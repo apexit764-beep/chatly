@@ -28,17 +28,12 @@ const mainNav = [
   { to: '/inbox', label: 'المحادثات', icon: InboxIcon, badgeKey: 'inboxUnread' as const },
   { to: '/contacts', label: 'العملاء', icon: Users },
   { to: '/reports', label: 'التحليلات', icon: BarChart3 },
-];
-
-const orgNav = [
   { to: '/channels', label: 'الحسابات والربط', icon: Smartphone },
   { to: '/departments', label: 'الأقسام', icon: Building2 },
   { to: '/team', label: 'الموظفون', icon: UsersRound },
-];
-
-const featuresNav = [
   { to: '/campaigns', label: 'الحملات الإعلانية', icon: Megaphone },
   { to: '/saved-replies', label: 'الردود السريعة', icon: MessageSquareQuote },
+  { to: '/settings', label: 'الإعدادات', icon: Settings },
 ];
 
 export function IconSidebar(): JSX.Element {
@@ -130,7 +125,7 @@ export function IconSidebar(): JSX.Element {
   if (collapsed) {
     return (
       <aside className="w-[52px] flex-shrink-0 h-screen sticky top-0 bg-sidebar-light dark:bg-sidebar-dark border-l border-border-light dark:border-border-dark flex flex-col items-center py-3 z-30">
-        <div className="relative group h-9 w-9 mb-3">
+        <div className="relative group h-9 w-9 mb-2">
           <NavLink
             to="/inbox"
             className="absolute inset-0 flex items-center justify-center group-hover:opacity-0 transition-opacity"
@@ -147,29 +142,25 @@ export function IconSidebar(): JSX.Element {
             <PanelRightOpen className="h-4 w-4" />
           </button>
         </div>
+        <button
+          onClick={toggleNotifications}
+          title={`${unreadNotifs} إشعار جديد`}
+          aria-label="الإشعارات"
+          className="relative h-9 w-9 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors mb-2"
+        >
+          <Bell className="h-[18px] w-[18px]" />
+          {unreadNotifs > 0 && (
+            <span className="absolute -top-1 -end-1 h-4 min-w-4 px-1 bg-danger text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-sidebar-light dark:ring-sidebar-dark">
+              {unreadNotifs}
+            </span>
+          )}
+        </button>
 
         <nav className="flex flex-col gap-1 flex-1">
           {mainNav.map(renderItem)}
-          <div className="h-px w-6 bg-border-light dark:bg-border-dark my-1.5 mx-auto" />
-          {orgNav.map(renderItem)}
-          <div className="h-px w-6 bg-border-light dark:bg-border-dark my-1.5 mx-auto" />
-          {featuresNav.map(renderItem)}
         </nav>
 
         <div className="flex flex-col items-center gap-1 mt-auto">
-          <button
-            onClick={toggleNotifications}
-            title={`${unreadNotifs} إشعار جديد`}
-            aria-label="الإشعارات"
-            className="relative h-9 w-9 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
-          >
-            <Bell className="h-[18px] w-[18px]" />
-            {unreadNotifs > 0 && (
-              <span className="absolute -top-1 -end-1 h-4 min-w-4 px-1 bg-danger text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-sidebar-light dark:ring-sidebar-dark">
-                {unreadNotifs}
-              </span>
-            )}
-          </button>
           <OnboardingReminder collapsed />
           <UtilityButtons onSearch={() => setCmdOpen(true)} />
           <ProfileButton
@@ -189,17 +180,30 @@ export function IconSidebar(): JSX.Element {
   // === EXPANDED (with labels, 224px) ===
   return (
     <aside className="w-[224px] flex-shrink-0 h-screen sticky top-0 bg-sidebar-light dark:bg-sidebar-dark border-l border-border-light dark:border-border-dark flex flex-col z-30">
-      {/* Logo + collapse */}
-      <div className="px-3 py-3 flex items-center justify-between">
-        <NavLink to="/inbox" className="flex items-center gap-2" aria-label="Chatly">
-          <SekaaLogo className="h-8 w-8" />
-          <span className="text-h3 font-bold">Chatly</span>
+      {/* Logo + notifications + collapse */}
+      <div className="px-3 py-3 flex items-center justify-between gap-1">
+        <NavLink to="/inbox" className="flex items-center gap-2 min-w-0 flex-1" aria-label="Chatly">
+          <SekaaLogo className="h-8 w-8 flex-shrink-0" />
+          <span className="text-h3 font-bold truncate">Chatly</span>
         </NavLink>
+        <button
+          onClick={toggleNotifications}
+          title={`${unreadNotifs} إشعار جديد`}
+          aria-label="الإشعارات"
+          className="relative h-8 w-8 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors flex-shrink-0"
+        >
+          <Bell className="h-4 w-4" />
+          {unreadNotifs > 0 && (
+            <span className="absolute -top-0.5 -end-0.5 h-4 min-w-4 px-1 bg-danger text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-sidebar-light dark:ring-sidebar-dark">
+              {unreadNotifs}
+            </span>
+          )}
+        </button>
         <button
           onClick={toggleCollapsed}
           title="طيّ السايدبار"
           aria-label="طيّ السايدبار"
-          className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
+          className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors flex-shrink-0"
         >
           <PanelRightClose className="h-4 w-4" />
         </button>
@@ -221,45 +225,10 @@ export function IconSidebar(): JSX.Element {
 
       <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
         {mainNav.map(renderItem)}
-        <SectionLabel>المؤسسة</SectionLabel>
-        {orgNav.map(renderItem)}
-        <SectionLabel>الميزات</SectionLabel>
-        {featuresNav.map(renderItem)}
       </nav>
 
-      {/* Notifications + Settings (side by side, above onboarding) */}
-      <div className="px-2 pt-2 flex items-center justify-end gap-1">
-        <button
-          onClick={toggleNotifications}
-          title={`${unreadNotifs} إشعار جديد`}
-          aria-label="الإشعارات"
-          className="relative h-8 w-8 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
-        >
-          <Bell className="h-4 w-4" />
-          {unreadNotifs > 0 && (
-            <span className="absolute -top-0.5 -end-0.5 h-4 min-w-4 px-1 bg-danger text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-sidebar-light dark:ring-sidebar-dark">
-              {unreadNotifs}
-            </span>
-          )}
-        </button>
-        <NavLink
-          to="/settings"
-          title="الإعدادات"
-          className={({ isActive }) =>
-            cn(
-              'h-8 w-8 rounded-lg flex items-center justify-center transition-colors',
-              isActive
-                ? 'bg-primary text-white'
-                : 'text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current'
-            )
-          }
-        >
-          <Settings className="h-4 w-4" />
-        </NavLink>
-      </div>
-
       {/* Onboarding reminder (shown only when skipped & incomplete) */}
-      <div className="px-2 pb-1 pt-1 empty:hidden">
+      <div className="px-2 pb-1 pt-2 empty:hidden">
         <OnboardingReminder />
       </div>
 
@@ -279,43 +248,19 @@ export function IconSidebar(): JSX.Element {
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }): JSX.Element {
-  return (
-    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-light dark:text-muted-dark px-3 pt-4 pb-1">
-      {children}
-    </p>
-  );
-}
-
 function UtilityButtons({
   onSearch,
 }: {
   onSearch: () => void;
 }): JSX.Element {
   return (
-    <>
-      <button
-        title="بحث (Ctrl+K)"
-        onClick={onSearch}
-        className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
-      >
-        <Search className="h-[18px] w-[18px]" />
-      </button>
-      <NavLink
-        to="/settings"
-        title="الإعدادات"
-        className={({ isActive }) =>
-          cn(
-            'h-9 w-9 rounded-lg flex items-center justify-center transition-colors',
-            isActive
-              ? 'bg-primary text-white'
-              : 'text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current'
-          )
-        }
-      >
-        <Settings className="h-[18px] w-[18px]" />
-      </NavLink>
-    </>
+    <button
+      title="بحث (Ctrl+K)"
+      onClick={onSearch}
+      className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
+    >
+      <Search className="h-[18px] w-[18px]" />
+    </button>
   );
 }
 
