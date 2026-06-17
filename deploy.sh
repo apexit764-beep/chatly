@@ -1,19 +1,27 @@
-#!/bin/bash
-# Apex Sekaa - one-shot build+deploy script
-# Builds the production bundle then pushes to both subdomain web roots.
-set -e
-SRC=/var/www/source.apexes.click
-cd "$SRC"
+#!/usr/bin/env bash
+# Chatly deploy script — run on the server inside the cloned repo
+# Usage: ./deploy.sh
+set -euo pipefail
 
-echo ">>> [$(date '+%H:%M:%S')] Building production bundle..."
-npm run build 2>&1 | tail -8
+TARGET="/var/www/apexes.click/chats-product/index.html"
+SOURCE="dist-single/index.html"
 
-echo ">>> [$(date '+%H:%M:%S')] Deploying to chat-admin.apexes.click..."
-rsync -a --delete dist/ /var/www/chat-admin.apexes.click/
+echo "==> git pull"
+git pull --ff-only
 
-echo ">>> [$(date '+%H:%M:%S')] Deploying to chat-client.apexes.click..."
-rsync -a --delete dist/ /var/www/chat-client.apexes.click/
+echo "==> npm install (clean)"
+npm ci --no-audit --no-fund --silent
 
-echo ">>> [$(date '+%H:%M:%S')] Done! Live URLs updated:"
-echo "    https://chat-admin.apexes.click"
-echo "    https://chat-client.apexes.click"
+echo "==> build single-file bundle"
+npm run build:single
+
+if [ ! -f "$SOURCE" ]; then
+  echo "ERROR: build did not produce $SOURCE"
+  exit 1
+fi
+
+echo "==> copy to web root"
+cp "$SOURCE" "$TARGET"
+
+echo "==> done. site: https://chats-product.apexes.click/"
+ls -la "$TARGET"

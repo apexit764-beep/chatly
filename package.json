@@ -1,11 +1,13 @@
 {
-  "name": "sekaa-dashboard",
+  "name": "chatly",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:single": "vite build --config vite.config.singlefile.ts",
+    "deploy": "npm run build:single && cp dist-single/index.html /var/www/apexes.click/chats-product/index.html",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx"
   },
