@@ -318,7 +318,14 @@ export default function Inbox(): JSX.Element {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-0.5">
-                    <div className="flex items-center gap-1 min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {conv.status === 'new' ? (
+                        <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" title="جديد" />
+                      ) : conv.status === 'pending' ? (
+                        <span className="h-2 w-2 rounded-full bg-warning flex-shrink-0" title="قيد المعالجة" />
+                      ) : (
+                        <span className="h-2 w-2 rounded-full bg-success flex-shrink-0" title="محلولة" />
+                      )}
                       {isConvBookmarked && <Bookmark className="h-3 w-3 text-warning fill-current flex-shrink-0" />}
                       <p className="text-body font-semibold truncate">{contact.name}</p>
                     </div>
@@ -326,27 +333,10 @@ export default function Inbox(): JSX.Element {
                       {timeAgo(conv.lastMessageAt)}
                     </span>
                   </div>
-                  <p className="text-small text-muted-light dark:text-muted-dark truncate">{conv.lastMessage}</p>
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    {conv.status === 'closed' ? (
-                      <span className="text-[10px] font-medium text-success">● محلولة</span>
-                    ) : conv.status === 'new' ? (
-                      <span className="bg-primary text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">جديد</span>
-                    ) : (
-                      <span className="text-[10px] font-medium text-warning">● قيد المعالجة</span>
-                    )}
-                    {convChannel && !selectedChannelId && (
-                      <span className="text-[10px] text-muted-light dark:text-muted-dark truncate max-w-[80px]">
-                        {convChannel.name}
-                      </span>
-                    )}
-                    {agent && (
-                      <span className="text-[10px] text-muted-light dark:text-muted-dark ms-1">
-                        {agent.name.split(' ')[0]}
-                      </span>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <p className="text-small text-muted-light dark:text-muted-dark truncate flex-1">{conv.lastMessage}</p>
                     {conv.unreadCount > 0 && (
-                      <span className="ms-auto bg-danger text-white text-[10px] font-bold rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center">
+                      <span className="bg-danger text-white text-[10px] font-bold rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center flex-shrink-0">
                         {conv.unreadCount}
                       </span>
                     )}
