@@ -125,7 +125,7 @@ export function IconSidebar(): JSX.Element {
   if (collapsed) {
     return (
       <aside className="w-[52px] flex-shrink-0 h-screen sticky top-0 bg-sidebar-light dark:bg-sidebar-dark border-l border-border-light dark:border-border-dark flex flex-col items-center py-3 z-30">
-        <div className="relative group h-9 w-9 mb-2">
+        <div className="relative group h-9 w-9 mb-3">
           <NavLink
             to="/inbox"
             className="absolute inset-0 flex items-center justify-center group-hover:opacity-0 transition-opacity"
@@ -142,19 +142,6 @@ export function IconSidebar(): JSX.Element {
             <PanelRightOpen className="h-4 w-4" />
           </button>
         </div>
-        <button
-          onClick={toggleNotifications}
-          title={`${unreadNotifs} إشعار جديد`}
-          aria-label="الإشعارات"
-          className="relative h-9 w-9 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors mb-2"
-        >
-          <Bell className="h-[18px] w-[18px]" />
-          {unreadNotifs > 0 && (
-            <span className="absolute -top-1 -end-1 h-4 min-w-4 px-1 bg-danger text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-sidebar-light dark:ring-sidebar-dark">
-              {unreadNotifs}
-            </span>
-          )}
-        </button>
 
         <nav className="flex flex-col gap-1 flex-1">
           {mainNav.map(renderItem)}
@@ -162,6 +149,19 @@ export function IconSidebar(): JSX.Element {
 
         <div className="flex flex-col items-center gap-1 mt-auto">
           <OnboardingReminder collapsed />
+          <button
+            onClick={toggleNotifications}
+            title={`${unreadNotifs} إشعار جديد`}
+            aria-label="الإشعارات"
+            className="relative h-9 w-9 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
+          >
+            <Bell className="h-[18px] w-[18px]" />
+            {unreadNotifs > 0 && (
+              <span className="absolute -top-1 -end-1 h-4 min-w-4 px-1 bg-danger text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-sidebar-light dark:ring-sidebar-dark">
+                {unreadNotifs}
+              </span>
+            )}
+          </button>
           <UtilityButtons onSearch={() => setCmdOpen(true)} />
           <ProfileButton
             user={user}
@@ -180,30 +180,17 @@ export function IconSidebar(): JSX.Element {
   // === EXPANDED (with labels, 224px) ===
   return (
     <aside className="w-[224px] flex-shrink-0 h-screen sticky top-0 bg-sidebar-light dark:bg-sidebar-dark border-l border-border-light dark:border-border-dark flex flex-col z-30">
-      {/* Logo + notifications + collapse */}
-      <div className="px-3 py-3 flex items-center justify-between gap-1">
-        <NavLink to="/inbox" className="flex items-center gap-2 min-w-0 flex-1" aria-label="Chatly">
-          <SekaaLogo className="h-8 w-8 flex-shrink-0" />
-          <span className="text-h3 font-bold truncate">Chatly</span>
+      {/* Logo + collapse */}
+      <div className="px-3 py-3 flex items-center justify-between">
+        <NavLink to="/inbox" className="flex items-center gap-2" aria-label="Chatly">
+          <SekaaLogo className="h-8 w-8" />
+          <span className="text-h3 font-bold">Chatly</span>
         </NavLink>
-        <button
-          onClick={toggleNotifications}
-          title={`${unreadNotifs} إشعار جديد`}
-          aria-label="الإشعارات"
-          className="relative h-8 w-8 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors flex-shrink-0"
-        >
-          <Bell className="h-4 w-4" />
-          {unreadNotifs > 0 && (
-            <span className="absolute -top-0.5 -end-0.5 h-4 min-w-4 px-1 bg-danger text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-sidebar-light dark:ring-sidebar-dark">
-              {unreadNotifs}
-            </span>
-          )}
-        </button>
         <button
           onClick={toggleCollapsed}
           title="طيّ السايدبار"
           aria-label="طيّ السايدبار"
-          className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors flex-shrink-0"
+          className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
         >
           <PanelRightClose className="h-4 w-4" />
         </button>
@@ -232,15 +219,30 @@ export function IconSidebar(): JSX.Element {
         <OnboardingReminder />
       </div>
 
-      {/* Profile */}
-      <div className="px-2 pb-3 pt-2 border-t border-border-light dark:border-border-dark">
-        <ProfileButton
-          user={user}
-          open={profileMenuOpen}
-          onToggle={() => setProfileMenuOpen((v) => !v)}
-          onClose={() => setProfileMenuOpen(false)}
-          onLogout={logout}
-        />
+      {/* Profile + Notifications */}
+      <div className="px-2 pb-3 pt-2 border-t border-border-light dark:border-border-dark mt-2 flex items-center gap-1">
+        <div className="flex-1 min-w-0">
+          <ProfileButton
+            user={user}
+            open={profileMenuOpen}
+            onToggle={() => setProfileMenuOpen((v) => !v)}
+            onClose={() => setProfileMenuOpen(false)}
+            onLogout={logout}
+          />
+        </div>
+        <button
+          onClick={toggleNotifications}
+          title={`${unreadNotifs} إشعار جديد`}
+          aria-label="الإشعارات"
+          className="relative h-9 w-9 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors flex-shrink-0"
+        >
+          <Bell className="h-[18px] w-[18px]" />
+          {unreadNotifs > 0 && (
+            <span className="absolute -top-0.5 -end-0.5 h-4 min-w-4 px-1 bg-danger text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-sidebar-light dark:ring-sidebar-dark">
+              {unreadNotifs}
+            </span>
+          )}
+        </button>
       </div>
 
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
