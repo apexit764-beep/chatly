@@ -1,0 +1,24 @@
+node_modules
+dist
+dist-single
+.DS_Store
+*.log
+.vite
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.idea
+.vscode/*
+!.vscode/extensions.json
+Thumbs.db
+._*
+
+# Local agent / session metadata
+.claude/
+
+# Local builds / temp upload artifacts
+_chunks
+*.b64tmp
+*.tmp

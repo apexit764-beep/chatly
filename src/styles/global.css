@@ -1,0 +1,145 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+  html {
+    font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    @apply bg-bg-light text-[#111827] dark:bg-bg-dark dark:text-[#F1F5F9];
+    @apply transition-colors duration-200;
+    font-feature-settings: 'kern', 'liga', 'ss01';
+  }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border-light dark:bg-border-dark rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-light/50 dark:bg-muted-dark/50;
+  }
+  /* Focus ring */
+  *:focus-visible {
+    outline: 2px solid #6C63FF;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+@layer base {
+  /* Checkbox — white background when unchecked, primary when checked */
+  input[type='checkbox'] {
+    appearance: none;
+    -webkit-appearance: none;
+    height: 1rem;
+    width: 1rem;
+    flex-shrink: 0;
+    border-radius: 4px;
+    border: 1.5px solid #D1D5DB;
+    background-color: #FFFFFF;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+    position: relative;
+    vertical-align: middle;
+  }
+  .dark input[type='checkbox'] {
+    background-color: #1A1D27;
+    border-color: #2D3148;
+  }
+  input[type='checkbox']:hover {
+    border-color: #2563EB;
+  }
+  input[type='checkbox']:checked {
+    background-color: #2563EB;
+    border-color: #2563EB;
+  }
+  input[type='checkbox']:checked::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 4px;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  input[type='checkbox']:focus-visible {
+    outline: 2px solid #2563EB;
+    outline-offset: 2px;
+  }
+  /* Radio — keep native accent for now */
+  input[type='radio'] {
+    accent-color: #2563EB;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface-light dark:bg-surface-dark rounded-card border border-border-light dark:border-border-dark;
+  }
+  .btn-primary {
+    @apply bg-primary hover:bg-primary-dark text-white font-medium rounded-btn px-4 py-2 transition-colors disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current rounded-btn px-3 py-2 transition-colors;
+  }
+  .input-field {
+    @apply bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-input px-3 py-2 text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all w-full;
+  }
+}
+
+/* Custom scroll for chat */
+.chat-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Focus ring uses blue */
+*:focus-visible {
+  outline-color: #2563EB !important;
+}
+
+/* Page transition */
+.page-fade {
+  animation: pageFade 0.25s ease-out;
+}
+@keyframes pageFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* BeDesk button helpers */
+.btn-pill {
+  @apply inline-flex items-center justify-center gap-2 font-medium rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40;
+}
+.btn-pill-primary {
+  @apply btn-pill bg-primary hover:bg-primary-dark text-white;
+}
+.btn-pill-secondary {
+  @apply btn-pill bg-white dark:bg-surface-dark text-[#111827] dark:text-[#F1F5F9] border border-border-light dark:border-border-dark hover:bg-bg-light dark:hover:bg-bg-dark;
+}
+
+/* Heatmap cell variants */
+.heat-0 { @apply bg-bg-light dark:bg-bg-dark; }
+.heat-1 { @apply bg-primary/10; }
+.heat-2 { @apply bg-primary/25; }
+.heat-3 { @apply bg-primary/45; }
+.heat-4 { @apply bg-primary/70; }
+.heat-5 { @apply bg-primary; }
