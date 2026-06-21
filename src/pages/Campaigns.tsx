@@ -694,7 +694,6 @@ function CampaignTemplatesSection({
     { value: 'buttons', label: campaignTemplateTypeLabel['buttons'], icon: <Tag className="h-4 w-4" /> },
     { value: 'list', label: campaignTemplateTypeLabel['list'], icon: <MoreHorizontal className="h-4 w-4 rotate-90" /> },
     { value: 'poll', label: campaignTemplateTypeLabel['poll'], icon: <Eye className="h-4 w-4" /> },
-    { value: 'ai-prompt', label: campaignTemplateTypeLabel['ai-prompt'], icon: <Sparkles className="h-4 w-4" /> },
   ];
 
   const typeCount = (k: 'all' | CampaignTemplateType): number =>
@@ -886,9 +885,11 @@ function CampaignTemplatesSection({
           />
 
           <Select label="نوع القالب" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as CampaignTemplateType })}>
-            {(Object.keys(campaignTemplateTypeLabel) as CampaignTemplateType[]).map((tt) => (
-              <option key={tt} value={tt}>{campaignTemplateTypeLabel[tt]}</option>
-            ))}
+            {(Object.keys(campaignTemplateTypeLabel) as CampaignTemplateType[])
+              .filter((tt) => tt !== 'ai-prompt')
+              .map((tt) => (
+                <option key={tt} value={tt}>{campaignTemplateTypeLabel[tt]}</option>
+              ))}
           </Select>
           <p className="text-[11px] text-muted-light dark:text-muted-dark -mt-2 flex items-center gap-1">
             <Sparkles className="h-3 w-3 text-primary" />

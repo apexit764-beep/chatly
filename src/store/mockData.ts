@@ -513,20 +513,6 @@ export const campaignTemplates: CampaignTemplate[] = [
     usageCount: 12,
     createdAt: nowMinus(60 * 24 * 15),
   },
-  {
-    id: 'ct7',
-    name: 'رسالة AI مخصصة',
-    description: 'يولّد الذكاء الاصطناعي رسالة فريدة لكل عميل حسب اهتماماته',
-    category: 'custom',
-    type: 'ai-prompt',
-    message: '',
-    aiPrompt: 'اكتب رسالة ترويجية ودودة لـ {{اسم_العميل}} باللهجة الخليجية، تذكره بمنتجاتنا الجديدة دون أن تكون مزعجة. اجعل النص قصيراً (لا يتجاوز سطرين).',
-    defaultAudience: 'customer',
-    defaultMinDelay: 60,
-    defaultMaxDelay: 180,
-    usageCount: 4,
-    createdAt: nowMinus(60 * 24 * 7),
-  },
 ];
 
 // ============================================================

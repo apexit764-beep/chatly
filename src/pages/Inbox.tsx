@@ -37,6 +37,8 @@ import {
   CheckCircle2,
   ArrowDownUp,
   StickyNote,
+  RotateCcw,
+  Lock,
 } from 'lucide-react';
 import {
   Avatar,
@@ -471,6 +473,28 @@ export default function Inbox(): JSX.Element {
             </div>
 
             {/* Input area */}
+            {selected.status === 'closed' ? (
+              <div className="border-t border-border-light dark:border-border-dark flex-shrink-0 bg-bg-light dark:bg-bg-dark">
+                <div className="flex items-center justify-between px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-success/15 flex items-center justify-center">
+                      <Lock className="h-4.5 w-4.5 text-success" />
+                    </div>
+                    <div>
+                      <p className="text-body font-semibold">تم إغلاق المحادثة</p>
+                      <p className="text-small text-muted-light dark:text-muted-dark">لا يمكن إرسال رسائل جديدة حتى يتم إعادة فتحها</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setStatus(selected.id, 'new'); showToast('تم إعادة فتح المحادثة', 'success'); }}
+                    className="h-9 px-4 rounded-full border border-primary text-primary text-small font-medium hover:bg-primary hover:text-white transition-colors flex items-center gap-2"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    إعادة فتح
+                  </button>
+                </div>
+              </div>
+            ) : (
             <div
               className={cn(
                 'border-t border-border-light dark:border-border-dark flex-shrink-0',
@@ -609,6 +633,7 @@ export default function Inbox(): JSX.Element {
                 </button>
               </div>
             </div>
+            )}
           </>
         )}
       </section>
