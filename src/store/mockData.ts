@@ -9,6 +9,7 @@ import type {
   Integration,
   Notification,
   Template,
+  TemplateCategoryItem,
   WidgetConfig,
 } from '@/types';
 
@@ -383,6 +384,17 @@ export const conversations: Conversation[] = [
       { id: 'm110', conversationId: 'conv12', direction: 'in', type: 'text', content: 'شفت المنشور الجديد عن فيلا الموج', timestamp: nowMinus(50), read: false, delivered: true },
     ],
   },
+];
+
+// ============================================================
+// Template Categories (CRUD-managed by user)
+// ============================================================
+export const templateCategories: TemplateCategoryItem[] = [
+  { id: 'welcome', name: 'ترحيب', color: '#2563EB' },
+  { id: 'followup', name: 'متابعة', color: '#06B6D4' },
+  { id: 'payment', name: 'دفع', color: '#10B981' },
+  { id: 'closing', name: 'إغلاق', color: '#F59E0B' },
+  { id: 'custom', name: 'مخصص', color: '#94A3B8' },
 ];
 
 // ============================================================

@@ -64,6 +64,12 @@ export type MessageDirection = 'in' | 'out';
 export type MessageType = 'text' | 'image' | 'document' | 'voice' | 'note';
 export type CampaignStatus = 'draft' | 'scheduled' | 'completed' | 'failed';
 export type TemplateCategory = 'welcome' | 'followup' | 'payment' | 'closing' | 'custom';
+
+export interface TemplateCategoryItem {
+  id: string;
+  name: string;
+  color: string;
+}
 export type ChannelType =
   // Communication
   | 'whatsapp' | 'messenger' | 'instagram' | 'telegram' | 'x' | 'widget' | 'email'
@@ -189,7 +195,8 @@ export interface ActivityEvent {
 export interface Template {
   id: string;
   name: string;
-  category: TemplateCategory;
+  /** Category id — references TemplateCategoryItem.id. Defaults match legacy TemplateCategory keys. */
+  category: string;
   body: string;
   usageCount: number;
   createdAt: string;

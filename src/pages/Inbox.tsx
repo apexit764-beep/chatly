@@ -13,6 +13,7 @@ import {
   MoreHorizontal,
   X,
   Download,
+  SquarePen,
   MessageSquarePlus,
   Edit2,
   UserCog,
@@ -33,7 +34,6 @@ import {
   SlidersHorizontal,
   Inbox as InboxIcon,
   UserX,
-  Star,
   CheckCircle2,
   ArrowDownUp,
   StickyNote,
@@ -228,14 +228,16 @@ export default function Inbox(): JSX.Element {
       >
         <div className="h-[56px] px-4 flex items-center justify-between border-b border-border-light dark:border-border-dark flex-shrink-0">
           <h2 className="text-h3 font-bold">المحادثات</h2>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => setNewConvOpen(true)}
-              className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center text-muted-light dark:text-muted-dark"
-              title="محادثة جديدة"
+              className="h-8 px-3 rounded-full bg-primary hover:bg-primary-dark text-white text-[12px] font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
+              title="بدء محادثة جديدة"
               aria-label="محادثة جديدة"
+              style={{ color: '#fff' }}
             >
-              <MessageSquarePlus className="h-[18px] w-[18px]" />
+              <SquarePen className="h-3.5 w-3.5" />
+              محادثة جديدة
             </button>
             <button
               onClick={toggleConversationList}
@@ -1475,12 +1477,10 @@ function InboxFilters({
   const [sortKey, setSortKey] = useState<'recent' | 'oldest' | 'unread'>('recent');
 
   type ViewItem = { key: InboxView; label: string; count: number; icon: JSX.Element; group: 'folder' | 'status' };
-  // Colored icons (stroke), Star keeps fill since it reads naturally as filled
   const items: ViewItem[] = [
     { key: 'all', label: 'الكل', count: counts.all, icon: <Globe className="h-4 w-4 text-slate-500" strokeWidth={2} />, group: 'folder' },
     { key: 'mine', label: 'صندوقي', count: counts.mine, icon: <InboxIcon className="h-4 w-4 text-primary" strokeWidth={2} />, group: 'folder' },
     { key: 'unassigned', label: 'غير مسندة', count: counts.unassigned, icon: <UserX className="h-4 w-4 text-warning" strokeWidth={2} />, group: 'folder' },
-    { key: 'vip', label: 'VIP', count: 0, icon: <Star className="h-4 w-4 text-yellow-500 fill-current" strokeWidth={2} />, group: 'folder' },
     { key: 'closed', label: 'مغلقة', count: counts.closed, icon: <CheckCircle2 className="h-4 w-4 text-success" strokeWidth={2} />, group: 'status' },
   ];
   const current = items.find((i) => i.key === view) ?? items[0];

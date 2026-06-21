@@ -36,8 +36,6 @@ import { useUIStore } from '@/store/useUIStore';
 import {
   campaignStatusColor,
   campaignStatusLabel,
-  campaignTemplateCategoryColor,
-  campaignTemplateCategoryLabel,
   campaignTemplateTypeDescription,
   campaignTemplateTypeLabel,
 } from '@/utils/labels';
@@ -411,7 +409,7 @@ export default function Campaigns(): JSX.Element {
                   <option value="">— اختر قالباً —</option>
                   {campaignTemplates.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {campaignTemplateCategoryLabel[t.category]} · {t.name}
+                      {campaignTemplateTypeLabel[t.type]} · {t.name}
                     </option>
                   ))}
                 </select>
@@ -560,7 +558,6 @@ function CampaignTemplatesSection({
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | CampaignTemplateType>('all');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | CampaignTemplateCategory>('all');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<CampaignTemplate | null>(null);
   const emptyForm: FormState = {
@@ -584,14 +581,13 @@ function CampaignTemplatesSection({
   const filtered = useMemo(() => {
     return templates.filter((t) => {
       if (typeFilter !== 'all' && t.type !== typeFilter) return false;
-      if (categoryFilter !== 'all' && t.category !== categoryFilter) return false;
       if (search) {
         const q = search.toLowerCase();
         return t.name.toLowerCase().includes(q) || t.message.toLowerCase().includes(q);
       }
       return true;
     });
-  }, [templates, typeFilter, categoryFilter, search]);
+  }, [templates, typeFilter, search]);
 
   const openCreate = (): void => {
     setEditing(null);
@@ -692,16 +688,6 @@ function CampaignTemplatesSection({
     showToast('تم نسخ القالب', 'success');
   };
 
-  const categories: { value: 'all' | CampaignTemplateCategory; label: string }[] = [
-    { value: 'all', label: 'كل التصنيفات' },
-    { value: 'welcome', label: campaignTemplateCategoryLabel.welcome },
-    { value: 'promo', label: campaignTemplateCategoryLabel.promo },
-    { value: 'reminder', label: campaignTemplateCategoryLabel.reminder },
-    { value: 'followup', label: campaignTemplateCategoryLabel.followup },
-    { value: 'announcement', label: campaignTemplateCategoryLabel.announcement },
-    { value: 'custom', label: campaignTemplateCategoryLabel.custom },
-  ];
-
   const types: { value: 'all' | CampaignTemplateType; label: string; icon: JSX.Element }[] = [
     { value: 'all', label: 'الكل', icon: <FileText className="h-4 w-4" /> },
     { value: 'text-media', label: campaignTemplateTypeLabel['text-media'], icon: <FileText className="h-4 w-4" /> },
@@ -716,33 +702,43 @@ function CampaignTemplatesSection({
 
   return (
     <>
-      {/* Type tabs — primary filter (like the screenshot the user shared) */}
-      <div className="flex items-center gap-1 flex-wrap p-1.5 bg-bg-light dark:bg-bg-dark rounded-card">
-        {types.map((t) => (
-          <button
-            key={t.value}
-            onClick={() => setTypeFilter(t.value)}
-            className={cn(
-              'h-9 px-3 rounded-lg text-small font-medium transition-colors flex items-center gap-2',
-              typeFilter === t.value
-                ? 'bg-primary text-white shadow-sm'
-                : 'text-muted-light dark:text-muted-dark hover:text-current hover:bg-white dark:hover:bg-surface-dark',
-            )}
-            style={typeFilter === t.value ? { color: '#fff' } : undefined}
-          >
-            {t.icon}
-            {t.label}
-            <span className={cn(
-              'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
-              typeFilter === t.value ? 'bg-white/20' : 'bg-border-light dark:bg-border-dark',
-            )}>
-              {typeCount(t.value)}
-            </span>
-          </button>
-        ))}
+      {/* Type sub-filter — clean horizontal scroll strip */}
+      <div className="overflow-x-auto -mx-1 px-1">
+        <div className="inline-flex items-center gap-1.5 min-w-full">
+          {types.map((t) => {
+            const active = typeFilter === t.value;
+            const count = typeCount(t.value);
+            return (
+              <button
+                key={t.value}
+                onClick={() => setTypeFilter(t.value)}
+                className={cn(
+                  'h-8 ps-2.5 pe-2 rounded-full text-[12px] font-medium transition-colors flex items-center gap-1.5 flex-shrink-0 border',
+                  active
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-white dark:bg-surface-dark text-current border-border-light dark:border-border-dark hover:border-primary/40 hover:text-primary',
+                )}
+                style={active ? { color: '#fff' } : undefined}
+              >
+                <span className={cn('flex-shrink-0', active ? 'opacity-90' : 'opacity-60')}>
+                  {t.icon}
+                </span>
+                <span>{t.label}</span>
+                <span className={cn(
+                  'text-[10px] font-bold px-1.5 min-w-[20px] h-[18px] rounded-full inline-flex items-center justify-center',
+                  active
+                    ? 'bg-white/25 text-white'
+                    : count > 0 ? 'bg-bg-light dark:bg-bg-dark text-current' : 'text-muted-light dark:text-muted-dark',
+                )} style={active ? { color: '#fff' } : undefined}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Search + categories + create */}
+      {/* Search + create */}
       <Card className="p-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px]">
           <input
@@ -752,24 +748,7 @@ function CampaignTemplatesSection({
             className="w-full h-9 px-3 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary"
           />
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {categories.map((c) => (
-            <button
-              key={c.value}
-              onClick={() => setCategoryFilter(c.value)}
-              className={cn(
-                'h-8 px-3 rounded-full text-[12px] font-medium transition-colors',
-                categoryFilter === c.value
-                  ? 'bg-primary text-white'
-                  : 'bg-bg-light dark:bg-bg-dark text-current hover:bg-border-light dark:hover:bg-border-dark'
-              )}
-              style={categoryFilter === c.value ? { color: '#fff' } : undefined}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-        <button onClick={openCreate} className="ms-auto h-9 px-4 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2" style={{ color: '#fff' }}>
+        <button onClick={openCreate} className="h-9 px-4 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2" style={{ color: '#fff' }}>
           <Plus className="h-4 w-4" /> قالب جديد
         </button>
       </Card>
@@ -782,9 +761,9 @@ function CampaignTemplatesSection({
           </div>
           <p className="text-body font-semibold">لا توجد قوالب</p>
           <p className="text-small text-muted-light dark:text-muted-dark mt-1">
-            {search || categoryFilter !== 'all' || typeFilter !== 'all' ? 'لا نتائج مطابقة' : 'أنشئ أول قالب لتعيد استخدامه في حملاتك'}
+            {search || typeFilter !== 'all' ? 'لا نتائج مطابقة' : 'أنشئ أول قالب لتعيد استخدامه في حملاتك'}
           </p>
-          {!search && categoryFilter === 'all' && typeFilter === 'all' && (
+          {!search && typeFilter === 'all' && (
             <button onClick={openCreate} className="mt-3 h-9 px-4 rounded-full bg-primary text-white text-small font-medium inline-flex items-center gap-2" style={{ color: '#fff' }}>
               <Plus className="h-4 w-4" /> قالب جديد
             </button>
@@ -797,9 +776,6 @@ function CampaignTemplatesSection({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                    <Badge className={cn(campaignTemplateCategoryColor[t.category], 'text-[10px]')}>
-                      {campaignTemplateCategoryLabel[t.category]}
-                    </Badge>
                     <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark">
                       {t.type === 'buttons' ? <Tag className="h-2.5 w-2.5" />
                         : t.type === 'list' ? <MoreHorizontal className="h-2.5 w-2.5 rotate-90" />
@@ -909,18 +885,11 @@ function CampaignTemplatesSection({
             placeholder="متى يُستخدم هذا القالب؟"
           />
 
-          <div className="grid grid-cols-2 gap-3">
-            <Select label="التصنيف" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as CampaignTemplateCategory })}>
-              {(Object.keys(campaignTemplateCategoryLabel) as CampaignTemplateCategory[]).map((c) => (
-                <option key={c} value={c}>{campaignTemplateCategoryLabel[c]}</option>
-              ))}
-            </Select>
-            <Select label="نوع القالب" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as CampaignTemplateType })}>
-              {(Object.keys(campaignTemplateTypeLabel) as CampaignTemplateType[]).map((tt) => (
-                <option key={tt} value={tt}>{campaignTemplateTypeLabel[tt]}</option>
-              ))}
-            </Select>
-          </div>
+          <Select label="نوع القالب" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as CampaignTemplateType })}>
+            {(Object.keys(campaignTemplateTypeLabel) as CampaignTemplateType[]).map((tt) => (
+              <option key={tt} value={tt}>{campaignTemplateTypeLabel[tt]}</option>
+            ))}
+          </Select>
           <p className="text-[11px] text-muted-light dark:text-muted-dark -mt-2 flex items-center gap-1">
             <Sparkles className="h-3 w-3 text-primary" />
             {campaignTemplateTypeDescription[form.type]}

@@ -13,6 +13,7 @@ import type {
   Notification,
   Role,
   Template,
+  TemplateCategoryItem,
   WidgetConfig,
 } from '@/types';
 import { defaultRoles } from './rolesData';
@@ -26,6 +27,7 @@ import {
   departments as initialDepartments,
   integrations as initialIntegrations,
   notifications as initialNotifications,
+  templateCategories as initialTemplateCategories,
   templates as initialTemplates,
   widgetConfig as initialWidgetConfig,
 } from './mockData';
@@ -36,6 +38,7 @@ interface DataState {
   contacts: Contact[];
   conversations: Conversation[];
   templates: Template[];
+  templateCategories: TemplateCategoryItem[];
   campaigns: Campaign[];
   campaignTemplates: CampaignTemplate[];
   notifications: Notification[];
@@ -70,6 +73,11 @@ interface DataState {
   addTemplate: (t: Omit<Template, 'id' | 'usageCount' | 'createdAt'>) => void;
   updateTemplate: (id: string, patch: Partial<Template>) => void;
   deleteTemplate: (id: string) => void;
+
+  // Template category actions
+  addTemplateCategory: (c: Omit<TemplateCategoryItem, 'id'>) => void;
+  updateTemplateCategory: (id: string, patch: Partial<TemplateCategoryItem>) => void;
+  deleteTemplateCategory: (id: string) => void;
 
   // Agent actions
   addAgent: (a: Omit<Agent, 'id' | 'lastActive' | 'status'>) => void;
@@ -135,6 +143,7 @@ export const useDataStore = create<DataState>((set) => ({
   contacts: initialContacts,
   conversations: initialConversations,
   templates: initialTemplates,
+  templateCategories: initialTemplateCategories,
   campaigns: initialCampaigns,
   campaignTemplates: initialCampaignTemplates,
   notifications: initialNotifications,
@@ -293,6 +302,21 @@ export const useDataStore = create<DataState>((set) => ({
 
   deleteTemplate: (id) =>
     set((state) => ({ templates: state.templates.filter((t) => t.id !== id) })),
+
+  addTemplateCategory: (c) =>
+    set((state) => ({
+      templateCategories: [...state.templateCategories, { ...c, id: newId() }],
+    })),
+  updateTemplateCategory: (id, patch) =>
+    set((state) => ({
+      templateCategories: state.templateCategories.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+    })),
+  deleteTemplateCategory: (id) =>
+    set((state) => ({
+      templateCategories: state.templateCategories.filter((c) => c.id !== id),
+      // Re-assign templates with this category to 'custom' so they don't break
+      templates: state.templates.map((t) => (t.category === id ? { ...t, category: 'custom' } : t)),
+    })),
 
   addAgent: (a) =>
     set((state) => ({
