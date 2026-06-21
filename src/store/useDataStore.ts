@@ -3,6 +3,7 @@ import type {
   Agent,
   AppSettings,
   Campaign,
+  CampaignTemplate,
   Channel,
   Contact,
   Conversation,
@@ -18,6 +19,7 @@ import { defaultRoles } from './rolesData';
 import {
   agents as initialAgents,
   campaigns as initialCampaigns,
+  campaignTemplates as initialCampaignTemplates,
   channels as initialChannels,
   contacts as initialContacts,
   conversations as initialConversations,
@@ -35,6 +37,7 @@ interface DataState {
   conversations: Conversation[];
   templates: Template[];
   campaigns: Campaign[];
+  campaignTemplates: CampaignTemplate[];
   notifications: Notification[];
   channels: Channel[];
   departments: Department[];
@@ -78,6 +81,12 @@ interface DataState {
 
   // Campaign actions
   addCampaign: (c: Omit<Campaign, 'id' | 'sentCount' | 'openRate' | 'createdAt'>) => void;
+
+  // Campaign template actions
+  addCampaignTemplate: (t: Omit<CampaignTemplate, 'id' | 'usageCount' | 'createdAt'>) => void;
+  updateCampaignTemplate: (id: string, patch: Partial<CampaignTemplate>) => void;
+  deleteCampaignTemplate: (id: string) => void;
+  incrementCampaignTemplateUsage: (id: string) => void;
 
   // Channel actions
   addChannel: (c: Omit<Channel, 'id' | 'createdAt' | 'unreadCount'>) => void;
@@ -127,6 +136,7 @@ export const useDataStore = create<DataState>((set) => ({
   conversations: initialConversations,
   templates: initialTemplates,
   campaigns: initialCampaigns,
+  campaignTemplates: initialCampaignTemplates,
   notifications: initialNotifications,
   channels: initialChannels,
   departments: initialDepartments,
@@ -330,6 +340,26 @@ export const useDataStore = create<DataState>((set) => ({
         { ...c, id: newId(), sentCount: 0, openRate: 0, createdAt: new Date().toISOString() },
         ...state.campaigns,
       ],
+    })),
+
+  addCampaignTemplate: (t) =>
+    set((state) => ({
+      campaignTemplates: [
+        { ...t, id: newId(), usageCount: 0, createdAt: new Date().toISOString() },
+        ...state.campaignTemplates,
+      ],
+    })),
+  updateCampaignTemplate: (id, patch) =>
+    set((state) => ({
+      campaignTemplates: state.campaignTemplates.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+    })),
+  deleteCampaignTemplate: (id) =>
+    set((state) => ({ campaignTemplates: state.campaignTemplates.filter((t) => t.id !== id) })),
+  incrementCampaignTemplateUsage: (id) =>
+    set((state) => ({
+      campaignTemplates: state.campaignTemplates.map((t) =>
+        t.id === id ? { ...t, usageCount: t.usageCount + 1 } : t
+      ),
     })),
 
   addChannel: (c) =>

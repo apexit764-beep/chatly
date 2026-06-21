@@ -730,6 +730,7 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
   const [contactMode, setContactMode] = useState<'existing' | 'new'>('existing');
   const [existingContactId, setExistingContactId] = useState<string | null>(null);
   const [contactSearch, setContactSearch] = useState('');
+  const [contactDropdownOpen, setContactDropdownOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [departmentId, setDepartmentId] = useState<string>('');
@@ -756,6 +757,7 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
     setContactMode('existing');
     setExistingContactId(null);
     setContactSearch('');
+    setContactDropdownOpen(false);
     setNewName('');
     setNewPhone('');
     setDepartmentId('');
@@ -893,41 +895,68 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
           )}
         >
           {contactMode === 'existing' ? (
-            <div className="space-y-2">
-              <div className="relative">
-                <Search className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark" />
-                <input
-                  type="text"
-                  placeholder="ابحث بالاسم أو الرقم..."
-                  value={contactSearch}
-                  onChange={(e) => setContactSearch(e.target.value)}
-                  className="w-full h-10 ps-3 pe-9 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
-                />
-              </div>
-              <div className="max-h-44 overflow-y-auto rounded-lg border border-border-light dark:border-border-dark divide-y divide-border-light dark:divide-border-dark">
-                {filteredContacts.length === 0 ? (
-                  <p className="p-4 text-small text-muted-light dark:text-muted-dark text-center">لا نتائج</p>
-                ) : (
-                  filteredContacts.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => setExistingContactId(c.id)}
-                      className={cn(
-                        'w-full flex items-center gap-3 p-2.5 text-start hover:bg-bg-light dark:hover:bg-bg-dark transition-colors',
-                        existingContactId === c.id && 'bg-primary/5'
-                      )}
-                    >
-                      <Avatar name={c.name} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-body font-semibold truncate">{c.name}</p>
-                        <p className="text-[11px] text-muted-light dark:text-muted-dark truncate font-mono">{formatPhone(c.phone)}</p>
-                      </div>
-                      {existingContactId === c.id && <Check className="h-4 w-4 text-primary" />}
-                    </button>
-                  ))
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setContactDropdownOpen((v) => !v)}
+                className={cn(
+                  'w-full h-10 ps-3 pe-3 rounded-lg bg-bg-light dark:bg-bg-dark border text-body focus:outline-none flex items-center justify-between gap-2',
+                  contactDropdownOpen ? 'border-primary' : 'border-transparent hover:border-border-light dark:hover:border-border-dark'
                 )}
-              </div>
+              >
+                {existingContact ? (
+                  <span className="flex items-center gap-2 flex-1 min-w-0">
+                    <Avatar name={existingContact.name} size="xs" />
+                    <span className="font-medium truncate">{existingContact.name}</span>
+                    <span className="text-[11px] text-muted-light dark:text-muted-dark font-mono">{formatPhone(existingContact.phone)}</span>
+                  </span>
+                ) : (
+                  <span className="text-muted-light dark:text-muted-dark">اختر جهة اتصال...</span>
+                )}
+                <ChevronDown className={cn('h-4 w-4 text-muted-light dark:text-muted-dark transition-transform flex-shrink-0', contactDropdownOpen && 'rotate-180')} />
+              </button>
+              {contactDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setContactDropdownOpen(false)} />
+                  <div className="absolute top-full mt-1 inset-x-0 z-20 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-card-hover overflow-hidden">
+                    <div className="relative border-b border-border-light dark:border-border-dark">
+                      <Search className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark" />
+                      <input
+                        type="text"
+                        placeholder="ابحث بالاسم أو الرقم..."
+                        value={contactSearch}
+                        onChange={(e) => setContactSearch(e.target.value)}
+                        autoFocus
+                        className="w-full h-10 ps-3 pe-9 bg-transparent text-body focus:outline-none"
+                      />
+                    </div>
+                    <div className="max-h-64 overflow-y-auto divide-y divide-border-light dark:divide-border-dark">
+                      {filteredContacts.length === 0 ? (
+                        <p className="p-4 text-small text-muted-light dark:text-muted-dark text-center">لا نتائج</p>
+                      ) : (
+                        filteredContacts.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => { setExistingContactId(c.id); setContactDropdownOpen(false); setContactSearch(''); }}
+                            className={cn(
+                              'w-full flex items-center gap-3 p-2.5 text-start hover:bg-bg-light dark:hover:bg-bg-dark transition-colors',
+                              existingContactId === c.id && 'bg-primary/5'
+                            )}
+                          >
+                            <Avatar name={c.name} size="sm" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-body font-semibold truncate">{c.name}</p>
+                              <p className="text-[11px] text-muted-light dark:text-muted-dark truncate font-mono">{formatPhone(c.phone)}</p>
+                            </div>
+                            {existingContactId === c.id && <Check className="h-4 w-4 text-primary flex-shrink-0" />}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <div className="space-y-2">

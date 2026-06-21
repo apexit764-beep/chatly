@@ -207,6 +207,35 @@ export interface Campaign {
   createdAt: string;
 }
 
+export type CampaignTemplateCategory = 'welcome' | 'promo' | 'reminder' | 'followup' | 'announcement' | 'custom';
+
+export type CampaignTemplateType = 'text-media' | 'buttons' | 'list' | 'poll' | 'ai-prompt';
+
+export interface CampaignTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  category: CampaignTemplateCategory;
+  type: CampaignTemplateType;
+  message: string;
+  /** For text-media type — optional image/video URL */
+  mediaUrl?: string;
+  /** For buttons type — labels of up to 3 reply buttons */
+  buttons?: string[];
+  /** For list type — title + items */
+  listTitle?: string;
+  listItems?: { label: string; description?: string }[];
+  /** For poll type — question is in `message`, options listed here */
+  pollOptions?: string[];
+  /** For ai-prompt type — the prompt to send to the LLM */
+  aiPrompt?: string;
+  defaultAudience: 'all' | ContactType;
+  defaultMinDelay: number;
+  defaultMaxDelay: number;
+  usageCount: number;
+  createdAt: string;
+}
+
 export interface Notification {
   id: string;
   title: string;

@@ -15,6 +15,8 @@ import {
   Copy,
   MoreHorizontal,
   Download,
+  FileText,
+  Sparkles,
 } from 'lucide-react';
 import {
   Badge,
@@ -31,11 +33,18 @@ import {
 } from '@components/ui';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
-import { campaignStatusColor, campaignStatusLabel } from '@/utils/labels';
+import {
+  campaignStatusColor,
+  campaignStatusLabel,
+  campaignTemplateCategoryColor,
+  campaignTemplateCategoryLabel,
+  campaignTemplateTypeDescription,
+  campaignTemplateTypeLabel,
+} from '@/utils/labels';
 import { formatDate, formatNumber } from '@/utils/format';
 import { downloadCsv } from '@/utils/csv';
 import { cn } from '@/utils/cn';
-import type { Campaign, CampaignStatus, ContactType } from '@/types';
+import type { Campaign, CampaignStatus, CampaignTemplate, CampaignTemplateCategory, CampaignTemplateType, ContactType } from '@/types';
 
 export default function Campaigns(): JSX.Element {
   const campaigns = useDataStore((s) => s.campaigns);
@@ -44,17 +53,24 @@ export default function Campaigns(): JSX.Element {
   const showToast = useUIStore((s) => s.showToast);
   const { confirm } = useConfirm();
 
+  const [tab, setTab] = useState<'campaigns' | 'templates'>('campaigns');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Campaign | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [messageMode, setMessageMode] = useState<'custom' | 'template'>('custom');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const campaignTemplates = useDataStore((s) => s.campaignTemplates);
+  const incrementTemplateUsage = useDataStore((s) => s.incrementCampaignTemplateUsage);
   const [form, setForm] = useState<{
     name: string;
     message: string;
     audience: 'all' | ContactType;
     schedule: 'now' | 'later';
     scheduledAt: string;
-  }>({ name: '', message: '', audience: 'all', schedule: 'now', scheduledAt: '' });
+    minDelay: number;
+    maxDelay: number;
+  }>({ name: '', message: '', audience: 'all', schedule: 'now', scheduledAt: '', minDelay: 15, maxDelay: 45 });
   const [errors, setErrors] = useState<{ name?: string; message?: string }>({});
 
   const stats = {
@@ -71,8 +87,10 @@ export default function Campaigns(): JSX.Element {
 
   const openCreate = (): void => {
     setEditing(null);
-    setForm({ name: '', message: '', audience: 'all', schedule: 'now', scheduledAt: '' });
+    setForm({ name: '', message: '', audience: 'all', schedule: 'now', scheduledAt: '', minDelay: 15, maxDelay: 45 });
     setErrors({});
+    setMessageMode('custom');
+    setSelectedTemplateId(null);
     setModalOpen(true);
   };
 
@@ -84,10 +102,27 @@ export default function Campaigns(): JSX.Element {
       audience: 'all',
       schedule: c.scheduledAt ? 'later' : 'now',
       scheduledAt: c.scheduledAt ? new Date(c.scheduledAt).toISOString().slice(0, 16) : '',
+      minDelay: 15,
+      maxDelay: 45,
     });
     setErrors({});
+    setMessageMode('custom');
+    setSelectedTemplateId(null);
     setModalOpen(true);
     setOpenMenu(null);
+  };
+
+  const applyTemplate = (t: CampaignTemplate): void => {
+    setSelectedTemplateId(t.id);
+    setForm((prev) => ({
+      ...prev,
+      message: t.message,
+      audience: t.defaultAudience,
+      minDelay: t.defaultMinDelay,
+      maxDelay: t.defaultMaxDelay,
+    }));
+    setErrors({ ...errors, message: undefined });
+    incrementTemplateUsage(t.id);
   };
 
   const submit = (): void => {
@@ -236,9 +271,56 @@ export default function Campaigns(): JSX.Element {
       <div>
         <h1 className="text-h1 font-bold">الحملات الإعلانية</h1>
         <p className="text-body text-muted-light dark:text-muted-dark mt-1">
-          أنشئ حملات رسائل جماعية لعملائك وتابع نتائجها
+          {tab === 'campaigns'
+            ? 'أنشئ حملات رسائل جماعية لعملائك وتابع نتائجها'
+            : 'قوالب جاهزة لحملاتك المتكررة — استخدمها مع نقرة واحدة'}
         </p>
       </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2">
+        <button
+          onClick={() => setTab('campaigns')}
+          className={cn(
+            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2',
+            tab === 'campaigns' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+          )}
+        >
+          <Megaphone className="h-4 w-4" />
+          الحملات
+        </button>
+        <button
+          onClick={() => setTab('templates')}
+          className={cn(
+            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2',
+            tab === 'templates' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+          )}
+        >
+          <FileText className="h-4 w-4" />
+          القوالب
+        </button>
+      </div>
+
+      {tab === 'templates' ? (
+        <CampaignTemplatesSection
+          onUseTemplate={(t) => {
+            setForm({
+              name: '',
+              message: t.message,
+              audience: t.defaultAudience,
+              schedule: 'now',
+              scheduledAt: '',
+              minDelay: t.defaultMinDelay,
+              maxDelay: t.defaultMaxDelay,
+            });
+            setEditing(null);
+            setErrors({});
+            setModalOpen(true);
+            setTab('campaigns');
+          }}
+        />
+      ) : (
+      <>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="إجمالي الحملات" value={stats.total} icon={<Megaphone className="h-5 w-5" />} />
@@ -265,6 +347,8 @@ export default function Campaigns(): JSX.Element {
           </>
         }
       />
+      </>
+      )}
 
       {/* Create/Edit drawer */}
       <Drawer
@@ -282,13 +366,70 @@ export default function Campaigns(): JSX.Element {
             error={errors.name ?? undefined}
             placeholder="مثال: عروض شهر رمضان"
           />
+
+          {/* Message mode tabs */}
           <div>
+            <div className="inline-flex items-center p-1 rounded-full bg-bg-light dark:bg-bg-dark mb-2">
+              <button
+                type="button"
+                onClick={() => setMessageMode('custom')}
+                className={cn(
+                  'h-8 px-4 rounded-full text-small font-medium transition-colors',
+                  messageMode === 'custom'
+                    ? 'bg-white dark:bg-surface-dark shadow-sm text-current'
+                    : 'text-muted-light dark:text-muted-dark hover:text-current'
+                )}
+              >
+                رسالة مخصصة
+              </button>
+              <button
+                type="button"
+                onClick={() => setMessageMode('template')}
+                className={cn(
+                  'h-8 px-4 rounded-full text-small font-medium transition-colors flex items-center gap-1.5',
+                  messageMode === 'template'
+                    ? 'bg-white dark:bg-surface-dark shadow-sm text-current'
+                    : 'text-muted-light dark:text-muted-dark hover:text-current'
+                )}
+              >
+                <FileText className="h-3.5 w-3.5" />
+                قوالب الرسائل
+              </button>
+            </div>
+
+            {messageMode === 'template' && (
+              <div className="mb-2">
+                <label className="text-small font-medium text-muted-light dark:text-muted-dark block mb-1">اختر قالباً</label>
+                <select
+                  value={selectedTemplateId ?? ''}
+                  onChange={(e) => {
+                    const t = campaignTemplates.find((tpl) => tpl.id === e.target.value);
+                    if (t) applyTemplate(t);
+                  }}
+                  className="w-full h-10 ps-3 pe-9 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
+                >
+                  <option value="">— اختر قالباً —</option>
+                  {campaignTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {campaignTemplateCategoryLabel[t.category]} · {t.name}
+                    </option>
+                  ))}
+                </select>
+                {selectedTemplateId && (
+                  <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1.5 flex items-center gap-1">
+                    <Sparkles className="h-3 w-3 text-primary" />
+                    تم تحميل القالب — يمكنك تعديل النص أدناه قبل الإرسال
+                  </p>
+                )}
+              </div>
+            )}
+
             <Textarea
-              label="نص الرسالة"
+              label={messageMode === 'template' ? 'نص الرسالة (من القالب — قابل للتعديل)' : 'نص الرسالة'}
               value={form.message}
               onChange={(e) => { setForm({ ...form, message: e.target.value }); setErrors({ ...errors, message: undefined }); }}
               error={errors.message ?? undefined}
-              placeholder="اكتب رسالتك هنا... يمكنك استخدام {{اسم_العميل}}"
+              placeholder={messageMode === 'template' ? 'اختر قالباً من الأعلى ليظهر النص هنا' : 'اكتب رسالتك هنا... يمكنك استخدام {{اسم_العميل}}'}
               rows={5}
             />
             <p className="text-[10px] text-muted-light dark:text-muted-dark mt-1 text-end">
@@ -296,14 +437,27 @@ export default function Campaigns(): JSX.Element {
             </p>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Select label="الجمهور المستهدف" value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value as 'all' | ContactType })}>
-              <option value="all">كل العملاء</option>
-              <option value="tenant">مستأجرين فقط</option>
-              <option value="owner">ملاك فقط</option>
-              <option value="seeker">باحثين فقط</option>
-              <option value="company">شركات فقط</option>
-              <option value="vip">VIP فقط</option>
-            </Select>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-small font-medium">الجمهور المستهدف</label>
+                <span className="inline-flex items-center gap-1 text-[11px] text-muted-light dark:text-muted-dark">
+                  <UsersIcon className="h-3 w-3" />
+                  <span className="tabular-nums font-semibold text-primary">{formatNumber(targetCount())}</span>
+                  <span>مستلم</span>
+                </span>
+              </div>
+              <select
+                value={form.audience}
+                onChange={(e) => setForm({ ...form, audience: e.target.value as 'all' | ContactType })}
+                className="w-full h-10 ps-3 pe-9 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
+              >
+                <option value="all">كل العملاء</option>
+                <option value="customer">عملاء فقط</option>
+                <option value="lead">عملاء محتملون</option>
+                <option value="company">شركات فقط</option>
+                <option value="vip">VIP فقط</option>
+              </select>
+            </div>
             <Select label="التوقيت" value={form.schedule} onChange={(e) => setForm({ ...form, schedule: e.target.value as 'now' | 'later' })}>
               <option value="now">إرسال الآن</option>
               <option value="later">جدولة لوقت محدد</option>
@@ -318,13 +472,14 @@ export default function Campaigns(): JSX.Element {
               icon={<Calendar className="h-4 w-4" />}
             />
           )}
-          <div className="bg-primary/10 border border-primary/20 rounded-card p-3 flex items-center gap-3">
-            <UsersIcon className="h-5 w-5 text-primary flex-shrink-0" />
-            <div>
-              <p className="text-small text-muted-light dark:text-muted-dark">عدد المستلمين المتوقع</p>
-              <p className="text-h2 font-bold text-primary">{formatNumber(targetCount())}</p>
-            </div>
-          </div>
+
+          {/* Sending speed (delay between messages) */}
+          <SendingSpeedSection
+            minDelay={form.minDelay}
+            maxDelay={form.maxDelay}
+            recipients={targetCount()}
+            onChange={(min, max) => setForm({ ...form, minDelay: min, maxDelay: max })}
+          />
         </div>
 
         {/* Sticky drawer footer */}
@@ -368,10 +523,767 @@ export default function Campaigns(): JSX.Element {
   );
 }
 
+interface FormState {
+  name: string;
+  description: string;
+  category: CampaignTemplateCategory;
+  type: CampaignTemplateType;
+  message: string;
+  mediaUrl: string;
+  buttons: string[];
+  listTitle: string;
+  listItems: { label: string; description: string }[];
+  pollOptions: string[];
+  aiPrompt: string;
+  defaultAudience: 'all' | ContactType;
+  defaultMinDelay: number;
+  defaultMaxDelay: number;
+}
+
+/**
+ * Campaign templates — reusable presets the user can apply when creating campaigns.
+ * CRUD (create / edit / delete) lives here. Selecting "استخدم" calls back to the
+ * parent to switch to the campaigns tab with the form pre-filled.
+ */
+function CampaignTemplatesSection({
+  onUseTemplate,
+}: {
+  onUseTemplate: (t: CampaignTemplate) => void;
+}): JSX.Element {
+  const templates = useDataStore((s) => s.campaignTemplates);
+  const addTemplate = useDataStore((s) => s.addCampaignTemplate);
+  const updateTemplate = useDataStore((s) => s.updateCampaignTemplate);
+  const deleteTemplate = useDataStore((s) => s.deleteCampaignTemplate);
+  const incrementUsage = useDataStore((s) => s.incrementCampaignTemplateUsage);
+  const showToast = useUIStore((s) => s.showToast);
+  const { confirm } = useConfirm();
+
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'all' | CampaignTemplateType>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | CampaignTemplateCategory>('all');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editing, setEditing] = useState<CampaignTemplate | null>(null);
+  const emptyForm: FormState = {
+    name: '',
+    description: '',
+    category: 'custom',
+    type: 'text-media',
+    message: '',
+    mediaUrl: '',
+    buttons: ['', '', ''],
+    listTitle: '',
+    listItems: [{ label: '', description: '' }],
+    pollOptions: ['', ''],
+    aiPrompt: '',
+    defaultAudience: 'all',
+    defaultMinDelay: 15,
+    defaultMaxDelay: 45,
+  };
+  const [form, setForm] = useState<FormState>(emptyForm);
+
+  const filtered = useMemo(() => {
+    return templates.filter((t) => {
+      if (typeFilter !== 'all' && t.type !== typeFilter) return false;
+      if (categoryFilter !== 'all' && t.category !== categoryFilter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        return t.name.toLowerCase().includes(q) || t.message.toLowerCase().includes(q);
+      }
+      return true;
+    });
+  }, [templates, typeFilter, categoryFilter, search]);
+
+  const openCreate = (): void => {
+    setEditing(null);
+    setForm({ ...emptyForm, type: typeFilter !== 'all' ? typeFilter : 'text-media' });
+    setDrawerOpen(true);
+  };
+
+  const openEdit = (t: CampaignTemplate): void => {
+    setEditing(t);
+    setForm({
+      name: t.name,
+      description: t.description ?? '',
+      category: t.category,
+      type: t.type,
+      message: t.message,
+      mediaUrl: t.mediaUrl ?? '',
+      buttons: t.buttons ? [...t.buttons, '', '', ''].slice(0, 3) : ['', '', ''],
+      listTitle: t.listTitle ?? '',
+      listItems: t.listItems && t.listItems.length > 0 ? t.listItems.map((i) => ({ label: i.label, description: i.description ?? '' })) : [{ label: '', description: '' }],
+      pollOptions: t.pollOptions ? [...t.pollOptions] : ['', ''],
+      aiPrompt: t.aiPrompt ?? '',
+      defaultAudience: t.defaultAudience,
+      defaultMinDelay: t.defaultMinDelay,
+      defaultMaxDelay: t.defaultMaxDelay,
+    });
+    setDrawerOpen(true);
+  };
+
+  const submit = (): void => {
+    if (!form.name.trim()) { showToast('اسم القالب مطلوب', 'error'); return; }
+    if (form.type !== 'ai-prompt' && !form.message.trim()) { showToast('نص الرسالة مطلوب', 'error'); return; }
+    if (form.type === 'ai-prompt' && !form.aiPrompt.trim()) { showToast('AI Prompt مطلوب', 'error'); return; }
+    const payload: Omit<CampaignTemplate, 'id' | 'usageCount' | 'createdAt'> = {
+      name: form.name.trim(),
+      description: form.description.trim() || undefined,
+      category: form.category,
+      type: form.type,
+      message: form.message.trim(),
+      defaultAudience: form.defaultAudience,
+      defaultMinDelay: form.defaultMinDelay,
+      defaultMaxDelay: form.defaultMaxDelay,
+    };
+    if (form.type === 'text-media' && form.mediaUrl.trim()) payload.mediaUrl = form.mediaUrl.trim();
+    if (form.type === 'buttons') payload.buttons = form.buttons.map((b) => b.trim()).filter(Boolean).slice(0, 3);
+    if (form.type === 'list') {
+      payload.listTitle = form.listTitle.trim();
+      payload.listItems = form.listItems
+        .map((i) => ({ label: i.label.trim(), description: i.description.trim() || undefined }))
+        .filter((i) => i.label.length > 0);
+    }
+    if (form.type === 'poll') payload.pollOptions = form.pollOptions.map((o) => o.trim()).filter(Boolean);
+    if (form.type === 'ai-prompt') payload.aiPrompt = form.aiPrompt.trim();
+    if (editing) {
+      updateTemplate(editing.id, payload);
+      showToast('تم تحديث القالب', 'success');
+    } else {
+      addTemplate(payload);
+      showToast('تم إضافة القالب', 'success');
+    }
+    setDrawerOpen(false);
+  };
+
+  const remove = async (t: CampaignTemplate): Promise<void> => {
+    const ok = await confirm({
+      title: `حذف "${t.name}"؟`,
+      message: 'هذا القالب سيُحذف نهائياً ولن يكون متاحاً في الحملات.',
+      variant: 'danger',
+      confirmText: 'حذف',
+    });
+    if (ok) {
+      deleteTemplate(t.id);
+      showToast('تم حذف القالب', 'success');
+    }
+  };
+
+  const use = (t: CampaignTemplate): void => {
+    incrementUsage(t.id);
+    onUseTemplate(t);
+  };
+
+  const duplicate = (t: CampaignTemplate): void => {
+    addTemplate({
+      name: `${t.name} (نسخة)`,
+      description: t.description,
+      category: t.category,
+      type: t.type,
+      message: t.message,
+      mediaUrl: t.mediaUrl,
+      buttons: t.buttons,
+      listTitle: t.listTitle,
+      listItems: t.listItems,
+      pollOptions: t.pollOptions,
+      aiPrompt: t.aiPrompt,
+      defaultAudience: t.defaultAudience,
+      defaultMinDelay: t.defaultMinDelay,
+      defaultMaxDelay: t.defaultMaxDelay,
+    });
+    showToast('تم نسخ القالب', 'success');
+  };
+
+  const categories: { value: 'all' | CampaignTemplateCategory; label: string }[] = [
+    { value: 'all', label: 'كل التصنيفات' },
+    { value: 'welcome', label: campaignTemplateCategoryLabel.welcome },
+    { value: 'promo', label: campaignTemplateCategoryLabel.promo },
+    { value: 'reminder', label: campaignTemplateCategoryLabel.reminder },
+    { value: 'followup', label: campaignTemplateCategoryLabel.followup },
+    { value: 'announcement', label: campaignTemplateCategoryLabel.announcement },
+    { value: 'custom', label: campaignTemplateCategoryLabel.custom },
+  ];
+
+  const types: { value: 'all' | CampaignTemplateType; label: string; icon: JSX.Element }[] = [
+    { value: 'all', label: 'الكل', icon: <FileText className="h-4 w-4" /> },
+    { value: 'text-media', label: campaignTemplateTypeLabel['text-media'], icon: <FileText className="h-4 w-4" /> },
+    { value: 'buttons', label: campaignTemplateTypeLabel['buttons'], icon: <Tag className="h-4 w-4" /> },
+    { value: 'list', label: campaignTemplateTypeLabel['list'], icon: <MoreHorizontal className="h-4 w-4 rotate-90" /> },
+    { value: 'poll', label: campaignTemplateTypeLabel['poll'], icon: <Eye className="h-4 w-4" /> },
+    { value: 'ai-prompt', label: campaignTemplateTypeLabel['ai-prompt'], icon: <Sparkles className="h-4 w-4" /> },
+  ];
+
+  const typeCount = (k: 'all' | CampaignTemplateType): number =>
+    k === 'all' ? templates.length : templates.filter((t) => t.type === k).length;
+
+  return (
+    <>
+      {/* Type tabs — primary filter (like the screenshot the user shared) */}
+      <div className="flex items-center gap-1 flex-wrap p-1.5 bg-bg-light dark:bg-bg-dark rounded-card">
+        {types.map((t) => (
+          <button
+            key={t.value}
+            onClick={() => setTypeFilter(t.value)}
+            className={cn(
+              'h-9 px-3 rounded-lg text-small font-medium transition-colors flex items-center gap-2',
+              typeFilter === t.value
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-muted-light dark:text-muted-dark hover:text-current hover:bg-white dark:hover:bg-surface-dark',
+            )}
+            style={typeFilter === t.value ? { color: '#fff' } : undefined}
+          >
+            {t.icon}
+            {t.label}
+            <span className={cn(
+              'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+              typeFilter === t.value ? 'bg-white/20' : 'bg-border-light dark:bg-border-dark',
+            )}>
+              {typeCount(t.value)}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Search + categories + create */}
+      <Card className="p-3 flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[200px]">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ابحث في القوالب..."
+            className="w-full h-9 px-3 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary"
+          />
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {categories.map((c) => (
+            <button
+              key={c.value}
+              onClick={() => setCategoryFilter(c.value)}
+              className={cn(
+                'h-8 px-3 rounded-full text-[12px] font-medium transition-colors',
+                categoryFilter === c.value
+                  ? 'bg-primary text-white'
+                  : 'bg-bg-light dark:bg-bg-dark text-current hover:bg-border-light dark:hover:bg-border-dark'
+              )}
+              style={categoryFilter === c.value ? { color: '#fff' } : undefined}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+        <button onClick={openCreate} className="ms-auto h-9 px-4 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2" style={{ color: '#fff' }}>
+          <Plus className="h-4 w-4" /> قالب جديد
+        </button>
+      </Card>
+
+      {/* Cards grid */}
+      {filtered.length === 0 ? (
+        <Card className="p-12 text-center">
+          <div className="h-12 w-12 mx-auto rounded-full bg-primary/10 text-primary flex items-center justify-center mb-2">
+            <FileText className="h-5 w-5" />
+          </div>
+          <p className="text-body font-semibold">لا توجد قوالب</p>
+          <p className="text-small text-muted-light dark:text-muted-dark mt-1">
+            {search || categoryFilter !== 'all' || typeFilter !== 'all' ? 'لا نتائج مطابقة' : 'أنشئ أول قالب لتعيد استخدامه في حملاتك'}
+          </p>
+          {!search && categoryFilter === 'all' && typeFilter === 'all' && (
+            <button onClick={openCreate} className="mt-3 h-9 px-4 rounded-full bg-primary text-white text-small font-medium inline-flex items-center gap-2" style={{ color: '#fff' }}>
+              <Plus className="h-4 w-4" /> قالب جديد
+            </button>
+          )}
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {filtered.map((t) => (
+            <div key={t.id} className="rounded-card border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark p-4 flex flex-col gap-3 hover:border-primary/30 transition-colors">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                    <Badge className={cn(campaignTemplateCategoryColor[t.category], 'text-[10px]')}>
+                      {campaignTemplateCategoryLabel[t.category]}
+                    </Badge>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark">
+                      {t.type === 'buttons' ? <Tag className="h-2.5 w-2.5" />
+                        : t.type === 'list' ? <MoreHorizontal className="h-2.5 w-2.5 rotate-90" />
+                        : t.type === 'poll' ? <Eye className="h-2.5 w-2.5" />
+                        : t.type === 'ai-prompt' ? <Sparkles className="h-2.5 w-2.5" />
+                        : <FileText className="h-2.5 w-2.5" />}
+                      {campaignTemplateTypeLabel[t.type]}
+                    </span>
+                    <span className="text-[10px] text-muted-light dark:text-muted-dark ms-auto">
+                      استُخدم {t.usageCount}×
+                    </span>
+                  </div>
+                  <p className="font-semibold truncate">{t.name}</p>
+                  {t.description && (
+                    <p className="text-[11px] text-muted-light dark:text-muted-dark line-clamp-1 mt-0.5">{t.description}</p>
+                  )}
+                </div>
+              </div>
+              <div className="rounded-lg bg-bg-light dark:bg-bg-dark p-2.5 text-small leading-relaxed min-h-[68px] flex flex-col gap-2">
+                {t.type === 'ai-prompt' ? (
+                  <p className="text-muted-light dark:text-muted-dark line-clamp-3 italic">
+                    🤖 <span className="not-italic font-medium">AI Prompt:</span> {t.aiPrompt}
+                  </p>
+                ) : (
+                  <p className="text-muted-light dark:text-muted-dark line-clamp-3 whitespace-pre-line">{t.message}</p>
+                )}
+                {t.type === 'buttons' && t.buttons && t.buttons.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {t.buttons.map((b, i) => (
+                      <span key={i} className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {t.type === 'list' && t.listItems && t.listItems.length > 0 && (
+                  <ul className="text-[11px] space-y-0.5 text-current">
+                    {t.listItems.slice(0, 3).map((i, idx) => (
+                      <li key={idx} className="flex items-start gap-1">
+                        <span className="text-muted-light dark:text-muted-dark">•</span>
+                        <span>{i.label}</span>
+                      </li>
+                    ))}
+                    {t.listItems.length > 3 && (
+                      <li className="text-[10px] text-muted-light dark:text-muted-dark">+{t.listItems.length - 3} عنصر آخر</li>
+                    )}
+                  </ul>
+                )}
+                {t.type === 'poll' && t.pollOptions && t.pollOptions.length > 0 && (
+                  <div className="space-y-0.5">
+                    {t.pollOptions.slice(0, 3).map((opt, i) => (
+                      <div key={i} className="text-[11px] flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full border border-muted-light dark:border-muted-dark flex-shrink-0" />
+                        <span>{opt}</span>
+                      </div>
+                    ))}
+                    {t.pollOptions.length > 3 && (
+                      <p className="text-[10px] text-muted-light dark:text-muted-dark">+{t.pollOptions.length - 3} خيار آخر</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-border-light dark:border-border-dark">
+                <button
+                  onClick={() => use(t)}
+                  className="h-8 px-3 rounded-full bg-primary text-white text-[12px] font-medium flex items-center gap-1.5 hover:bg-primary-dark transition-colors"
+                  style={{ color: '#fff' }}
+                >
+                  <Send className="h-3 w-3" /> استخدم في حملة
+                </button>
+                <div className="flex items-center gap-0.5">
+                  <button onClick={() => duplicate(t)} className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-current flex items-center justify-center" title="نسخ">
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => openEdit(t)} className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title="تعديل">
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => remove(t)} className="h-8 w-8 rounded-lg hover:bg-danger/10 text-muted-light dark:text-muted-dark hover:text-danger flex items-center justify-center" title="حذف">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Create/Edit drawer */}
+      <Drawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={editing ? `تعديل: ${editing.name}` : 'قالب جديد'}
+        side="end"
+        width="w-[480px]"
+      >
+        <div className="space-y-4 pb-20">
+          <Input
+            label="اسم القالب"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder="مثال: ترحيب بعملاء جدد"
+          />
+          <Input
+            label="وصف مختصر (اختياري)"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            placeholder="متى يُستخدم هذا القالب؟"
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <Select label="التصنيف" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as CampaignTemplateCategory })}>
+              {(Object.keys(campaignTemplateCategoryLabel) as CampaignTemplateCategory[]).map((c) => (
+                <option key={c} value={c}>{campaignTemplateCategoryLabel[c]}</option>
+              ))}
+            </Select>
+            <Select label="نوع القالب" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as CampaignTemplateType })}>
+              {(Object.keys(campaignTemplateTypeLabel) as CampaignTemplateType[]).map((tt) => (
+                <option key={tt} value={tt}>{campaignTemplateTypeLabel[tt]}</option>
+              ))}
+            </Select>
+          </div>
+          <p className="text-[11px] text-muted-light dark:text-muted-dark -mt-2 flex items-center gap-1">
+            <Sparkles className="h-3 w-3 text-primary" />
+            {campaignTemplateTypeDescription[form.type]}
+          </p>
+
+          {/* Message + type-specific fields */}
+          {form.type === 'ai-prompt' ? (
+            <div>
+              <Textarea
+                label="AI Prompt — تعليمات للذكاء الاصطناعي"
+                value={form.aiPrompt}
+                onChange={(e) => setForm({ ...form, aiPrompt: e.target.value })}
+                placeholder="اكتب رسالة ترحيب لـ {{اسم_العميل}} باللهجة الخليجية..."
+                rows={5}
+              />
+              <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1">
+                💡 AI سيولّد رسالة فريدة لكل عميل بناءً على هذه التعليمات.
+              </p>
+            </div>
+          ) : (
+            <>
+              <Textarea
+                label={form.type === 'poll' ? 'سؤال الاستطلاع' : 'نص الرسالة'}
+                value={form.message}
+                onChange={(e) => setForm({ ...form, message: e.target.value })}
+                placeholder={form.type === 'poll' ? 'كيف كانت تجربتك معنا؟' : 'مرحباً {{اسم_العميل}}...'}
+                rows={form.type === 'poll' ? 2 : 5}
+              />
+              <p className="text-[11px] text-muted-light dark:text-muted-dark -mt-3">
+                استخدم متغيرات مثل <code className="bg-bg-light dark:bg-bg-dark px-1 rounded">{'{{اسم_العميل}}'}</code> ليتم استبدالها تلقائياً.
+              </p>
+            </>
+          )}
+
+          {/* Type-specific extras */}
+          {form.type === 'text-media' && (
+            <Input
+              label="رابط الميديا (اختياري)"
+              value={form.mediaUrl}
+              onChange={(e) => setForm({ ...form, mediaUrl: e.target.value })}
+              placeholder="https://example.com/image.jpg"
+            />
+          )}
+
+          {form.type === 'buttons' && (
+            <div>
+              <label className="text-small font-medium block mb-1.5">أزرار الرد السريع (حتى 3)</label>
+              <div className="space-y-2">
+                {form.buttons.map((b, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="h-7 w-7 rounded-full bg-primary/10 text-primary text-[11px] font-bold flex items-center justify-center flex-shrink-0">
+                      {i + 1}
+                    </span>
+                    <input
+                      value={b}
+                      onChange={(e) => {
+                        const next = [...form.buttons];
+                        next[i] = e.target.value;
+                        setForm({ ...form, buttons: next });
+                      }}
+                      placeholder={i === 0 ? 'مثال: نعم' : i === 1 ? 'مثال: لا' : 'مثال: لاحقاً'}
+                      maxLength={20}
+                      className="flex-1 h-9 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-light dark:text-muted-dark mt-1.5">حد أقصى 20 حرفاً لكل زر — اترك الزر فارغاً لتجاوزه</p>
+            </div>
+          )}
+
+          {form.type === 'list' && (
+            <>
+              <Input
+                label="عنوان القائمة"
+                value={form.listTitle}
+                onChange={(e) => setForm({ ...form, listTitle: e.target.value })}
+                placeholder="مثال: اختر خدمة"
+              />
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-small font-medium">عناصر القائمة</label>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, listItems: [...form.listItems, { label: '', description: '' }] })}
+                    className="text-[11px] font-medium text-primary hover:underline flex items-center gap-1"
+                  >
+                    <Plus className="h-3 w-3" /> إضافة عنصر
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {form.listItems.map((item, i) => (
+                    <div key={i} className="p-2 rounded-card bg-bg-light dark:bg-bg-dark space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <input
+                          value={item.label}
+                          onChange={(e) => {
+                            const next = [...form.listItems];
+                            next[i] = { ...next[i], label: e.target.value };
+                            setForm({ ...form, listItems: next });
+                          }}
+                          placeholder={`العنصر ${i + 1}`}
+                          className="flex-1 h-8 px-2 rounded bg-white dark:bg-surface-dark border border-transparent text-small focus:outline-none focus:border-primary"
+                        />
+                        {form.listItems.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setForm({ ...form, listItems: form.listItems.filter((_, idx) => idx !== i) })}
+                            className="h-8 w-8 rounded-lg hover:bg-danger/10 text-muted-light dark:text-muted-dark hover:text-danger flex items-center justify-center"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        value={item.description}
+                        onChange={(e) => {
+                          const next = [...form.listItems];
+                          next[i] = { ...next[i], description: e.target.value };
+                          setForm({ ...form, listItems: next });
+                        }}
+                        placeholder="وصف اختياري"
+                        className="w-full h-7 px-2 rounded bg-white dark:bg-surface-dark border border-transparent text-[11px] focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {form.type === 'poll' && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-small font-medium">خيارات الاستطلاع</label>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, pollOptions: [...form.pollOptions, ''] })}
+                  className="text-[11px] font-medium text-primary hover:underline flex items-center gap-1"
+                  disabled={form.pollOptions.length >= 12}
+                >
+                  <Plus className="h-3 w-3" /> إضافة خيار
+                </button>
+              </div>
+              <div className="space-y-2">
+                {form.pollOptions.map((opt, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full border-2 border-muted-light dark:border-muted-dark flex-shrink-0" />
+                    <input
+                      value={opt}
+                      onChange={(e) => {
+                        const next = [...form.pollOptions];
+                        next[i] = e.target.value;
+                        setForm({ ...form, pollOptions: next });
+                      }}
+                      placeholder={`الخيار ${i + 1}`}
+                      className="flex-1 h-9 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
+                    />
+                    {form.pollOptions.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, pollOptions: form.pollOptions.filter((_, idx) => idx !== i) })}
+                        className="h-8 w-8 rounded-lg hover:bg-danger/10 text-muted-light dark:text-muted-dark hover:text-danger flex items-center justify-center"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-light dark:text-muted-dark mt-1.5">حد أدنى خياران، حد أقصى 12 خياراً</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-3 pt-3 border-t border-border-light dark:border-border-dark">
+            <p className="text-small font-semibold">القيم الافتراضية للحملة</p>
+            <Select label="الجمهور المستهدف" value={form.defaultAudience} onChange={(e) => setForm({ ...form, defaultAudience: e.target.value as 'all' | ContactType })}>
+              <option value="all">كل العملاء</option>
+              <option value="customer">عملاء فقط</option>
+              <option value="lead">عملاء محتملون</option>
+              <option value="company">شركات فقط</option>
+              <option value="vip">VIP فقط</option>
+            </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] text-muted-light dark:text-muted-dark block mb-1">أقل ثانية</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={form.defaultMaxDelay}
+                  value={form.defaultMinDelay}
+                  onChange={(e) => setForm({ ...form, defaultMinDelay: Math.max(1, Math.min(Number(e.target.value) || 1, form.defaultMaxDelay)) })}
+                  className="w-full h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary tabular-nums"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-light dark:text-muted-dark block mb-1">أكثر ثانية</label>
+                <input
+                  type="number"
+                  min={form.defaultMinDelay}
+                  max={300}
+                  value={form.defaultMaxDelay}
+                  onChange={(e) => setForm({ ...form, defaultMaxDelay: Math.max(form.defaultMinDelay, Math.min(Number(e.target.value) || form.defaultMinDelay, 300)) })}
+                  className="w-full h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary tabular-nums"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="absolute bottom-0 inset-x-0 px-5 py-3 bg-white dark:bg-surface-dark border-t border-border-light dark:border-border-dark flex items-center justify-end gap-2">
+          <button onClick={() => setDrawerOpen(false)} className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">
+            إلغاء
+          </button>
+          <button onClick={submit} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium" style={{ color: '#fff' }}>
+            {editing ? 'حفظ التغييرات' : 'إضافة القالب'}
+          </button>
+        </div>
+      </Drawer>
+    </>
+  );
+}
+
 function MenuItem({ icon, label, onClick, danger }: { icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean }): JSX.Element {
   return (
     <button onClick={onClick} className={cn('w-full flex items-center gap-2.5 px-3 py-2 text-body hover:bg-bg-light dark:hover:bg-bg-dark text-start', danger ? 'text-danger' : '')}>
       <span className={danger ? 'text-danger' : 'text-muted-light dark:text-muted-dark'}>{icon}</span>
+      {label}
+    </button>
+  );
+}
+
+/**
+ * Sending speed picker — controls random delay between messages
+ * with a live risk indicator (very short delays risk WhatsApp suspension).
+ */
+function SendingSpeedSection({
+  minDelay,
+  maxDelay,
+  recipients,
+  onChange,
+}: {
+  minDelay: number;
+  maxDelay: number;
+  recipients: number;
+  onChange: (min: number, max: number) => void;
+}): JSX.Element {
+  const MAX = 180;
+  const avg = (minDelay + maxDelay) / 2;
+  const risk =
+    avg < 5 ? { level: 'high', label: 'خطر مرتفع', color: 'text-danger', bg: 'bg-danger/10', border: 'border-danger/30', track: 'bg-danger', msg: 'فترة قصيرة جداً — قد يُعتبر إرسالاً جماعياً ويُحظر حسابك خلال دقائق.' } :
+    avg < 15 ? { level: 'medium', label: 'خطر متوسط', color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/30', track: 'bg-warning', msg: 'فترة سريعة — يُنصح بالـ 15 ثانية على الأقل لمحاكاة الإرسال الطبيعي.' } :
+    avg < 30 ? { level: 'low', label: 'مقبول', color: 'text-info', bg: 'bg-info/10', border: 'border-info/30', track: 'bg-info', msg: 'سرعة جيدة — توازن بين السرعة والأمان.' } :
+    { level: 'safe', label: 'آمن', color: 'text-success', bg: 'bg-success/10', border: 'border-success/30', track: 'bg-success', msg: 'أبطأ ولكن الأكثر أماناً — موصى به للحملات الكبيرة.' };
+
+  // Total estimated duration: recipients × avg delay
+  const totalSec = recipients * avg;
+  const totalLabel = (() => {
+    if (totalSec <= 0) return '—';
+    if (totalSec < 60) return `${Math.round(totalSec)} ثانية`;
+    if (totalSec < 3600) return `${Math.round(totalSec / 60)} دقيقة`;
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.round((totalSec % 3600) / 60);
+    return `${h} ساعة${m > 0 ? ` و${m} دقيقة` : ''}`;
+  })();
+
+  const minPct = (minDelay / MAX) * 100;
+  const maxPct = (maxDelay / MAX) * 100;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <label className="text-small font-medium">سرعة الإرسال (الفترة بين كل رسالة)</label>
+        <span className={cn('text-[11px] font-semibold px-2 py-0.5 rounded-full', risk.bg, risk.color)}>
+          {risk.label}
+        </span>
+      </div>
+
+      {/* Dual-range slider visualization */}
+      <div className="rounded-card border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark p-3 space-y-3">
+        {/* Min slider */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] text-muted-light dark:text-muted-dark">أقل ثوانٍ</span>
+            <span className="text-small font-bold tabular-nums">{minDelay} <span className="text-[10px] font-normal text-muted-light dark:text-muted-dark">ث</span></span>
+          </div>
+          <input
+            type="range"
+            min={1}
+            max={MAX}
+            value={minDelay}
+            onChange={(e) => {
+              const v = Math.min(Number(e.target.value), maxDelay);
+              onChange(v, maxDelay);
+            }}
+            className={cn('w-full h-1.5 appearance-none cursor-pointer rounded-full accent-primary', risk.track.replace('bg-', 'accent-'))}
+            style={{
+              background: `linear-gradient(to left, var(--tw-color, currentColor) 0%, var(--tw-color, currentColor) ${minPct}%, rgba(0,0,0,0.08) ${minPct}%, rgba(0,0,0,0.08) 100%)`,
+            }}
+          />
+        </div>
+        {/* Max slider */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] text-muted-light dark:text-muted-dark">أكثر ثوانٍ</span>
+            <span className="text-small font-bold tabular-nums">{maxDelay} <span className="text-[10px] font-normal text-muted-light dark:text-muted-dark">ث</span></span>
+          </div>
+          <input
+            type="range"
+            min={1}
+            max={MAX}
+            value={maxDelay}
+            onChange={(e) => {
+              const v = Math.max(Number(e.target.value), minDelay);
+              onChange(minDelay, v);
+            }}
+            className="w-full h-1.5 appearance-none cursor-pointer rounded-full accent-primary"
+            style={{
+              background: `linear-gradient(to left, var(--tw-color, currentColor) 0%, var(--tw-color, currentColor) ${maxPct}%, rgba(0,0,0,0.08) ${maxPct}%, rgba(0,0,0,0.08) 100%)`,
+            }}
+          />
+        </div>
+
+        {/* Range visualization */}
+        <div className="pt-1.5 border-t border-border-light dark:border-border-dark flex items-center justify-between text-[11px]">
+          <span className="text-muted-light dark:text-muted-dark">متوسط: <strong className="text-current tabular-nums">{Math.round(avg)} ث</strong></span>
+          <span className="text-muted-light dark:text-muted-dark">المدة المتوقعة: <strong className="text-current tabular-nums">{totalLabel}</strong></span>
+        </div>
+      </div>
+
+      {/* Preset chips */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <PresetChip label="سريع (5-15ث)" active={minDelay === 5 && maxDelay === 15} onClick={() => onChange(5, 15)} />
+        <PresetChip label="معتدل (15-45ث)" active={minDelay === 15 && maxDelay === 45} onClick={() => onChange(15, 45)} recommended />
+        <PresetChip label="حذر (30-90ث)" active={minDelay === 30 && maxDelay === 90} onClick={() => onChange(30, 90)} />
+        <PresetChip label="آمن جداً (60-180ث)" active={minDelay === 60 && maxDelay === 180} onClick={() => onChange(60, 180)} />
+      </div>
+
+      {/* Risk message */}
+      <div className={cn('flex items-start gap-2 p-2.5 rounded-card border text-small', risk.bg, risk.border, risk.color)}>
+        <span className="text-base leading-none mt-0.5">
+          {risk.level === 'high' ? '⚠️' : risk.level === 'medium' ? '⏱' : risk.level === 'low' ? 'ℹ️' : '✅'}
+        </span>
+        <span>{risk.msg}</span>
+      </div>
+    </div>
+  );
+}
+
+function PresetChip({ label, active, recommended, onClick }: { label: string; active: boolean; recommended?: boolean; onClick: () => void }): JSX.Element {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'h-7 px-2.5 rounded-full text-[11px] font-medium transition-colors border',
+        active
+          ? 'bg-primary text-white border-primary'
+          : recommended
+            ? 'bg-success/5 text-success border-success/30 hover:bg-success/10'
+            : 'bg-white dark:bg-surface-dark text-current border-border-light dark:border-border-dark hover:bg-bg-light dark:hover:bg-bg-dark',
+      )}
+      style={active ? { color: '#fff' } : undefined}
+    >
       {label}
     </button>
   );
