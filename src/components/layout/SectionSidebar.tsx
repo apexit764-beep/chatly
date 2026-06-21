@@ -27,10 +27,23 @@ import { useUIStore } from '@/store/useUIStore';
 import { ChannelIcon } from '@components/ui';
 import { cn } from '@/utils/cn';
 
+const settingsItems: { key: string; label: string; icon: ReactNode }[] = [
+  { key: 'general', label: 'عام', icon: <Building className="h-4 w-4" /> },
+  { key: 'profile', label: 'الحساب', icon: <User className="h-4 w-4" /> },
+  { key: 'billing', label: 'الفوترة والاشتراك', icon: <CreditCard className="h-4 w-4" /> },
+  { key: 'notifications', label: 'الإشعارات', icon: <Bell className="h-4 w-4" /> },
+  { key: 'appearance', label: 'المظهر', icon: <Palette className="h-4 w-4" /> },
+  { key: 'security', label: 'الأمان', icon: <Shield className="h-4 w-4" /> },
+  { key: 'language', label: 'اللغة والمنطقة', icon: <Languages className="h-4 w-4" /> },
+  { key: 'data', label: 'البيانات', icon: <Database className="h-4 w-4" /> },
+];
+
 export function SectionSidebar(): JSX.Element | null {
   const location = useLocation();
   const collapsed = useUIStore((s) => s.sectionSidebarCollapsed);
   const toggleCollapsed = useUIStore((s) => s.toggleSectionSidebar);
+  const tab = useInboxStore((s) => s.settingsTab);
+  const setTab = useInboxStore((s) => s.setSettingsTab);
 
   const hasSidebar = location.pathname.startsWith('/settings');
 
@@ -38,14 +51,39 @@ export function SectionSidebar(): JSX.Element | null {
 
   if (collapsed) {
     return (
-      <aside className="w-[24px] flex-shrink-0 h-screen sticky top-0 bg-sidebar-light dark:bg-sidebar-dark border-l border-border-light dark:border-border-dark flex flex-col items-center pt-3 z-20">
+      <aside className="w-[52px] flex-shrink-0 h-screen sticky top-0 bg-sidebar-light dark:bg-sidebar-dark border-l border-border-light dark:border-border-dark flex flex-col items-center py-3 z-20">
         <button
           onClick={toggleCollapsed}
-          title="توسعة القائمة الفرعية"
-          className="h-9 w-6 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
+          title="توسعة القائمة"
+          aria-label="توسعة القائمة"
+          className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors mb-2"
         >
           <PanelRightOpen className="h-4 w-4" />
         </button>
+        <nav className="flex flex-col gap-1 flex-1">
+          {settingsItems.map((it) => {
+            const active = tab === it.key;
+            return (
+              <button
+                key={it.key}
+                onClick={() => setTab(it.key)}
+                title={it.label}
+                aria-label={it.label}
+                className={cn(
+                  'relative group h-9 w-9 rounded-lg flex items-center justify-center transition-colors',
+                  active
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current'
+                )}
+              >
+                {it.icon}
+                <span className="absolute start-full ms-2 px-2 py-1 bg-[#111827] text-white text-[11px] rounded-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">
+                  {it.label}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
       </aside>
     );
   }
@@ -262,22 +300,11 @@ function SettingsSectionSidebar(): JSX.Element {
   const tab = useInboxStore((s) => s.settingsTab);
   const setTab = useInboxStore((s) => s.setSettingsTab);
 
-  const items: { key: string; label: string; icon: ReactNode }[] = [
-    { key: 'general', label: 'عام', icon: <Building className="h-4 w-4" /> },
-    { key: 'profile', label: 'الحساب', icon: <User className="h-4 w-4" /> },
-    { key: 'billing', label: 'الفوترة والاشتراك', icon: <CreditCard className="h-4 w-4" /> },
-    { key: 'notifications', label: 'الإشعارات', icon: <Bell className="h-4 w-4" /> },
-    { key: 'appearance', label: 'المظهر', icon: <Palette className="h-4 w-4" /> },
-    { key: 'security', label: 'الأمان', icon: <Shield className="h-4 w-4" /> },
-    { key: 'language', label: 'اللغة والمنطقة', icon: <Languages className="h-4 w-4" /> },
-    { key: 'data', label: 'البيانات', icon: <Database className="h-4 w-4" /> },
-  ];
-
   return (
     <aside className="w-[240px] flex-shrink-0 h-screen sticky top-0 bg-sidebar-light dark:bg-sidebar-dark border-l border-border-light dark:border-border-dark flex flex-col z-20">
       <SectionHeader>الإعدادات</SectionHeader>
       <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
-        {items.map((it) => (
+        {settingsItems.map((it) => (
           <SectionItem
             key={it.key}
             icon={it.icon}

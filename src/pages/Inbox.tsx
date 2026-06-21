@@ -13,10 +13,9 @@ import {
   MoreHorizontal,
   X,
   Download,
-  Share2,
   MessageSquarePlus,
   Edit2,
-  PauseCircle,
+  UserCog,
   LayoutGrid,
   ChevronDown,
   ChevronUp,
@@ -199,13 +198,6 @@ export default function Inbox(): JSX.Element {
       }))
     );
     showToast(`تم تحميل ${selected.messages.length} رسالة`, 'success');
-    setMenuOpen(false);
-  };
-
-  const handlePauseConv = (): void => {
-    if (!selected) return;
-    setStatus(selected.id, 'pending');
-    showToast('تم تعليق المحادثة', 'info');
     setMenuOpen(false);
   };
 
@@ -435,12 +427,11 @@ export default function Inbox(): JSX.Element {
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                     <div className="absolute end-0 mt-1 w-56 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1.5 z-20">
-                      <MenuItem icon={<Download className="h-4 w-4" />} label="تحميل المحادثة (CSV)" onClick={handleDownloadConv} />
-                      <MenuItem icon={<Share2 className="h-4 w-4" />} label="تحويل لموظف آخر" onClick={() => { setTransferOpen(true); setMenuOpen(false); }} />
-                      <MenuItem icon={<MessageSquarePlus className="h-4 w-4" />} label="محادثة جديدة" onClick={() => { setNewConvOpen(true); setMenuOpen(false); }} />
+                      <MenuItem icon={<UserCog className="h-4 w-4" />} label="تحويل لموظف آخر" onClick={() => { setTransferOpen(true); setMenuOpen(false); }} />
                       <MenuItem icon={<Bookmark className={cn('h-4 w-4', isBookmarked && 'fill-current text-warning')} />} label={isBookmarked ? 'إلغاء العلامة' : 'تعليم بنجمة'} onClick={() => { toggleBookmark(selected.id); showToast(isBookmarked ? 'تم إلغاء العلامة' : 'تم التعليم', 'success'); setMenuOpen(false); }} />
-                      <MenuItem icon={<PauseCircle className="h-4 w-4" />} label="تعليق (قيد المعالجة)" onClick={handlePauseConv} />
+                      <MenuItem icon={<MessageSquarePlus className="h-4 w-4" />} label="محادثة جديدة" onClick={() => { setNewConvOpen(true); setMenuOpen(false); }} />
                       <div className="h-px bg-border-light dark:bg-border-dark my-1" />
+                      <MenuItem icon={<Download className="h-4 w-4" />} label="تحميل المحادثة (CSV)" onClick={handleDownloadConv} />
                       <MenuItem icon={<LayoutGrid className="h-4 w-4" />} label="فتح في نافذة منفصلة" onClick={() => { window.open(`/inbox?conv=${selected.id}`, '_blank'); setMenuOpen(false); }} />
                     </div>
                   </>
@@ -850,23 +841,14 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
     : agents;
 
   return (
-    <Modal
+    <Drawer
       open={open}
       onClose={onClose}
       title="بدء محادثة جديدة"
-      size="lg"
-      footer={
-        <>
-          <button onClick={onClose} className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">
-            إلغاء
-          </button>
-          <button onClick={submit} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2">
-            <Send className="h-4 w-4" /> إرسال
-          </button>
-        </>
-      }
+      side="end"
+      width="w-[480px]"
     >
-      <div className="space-y-5">
+      <div className="space-y-5 pb-20">
         {/* 1. Channel */}
         <FormSection number={1} title="القناة المرسلة" hint="اختر الحساب الذي سترسل منه">
           {connectedChannels.length === 0 ? (
@@ -1053,7 +1035,15 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
           )}
         </FormSection>
       </div>
-    </Modal>
+      <div className="absolute bottom-0 inset-x-0 px-5 py-3 bg-white dark:bg-surface-dark border-t border-border-light dark:border-border-dark flex items-center justify-end gap-2">
+        <button onClick={onClose} className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">
+          إلغاء
+        </button>
+        <button onClick={submit} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2" style={{ color: '#fff' }}>
+          <Send className="h-4 w-4" /> إرسال
+        </button>
+      </div>
+    </Drawer>
   );
 }
 

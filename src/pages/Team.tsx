@@ -18,6 +18,9 @@ import {
   RefreshCw,
   Pause,
   Users,
+  LayoutGrid,
+  List,
+  MessageSquare,
 } from 'lucide-react';
 import {
   Avatar,
@@ -86,9 +89,18 @@ export default function Team(): JSX.Element {
   const [filterDept, setFilterDept] = useState<string>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  // View mode (cards default)
+  const [view, setView] = useState<'cards' | 'table'>(
+    () => (typeof window !== 'undefined' && (localStorage.getItem('chatly_team_view') as 'cards' | 'table' | null)) ?? 'cards',
+  );
+  const setViewPersisted = (v: 'cards' | 'table'): void => {
+    setView(v);
+    try { localStorage.setItem('chatly_team_view', v); } catch { /* ignore */ }
+  };
+
   // Pagination
   const [page, setPage] = useState(0);
-  const pageSize = 10;
+  const pageSize = view === 'cards' ? 12 : 10;
 
   const counts = {
     total: agents.length,
@@ -258,14 +270,7 @@ export default function Team(): JSX.Element {
         <div>
           <h1 className="text-h1 font-bold">الموظفون</h1>
           <p className="text-body text-muted-light dark:text-muted-dark mt-1">
-            <strong className="text-current">{counts.total}</strong> {counts.total === 1 ? 'موظف' : 'موظفين'} ·{' '}
-            <strong className="text-success">{counts.active}</strong> متاحون الآن
-            {counts.pending > 0 && (
-              <>
-                {' · '}
-                <strong className="text-warning">{counts.pending}</strong> بانتظار قبول الدعوة
-              </>
-            )}
+            أدر فريقك، أدِر صلاحياتهم وادعُ موظفين جدد
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -367,6 +372,32 @@ export default function Team(): JSX.Element {
                 </button>
               )}
             </div>
+            <div className="ms-auto flex items-center bg-bg-light dark:bg-bg-dark rounded-full p-0.5">
+              <button
+                onClick={() => setViewPersisted('cards')}
+                title="عرض البطاقات"
+                aria-label="عرض البطاقات"
+                aria-pressed={view === 'cards'}
+                className={cn(
+                  'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
+                  view === 'cards' ? 'bg-white dark:bg-surface-dark shadow-sm text-primary' : 'text-muted-light dark:text-muted-dark hover:text-current',
+                )}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewPersisted('table')}
+                title="عرض الجدول"
+                aria-label="عرض الجدول"
+                aria-pressed={view === 'table'}
+                className={cn(
+                  'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
+                  view === 'table' ? 'bg-white dark:bg-surface-dark shadow-sm text-primary' : 'text-muted-light dark:text-muted-dark hover:text-current',
+                )}
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           {/* Bulk action bar */}
@@ -407,6 +438,148 @@ export default function Team(): JSX.Element {
                   مسح كل البحث والفلاتر
                 </button>
               )}
+            </div>
+          ) : view === 'cards' ? (
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              {pageRows.map((a) => {
+                const role = roles.find((r) => r.id === a.roleId);
+                const active = conversations.filter((c) => c.assignedTo === a.id && c.status !== 'closed').length;
+                const agentChannels = channels.filter((c) => a.channels.includes(c.id));
+                const agentDepts = departments.filter((d) => a.departments.includes(d.id));
+                const isPending = a.invitationStatus === 'pending';
+                const isSuspended = a.invitationStatus === 'suspended';
+                const isSelected = selected.has(a.id);
+                const uniqueChannelTypes = Array.from(new Set(agentChannels.map((c) => c.type)));
+                return (
+                  <div
+                    key={a.id}
+                    className={cn(
+                      'rounded-card border bg-white dark:bg-surface-dark p-4 transition-colors flex flex-col gap-3',
+                      isSelected ? 'border-primary/40 bg-primary/5' : 'border-border-light dark:border-border-dark hover:border-primary/30',
+                      isPending && 'opacity-80',
+                    )}
+                  >
+                    {/* Top: avatar + name + select + actions */}
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(a.id)}
+                        className="h-4 w-4 mt-1"
+                        aria-label="تحديد"
+                      />
+                      <button
+                        onClick={() => setDrawer(a)}
+                        className="flex-1 min-w-0 flex items-center gap-3 text-start hover:text-primary"
+                      >
+                        <div className="relative flex-shrink-0">
+                          <Avatar name={a.name} size="md" status={isPending ? 'offline' : a.status} />
+                          {isPending && (
+                            <span className="absolute -bottom-0.5 -end-0.5 h-4 w-4 rounded-full bg-warning ring-2 ring-white dark:ring-surface-dark flex items-center justify-center">
+                              <Clock className="h-2.5 w-2.5 text-white" />
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold truncate">{a.name}</p>
+                          <p className="text-small text-muted-light dark:text-muted-dark truncate">{a.email}</p>
+                        </div>
+                      </button>
+                      <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                        {isPending ? (
+                          <>
+                            <button onClick={() => { resendInvitation(a.id); showToast('تم إعادة إرسال الدعوة', 'success'); }} className="h-8 w-8 rounded-lg hover:bg-primary/10 text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title="إعادة إرسال الدعوة">
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => { cancelInvitation(a.id); showToast('تم إلغاء الدعوة', 'success'); }} className="h-8 w-8 rounded-lg hover:bg-danger/10 text-muted-light dark:text-muted-dark hover:text-danger flex items-center justify-center" title="إلغاء الدعوة">
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => openEdit(a)} className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title="تعديل">
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => removeAgent(a)} className="h-8 w-8 rounded-lg hover:bg-danger/10 text-muted-light dark:text-muted-dark hover:text-danger flex items-center justify-center" title="حذف">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Role */}
+                    {role && (
+                      <span
+                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-small font-medium self-start"
+                        style={{ background: `${role.color}1f`, color: role.color }}
+                      >
+                        <Shield className="h-3 w-3" />
+                        {role.name}
+                      </span>
+                    )}
+
+                    {/* Departments */}
+                    {agentDepts.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {agentDepts.slice(0, 3).map((d) => (
+                          <span key={d.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium" style={{ background: `${d.color}1f`, color: d.color }}>
+                            <span className="h-1.5 w-1.5 rounded-full" style={{ background: d.color }} />
+                            {d.name}
+                          </span>
+                        ))}
+                        {agentDepts.length > 3 && (
+                          <span className="text-[11px] text-muted-light dark:text-muted-dark px-1">+{agentDepts.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Footer: channels + open convs + status switch */}
+                    <div className="flex items-center justify-between gap-2 pt-3 border-t border-border-light dark:border-border-dark">
+                      <div className="flex items-center gap-3 text-small text-muted-light dark:text-muted-dark">
+                        {uniqueChannelTypes.length > 0 && (
+                          <span className="flex items-center gap-1" title={agentChannels.map((c) => c.name).join('، ')}>
+                            {uniqueChannelTypes.slice(0, 4).map((t) => (
+                              <ChannelIcon key={t} type={t} size={12} />
+                            ))}
+                            {uniqueChannelTypes.length > 4 && (
+                              <span className="text-[11px]">+{uniqueChannelTypes.length - 4}</span>
+                            )}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1" title="المحادثات المفتوحة">
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          <span className="font-semibold text-current tabular-nums">{active}</span>
+                        </span>
+                      </div>
+                      {isPending ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/15 text-warning text-[11px] font-medium">
+                          <Clock className="h-3 w-3" /> بانتظار القبول
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => toggleSuspend(a)}
+                          className={cn(
+                            'relative h-5 w-9 rounded-full transition-colors flex-shrink-0',
+                            !isSuspended ? 'bg-primary' : 'bg-border-light dark:bg-border-dark',
+                          )}
+                          role="switch"
+                          aria-checked={!isSuspended}
+                          title={isSuspended ? 'مُعطّل — اضغط للتفعيل' : 'مُفعّل — اضغط للتعليق'}
+                        >
+                          <span
+                            className={cn(
+                              'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all',
+                              !isSuspended ? 'start-0.5' : 'end-0.5',
+                            )}
+                          />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -500,18 +673,39 @@ export default function Team(): JSX.Element {
                             {agentDepts.length === 0 && <span className="text-small text-muted-light dark:text-muted-dark italic">—</span>}
                           </div>
                         </td>
-                        <td className="px-4 py-3 hidden xl:table-cell text-center">
-                          <div className="flex items-center gap-1 justify-center">
-                            {agentChannels.slice(0, 4).map((c) => (
-                              <span key={c.id} title={c.name + ' (' + c.identifier + ')'} className="cursor-help">
-                                <ChannelIcon type={c.type} size={12} />
-                              </span>
-                            ))}
-                            {agentChannels.length > 4 && (
-                              <span className="text-[11px] text-muted-light dark:text-muted-dark ms-1">+{agentChannels.length - 4}</span>
-                            )}
-                            {agentChannels.length === 0 && <span className="text-small text-muted-light dark:text-muted-dark italic">—</span>}
-                          </div>
+                        <td className="px-4 py-3 hidden lg:table-cell text-center">
+                          {agentChannels.length === 0 ? (
+                            <span className="text-small text-muted-light dark:text-muted-dark italic">—</span>
+                          ) : (
+                            (() => {
+                              const byType = new Map<string, { count: number; names: string[] }>();
+                              agentChannels.forEach((c) => {
+                                const entry = byType.get(c.type) ?? { count: 0, names: [] };
+                                entry.count++;
+                                entry.names.push(c.name);
+                                byType.set(c.type, entry);
+                              });
+                              const types = Array.from(byType.entries());
+                              return (
+                                <div className="flex items-center gap-1.5 justify-center">
+                                  {types.map(([type, info]) => (
+                                    <span
+                                      key={type}
+                                      title={info.names.join('، ')}
+                                      className="relative inline-flex items-center justify-center cursor-help"
+                                    >
+                                      <ChannelIcon type={type as Parameters<typeof ChannelIcon>[0]['type']} size={14} />
+                                      {info.count > 1 && (
+                                        <span className="absolute -top-1.5 -end-1.5 h-3.5 min-w-3.5 px-1 rounded-full bg-bg-light dark:bg-bg-dark text-[9px] font-bold flex items-center justify-center text-current border border-border-light dark:border-border-dark">
+                                          {info.count}
+                                        </span>
+                                      )}
+                                    </span>
+                                  ))}
+                                </div>
+                              );
+                            })()
+                          )}
                         </td>
                         <td className="px-4 py-3 hidden sm:table-cell tabular-nums text-center">
                           {active > 0 ? (

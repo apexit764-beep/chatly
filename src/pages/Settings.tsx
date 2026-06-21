@@ -172,15 +172,19 @@ function ProfileTab(): JSX.Element {
         <button onClick={savePwd} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">حفظ كلمة المرور</button>
       </div>
 
-      <div className="mt-10 p-5 rounded-card border border-danger/30 bg-danger/5">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-danger flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <h3 className="text-h3 font-semibold text-danger">منطقة الخطر</h3>
-            <p className="text-small text-muted-light dark:text-muted-dark mt-1 mb-3">حذف الحساب نهائي ولا يمكن التراجع عنه.</p>
-            <button onClick={handleDelete} className="h-10 px-4 rounded-full bg-danger hover:bg-danger/90 text-white text-small font-medium">حذف الحساب</button>
-          </div>
+      <div className="mt-10 p-5 rounded-card border border-danger/20 bg-danger/5 flex items-center gap-4 flex-wrap">
+        <div className="flex-1 min-w-[240px]">
+          <h3 className="text-body font-semibold flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-danger" />
+            حذف الحساب نهائياً
+          </h3>
+          <p className="text-small text-muted-light dark:text-muted-dark mt-1">
+            ستفقد كل المحادثات والقوالب والحملات ولا يمكن استرجاعها.
+          </p>
         </div>
+        <button onClick={handleDelete} className="h-10 px-4 rounded-full bg-danger hover:bg-danger/90 text-white text-small font-medium flex-shrink-0" style={{ color: '#fff' }}>
+          احذف حسابي
+        </button>
       </div>
     </div>
   );
