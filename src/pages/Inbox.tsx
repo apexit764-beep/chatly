@@ -817,7 +817,7 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
       addContact({
         name: newName.trim(),
         phone: newPhone.trim(),
-        type: 'seeker',
+        type: 'lead',
         notes: '',
         channels: channel?.type === 'whatsapp' ? ['whatsapp'] : undefined,
       });

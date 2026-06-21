@@ -239,17 +239,17 @@ export const agents: Agent[] = [
 // Contacts
 // ============================================================
 export const contacts: Contact[] = [
-  { id: 'c1', name: 'أحمد الشعيلي', phone: '+96891234567', type: 'tenant', notes: 'يبحث عن شقة في مسقط بإيجار شهري لا يتجاوز 350 ر.ع', tags: ['مسقط', 'شقة'], blocked: false, conversationCount: 8, lastContact: nowMinus(15), createdAt: nowMinus(60 * 24 * 30), channels: ['whatsapp'] },
-  { id: 'c2', name: 'سارة المعمري', phone: '+96892345678', type: 'owner', notes: 'تملك 3 شقق في الخوض، تريد عرضها للإيجار', tags: ['الخوض', 'مالك ذهبي'], blocked: false, conversationCount: 14, lastContact: nowMinus(45), createdAt: nowMinus(60 * 24 * 90), channels: ['whatsapp', 'messenger'] },
+  { id: 'c1', name: 'أحمد الشعيلي', phone: '+96891234567', type: 'customer', notes: 'يبحث عن شقة في مسقط بإيجار شهري لا يتجاوز 350 ر.ع', tags: ['مسقط', 'شقة'], blocked: false, conversationCount: 8, lastContact: nowMinus(15), createdAt: nowMinus(60 * 24 * 30), channels: ['whatsapp'] },
+  { id: 'c2', name: 'سارة المعمري', phone: '+96892345678', type: 'company', notes: 'تملك 3 شقق في الخوض، تريد عرضها للإيجار', tags: ['الخوض', 'مالك ذهبي'], blocked: false, conversationCount: 14, lastContact: nowMinus(45), createdAt: nowMinus(60 * 24 * 90), channels: ['whatsapp', 'messenger'] },
   { id: 'c3', name: 'شركة الوفاء للتطوير', phone: '+96893456789', type: 'company', notes: 'شركة تطوير عقاري - مشاريع متعددة', tags: ['B2B', 'مطور'], blocked: false, conversationCount: 23, lastContact: nowMinus(120), createdAt: nowMinus(60 * 24 * 200), channels: ['whatsapp'] },
-  { id: 'c4', name: 'عبدالله الهنائي', phone: '+96894567890', type: 'seeker', tags: ['صلالة'], blocked: false, conversationCount: 3, lastContact: nowMinus(240), createdAt: nowMinus(60 * 24 * 7), channels: ['widget'] },
+  { id: 'c4', name: 'عبدالله الهنائي', phone: '+96894567890', type: 'lead', tags: ['صلالة'], blocked: false, conversationCount: 3, lastContact: nowMinus(240), createdAt: nowMinus(60 * 24 * 7), channels: ['widget'] },
   { id: 'c5', name: 'منى الزدجالية', phone: '+96895678901', type: 'vip', notes: 'عميلة VIP - استجابة فورية مطلوبة', tags: ['VIP', 'استجابة سريعة'], blocked: false, conversationCount: 31, lastContact: nowMinus(8), createdAt: nowMinus(60 * 24 * 365), channels: ['whatsapp', 'instagram'] },
-  { id: 'c6', name: 'يوسف البوسعيدي', phone: '+96896789012', type: 'tenant', tags: ['نزوى'], blocked: false, conversationCount: 5, lastContact: nowMinus(60), createdAt: nowMinus(60 * 24 * 15), channels: ['whatsapp'] },
-  { id: 'c7', name: 'هدى الفارسي', phone: '+96897890123', type: 'owner', tags: ['صحار'], blocked: false, conversationCount: 9, lastContact: nowMinus(300), createdAt: nowMinus(60 * 24 * 120), channels: ['whatsapp', 'widget'] },
-  { id: 'c8', name: 'بدر السيابي', phone: '+96898901234', type: 'seeker', tags: ['سيارة', 'تويوتا'], blocked: false, conversationCount: 2, lastContact: nowMinus(35), createdAt: nowMinus(60 * 24 * 3), channels: ['instagram'] },
-  { id: 'c9', name: 'ريم اللواتي', phone: '+96899012345', type: 'tenant', tags: ['مسقط', 'فيلا'], blocked: false, conversationCount: 12, lastContact: nowMinus(90), createdAt: nowMinus(60 * 24 * 45), channels: ['whatsapp'] },
+  { id: 'c6', name: 'يوسف البوسعيدي', phone: '+96896789012', type: 'customer', tags: ['نزوى'], blocked: false, conversationCount: 5, lastContact: nowMinus(60), createdAt: nowMinus(60 * 24 * 15), channels: ['whatsapp'] },
+  { id: 'c7', name: 'هدى الفارسي', phone: '+96897890123', type: 'company', tags: ['صحار'], blocked: false, conversationCount: 9, lastContact: nowMinus(300), createdAt: nowMinus(60 * 24 * 120), channels: ['whatsapp', 'widget'] },
+  { id: 'c8', name: 'بدر السيابي', phone: '+96898901234', type: 'lead', tags: ['سيارة', 'تويوتا'], blocked: false, conversationCount: 2, lastContact: nowMinus(35), createdAt: nowMinus(60 * 24 * 3), channels: ['instagram'] },
+  { id: 'c9', name: 'ريم اللواتي', phone: '+96899012345', type: 'customer', tags: ['مسقط', 'فيلا'], blocked: false, conversationCount: 12, lastContact: nowMinus(90), createdAt: nowMinus(60 * 24 * 45), channels: ['whatsapp'] },
   { id: 'c10', name: 'مجموعة العمري التجارية', phone: '+96890123456', type: 'company', tags: ['B2B'], blocked: false, conversationCount: 17, lastContact: nowMinus(420), createdAt: nowMinus(60 * 24 * 180), channels: ['whatsapp', 'messenger'] },
-  { id: 'c11', name: 'علي الجابري', phone: '+96891111111', type: 'tenant', tags: ['مسقط'], blocked: true, conversationCount: 1, lastContact: nowMinus(60 * 24 * 60), createdAt: nowMinus(60 * 24 * 80), channels: ['whatsapp'] },
+  { id: 'c11', name: 'علي الجابري', phone: '+96891111111', type: 'customer', tags: ['مسقط'], blocked: true, conversationCount: 1, lastContact: nowMinus(60 * 24 * 60), createdAt: nowMinus(60 * 24 * 80), channels: ['whatsapp'] },
   { id: 'c12', name: 'لطيفة الحبسي', phone: '+96892222222', type: 'vip', tags: ['VIP'], blocked: false, conversationCount: 28, lastContact: nowMinus(25), createdAt: nowMinus(60 * 24 * 300), channels: ['whatsapp'] },
 ];
 

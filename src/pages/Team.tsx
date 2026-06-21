@@ -522,20 +522,28 @@ export default function Team(): JSX.Element {
                         </td>
                         <td className="px-4 py-3 text-center">
                           {isPending ? (
-                            <div className="inline-flex items-center gap-1.5 text-warning">
-                              <Clock className="h-3.5 w-3.5" />
-                              <span className="text-small font-medium">بانتظار القبول</span>
-                            </div>
-                          ) : isSuspended ? (
-                            <div className="inline-flex items-center gap-1.5 text-danger">
-                              <AlertCircle className="h-3.5 w-3.5" />
-                              <span className="text-small font-medium">معلّق</span>
-                            </div>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/15 text-warning text-[11px] font-medium">
+                              <Clock className="h-3 w-3" /> بانتظار القبول
+                            </span>
                           ) : (
-                            <div className="inline-flex items-center gap-2">
-                              <span className={cn('h-2 w-2 rounded-full', agentStatusColor[a.status])} />
-                              <span className="text-small">{agentStatusLabel[a.status]}</span>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => toggleSuspend(a)}
+                              className={cn(
+                                'relative h-5 w-9 rounded-full transition-colors mx-auto block',
+                                !isSuspended ? 'bg-primary' : 'bg-border-light dark:bg-border-dark'
+                              )}
+                              role="switch"
+                              aria-checked={!isSuspended}
+                              title={isSuspended ? 'مُعطّل — اضغط للتفعيل' : 'مُفعّل — اضغط للتعليق'}
+                            >
+                              <span
+                                className={cn(
+                                  'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all',
+                                  !isSuspended ? 'start-0.5' : 'end-0.5'
+                                )}
+                              />
+                            </button>
                           )}
                         </td>
                         <td className="px-4 py-3 text-muted-light dark:text-muted-dark hidden lg:table-cell text-small text-center">
@@ -566,9 +574,6 @@ export default function Team(): JSX.Element {
                               <>
                                 <button onClick={() => openEdit(a)} className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title="تعديل" aria-label="تعديل">
                                   <Edit2 className="h-3.5 w-3.5" />
-                                </button>
-                                <button onClick={() => toggleSuspend(a)} className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-warning flex items-center justify-center" title={isSuspended ? 'إعادة التفعيل' : 'تعليق'}>
-                                  {isSuspended ? <Check className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
                                 </button>
                                 <button onClick={() => removeAgent(a)} className="h-8 w-8 rounded-lg hover:bg-danger/10 text-muted-light dark:text-muted-dark hover:text-danger flex items-center justify-center" title="حذف" aria-label="حذف">
                                   <Trash2 className="h-3.5 w-3.5" />

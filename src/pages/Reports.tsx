@@ -128,30 +128,37 @@ export default function Reports(): JSX.Element {
         'التقييم': r.rating,
       }));
       downloadCsv(`agent-performance-${new Date().toISOString().slice(0, 10)}.csv`, rows);
-      showToast(`تم تصدير ${rows.length} موظفين`, 'success');
+      showToast(`تم تصدير بيانات ${rows.length} موظف`, 'success');
       return;
     }
-    // PDF: open print window with summary
+    // PDF: open print window with summary derived from real store data
+    const totalNewConvs = newConvsLine.reduce((s, n) => s + n, 0);
+    const totalReplies = conversations.reduce((s, c) => s + c.messages.filter((m) => m.direction === 'out').length, 0);
+    const validAvg = agentRows.map((r) => r.avgReply).filter((v) => v !== '—').map(Number);
+    const avgReplyAll = validAvg.length > 0 ? (validAvg.reduce((s, n) => s + n, 0) / validAvg.length).toFixed(1) : '—';
+    const totalConvs = conversations.length;
+    const closedConvs = conversations.filter((c) => c.status === 'closed').length;
+    const resolutionPct = totalConvs > 0 ? Math.round((closedConvs / totalConvs) * 100) : 0;
     const html = `
       <h1>تقرير الأداء — ${range === 'today' ? 'اليوم' : range === 'week' ? 'الأسبوع' : range === 'month' ? 'الشهر' : 'مخصص'}</h1>
       <p class="muted">${new Date().toLocaleString('ar-OM-u-nu-latn')}</p>
-      <h2>إحصائيات سريعة</h2>
+      <h2>ملخّص الفترة</h2>
       <table>
-        <tr><td>محادثات جديدة</td><td class="right">125</td></tr>
-        <tr><td>ردود الوكلاء</td><td class="right">892</td></tr>
-        <tr><td>متوسط وقت الرد</td><td class="right">3.2 دقيقة</td></tr>
-        <tr><td>مغلق من أول رد</td><td class="right">68%</td></tr>
+        <tr><td>محادثات جديدة</td><td class="right">${totalNewConvs}</td></tr>
+        <tr><td>ردود الموظفين</td><td class="right">${totalReplies}</td></tr>
+        <tr><td>متوسط وقت الرد</td><td class="right">${avgReplyAll} دقيقة</td></tr>
+        <tr><td>معدل الحلّ</td><td class="right">${resolutionPct}%</td></tr>
       </table>
       <h2>أداء الموظفين</h2>
       <table>
-        <thead><tr><th>الموظف</th><th class="right">المحادثات</th><th class="right">متوسط الرد</th><th class="right">معدل الحل</th><th class="right">التقييم</th></tr></thead>
+        <thead><tr><th>الموظف</th><th class="right">المحادثات</th><th class="right">متوسط الرد</th><th class="right">معدل الحلّ</th><th class="right">التقييم</th></tr></thead>
         <tbody>
           ${agentRows.map((r) => `<tr><td>${r.agent.name}</td><td class="right">${r.handled}</td><td class="right">${r.avgReply} د</td><td class="right">${r.resolutionRate}%</td><td class="right">⭐ ${r.rating}</td></tr>`).join('')}
         </tbody>
       </table>
-      <h2>المحادثات حسب التاق</h2>
+      <h2>المحادثات حسب الوسم</h2>
       <table>
-        <thead><tr><th>التاق</th><th class="right">العدد</th></tr></thead>
+        <thead><tr><th>الوسم</th><th class="right">العدد</th></tr></thead>
         <tbody>
           ${byTag.map((t) => `<tr><td>${t.tag}</td><td class="right">${t.count}</td></tr>`).join('')}
         </tbody>
@@ -221,7 +228,7 @@ export default function Reports(): JSX.Element {
           iconColor="text-primary"
         />
         <StatCard
-          label="ردود الوكلاء"
+          label="ردود الموظفين"
           value={formatNumber(conversations.reduce((s, c) => s + c.messages.filter((m) => m.direction === 'out').length, 0))}
           icon={<Send className="h-5 w-5" />}
           iconBg="bg-info/10"
@@ -239,7 +246,7 @@ export default function Reports(): JSX.Element {
           iconColor="text-warning"
         />
         <StatCard
-          label="نسبة الإغلاق"
+          label="معدل الحلّ"
           value={(() => {
             const total = conversations.length;
             if (total === 0) return '0%';
@@ -257,8 +264,8 @@ export default function Reports(): JSX.Element {
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-h3 font-bold">محادثات جديدة</h2>
-              <p className="text-small text-muted-light dark:text-muted-dark">يومياً خلال الأسبوع</p>
+              <h2 className="text-h3 font-bold">المحادثات الجديدة</h2>
+              <p className="text-small text-muted-light dark:text-muted-dark">{range === 'today' ? 'يومياً خلال الأسبوع' : range === 'month' ? 'يومياً خلال الشهر' : 'يومياً خلال الأسبوع'}</p>
             </div>
             <button className="text-small text-primary font-medium flex items-center gap-1">
               عرض الكل <ChevronDown className="h-3 w-3" />
@@ -274,8 +281,8 @@ export default function Reports(): JSX.Element {
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-h3 font-bold">ساعات حتى أول رد</h2>
-              <p className="text-small text-muted-light dark:text-muted-dark">المتوسط اليومي</p>
+              <h2 className="text-h3 font-bold">متوسط وقت الرد الأول</h2>
+              <p className="text-small text-muted-light dark:text-muted-dark">بالساعات — يومياً</p>
             </div>
             <div className="flex items-center gap-3 text-small">
               <span className="flex items-center gap-1.5">
@@ -307,8 +314,8 @@ export default function Reports(): JSX.Element {
       {/* Row: tag bars + agents table */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <Card className="p-5 lg:col-span-2">
-          <h2 className="text-h3 font-bold mb-1">المحادثات حسب التاق</h2>
-          <p className="text-small text-muted-light dark:text-muted-dark mb-4">توزيع الوسوم على المحادثات</p>
+          <h2 className="text-h3 font-bold mb-1">المحادثات حسب الوسم</h2>
+          <p className="text-small text-muted-light dark:text-muted-dark mb-4">أكثر الوسوم استخداماً في محادثات عملائك</p>
           <div className="space-y-3">
             {byTag.map((t) => (
               <div key={t.tag}>

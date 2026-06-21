@@ -8,17 +8,15 @@ import type {
 } from '@/types';
 
 export const contactTypeLabel: Record<ContactType, string> = {
-  tenant: 'مستأجر',
-  owner: 'مالك',
-  seeker: 'باحث',
+  customer: 'عميل',
+  lead: 'محتمل',
   company: 'شركة',
   vip: 'VIP',
 };
 
 export const contactTypeColor: Record<ContactType, string> = {
-  tenant: 'bg-info/15 text-info border-info/30',
-  owner: 'bg-success/15 text-success border-success/30',
-  seeker: 'bg-warning/15 text-warning border-warning/30',
+  customer: 'bg-success/15 text-success border-success/30',
+  lead: 'bg-warning/15 text-warning border-warning/30',
   company: 'bg-primary/15 text-primary border-primary/30',
   vip: 'bg-danger/15 text-danger border-danger/30',
 };

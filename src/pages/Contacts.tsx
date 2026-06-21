@@ -6,10 +6,6 @@ import {
   Eye,
   Edit2,
   Trash2,
-  Users,
-  Home,
-  Crown,
-  Building2,
   MoreHorizontal,
   Ban,
   CheckCircle2,
@@ -20,14 +16,12 @@ import {
 import {
   Avatar,
   Badge,
-  Card,
   DataTable,
   Drawer,
   FilterDropdown,
   Input,
   Modal,
   Select,
-  StatCard,
   Textarea,
   useConfirm,
   type Column,
@@ -58,16 +52,9 @@ export default function Contacts(): JSX.Element {
   const [drawer, setDrawer] = useState<Contact | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [form, setForm] = useState<{ name: string; phone: string; type: ContactType; notes: string }>({
-    name: '', phone: '', type: 'seeker', notes: '',
+    name: '', phone: '', type: 'lead', notes: '',
   });
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
-
-  const stats = {
-    total: contacts.length,
-    tenant: contacts.filter((c) => c.type === 'tenant').length,
-    owner: contacts.filter((c) => c.type === 'owner').length,
-    vip: contacts.filter((c) => c.type === 'vip').length,
-  };
 
   const filtered = useMemo(() => {
     return contacts.filter((c) => {
@@ -80,7 +67,7 @@ export default function Contacts(): JSX.Element {
 
   const openCreate = (): void => {
     setEditing(null);
-    setForm({ name: '', phone: '', type: 'seeker', notes: '' });
+    setForm({ name: '', phone: '', type: 'lead', notes: '' });
     setErrors({});
     setModalOpen(true);
   };
@@ -156,8 +143,8 @@ export default function Contacts(): JSX.Element {
 
   const downloadImportTemplate = (): void => {
     downloadCsv('contacts-template.csv', [
-      { 'الاسم': 'أحمد محمد', 'الهاتف': '+968912345678', 'النوع': 'مستأجر', 'الوسوم': 'VIP|عربي', 'البريد': 'ahmed@example.com', 'ملاحظات': '' },
-      { 'الاسم': 'سارة العلي', 'الهاتف': '+968923456789', 'النوع': 'مالك', 'الوسوم': '', 'البريد': '', 'ملاحظات': '' },
+      { 'الاسم': 'أحمد محمد', 'الهاتف': '+968912345678', 'النوع': 'عميل', 'الوسوم': 'VIP|عربي', 'البريد': 'ahmed@example.com', 'ملاحظات': '' },
+      { 'الاسم': 'سارة العلي', 'الهاتف': '+968923456789', 'النوع': 'محتمل', 'الوسوم': '', 'البريد': '', 'ملاحظات': '' },
     ]);
     showToast('تم تنزيل القالب', 'success');
   };
@@ -221,13 +208,6 @@ export default function Contacts(): JSX.Element {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="إجمالي جهات الاتصال" value={stats.total} icon={<Users className="h-5 w-5" />} iconBg="bg-primary/15" iconColor="text-primary" />
-        <StatCard label="مستأجرين" value={stats.tenant} icon={<Home className="h-5 w-5" />} iconBg="bg-info/15" iconColor="text-info" />
-        <StatCard label="ملاك" value={stats.owner} icon={<Building2 className="h-5 w-5" />} iconBg="bg-success/15" iconColor="text-success" />
-        <StatCard label="VIP" value={stats.vip} icon={<Crown className="h-5 w-5" />} iconBg="bg-danger/15" iconColor="text-danger" />
-      </div>
-
       <DataTable
         data={filtered}
         columns={columns}
@@ -252,11 +232,10 @@ export default function Contacts(): JSX.Element {
               onChange={(v) => setTypeFilter(v as 'all' | ContactType)}
               options={[
                 { value: 'all', label: 'كل الأنواع' },
-                { value: 'tenant', label: 'مستأجر' },
-                { value: 'owner', label: 'مالك' },
-                { value: 'seeker', label: 'باحث' },
-                { value: 'company', label: 'شركة' },
-                { value: 'vip', label: 'VIP', leading: <span className="h-2 w-2 rounded-full bg-warning" /> },
+                { value: 'customer', label: 'عميل', leading: <span className="h-2 w-2 rounded-full bg-success" /> },
+                { value: 'lead', label: 'محتمل', leading: <span className="h-2 w-2 rounded-full bg-warning" /> },
+                { value: 'company', label: 'شركة', leading: <span className="h-2 w-2 rounded-full bg-primary" /> },
+                { value: 'vip', label: 'VIP', leading: <span className="h-2 w-2 rounded-full bg-danger" /> },
               ]}
             />
             <FilterDropdown
@@ -276,7 +255,7 @@ export default function Contacts(): JSX.Element {
           <>
             <ImportExportMenu onImport={() => setImportOpen(true)} onExport={() => handleExport(filtered)} />
             <button onClick={openCreate} className="h-9 px-4 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2">
-              <Plus className="h-4 w-4" /> جهة اتصال
+              <Plus className="h-4 w-4" /> عميل جديد
             </button>
           </>
         }
@@ -305,9 +284,8 @@ export default function Contacts(): JSX.Element {
           <Input label="الاسم الكامل" value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors({ ...errors, name: undefined }); }} placeholder="مثال: أحمد الشعيلي" error={errors.name ?? undefined} />
           <Input label="رقم الواتساب" value={form.phone} onChange={(e) => { setForm({ ...form, phone: e.target.value }); setErrors({ ...errors, phone: undefined }); }} placeholder="+96891234567" error={errors.phone ?? undefined} />
           <Select label="النوع" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as ContactType })}>
-            <option value="tenant">مستأجر</option>
-            <option value="owner">مالك</option>
-            <option value="seeker">باحث</option>
+            <option value="customer">عميل</option>
+            <option value="lead">محتمل</option>
             <option value="company">شركة</option>
             <option value="vip">VIP</option>
           </Select>
