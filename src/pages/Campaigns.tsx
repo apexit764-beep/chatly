@@ -1065,40 +1065,6 @@ function CampaignTemplatesSection({
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-3 pt-3 border-t border-border-light dark:border-border-dark">
-            <p className="text-small font-semibold">القيم الافتراضية للحملة</p>
-            <Select label="الجمهور المستهدف" value={form.defaultAudience} onChange={(e) => setForm({ ...form, defaultAudience: e.target.value as 'all' | ContactType })}>
-              <option value="all">كل العملاء</option>
-              <option value="customer">عملاء فقط</option>
-              <option value="lead">عملاء محتملون</option>
-              <option value="company">شركات فقط</option>
-              <option value="vip">VIP فقط</option>
-            </Select>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[11px] text-muted-light dark:text-muted-dark block mb-1">أقل ثانية</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={form.defaultMaxDelay}
-                  value={form.defaultMinDelay}
-                  onChange={(e) => setForm({ ...form, defaultMinDelay: Math.max(1, Math.min(Number(e.target.value) || 1, form.defaultMaxDelay)) })}
-                  className="w-full h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary tabular-nums"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] text-muted-light dark:text-muted-dark block mb-1">أكثر ثانية</label>
-                <input
-                  type="number"
-                  min={form.defaultMinDelay}
-                  max={300}
-                  value={form.defaultMaxDelay}
-                  onChange={(e) => setForm({ ...form, defaultMaxDelay: Math.max(form.defaultMinDelay, Math.min(Number(e.target.value) || form.defaultMinDelay, 300)) })}
-                  className="w-full h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary tabular-nums"
-                />
-              </div>
-            </div>
-          </div>
         </div>
         <div className="absolute bottom-0 inset-x-0 px-5 py-3 bg-white dark:bg-surface-dark border-t border-border-light dark:border-border-dark flex items-center justify-end gap-2">
           <button onClick={() => setDrawerOpen(false)} className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">

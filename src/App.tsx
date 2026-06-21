@@ -7,6 +7,7 @@ import { getAppMode } from '@/utils/mode';
 
 // Client-side pages
 const Login = lazy(() => import('@pages/Login'));
+const ForgotPassword = lazy(() => import('@pages/ForgotPassword'));
 const Overview = lazy(() => import('@pages/Overview'));
 const Inbox = lazy(() => import('@pages/Inbox'));
 const Contacts = lazy(() => import('@pages/Contacts'));
@@ -47,6 +48,7 @@ export default function App(): JSX.Element {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route
             element={
               <ProtectedRoute>
@@ -74,6 +76,7 @@ export default function App(): JSX.Element {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route
           element={
             <ProtectedRoute>
