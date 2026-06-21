@@ -167,8 +167,27 @@ export default function Contacts(): JSX.Element {
     { key: 'last', header: 'آخر تواصل', accessor: (r) => r.lastContact, hideOn: 'lg', cell: (r) => <span className="text-small text-muted-light dark:text-muted-dark">{timeAgo(r.lastContact)}</span> },
     { key: 'conv', header: 'المحادثات', accessor: (r) => r.conversationCount, hideOn: 'lg' },
     {
-      key: 'status', header: 'الحالة', accessor: (r) => r.blocked ? 1 : 0,
-      cell: (r) => r.blocked ? <Badge className="bg-danger/15 text-danger border-danger/30">محظور</Badge> : <Badge className="bg-success/15 text-success border-success/30">نشط</Badge>,
+      key: 'status', header: 'الحالة', accessor: (r) => r.blocked ? 1 : 0, align: 'center',
+      cell: (r) => (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); toggleBlock(r); }}
+          className={cn(
+            'relative h-5 w-9 rounded-full transition-colors mx-auto block',
+            !r.blocked ? 'bg-primary' : 'bg-border-light dark:bg-border-dark'
+          )}
+          role="switch"
+          aria-checked={!r.blocked}
+          title={r.blocked ? 'محظور — اضغط لإلغاء الحظر' : 'نشط — اضغط للحظر'}
+        >
+          <span
+            className={cn(
+              'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all',
+              !r.blocked ? 'start-0.5' : 'end-0.5'
+            )}
+          />
+        </button>
+      ),
     },
     {
       key: 'actions', header: '', sortable: false, width: '80px', align: 'end',
