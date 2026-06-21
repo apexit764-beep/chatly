@@ -90,9 +90,11 @@ export default function Team(): JSX.Element {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // View mode (cards default)
-  const [view, setView] = useState<'cards' | 'table'>(
-    () => (typeof window !== 'undefined' && (localStorage.getItem('chatly_team_view') as 'cards' | 'table' | null)) ?? 'cards',
-  );
+  const [view, setView] = useState<'cards' | 'table'>(() => {
+    if (typeof window === 'undefined') return 'cards';
+    const saved = localStorage.getItem('chatly_team_view') as 'cards' | 'table' | null;
+    return saved ?? 'cards';
+  });
   const setViewPersisted = (v: 'cards' | 'table'): void => {
     setView(v);
     try { localStorage.setItem('chatly_team_view', v); } catch { /* ignore */ }
