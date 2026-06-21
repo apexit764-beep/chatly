@@ -849,8 +849,8 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
       width="w-[480px]"
     >
       <div className="space-y-5 pb-20">
-        {/* 1. Channel */}
-        <FormSection number={1} title="القناة المرسلة" hint="اختر الحساب الذي سترسل منه">
+        {/* Channel */}
+        <Field label="القناة المرسلة" required>
           {connectedChannels.length === 0 ? (
             <div className="p-3 rounded-lg bg-warning/10 text-warning text-small">
               لا توجد قنوات متصلة. اذهب إلى صفحة القنوات لربط حساب.
@@ -868,37 +868,30 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
               ))}
             </select>
           )}
-        </FormSection>
+        </Field>
 
-        {/* 2. Contact */}
-        <FormSection number={2} title="جهة الاتصال" hint="اختر من القائمة أو أضف جهة جديدة">
-          <div className="flex items-center border-b border-border-light dark:border-border-dark mb-3">
-            <button
-              type="button"
-              onClick={() => setContactMode('existing')}
-              className={cn(
-                'px-3 py-2 text-small font-medium border-b-2 -mb-px transition-colors',
-                contactMode === 'existing'
-                  ? 'border-primary text-current'
-                  : 'border-transparent text-muted-light dark:text-muted-dark'
-              )}
-            >
-              موجودة
-            </button>
+        {/* Contact */}
+        <Field
+          label="جهة الاتصال"
+          required
+          action={contactMode === 'existing' ? (
             <button
               type="button"
               onClick={() => setContactMode('new')}
-              className={cn(
-                'px-3 py-2 text-small font-medium border-b-2 -mb-px transition-colors',
-                contactMode === 'new'
-                  ? 'border-primary text-current'
-                  : 'border-transparent text-muted-light dark:text-muted-dark'
-              )}
+              className="text-small font-medium text-primary hover:underline flex items-center gap-1"
             >
-              جديدة
+              <Plus className="h-3.5 w-3.5" /> عميل جديد
             </button>
-          </div>
-
+          ) : (
+            <button
+              type="button"
+              onClick={() => setContactMode('existing')}
+              className="text-small font-medium text-primary hover:underline"
+            >
+              ← اختر من القائمة
+            </button>
+          )}
+        >
           {contactMode === 'existing' ? (
             <div className="space-y-2">
               <div className="relative">
@@ -930,9 +923,6 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
                         <p className="text-body font-semibold truncate">{c.name}</p>
                         <p className="text-[11px] text-muted-light dark:text-muted-dark truncate font-mono">{formatPhone(c.phone)}</p>
                       </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark">
-                        {contactTypeLabel[c.type]}
-                      </span>
                       {existingContactId === c.id && <Check className="h-4 w-4 text-primary" />}
                     </button>
                   ))
@@ -940,84 +930,70 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
               <Input
-                label="اسم العميل"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="مثال: أحمد محمد"
+                placeholder="اسم العميل (مثل: أحمد محمد)"
               />
               <Input
-                label={channel?.type === 'whatsapp' ? 'رقم الواتساب' : 'الرقم/المعرّف'}
                 value={newPhone}
                 onChange={(e) => setNewPhone(e.target.value)}
-                placeholder="+968 9123 4567"
+                placeholder={channel?.type === 'whatsapp' ? '+968 9123 4567' : 'الرقم/المعرّف'}
                 icon={<Phone className="h-4 w-4" />}
               />
             </div>
           )}
-        </FormSection>
+        </Field>
 
-        {/* 3. Pre-assignment */}
-        <FormSection number={3} title="الإسناد المُسبق" hint="اختياري — يحدد القسم والموظف المسؤول من البداية">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-small font-medium text-muted-light dark:text-muted-dark">القسم</label>
-              <select
-                value={departmentId}
-                onChange={(e) => setDepartmentId(e.target.value)}
-                className="w-full h-10 ps-3 pe-9 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
-              >
-                <option value="">بدون قسم</option>
-                {departments.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-small font-medium text-muted-light dark:text-muted-dark">المسؤول</label>
-              <select
-                value={agentId}
-                onChange={(e) => setAgentId(e.target.value)}
-                className="w-full h-10 ps-3 pe-9 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
-              >
-                <option value="">غير مُسند</option>
-                {eligibleAgents.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </FormSection>
+        {/* Pre-assignment */}
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="القسم">
+            <select
+              value={departmentId}
+              onChange={(e) => setDepartmentId(e.target.value)}
+              className="w-full h-10 ps-3 pe-9 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
+            >
+              <option value="">بدون قسم</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="المسؤول">
+            <select
+              value={agentId}
+              onChange={(e) => setAgentId(e.target.value)}
+              className="w-full h-10 ps-3 pe-9 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
+            >
+              <option value="">غير مُسند</option>
+              {eligibleAgents.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
 
-        {/* 4. Template (required for WhatsApp) */}
-        <FormSection
-          number={4}
-          title="قالب الرسالة"
-          hint={requiresTemplate
-            ? 'مطلوب — واتساب لا يسمح بالنص الحر لبدء محادثة جديدة. اختر قالباً معتمداً.'
-            : 'اختياري — يمكنك اختيار قالب أو كتابة نص حر'}
+        {/* Template */}
+        <Field
+          label="قالب الرسالة"
           required={requiresTemplate}
+          hint={requiresTemplate ? 'مطلوب — واتساب لا يسمح بالنص الحر' : undefined}
         >
           <select
             value={templateId}
             onChange={(e) => setTemplateId(e.target.value)}
-            className="w-full h-10 ps-3 pe-9 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary mb-2"
+            className="w-full h-10 ps-3 pe-9 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
           >
             <option value="">{requiresTemplate ? 'اختر قالباً معتمداً...' : 'بدون قالب (نص حر)'}</option>
             {templates.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>
-          {template && (
-            <p className="text-[11px] text-muted-light dark:text-muted-dark px-1">
-              تصنيف: {template.category} · المتغيرات سترتبط تلقائياً باسم العميل
-            </p>
-          )}
-        </FormSection>
+        </Field>
 
-        {/* 5. Message preview */}
-        <FormSection number={5} title="معاينة الرسالة" hint="يمكنك تعديل النص قبل الإرسال">
+        {/* Message preview */}
+        <Field label="الرسالة">
           <textarea
             value={previewMessage}
             onChange={(e) => setMessage(e.target.value)}
@@ -1029,11 +1005,11 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
             <div className="mt-2 flex items-start gap-2 p-2 rounded-lg bg-info/5 border border-info/20">
               <Sparkles className="h-4 w-4 text-info flex-shrink-0 mt-0.5" />
               <p className="text-[11px] text-info">
-                هذا قالب معتمد من Meta. تعديل النص الأساسي قد يبطل اعتماده.
+                قالب معتمد من Meta — تعديل النص قد يبطل اعتماده.
               </p>
             </div>
           )}
-        </FormSection>
+        </Field>
       </div>
       <div className="absolute bottom-0 inset-x-0 px-5 py-3 bg-white dark:bg-surface-dark border-t border-border-light dark:border-border-dark flex items-center justify-end gap-2">
         <button onClick={onClose} className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">
@@ -1047,35 +1023,31 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
   );
 }
 
-function FormSection({
-  number,
-  title,
+function Field({
+  label,
   hint,
   required,
+  action,
   children,
 }: {
-  number: number;
-  title: string;
+  label: string;
   hint?: string;
   required?: boolean;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }): JSX.Element {
   return (
-    <section>
-      <div className="flex items-start gap-2.5 mb-2.5">
-        <span className="h-6 w-6 rounded-full bg-primary/10 text-primary text-[12px] font-bold flex items-center justify-center flex-shrink-0">
-          {number}
-        </span>
-        <div className="flex-1">
-          <h3 className="text-body font-bold">
-            {title}
-            {required && <span className="text-danger ms-1">*</span>}
-          </h3>
-          {hint && <p className="text-[11px] text-muted-light dark:text-muted-dark mt-0.5">{hint}</p>}
-        </div>
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-small font-medium">
+          {label}
+          {required && <span className="text-danger ms-1">*</span>}
+        </label>
+        {action}
       </div>
-      <div className="ps-8">{children}</div>
-    </section>
+      {children}
+      {hint && <p className="text-[11px] text-muted-light dark:text-muted-dark">{hint}</p>}
+    </div>
   );
 }
 

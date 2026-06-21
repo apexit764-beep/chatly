@@ -307,6 +307,7 @@ export default function Team(): JSX.Element {
           </button>
         </Card>
       ) : (
+        <>
         <Card className="overflow-hidden">
           {/* Toolbar */}
           <div className="p-3 border-b border-border-light dark:border-border-dark flex flex-wrap items-center gap-2">
@@ -402,7 +403,7 @@ export default function Team(): JSX.Element {
 
           {/* Bulk action bar */}
           {selected.size > 0 && (
-            <div className="px-4 py-2.5 bg-primary/5 border-b border-primary/20 flex items-center justify-between gap-2 flex-wrap">
+            <div className="px-4 py-2.5 bg-primary/5 border-t border-primary/20 flex items-center justify-between gap-2 flex-wrap">
               <p className="text-small font-medium">
                 <strong className="text-primary">{selected.size}</strong> موظف مُحدّد
               </p>
@@ -419,28 +420,29 @@ export default function Team(): JSX.Element {
               </div>
             </div>
           )}
+        </Card>
 
-          {/* Empty state — no results */}
-          {noResults ? (
-            <div className="p-12 text-center">
-              <div className="h-12 w-12 mx-auto rounded-full bg-muted-light/10 text-muted-light flex items-center justify-center mb-2">
-                <Search className="h-5 w-5" />
-              </div>
-              <p className="text-body font-semibold">لا نتائج</p>
-              <p className="text-small text-muted-light dark:text-muted-dark mt-1">
-                جرّب بحث آخر أو امسح الفلاتر
-              </p>
-              {(activeFilters > 0 || search) && (
-                <button
-                  onClick={() => { clearFilters(); setSearch(''); }}
-                  className="mt-3 h-8 px-3 rounded-full text-small text-primary hover:bg-primary/10"
-                >
-                  مسح كل البحث والفلاتر
-                </button>
-              )}
+        {/* Body — empty / cards (standalone) / table (in a Card) */}
+        {noResults ? (
+          <Card className="p-12 text-center">
+            <div className="h-12 w-12 mx-auto rounded-full bg-muted-light/10 text-muted-light flex items-center justify-center mb-2">
+              <Search className="h-5 w-5" />
             </div>
-          ) : view === 'cards' ? (
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            <p className="text-body font-semibold">لا نتائج</p>
+            <p className="text-small text-muted-light dark:text-muted-dark mt-1">
+              جرّب بحث آخر أو امسح الفلاتر
+            </p>
+            {(activeFilters > 0 || search) && (
+              <button
+                onClick={() => { clearFilters(); setSearch(''); }}
+                className="mt-3 h-8 px-3 rounded-full text-small text-primary hover:bg-primary/10"
+              >
+                مسح كل البحث والفلاتر
+              </button>
+            )}
+          </Card>
+        ) : view === 'cards' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
               {pageRows.map((a) => {
                 const role = roles.find((r) => r.id === a.roleId);
                 const active = conversations.filter((c) => c.assignedTo === a.id && c.status !== 'closed').length;
@@ -579,9 +581,10 @@ export default function Team(): JSX.Element {
                     </div>
                   </div>
                 );
-              })}
-            </div>
-          ) : (
+          })}
+          </div>
+        ) : (
+          <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-body">
                 <thead className="bg-bg-light dark:bg-bg-dark text-small text-muted-light dark:text-muted-dark border-b border-border-light dark:border-border-dark">
@@ -782,38 +785,39 @@ export default function Team(): JSX.Element {
                 </tbody>
               </table>
             </div>
-          )}
+          </Card>
+        )}
 
-          {/* Pagination */}
-          {!noResults && filtered.length > pageSize && (
-            <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-border-light dark:border-border-dark text-small flex-wrap">
-              <p className="text-muted-light dark:text-muted-dark">
-                عرض <strong className="text-current">{safePage * pageSize + 1}</strong> -{' '}
-                <strong className="text-current">{Math.min(filtered.length, (safePage + 1) * pageSize)}</strong>{' '}
-                من <strong className="text-current">{filtered.length}</strong>
-              </p>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  disabled={safePage === 0}
-                  className="h-8 px-3 rounded-md border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  السابق
-                </button>
-                <span className="px-2 text-small text-muted-light dark:text-muted-dark tabular-nums">
-                  {safePage + 1} / {pageCount}
-                </span>
-                <button
-                  onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-                  disabled={safePage >= pageCount - 1}
-                  className="h-8 px-3 rounded-md border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  التالي
-                </button>
-              </div>
+        {/* Pagination — outside body so it appears under both cards and table */}
+        {!noResults && filtered.length > pageSize && (
+          <div className="flex items-center justify-between gap-2 px-4 py-3 text-small flex-wrap">
+            <p className="text-muted-light dark:text-muted-dark">
+              عرض <strong className="text-current">{safePage * pageSize + 1}</strong> -{' '}
+              <strong className="text-current">{Math.min(filtered.length, (safePage + 1) * pageSize)}</strong>{' '}
+              من <strong className="text-current">{filtered.length}</strong>
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={safePage === 0}
+                className="h-8 px-3 rounded-md border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                السابق
+              </button>
+              <span className="px-2 text-small text-muted-light dark:text-muted-dark tabular-nums">
+                {safePage + 1} / {pageCount}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                disabled={safePage >= pageCount - 1}
+                className="h-8 px-3 rounded-md border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                التالي
+              </button>
             </div>
-          )}
-        </Card>
+          </div>
+        )}
+        </>
       )}
 
       {/* Invite/Edit Drawer */}

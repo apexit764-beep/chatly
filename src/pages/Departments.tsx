@@ -6,7 +6,6 @@ import {
   ChannelIcon,
   Drawer,
   Input,
-  StatCard,
   Textarea,
   useConfirm,
 } from '@components/ui';
@@ -131,9 +130,6 @@ export default function Departments(): JSX.Element {
     }
   };
 
-  const totalAgents = agents.length;
-  const assignedAgents = agents.filter((a) => a.departments.length > 0).length;
-
   return (
     <div className="p-4 lg:p-6 space-y-5 page-fade">
       {/* Header */}
@@ -150,14 +146,6 @@ export default function Departments(): JSX.Element {
         >
           <Plus className="h-4 w-4" /> قسم جديد
         </button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="إجمالي الأقسام" value={departments.length} icon={<Building2 className="h-5 w-5" />} iconBg="bg-primary/10" iconColor="text-primary" />
-        <StatCard label="الموظفون" value={`${assignedAgents}/${totalAgents}`} icon={<Users className="h-5 w-5" />} iconBg="bg-info/10" iconColor="text-info" />
-        <StatCard label="القنوات" value={channels.length} icon={<MessageSquare className="h-5 w-5" />} iconBg="bg-success/10" iconColor="text-success" />
-        <StatCard label="المحادثات" value={conversations.length} icon={<MessageSquare className="h-5 w-5" />} iconBg="bg-warning/10" iconColor="text-warning" />
       </div>
 
       {/* Departments grid */}
