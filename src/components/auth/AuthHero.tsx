@@ -30,7 +30,6 @@ export function AuthHero(): JSX.Element {
       <svg
         viewBox="0 0 40 40"
         xmlns="http://www.w3.org/2000/svg"
-        dir="ltr"
         className="absolute -bottom-40 -left-40 w-[700px] h-[700px] pointer-events-none opacity-[0.20]"
         style={{
           maskImage: 'radial-gradient(circle at 25% 75%, rgba(0,0,0,1) 0%, rgba(0,0,0,0.8) 35%, rgba(0,0,0,0) 75%)',
