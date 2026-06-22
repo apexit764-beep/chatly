@@ -2,6 +2,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { IconSidebar } from './IconSidebar';
 import { SectionSidebar } from './SectionSidebar';
+import { TopHeader } from './TopHeader';
 import { NotificationsPanel } from './NotificationsPanel';
 import { OnboardingModal } from '@components/onboarding/OnboardingModal';
 import { Toast } from '@components/ui';
@@ -14,7 +15,8 @@ export function AppShell(): JSX.Element {
       <IconSidebar />
       <SectionSidebar />
       <div className="flex-1 flex flex-col min-w-0">
-        <main className={isInbox ? 'flex-1 overflow-hidden' : 'flex-1 overflow-x-hidden'}>
+        <TopHeader />
+        <main className={isInbox ? 'flex-1 overflow-hidden min-h-0' : 'flex-1 overflow-x-hidden'}>
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}

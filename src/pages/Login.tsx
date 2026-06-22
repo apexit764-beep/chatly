@@ -148,7 +148,7 @@ export default function Login(): JSX.Element {
                 onChange={(e) => setRemember(e.target.checked)}
                 className="h-4 w-4 accent-primary rounded"
               />
-              <span className="text-small text-muted-light dark:text-muted-dark">تذكّرني لمدة 30 يوم</span>
+              <span className="text-small text-muted-light dark:text-muted-dark">تذكّرني</span>
             </label>
 
             {error && (

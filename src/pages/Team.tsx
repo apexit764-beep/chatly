@@ -238,7 +238,7 @@ export default function Team(): JSX.Element {
   const toggleSuspend = (a: Agent): void => {
     const newStatus: InvitationStatus = a.invitationStatus === 'suspended' ? 'active' : 'suspended';
     updateAgent(a.id, { invitationStatus: newStatus });
-    showToast(newStatus === 'suspended' ? 'تم تعليق الحساب' : 'تم إعادة التفعيل', 'success');
+    showToast(newStatus === 'suspended' ? 'تم تعطيل الحساب' : 'تم إعادة التفعيل', 'success');
   };
 
   // Bulk actions
@@ -257,7 +257,7 @@ export default function Team(): JSX.Element {
   };
   const bulkSuspend = (): void => {
     Array.from(selected).forEach((id) => updateAgent(id, { invitationStatus: 'suspended' }));
-    showToast(`تم تعليق ${selected.size} موظف`, 'success');
+    showToast(`تم تعطيل ${selected.size} موظف`, 'success');
     clearSelection();
   };
 
@@ -411,7 +411,7 @@ export default function Team(): JSX.Element {
               </p>
               <div className="flex items-center gap-1.5">
                 <button onClick={bulkSuspend} className="h-8 px-3 rounded-full bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex items-center gap-1.5">
-                  <Pause className="h-3.5 w-3.5" /> تعليق
+                  <Pause className="h-3.5 w-3.5" /> تعطيل
                 </button>
                 <button onClick={bulkDelete} className="h-8 px-3 rounded-full bg-danger/10 text-danger text-small font-medium hover:bg-danger/20 flex items-center gap-1.5">
                   <Trash2 className="h-3.5 w-3.5" /> حذف
@@ -458,127 +458,142 @@ export default function Team(): JSX.Element {
                   <div
                     key={a.id}
                     className={cn(
-                      'rounded-card border bg-white dark:bg-surface-dark p-4 transition-colors flex flex-col gap-3',
-                      isSelected ? 'border-primary/40 bg-primary/5' : 'border-border-light dark:border-border-dark hover:border-primary/30',
+                      'group relative rounded-card border bg-white dark:bg-surface-dark p-5 transition-all flex flex-col',
+                      isSelected
+                        ? 'border-primary/50 ring-2 ring-primary/10'
+                        : 'border-border-light dark:border-border-dark hover:border-primary/30 hover:shadow-md',
                       isPending && 'opacity-80',
                     )}
                   >
-                    {/* Top: avatar + name + select + actions */}
-                    <div className="flex items-start gap-3">
+                    {/* Top toolbar: checkbox + edit + delete, always visible (left of card) */}
+                    <div
+                      className="absolute top-3 end-3 flex items-center gap-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleSelect(a.id)}
-                        className="h-4 w-4 mt-1"
+                        className="h-4 w-4 cursor-pointer"
                         aria-label="تحديد"
                       />
-                      <button
-                        onClick={() => setDrawer(a)}
-                        className="flex-1 min-w-0 flex items-center gap-3 text-start hover:text-primary"
-                      >
-                        <div className="relative flex-shrink-0">
-                          <Avatar name={a.name} size="md" status={isPending ? 'offline' : a.status} />
-                          {isPending && (
-                            <span className="absolute -bottom-0.5 -end-0.5 h-4 w-4 rounded-full bg-warning ring-2 ring-white dark:ring-surface-dark flex items-center justify-center">
-                              <Clock className="h-2.5 w-2.5 text-white" />
-                            </span>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold truncate">{a.name}</p>
-                          <p className="text-small text-muted-light dark:text-muted-dark truncate">{a.email}</p>
-                        </div>
-                      </button>
-                      <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                        {isPending ? (
-                          <>
-                            <button onClick={() => { resendInvitation(a.id); showToast('تم إعادة إرسال الدعوة', 'success'); }} className="h-8 w-8 rounded-lg hover:bg-primary/10 text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title="إعادة إرسال الدعوة">
-                              <RefreshCw className="h-3.5 w-3.5" />
-                            </button>
-                            <button onClick={() => { cancelInvitation(a.id); showToast('تم إلغاء الدعوة', 'success'); }} className="h-8 w-8 rounded-lg hover:bg-danger/10 text-muted-light dark:text-muted-dark hover:text-danger flex items-center justify-center" title="إلغاء الدعوة">
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button onClick={() => openEdit(a)} className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title="تعديل">
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
-                            <button onClick={() => removeAgent(a)} className="h-8 w-8 rounded-lg hover:bg-danger/10 text-muted-light dark:text-muted-dark hover:text-danger flex items-center justify-center" title="حذف">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </>
-                        )}
-                      </div>
+                      {isPending ? (
+                        <>
+                          <button onClick={() => { resendInvitation(a.id); showToast('تم إعادة إرسال الدعوة', 'success'); }} className="h-7 w-7 rounded-lg text-muted-light dark:text-muted-dark hover:bg-primary/10 hover:text-primary flex items-center justify-center" title="إعادة إرسال الدعوة">
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          </button>
+                          <button onClick={() => { cancelInvitation(a.id); showToast('تم إلغاء الدعوة', 'success'); }} className="h-7 w-7 rounded-lg text-muted-light dark:text-muted-dark hover:bg-danger/10 hover:text-danger flex items-center justify-center" title="إلغاء الدعوة">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => openEdit(a)} className="h-7 w-7 rounded-lg text-muted-light dark:text-muted-dark hover:bg-primary/10 hover:text-primary flex items-center justify-center" title="تعديل">
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </button>
+                          <button onClick={() => removeAgent(a)} className="h-7 w-7 rounded-lg text-muted-light dark:text-muted-dark hover:bg-danger/10 hover:text-danger flex items-center justify-center" title="حذف">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      )}
                     </div>
 
-                    {/* Role */}
-                    {role && (
-                      <span
-                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-small font-medium self-start"
-                        style={{ background: `${role.color}1f`, color: role.color }}
-                      >
-                        <Shield className="h-3 w-3" />
-                        {role.name}
-                      </span>
-                    )}
-
-                    {/* Departments */}
-                    {agentDepts.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {agentDepts.slice(0, 3).map((d) => (
-                          <span key={d.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium" style={{ background: `${d.color}1f`, color: d.color }}>
-                            <span className="h-1.5 w-1.5 rounded-full" style={{ background: d.color }} />
-                            {d.name}
+                    {/* Identity: avatar + name + email */}
+                    <button
+                      onClick={() => setDrawer(a)}
+                      className="flex items-center gap-3 text-start mb-4"
+                    >
+                      <div className="relative flex-shrink-0">
+                        <Avatar name={a.name} size="lg" status={isPending ? 'offline' : a.status} />
+                        {isPending && (
+                          <span className="absolute -bottom-0.5 -end-0.5 h-4 w-4 rounded-full bg-warning ring-2 ring-white dark:ring-surface-dark flex items-center justify-center">
+                            <Clock className="h-2.5 w-2.5 text-white" />
                           </span>
-                        ))}
-                        {agentDepts.length > 3 && (
-                          <span className="text-[11px] text-muted-light dark:text-muted-dark px-1">+{agentDepts.length - 3}</span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold truncate text-body group-hover:text-primary transition-colors">{a.name}</p>
+                        <p className="text-small text-muted-light dark:text-muted-dark truncate">{a.email}</p>
+                      </div>
+                    </button>
+
+                    {/* Meta: role + departments as compact text rows */}
+                    {(role || agentDepts.length > 0) && (
+                      <div className="space-y-1.5 mb-4">
+                        {role && (
+                          <div className="flex items-center gap-2 text-small">
+                            <Shield className="h-3.5 w-3.5 text-muted-light dark:text-muted-dark flex-shrink-0" />
+                            <span className="text-muted-light dark:text-muted-dark">الدور</span>
+                            <span className="font-semibold truncate">{role.name}</span>
+                          </div>
+                        )}
+                        {agentDepts.length > 0 && (
+                          <div className="flex items-center gap-2 text-small">
+                            <Users className="h-3.5 w-3.5 text-muted-light dark:text-muted-dark flex-shrink-0" />
+                            <span className="text-muted-light dark:text-muted-dark">الأقسام</span>
+                            <span className="font-semibold truncate">
+                              {agentDepts.slice(0, 2).map((d) => d.name).join('، ')}
+                              {agentDepts.length > 2 && (
+                                <span className="text-muted-light dark:text-muted-dark font-normal"> +{agentDepts.length - 2}</span>
+                              )}
+                            </span>
+                          </div>
                         )}
                       </div>
                     )}
 
-                    {/* Footer: channels + open convs + status switch */}
-                    <div className="flex items-center justify-between gap-2 pt-3 border-t border-border-light dark:border-border-dark">
-                      <div className="flex items-center gap-3 text-small text-muted-light dark:text-muted-dark">
+                    {/* Footer: channels + convs (right of card / start in RTL); status pill (left / end) */}
+                    <div className="mt-auto flex items-center justify-between gap-2 pt-3 border-t border-border-light dark:border-border-dark">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1.5 text-small" title="المحادثات المفتوحة">
+                          <MessageSquare className="h-3.5 w-3.5 text-muted-light dark:text-muted-dark" />
+                          <span className="font-bold tabular-nums">{active}</span>
+                        </span>
                         {uniqueChannelTypes.length > 0 && (
-                          <span className="flex items-center gap-1" title={agentChannels.map((c) => c.name).join('، ')}>
+                          <span
+                            className="flex items-center gap-1"
+                            title={agentChannels.map((c) => c.name).join('، ')}
+                          >
                             {uniqueChannelTypes.slice(0, 4).map((t) => (
-                              <ChannelIcon key={t} type={t} size={12} />
+                              <ChannelIcon key={t} type={t} size={14} />
                             ))}
                             {uniqueChannelTypes.length > 4 && (
-                              <span className="text-[11px]">+{uniqueChannelTypes.length - 4}</span>
+                              <span className="text-[11px] text-muted-light dark:text-muted-dark">+{uniqueChannelTypes.length - 4}</span>
                             )}
                           </span>
                         )}
-                        <span className="flex items-center gap-1" title="المحادثات المفتوحة">
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          <span className="font-semibold text-current tabular-nums">{active}</span>
-                        </span>
                       </div>
                       {isPending ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/15 text-warning text-[11px] font-medium">
                           <Clock className="h-3 w-3" /> بانتظار القبول
                         </span>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => toggleSuspend(a)}
-                          className={cn(
-                            'relative h-5 w-9 rounded-full transition-colors flex-shrink-0',
-                            !isSuspended ? 'bg-primary' : 'bg-border-light dark:bg-border-dark',
-                          )}
-                          role="switch"
-                          aria-checked={!isSuspended}
-                          title={isSuspended ? 'مُعطّل — اضغط للتفعيل' : 'مُفعّل — اضغط للتعليق'}
-                        >
-                          <span
+                        <div className="flex items-center gap-2">
+                          <span className={cn(
+                            'text-[11px] font-semibold',
+                            !isSuspended ? 'text-primary' : 'text-muted-light dark:text-muted-dark',
+                          )}>
+                            {!isSuspended ? 'مُفعّل' : 'مُعطّل'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => toggleSuspend(a)}
                             className={cn(
-                              'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all',
-                              !isSuspended ? 'start-0.5' : 'end-0.5',
+                              'relative h-5 w-9 rounded-full transition-colors flex-shrink-0',
+                              !isSuspended ? 'bg-primary' : 'bg-border-light dark:bg-border-dark',
                             )}
-                          />
-                        </button>
+                            role="switch"
+                            aria-checked={!isSuspended}
+                            title={isSuspended ? 'مُعطّل — اضغط للتفعيل' : 'مُفعّل — اضغط للتعطيل'}
+                          >
+                            <span
+                              className={cn(
+                                'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all',
+                                !isSuspended ? 'start-0.5' : 'end-0.5',
+                              )}
+                            />
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -734,7 +749,7 @@ export default function Team(): JSX.Element {
                               )}
                               role="switch"
                               aria-checked={!isSuspended}
-                              title={isSuspended ? 'مُعطّل — اضغط للتفعيل' : 'مُفعّل — اضغط للتعليق'}
+                              title={isSuspended ? 'مُعطّل — اضغط للتفعيل' : 'مُفعّل — اضغط للتعطيل'}
                             >
                               <span
                                 className={cn(
