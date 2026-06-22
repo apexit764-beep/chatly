@@ -7,6 +7,8 @@ interface UIState {
   conversationListCollapsed: boolean;
   detailsCollapsed: boolean;
   notificationsOpen: boolean;
+  /** Inbox focus mode: hides the icon sidebar, section sidebar, and top header */
+  inboxFocus: boolean;
   toast: { id: number; message: string; type: 'success' | 'error' | 'info' } | null;
   toggleSidebar: () => void;
   setSidebarCollapsed: (v: boolean) => void;
@@ -16,6 +18,8 @@ interface UIState {
   toggleDetails: () => void;
   toggleNotifications: () => void;
   setNotificationsOpen: (v: boolean) => void;
+  toggleInboxFocus: () => void;
+  setInboxFocus: (v: boolean) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   hideToast: () => void;
 }
@@ -27,6 +31,7 @@ export const useUIStore = create<UIState>((set) => ({
   conversationListCollapsed: false,
   detailsCollapsed: false,
   notificationsOpen: false,
+  inboxFocus: false,
   toast: null,
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
@@ -36,6 +41,8 @@ export const useUIStore = create<UIState>((set) => ({
   toggleDetails: () => set((s) => ({ detailsCollapsed: !s.detailsCollapsed })),
   toggleNotifications: () => set((s) => ({ notificationsOpen: !s.notificationsOpen })),
   setNotificationsOpen: (v) => set({ notificationsOpen: v }),
+  toggleInboxFocus: () => set((s) => ({ inboxFocus: !s.inboxFocus })),
+  setInboxFocus: (v) => set({ inboxFocus: v }),
   showToast: (message, type = 'success') => {
     const id = Date.now();
     set({ toast: { id, message, type } });

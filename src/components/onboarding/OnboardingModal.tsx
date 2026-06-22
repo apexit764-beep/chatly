@@ -154,10 +154,10 @@ export function OnboardingReminder({ collapsed = false }: { collapsed?: boolean 
         onClick={reopen}
         title={`إكمال الإعداد · ${doneCount}/${total}`}
         aria-label="إكمال الإعداد"
-        className="relative h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors"
+        className="relative h-10 w-10 rounded-lg bg-white/10 border border-white/15 text-sky-300 flex items-center justify-center hover:bg-white/15 transition-colors"
       >
         <Rocket className="h-4 w-4" />
-        <span className="absolute -top-1 -end-1 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
+        <span className="absolute -top-1 -end-1 h-4 min-w-4 px-1 rounded-full bg-sky-400 text-[#0F2554] text-[9px] font-bold flex items-center justify-center ring-2 ring-[#172554]">
           {doneCount}
         </span>
       </button>
@@ -167,15 +167,21 @@ export function OnboardingReminder({ collapsed = false }: { collapsed?: boolean 
   return (
     <button
       onClick={reopen}
-      className="w-full text-start p-2.5 rounded-card bg-primary/5 border border-primary/20 hover:border-primary/40 transition-colors"
+      className="w-full text-start p-3 rounded-xl bg-gradient-to-br from-white/[0.14] to-white/[0.06] border border-white/15 hover:border-sky-300/50 hover:from-white/[0.18] transition-all relative overflow-hidden group"
     >
-      <div className="flex items-center gap-2 mb-1.5">
-        <Rocket className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-        <span className="text-small font-semibold flex-1">إكمال الإعداد</span>
-        <span className="text-[11px] text-muted-light dark:text-muted-dark tabular-nums">{doneCount}/{total}</span>
+      <span className="absolute -top-6 -end-6 h-20 w-20 rounded-full bg-sky-400/20 blur-2xl pointer-events-none group-hover:bg-sky-400/30 transition-colors" />
+      <div className="relative flex items-center gap-2 mb-2">
+        <span className="h-6 w-6 rounded-md bg-sky-400/20 flex items-center justify-center">
+          <Rocket className="h-3.5 w-3.5 text-sky-300" />
+        </span>
+        <span className="text-small font-semibold flex-1 text-white">إكمال الإعداد</span>
+        <span className="text-[11px] text-sky-300 font-bold tabular-nums">{doneCount}/{total}</span>
       </div>
-      <div className="h-1.5 rounded-full bg-bg-light dark:bg-bg-dark overflow-hidden">
-        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progress}%` }} />
+      <div className="relative h-1.5 rounded-full bg-white/10 overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all bg-gradient-to-r from-sky-400 to-sky-300"
+          style={{ width: `${progress}%` }}
+        />
       </div>
     </button>
   );

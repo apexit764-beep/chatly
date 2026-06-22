@@ -38,15 +38,15 @@ export default function Subscribe(): JSX.Element {
   const navigate = useNavigate();
 
   const client = clients.find((c) => c.id === CURRENT_CLIENT_ID);
-  const currentCountry = countries.find((c) => c.code === client?.country) ?? countries[0];
+  // Country is auto-detected from the client's IP / billing address — not user-selectable.
+  const selectedCountry = countries.find((c) => c.code === client?.country) ?? countries[0];
+  const country = selectedCountry.code;
 
-  const [country, setCountry] = useState(currentCountry.code);
   const [cycle, setCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [step, setStep] = useState<Step>('select');
 
   const activePlans = plans.filter((p) => p.active);
-  const selectedCountry = countries.find((c) => c.code === country) ?? currentCountry;
   const currentPlanId = client?.planId ?? null;
 
   const handleSubscribe = (plan: Plan): void => {
@@ -69,25 +69,47 @@ export default function Subscribe(): JSX.Element {
             </p>
           </div>
 
-          {/* Country + cycle toggle */}
-          <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark">
-              <Globe2 className="h-4 w-4 text-muted-light dark:text-muted-dark" />
-              <select value={country} onChange={(e) => setCountry(e.target.value)} className="bg-transparent text-small font-medium focus:outline-none cursor-pointer">
-                {countries.map((c) => (
-                  <option key={c.code} value={c.code}>{c.flag} {c.nameAr} — {c.currency}</option>
-                ))}
-              </select>
-            </div>
+          {/* Cycle toggle */}
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-3">
             <div className="flex items-center gap-1 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-full p-1">
-              <button onClick={() => setCycle('monthly')} className={cn('px-4 py-1.5 rounded-full text-small font-medium transition-colors', cycle === 'monthly' ? 'bg-primary text-white shadow' : 'text-muted-light dark:text-muted-dark')}>
+              <button
+                onClick={() => setCycle('monthly')}
+                className={cn(
+                  'px-4 py-1.5 rounded-full text-small font-medium transition-colors',
+                  cycle === 'monthly' ? 'bg-primary text-white shadow' : 'text-muted-light dark:text-muted-dark'
+                )}
+                style={cycle === 'monthly' ? { color: '#fff' } : undefined}
+              >
                 شهري
               </button>
-              <button onClick={() => setCycle('yearly')} className={cn('px-4 py-1.5 rounded-full text-small font-medium transition-colors flex items-center gap-1.5', cycle === 'yearly' ? 'bg-primary text-white shadow' : 'text-muted-light dark:text-muted-dark')}>
+              <button
+                onClick={() => setCycle('yearly')}
+                className={cn(
+                  'px-4 py-1.5 rounded-full text-small font-medium transition-colors flex items-center gap-1.5',
+                  cycle === 'yearly' ? 'bg-primary text-white shadow' : 'text-muted-light dark:text-muted-dark'
+                )}
+                style={cycle === 'yearly' ? { color: '#fff' } : undefined}
+              >
                 سنوي
-                <span className="text-[10px] bg-success/20 text-success px-1.5 py-0.5 rounded-full font-bold">وفّر شهرين</span>
+                <span
+                  className={cn(
+                    'text-[10px] px-1.5 py-0.5 rounded-full font-bold',
+                    cycle === 'yearly' ? 'bg-white text-primary' : 'bg-success/15 text-success'
+                  )}
+                  style={cycle === 'yearly' ? { color: '#2563EB' } : undefined}
+                >
+                  وفّر شهرين
+                </span>
               </button>
             </div>
+          </div>
+
+          {/* Auto-detected country indicator */}
+          <div className="flex items-center justify-center mb-8">
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-light dark:text-muted-dark">
+              <Globe2 className="h-3 w-3" />
+              الأسعار بـ {selectedCountry.currency} لـ {selectedCountry.nameAr} (تلقائياً)
+            </span>
           </div>
 
           {/* Plans grid */}

@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import {
+  LayoutDashboard,
   Inbox as InboxIcon,
   Users,
   BarChart3,
@@ -9,8 +10,11 @@ import {
   Settings,
   Building2,
   Smartphone,
+  CreditCard,
+  Sparkles,
   PanelRightClose,
   PanelRightOpen,
+  BookOpen,
 } from 'lucide-react';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -27,6 +31,7 @@ interface NavItem {
 }
 
 const mainNav: NavItem[] = [
+  { to: '/overview', label: 'نظرة عامة', icon: LayoutDashboard, group: 'main' },
   { to: '/inbox', label: 'المحادثات', icon: InboxIcon, badgeKey: 'inboxUnread', group: 'main' },
   { to: '/contacts', label: 'العملاء', icon: Users, group: 'main' },
   { to: '/reports', label: 'التحليلات', icon: BarChart3, group: 'main' },
@@ -35,6 +40,9 @@ const mainNav: NavItem[] = [
   { to: '/team', label: 'الموظفون', icon: UsersRound, group: 'manage' },
   { to: '/campaigns', label: 'الحملات الإعلانية', icon: Megaphone, group: 'manage' },
   { to: '/saved-replies', label: 'الردود السريعة', icon: MessageSquareQuote, group: 'manage' },
+  { to: '/knowledge-base', label: 'مركز المساعدة', icon: BookOpen, group: 'manage' },
+  { to: '/ai-settings', label: 'إعدادات الذكاء الاصطناعي', icon: Sparkles, group: 'manage' },
+  { to: '/billing', label: 'الباقات والاشتراك', icon: CreditCard, group: 'system' },
   { to: '/settings', label: 'الإعدادات', icon: Settings, group: 'system' },
 ];
 
@@ -49,11 +57,9 @@ const SIDEBAR_GRADIENT =
 
 export function IconSidebar(): JSX.Element {
   const conversations = useDataStore((s) => s.conversations);
-  const channels = useDataStore((s) => s.channels);
   const collapsed = useUIStore((s) => s.iconSidebarCollapsed);
   const toggleCollapsed = useUIStore((s) => s.toggleIconSidebar);
   const inboxUnread = conversations.reduce((acc, c) => acc + (c.unreadCount > 0 ? 1 : 0), 0);
-  const connectedChannels = channels.filter((c) => c.status === 'connected').length;
 
   const renderItem = (item: NavItem): JSX.Element => {
     const Icon = item.icon;
@@ -142,7 +148,7 @@ export function IconSidebar(): JSX.Element {
         {/* Brand */}
         <div className="relative group h-11 w-11 mb-3">
           <NavLink
-            to="/inbox"
+            to="/overview"
             className="absolute inset-0 rounded-lg bg-white flex items-center justify-center group-hover:opacity-0 transition-opacity shadow-md"
             aria-label="Chatly"
           >
@@ -169,16 +175,6 @@ export function IconSidebar(): JSX.Element {
 
         <div className="flex flex-col items-center gap-1 mt-auto w-full">
           <OnboardingReminder collapsed />
-          {/* Connection status indicator (dot only when collapsed) */}
-          <div
-            className="h-9 w-9 rounded-lg flex items-center justify-center"
-            title={`${connectedChannels} قناة متصلة`}
-          >
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 animate-ping" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
-            </span>
-          </div>
         </div>
       </aside>
     );
@@ -194,7 +190,7 @@ export function IconSidebar(): JSX.Element {
     >
       {/* Brand block */}
       <div className="h-14 px-4 flex items-center gap-2.5 border-b border-white/10 flex-shrink-0">
-        <NavLink to="/inbox" className="flex items-center gap-2.5 flex-1 min-w-0" aria-label="Chatly">
+        <NavLink to="/overview" className="flex items-center gap-2.5 flex-1 min-w-0" aria-label="Chatly">
           <span className="h-9 w-9 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
             <SekaaLogo className="h-6 w-6" />
           </span>
@@ -228,26 +224,8 @@ export function IconSidebar(): JSX.Element {
       </nav>
 
       {/* Onboarding reminder */}
-      <div className="px-3 pb-2 empty:hidden">
+      <div className="px-3 pb-3 empty:hidden">
         <OnboardingReminder />
-      </div>
-
-      {/* Footer: connection status */}
-      <div className="p-3 border-t border-white/10">
-        <div className="flex items-center gap-2.5 bg-emerald-500/15 border border-emerald-500/30 rounded-lg px-3 py-2.5">
-          <span className="relative flex h-2.5 w-2.5 flex-shrink-0">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 animate-ping" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
-          </span>
-          <div className="min-w-0 leading-tight">
-            <p className="text-small font-semibold text-emerald-100 truncate">
-              {connectedChannels > 0 ? 'القنوات متصلة' : 'لا توجد قنوات'}
-            </p>
-            <p className="text-[10.5px] text-emerald-200/70">
-              {connectedChannels} قناة نشطة
-            </p>
-          </div>
-        </div>
       </div>
     </aside>
   );

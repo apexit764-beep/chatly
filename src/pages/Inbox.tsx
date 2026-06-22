@@ -31,6 +31,8 @@ import {
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
+  Maximize2,
+  Minimize2,
   SlidersHorizontal,
   Inbox as InboxIcon,
   UserX,
@@ -80,6 +82,8 @@ export default function Inbox(): JSX.Element {
   const toggleConversationList = useUIStore((s) => s.toggleConversationList);
   const detailsCollapsed = useUIStore((s) => s.detailsCollapsed);
   const toggleDetails = useUIStore((s) => s.toggleDetails);
+  const inboxFocus = useUIStore((s) => s.inboxFocus);
+  const toggleInboxFocus = useUIStore((s) => s.toggleInboxFocus);
   const { confirm } = useConfirm();
   const view = useInboxStore((s) => s.view);
   const selectedId = useInboxStore((s) => s.selectedId);
@@ -151,6 +155,16 @@ export default function Inbox(): JSX.Element {
     if (selectedId) markRead(selectedId);
   }, [selectedId, markRead]);
 
+  // ESC exits focus mode
+  useEffect(() => {
+    if (!inboxFocus) return;
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') toggleInboxFocus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [inboxFocus, toggleInboxFocus]);
+
   const handleSend = (): void => {
     if (!draft.trim() || !selected) return;
     if (inputMode === 'note') {
@@ -212,7 +226,36 @@ export default function Inbox(): JSX.Element {
   };
 
   return (
-    <div className="h-screen flex gap-2 p-2 bg-bg-light dark:bg-bg-dark overflow-hidden">
+    <div className="h-full flex gap-2 p-2 bg-bg-light dark:bg-bg-dark overflow-hidden relative">
+      {/* Focus mode FAB — bottom-end (left-bottom in RTL), always visible, prominent with glow */}
+      <div className="absolute bottom-5 end-5 z-30">
+        {/* Pulsing glow halo */}
+        <span className="absolute inset-0 rounded-full bg-primary/40 blur-md animate-ping pointer-events-none" />
+        <span className="absolute inset-0 rounded-full bg-primary/30 blur-lg pointer-events-none" />
+        <button
+          onClick={toggleInboxFocus}
+          className={cn(
+            'relative h-12 w-12 rounded-full flex items-center justify-center transition-all group',
+            'bg-gradient-to-br from-primary to-primary-dark text-white',
+            'shadow-[0_8px_24px_-4px_rgba(37,99,235,0.5)] hover:shadow-[0_12px_32px_-4px_rgba(37,99,235,0.7)]',
+            'ring-2 ring-white/40 dark:ring-white/20',
+            'hover:scale-110 active:scale-95',
+          )}
+          style={{ color: '#fff' }}
+          title={inboxFocus ? 'الخروج من وضع التركيز (Esc)' : 'وضع ملء الشاشة'}
+          aria-label={inboxFocus ? 'الخروج من وضع التركيز' : 'وضع ملء الشاشة'}
+        >
+          {inboxFocus ? (
+            <Minimize2 className="h-5 w-5" />
+          ) : (
+            <Maximize2 className="h-5 w-5" />
+          )}
+          {/* Tooltip label on hover */}
+          <span className="absolute end-full me-3 px-2.5 py-1 rounded-md bg-[#111827] text-white text-[11px] font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+            {inboxFocus ? 'خروج (Esc)' : 'ملء الشاشة'}
+          </span>
+        </button>
+      </div>
       {/* Hidden file inputs */}
       <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" onChange={(e) => handlePickFile(e, 'document')} />
       <input ref={imageInputRef} type="file" className="hidden" accept="image/*" onChange={(e) => handlePickFile(e, 'image')} />
@@ -417,6 +460,7 @@ export default function Inbox(): JSX.Element {
               >
                 {detailsCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
               </button>
+
 
               {/* More menu */}
               <div className="relative">

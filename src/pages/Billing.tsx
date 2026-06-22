@@ -1,28 +1,28 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-  CreditCard,
-  Calendar,
   Download,
-  FileText,
-  CheckCircle2,
-  AlertTriangle,
   ArrowUpRight,
   Sparkles,
-  RefreshCw,
-  X,
-  Plus,
-  Building2,
-  Lock,
+  Check,
+  Star,
+  Calendar,
+  FileText,
+  CheckCircle2,
+  Receipt,
+  Users,
+  Users2,
+  MessageSquare,
+  Radio,
 } from 'lucide-react';
-import { Card, Input, Modal, StatCard, useConfirm } from '@components/ui';
+import { Card, useConfirm } from '@components/ui';
 import { useAdminStore } from '@/store/useAdminStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
-import { formatDate, timeAgo } from '@/utils/format';
+import { formatDate } from '@/utils/format';
 import { printAsPdf } from '@/utils/csv';
 import { cn } from '@/utils/cn';
-import type { Invoice, InvoiceStatus } from '@/types';
+import type { Invoice, InvoiceStatus, Plan } from '@/types';
 
 const CURRENT_CLIENT_ID = 'client_1';
 
@@ -44,22 +44,35 @@ const invStatusColor: Record<InvoiceStatus, string> = {
 
 export default function Billing(): JSX.Element {
   const clients = useAdminStore((s) => s.clients);
-  const plans = useAdminStore((s) => s.plans);
+  const allPlans = useAdminStore((s) => s.plans);
   const subscriptions = useAdminStore((s) => s.subscriptions);
   const invoices = useAdminStore((s) => s.invoices);
   const countries = useAdminStore((s) => s.countries);
   const cancelSubscription = useAdminStore((s) => s.cancelSubscription);
   const showToast = useUIStore((s) => s.showToast);
-
-  const [cancelModal, setCancelModal] = useState(false);
-  const [addCardOpen, setAddCardOpen] = useState(false);
+  const navigate = useNavigate();
   const { confirm } = useConfirm();
+
+  const [cycle, setCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'all'>('all');
 
   const client = clients.find((c) => c.id === CURRENT_CLIENT_ID);
   const sub = subscriptions.find((s) => s.clientId === CURRENT_CLIENT_ID && s.status === 'active');
-  const plan = plans.find((p) => p.id === client?.planId);
-  const country = countries.find((c) => c.code === client?.country);
-  const clientInvoices = invoices.filter((i) => i.clientId === CURRENT_CLIENT_ID).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const plan = allPlans.find((p) => p.id === client?.planId);
+  const country = countries.find((c) => c.code === client?.country) ?? countries[0];
+  const activePlans = allPlans.filter((p) => p.active);
+  const clientInvoices = invoices
+    .filter((i) => i.clientId === CURRENT_CLIENT_ID)
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const filteredInvoices = statusFilter === 'all'
+    ? clientInvoices
+    : clientInvoices.filter((i) => i.status === statusFilter);
+
+  const paidCount = clientInvoices.filter((i) => i.status === 'paid').length;
+  const pendingCount = clientInvoices.filter((i) => i.status === 'pending').length;
+  const totalPaid = clientInvoices
+    .filter((i) => i.status === 'paid')
+    .reduce((acc, i) => acc + i.total, 0);
 
   const handleDownload = (inv: Invoice): void => {
     const html = `
@@ -93,12 +106,13 @@ export default function Billing(): JSX.Element {
     if (ok) {
       cancelSubscription(sub.id);
       showToast('تم إلغاء الاشتراك', 'success');
-      setCancelModal(false);
     }
   };
 
-  const paidCount = clientInvoices.filter((i) => i.status === 'paid').length;
-  const totalSpent = clientInvoices.filter((i) => i.status === 'paid').reduce((acc, i) => acc + i.total, 0);
+  const goToCheckout = (p: Plan): void => {
+    if (p.id === client?.planId) return;
+    navigate('/subscribe');
+  };
 
   if (!client || !plan || !sub) {
     return (
@@ -121,13 +135,13 @@ export default function Billing(): JSX.Element {
   }
 
   return (
-    <div className="p-4 lg:p-8 page-fade max-w-5xl mx-auto space-y-5">
+    <div className="p-4 lg:p-8 page-fade max-w-6xl mx-auto space-y-6">
       {/* Current plan */}
       <Card className="p-6 bg-gradient-to-l from-primary to-primary-dark text-white border-0">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur text-[10px] font-bold uppercase tracking-wider mb-2">
-              <Sparkles className="h-3 w-3" /> الباقة الحالية
+              <Sparkles className="h-3 w-3" /> اشتراكك الحالي
             </span>
             <h2 className="text-h1 font-extrabold mb-1">{plan.nameAr}</h2>
             <p className="text-body opacity-90 mb-4">{plan.tagline}</p>
@@ -140,180 +154,316 @@ export default function Billing(): JSX.Element {
             <Link to="/subscribe" className="h-10 px-5 rounded-full bg-white text-primary text-small font-semibold flex items-center gap-2 hover:bg-white/90 transition-colors">
               <ArrowUpRight className="h-4 w-4" /> ترقية / تخفيض
             </Link>
-            <button onClick={() => setCancelModal(true)} className="h-10 px-5 rounded-full bg-white/15 backdrop-blur text-white text-small font-semibold hover:bg-white/25 transition-colors">
+            <button onClick={handleCancel} className="h-10 px-5 rounded-full bg-white/15 backdrop-blur text-white text-small font-semibold hover:bg-white/25 transition-colors">
               إلغاء الاشتراك
             </button>
           </div>
         </div>
 
-        <div className="mt-5 pt-5 border-t border-white/20 grid grid-cols-1 sm:grid-cols-3 gap-4 text-small">
-          <div>
-            <p className="opacity-80">يتجدد في</p>
-            <p className="font-semibold">{formatDate(sub.currentPeriodEnd)}</p>
-          </div>
-          <div>
-            <p className="opacity-80">طريقة الدفع</p>
-            <p className="font-semibold">VISA •••• {sub.paymentMethod?.last4 ?? '4242'}</p>
-          </div>
-          <div>
-            <p className="opacity-80">الدولة</p>
-            <p className="font-semibold">{country?.flag} {country?.nameAr}</p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="مدفوع منذ الاشتراك" value={formatMoney(totalSpent, client.currency)} icon={<CheckCircle2 className="h-5 w-5" />} iconBg="bg-success/15" iconColor="text-success" />
-        <StatCard label="الفواتير المدفوعة" value={paidCount} icon={<FileText className="h-5 w-5" />} iconBg="bg-primary/15" iconColor="text-primary" />
-        <StatCard label="الموظفون" value={`${client.agentCount} / ${plan.limits.agents === -1 ? '∞' : plan.limits.agents}`} icon={<Building2 className="h-5 w-5" />} iconBg="bg-info/15" iconColor="text-info" />
-        <StatCard label="الفترة القادمة" value={timeAgo(sub.currentPeriodEnd).replace('قبل', 'بعد')} icon={<Calendar className="h-5 w-5" />} iconBg="bg-warning/15" iconColor="text-warning" />
-      </div>
-
-      {/* Payment method */}
-      <Card className="p-5 lg:p-6">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <h3 className="text-h2 font-bold flex items-center gap-2"><CreditCard className="h-5 w-5 text-primary" /> طريقة الدفع</h3>
-          <button onClick={() => setAddCardOpen(true)} className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex items-center gap-2">
-            <Plus className="h-4 w-4" /> إضافة بطاقة
-          </button>
-        </div>
-        {sub.paymentMethod ? (
-          <div className="flex items-center justify-between p-4 rounded-card bg-gradient-to-br from-slate-900 to-slate-800 text-white max-w-md">
+        <div className="mt-5 pt-5 border-t border-white/20 grid grid-cols-1 sm:grid-cols-2 gap-4 text-small">
+          <div className="flex items-center gap-2.5">
+            <Calendar className="h-4 w-4 opacity-80" />
             <div>
-              <div className="inline-flex items-center justify-center h-7 px-2 rounded bg-gradient-to-r from-[#1a1f71] to-[#0f1c5e] text-white text-[10px] font-extrabold italic mb-3">
-                VISA
-              </div>
-              <p className="font-mono text-body tracking-wider">•••• •••• •••• {sub.paymentMethod.last4}</p>
-              <p className="text-[10px] opacity-70 mt-1">ينتهي {String(sub.paymentMethod.expMonth).padStart(2, '0')}/{sub.paymentMethod.expYear}</p>
+              <p className="opacity-80 text-[11px]">يتجدد في</p>
+              <p className="font-semibold">{formatDate(sub.currentPeriodEnd)}</p>
             </div>
-            <span className="px-2.5 py-1 rounded-full bg-white/15 backdrop-blur text-[10px] font-bold">افتراضية</span>
           </div>
-        ) : (
-          <p className="text-body text-muted-light dark:text-muted-dark">لا توجد طريقة دفع محفوظة</p>
-        )}
+          <div className="flex items-center gap-2.5">
+            <span className="text-base">{country.flag}</span>
+            <div>
+              <p className="opacity-80 text-[11px]">الدولة</p>
+              <p className="font-semibold">{country.nameAr}</p>
+            </div>
+          </div>
+        </div>
       </Card>
+
+      {/* Available plans */}
+      <div>
+        <div className="flex items-end justify-between gap-4 flex-wrap mb-4">
+          <div>
+            <h2 className="text-h2 font-bold">الباقات المتاحة</h2>
+            <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
+              قارن بين الباقات وارقِ متى ما احتجت
+            </p>
+          </div>
+          <div className="flex items-center gap-1 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-full p-1">
+            <button
+              onClick={() => setCycle('monthly')}
+              className={cn(
+                'px-4 py-1.5 rounded-full text-small font-medium transition-colors',
+                cycle === 'monthly' ? 'bg-primary text-white shadow' : 'text-muted-light dark:text-muted-dark'
+              )}
+              style={cycle === 'monthly' ? { color: '#fff' } : undefined}
+            >
+              شهري
+            </button>
+            <button
+              onClick={() => setCycle('yearly')}
+              className={cn(
+                'px-4 py-1.5 rounded-full text-small font-medium transition-colors flex items-center gap-1.5',
+                cycle === 'yearly' ? 'bg-primary text-white shadow' : 'text-muted-light dark:text-muted-dark'
+              )}
+              style={cycle === 'yearly' ? { color: '#fff' } : undefined}
+            >
+              سنوي
+              <span
+                className={cn(
+                  'text-[10px] px-1.5 py-0.5 rounded-full font-bold',
+                  cycle === 'yearly'
+                    ? 'bg-white text-primary'
+                    : 'bg-success/15 text-success',
+                )}
+                style={cycle === 'yearly' ? { color: '#2563EB' } : undefined}
+              >
+                وفّر شهرين
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {activePlans.map((p) => {
+            const price = p.pricesPerCountry[country.code] ?? { monthly: 0, yearly: 0 };
+            const isCurrent = p.id === client.planId;
+            const display = cycle === 'monthly' ? price.monthly : Math.round(price.yearly / 12);
+            return (
+              <Card
+                key={p.id}
+                className={cn(
+                  'p-5 relative transition-all flex flex-col',
+                  isCurrent
+                    ? 'border-2 border-success shadow-card-hover bg-success/[0.03]'
+                    : p.popular
+                      ? 'border-2 border-primary/30 hover:border-primary'
+                      : 'hover:border-primary/30'
+                )}
+              >
+                {p.popular && !isCurrent && (
+                  <span className="absolute -top-3 start-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary text-white text-[10px] font-bold shadow-lg" style={{ color: '#fff' }}>
+                    <Star className="h-3 w-3 fill-current" /> الأكثر شعبية
+                  </span>
+                )}
+                {isCurrent && (
+                  <span className="absolute -top-3 start-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-success text-white text-[10px] font-bold shadow-lg shadow-success/30" style={{ color: '#fff' }}>
+                    <Check className="h-3 w-3" /> باقتك الحالية
+                  </span>
+                )}
+                <h3 className="text-h3 font-extrabold">{p.nameAr}</h3>
+                <p className="text-small text-muted-light dark:text-muted-dark mt-1 mb-4 min-h-[2.5em]">{p.tagline}</p>
+
+                <div className="mb-4 pb-4 border-b border-border-light dark:border-border-dark">
+                  <div className="flex items-baseline gap-1">
+                    <p className="text-h1 font-extrabold">{formatMoney(display, country.currency)}</p>
+                    <span className="text-small text-muted-light dark:text-muted-dark">/شهر</span>
+                  </div>
+                  {cycle === 'yearly' && (
+                    <p className="text-[11px] text-success font-medium mt-0.5">
+                      {formatMoney(price.yearly, country.currency)} سنوياً
+                    </p>
+                  )}
+                </div>
+
+                {/* Limits — integrated as the first feature rows */}
+                <ul className="space-y-2 mb-5 flex-1 text-small">
+                  <LimitItem
+                    icon={<Users2 className="h-4 w-4" />}
+                    value={p.limits.agents === -1 ? 'موظفون بلا حدود' : `حتى ${p.limits.agents} موظف`}
+                  />
+                  <LimitItem
+                    icon={<Radio className="h-4 w-4" />}
+                    value={p.limits.channels === -1 ? 'قنوات بلا حدود' : `${p.limits.channels} ${p.limits.channels === 1 ? 'قناة تواصل' : 'قنوات تواصل'}`}
+                  />
+                  <LimitItem
+                    icon={<MessageSquare className="h-4 w-4" />}
+                    value={p.limits.conversations === -1 ? 'محادثات بلا حدود' : `${p.limits.conversations.toLocaleString('en-US')} محادثة/شهر`}
+                  />
+                  <LimitItem
+                    icon={<Users className="h-4 w-4" />}
+                    value={p.limits.contacts === -1 ? 'جهات اتصال بلا حدود' : `${p.limits.contacts.toLocaleString('en-US')} جهة اتصال`}
+                  />
+                  <li className="h-px bg-border-light dark:bg-border-dark my-2" />
+                  {p.features.slice(0, 6).map((f, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                      <Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => goToCheckout(p)}
+                  disabled={isCurrent}
+                  className={cn(
+                    'w-full h-10 rounded-full text-small font-semibold transition-colors inline-flex items-center justify-center gap-1.5',
+                    isCurrent
+                      ? 'bg-success/15 text-success cursor-default'
+                      : 'bg-primary hover:bg-primary-dark text-white'
+                  )}
+                  style={isCurrent ? undefined : { color: '#fff' }}
+                >
+                  {isCurrent && <Check className="h-3.5 w-3.5" />}
+                  {isCurrent ? 'مفعّلة' : 'اختر هذه الباقة'}
+                </button>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Invoices */}
       <Card className="overflow-hidden">
-        <div className="px-5 py-4 border-b border-border-light dark:border-border-dark flex items-center justify-between flex-wrap gap-2">
-          <h3 className="text-h2 font-bold">الفواتير</h3>
-          <span className="text-small text-muted-light dark:text-muted-dark">{clientInvoices.length} فاتورة</span>
+        <div className="px-5 py-4 border-b border-border-light dark:border-border-dark">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h3 className="text-h2 font-bold flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-primary" />
+              الفواتير
+            </h3>
+
+            {/* Summary chips */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <SummaryChip
+                icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                label={`${paidCount} مدفوعة`}
+                tone="success"
+              />
+              {pendingCount > 0 && (
+                <SummaryChip
+                  icon={<FileText className="h-3.5 w-3.5" />}
+                  label={`${pendingCount} معلّقة`}
+                  tone="warning"
+                />
+              )}
+              <SummaryChip
+                icon={<Sparkles className="h-3.5 w-3.5" />}
+                label={`إجمالي ${formatMoney(totalPaid, client.currency)}`}
+                tone="primary"
+              />
+            </div>
+          </div>
+
+          {/* Status filter pills */}
+          <div className="mt-3 flex items-center gap-1.5 overflow-x-auto">
+            <FilterPill active={statusFilter === 'all'} onClick={() => setStatusFilter('all')}>
+              الكل ({clientInvoices.length})
+            </FilterPill>
+            {(['paid', 'pending', 'failed', 'refunded'] as InvoiceStatus[]).map((s) => {
+              const n = clientInvoices.filter((i) => i.status === s).length;
+              if (n === 0) return null;
+              return (
+                <FilterPill key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>
+                  {invStatusLabel[s]} ({n})
+                </FilterPill>
+              );
+            })}
+          </div>
         </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-body">
             <thead className="bg-bg-light dark:bg-bg-dark text-small text-muted-light dark:text-muted-dark">
               <tr>
                 <th className="text-start font-medium px-4 py-3">رقم الفاتورة</th>
+                <th className="text-start font-medium px-4 py-3 hidden md:table-cell">البيان</th>
                 <th className="text-start font-medium px-4 py-3">التاريخ</th>
-                <th className="text-start font-medium px-4 py-3">المبلغ</th>
-                <th className="text-start font-medium px-4 py-3">الحالة</th>
-                <th className="text-start font-medium px-4 py-3 w-1">تحميل</th>
+                <th className="text-end font-medium px-4 py-3">المبلغ</th>
+                <th className="text-center font-medium px-4 py-3">الحالة</th>
+                <th className="text-center font-medium px-4 py-3 w-1">PDF</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
-              {clientInvoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-bg-light dark:hover:bg-bg-dark transition-colors">
-                  <td className="px-4 py-3 font-mono font-semibold">{inv.number}</td>
-                  <td className="px-4 py-3 text-small text-muted-light dark:text-muted-dark">{formatDate(inv.dueDate)}</td>
-                  <td className="px-4 py-3 font-semibold">{formatMoney(inv.total, inv.currency)}</td>
-                  <td className="px-4 py-3">
-                    <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold', invStatusColor[inv.status])}>
-                      {invStatusLabel[inv.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => handleDownload(inv)} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title="تحميل PDF">
-                      <Download className="h-4 w-4" />
-                    </button>
+              {filteredInvoices.map((inv) => {
+                const summary = inv.items[0]?.description ?? '—';
+                return (
+                  <tr key={inv.id} className="hover:bg-bg-light dark:hover:bg-bg-dark transition-colors">
+                    <td className="px-4 py-3 font-mono font-semibold whitespace-nowrap">{inv.number}</td>
+                    <td className="px-4 py-3 text-small text-muted-light dark:text-muted-dark hidden md:table-cell truncate max-w-[260px]">{summary}</td>
+                    <td className="px-4 py-3 text-small text-muted-light dark:text-muted-dark whitespace-nowrap">{formatDate(inv.dueDate)}</td>
+                    <td className="px-4 py-3 font-semibold text-end whitespace-nowrap">{formatMoney(inv.total, inv.currency)}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold', invStatusColor[inv.status])}>
+                        {invStatusLabel[inv.status]}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => handleDownload(inv)}
+                        className="h-8 w-8 rounded-full hover:bg-primary/10 text-muted-light dark:text-muted-dark hover:text-primary inline-flex items-center justify-center transition-colors"
+                        title="تحميل PDF"
+                      >
+                        <Download className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredInvoices.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="text-center py-12 text-muted-light dark:text-muted-dark">
+                    {statusFilter === 'all' ? 'لا توجد فواتير بعد' : `لا توجد فواتير ${invStatusLabel[statusFilter]}`}
                   </td>
                 </tr>
-              ))}
-              {clientInvoices.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-12 text-muted-light dark:text-muted-dark">لا توجد فواتير</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </Card>
-
-      <AddCardModal open={addCardOpen} onClose={() => setAddCardOpen(false)} onSuccess={() => { setAddCardOpen(false); showToast('تم حفظ البطاقة بنجاح', 'success'); }} />
     </div>
   );
 }
 
-function AddCardModal({ open, onClose, onSuccess }: { open: boolean; onClose: () => void; onSuccess: () => void }): JSX.Element {
-  const [card, setCard] = useState({ number: '', name: '', exp: '', cvv: '' });
-  const [errors, setErrors] = useState<{ number?: string; name?: string; exp?: string; cvv?: string }>({});
-  const [processing, setProcessing] = useState(false);
-
-  const formatCardNumber = (v: string): string => {
-    const digits = v.replace(/\D/g, '').slice(0, 19);
-    return digits.replace(/(.{4})/g, '$1 ').trim();
-  };
-  const formatExp = (v: string): string => {
-    const digits = v.replace(/\D/g, '').slice(0, 4);
-    if (digits.length < 3) return digits;
-    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-  };
-
-  const submit = (): void => {
-    const e: typeof errors = {};
-    const digits = card.number.replace(/\s/g, '');
-    if (digits.length < 13 || digits.length > 19) e.number = 'رقم البطاقة غير صحيح';
-    if (!card.name.trim()) e.name = 'الاسم مطلوب';
-    if (!/^\d{2}\/\d{2}$/.test(card.exp)) e.exp = 'الصيغة MM/YY';
-    if (!/^\d{3,4}$/.test(card.cvv)) e.cvv = 'CVV 3 أو 4 أرقام';
-    setErrors(e);
-    if (Object.keys(e).length > 0) return;
-    setProcessing(true);
-    setTimeout(() => {
-      setProcessing(false);
-      setCard({ number: '', name: '', exp: '', cvv: '' });
-      onSuccess();
-    }, 900);
-  };
-
+function LimitItem({ icon, value }: { icon: React.ReactNode; value: string }): JSX.Element {
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="إضافة بطاقة جديدة"
-      size="md"
-      footer={
-        <>
-          <button onClick={onClose} className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">إلغاء</button>
-          <button onClick={submit} disabled={processing} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2 disabled:opacity-50">
-            {processing ? <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" /> : <Lock className="h-4 w-4" />}
-            {processing ? 'جارٍ الحفظ...' : 'حفظ البطاقة'}
-          </button>
-        </>
-      }
+    <li className="flex items-start gap-2.5">
+      <span className="text-primary flex-shrink-0 mt-0.5">{icon}</span>
+      <span className="font-semibold">{value}</span>
+    </li>
+  );
+}
+
+function SummaryChip({
+  icon,
+  label,
+  tone,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  tone: 'success' | 'warning' | 'primary';
+}): JSX.Element {
+  const tones: Record<typeof tone, string> = {
+    success: 'bg-success/10 text-success',
+    warning: 'bg-warning/10 text-warning',
+    primary: 'bg-primary/10 text-primary',
+  };
+  return (
+    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold', tones[tone])}>
+      {icon}
+      {label}
+    </span>
+  );
+}
+
+function FilterPill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}): JSX.Element {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'h-7 px-3 rounded-full text-[11px] font-medium whitespace-nowrap transition-colors',
+        active
+          ? 'bg-primary text-white'
+          : 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark hover:bg-primary/10 hover:text-primary'
+      )}
+      style={active ? { color: '#fff' } : undefined}
     >
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-bg-light dark:bg-bg-dark text-small text-muted-light dark:text-muted-dark">
-          <Lock className="h-3.5 w-3.5" />
-          البطاقة محفوظة بشكل آمن عبر Paymob (Tokenization)
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-small font-medium text-muted-light dark:text-muted-dark">رقم البطاقة</label>
-          <div className="relative">
-            <input
-              value={card.number}
-              onChange={(e) => { setCard({ ...card, number: formatCardNumber(e.target.value) }); setErrors({ ...errors, number: undefined }); }}
-              placeholder="1234 5678 9012 3456"
-              className={`w-full h-11 px-3 pe-14 rounded-input bg-bg-light dark:bg-bg-dark border text-body font-mono tracking-wider focus:outline-none ${errors.number ? 'border-danger' : 'border-transparent focus:border-primary'}`}
-            />
-            <span className="absolute end-3 top-1/2 -translate-y-1/2 inline-flex items-center justify-center h-6 px-2 rounded bg-gradient-to-r from-[#1a1f71] to-[#0f1c5e] text-white text-[10px] font-extrabold italic">VISA</span>
-          </div>
-          {errors.number && <p className="text-small text-danger">{errors.number}</p>}
-        </div>
-        <Input label="اسم حامل البطاقة" value={card.name} onChange={(e) => { setCard({ ...card, name: e.target.value }); setErrors({ ...errors, name: undefined }); }} placeholder="MOHAMMED AL KINDI" error={errors.name ?? undefined} className="font-mono uppercase" />
-        <div className="grid grid-cols-2 gap-3">
-          <Input label="تاريخ الانتهاء" value={card.exp} onChange={(e) => { setCard({ ...card, exp: formatExp(e.target.value) }); setErrors({ ...errors, exp: undefined }); }} placeholder="MM/YY" maxLength={5} error={errors.exp ?? undefined} className="font-mono" />
-          <Input label="CVV" value={card.cvv} onChange={(e) => { setCard({ ...card, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) }); setErrors({ ...errors, cvv: undefined }); }} placeholder="123" maxLength={4} error={errors.cvv ?? undefined} className="font-mono" />
-        </div>
-      </div>
-    </Modal>
+      {children}
+    </button>
   );
 }
