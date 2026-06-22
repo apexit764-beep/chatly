@@ -157,6 +157,8 @@ export interface Contact {
   channels?: ChannelType[]; // which channels this contact uses
 }
 
+export type MessageSender = 'agent' | 'ai';
+
 export interface Message {
   id: string;
   conversationId: string;
@@ -167,6 +169,8 @@ export interface Message {
   timestamp: string;
   read: boolean;
   delivered: boolean;
+  /** Who sent outgoing message — only meaningful when direction === 'out' */
+  sender?: MessageSender;
 }
 
 export interface Conversation {
@@ -182,6 +186,10 @@ export interface Conversation {
   messages: Message[];
   notes: string[];
   activityLog: ActivityEvent[];
+  /** True when the AI assistant currently owns this conversation */
+  aiActive?: boolean;
+  /** True when conversation was handed off from AI to a human agent */
+  aiHandedOff?: boolean;
 }
 
 export interface ActivityEvent {

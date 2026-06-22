@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
-import { MessageCircle, Clock, Zap, UserPlus, ArrowLeft, Activity } from 'lucide-react';
+import { MessageCircle, Clock, Zap, UserPlus, ArrowLeft, Activity, Sparkles, Bot, ArrowLeftRight, ChevronLeft } from 'lucide-react';
 import { Card, StatCard, Avatar, Badge } from '@components/ui';
 import { LineChart } from '@components/charts/LineChart';
 import { DoughnutChart } from '@components/charts/DoughnutChart';
 import { useDataStore } from '@/store/useDataStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useAIStore } from '@/store/useAIStore';
 import {
   agentStatusColor,
   agentStatusLabel,
@@ -17,11 +19,42 @@ export default function Overview(): JSX.Element {
   const conversations = useDataStore((s) => s.conversations);
   const contacts = useDataStore((s) => s.contacts);
   const agents = useDataStore((s) => s.agents);
+  const user = useAuthStore((s) => s.user);
+  const aiSettings = useAIStore((s) => s.settings);
 
+  const firstName = user?.name?.split(' ')[0] ?? 'صديقي';
+
+  // === Real metrics from store ===
   const todayConvs = conversations.length;
   const openConvs = conversations.filter((c) => c.status !== 'closed').length;
-  const avgResponse = 3;
-  const newContactsToday = 4;
+  const onlineAgents = agents.filter((a) => a.status === 'online').length;
+
+  // Average first-reply time (minutes)
+  const replyGaps: number[] = [];
+  conversations.forEach((c) => {
+    const firstIn = c.messages.find((m) => m.direction === 'in');
+    const firstOut = c.messages.find((m) => m.direction === 'out' && firstIn && new Date(m.timestamp) > new Date(firstIn.timestamp));
+    if (firstIn && firstOut) {
+      const gap = (new Date(firstOut.timestamp).getTime() - new Date(firstIn.timestamp).getTime()) / 60000;
+      if (gap >= 0 && gap < 60) replyGaps.push(gap);
+    }
+  });
+  const avgResponse = replyGaps.length > 0 ? (replyGaps.reduce((s, n) => s + n, 0) / replyGaps.length).toFixed(1) : '—';
+
+  // New contacts today (createdAt within last 24h)
+  const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+  const newContactsToday = contacts.filter((c) => new Date(c.createdAt).getTime() > dayAgo).length;
+
+  // === AI metrics ===
+  const aiReplies = conversations.reduce(
+    (s, c) => s + c.messages.filter((m) => m.direction === 'out' && m.sender === 'ai').length,
+    0,
+  );
+  const totalOutgoing = conversations.reduce((s, c) => s + c.messages.filter((m) => m.direction === 'out').length, 0);
+  const aiHandlingPct = totalOutgoing > 0 ? Math.round((aiReplies / totalOutgoing) * 100) : 0;
+  const aiActiveConvs = conversations.filter((c) => c.aiActive).length;
+  const aiHandoffs = conversations.filter((c) => c.aiHandedOff).length;
+  const aiResolved = conversations.filter((c) => c.aiActive && c.status === 'closed').length;
 
   const statusBuckets = {
     new: conversations.filter((c) => c.status === 'new').length,
@@ -33,14 +66,12 @@ export default function Overview(): JSX.Element {
     .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime())
     .slice(0, 5);
 
-  const onlineAgents = agents.filter((a) => a.status === 'online').length;
-
   return (
     <div className="p-4 lg:p-6 space-y-6 page-fade">
       {/* Banner */}
       <div className="bg-gradient-to-l from-primary to-primary-dark text-white rounded-card p-5 lg:p-6 flex items-center justify-between flex-wrap gap-3 shadow-lg">
         <div>
-          <p className="text-h2 font-bold mb-1">أهلاً، سالم 👋</p>
+          <p className="text-h2 font-bold mb-1">أهلاً، {firstName} 👋</p>
           <p className="text-body opacity-90">إليك ملخص اليوم — {todayConvs} محادثة، {openConvs} مفتوحة</p>
         </div>
         <div className="flex items-center gap-2 bg-white/15 backdrop-blur px-4 py-2 rounded-card">
@@ -69,7 +100,7 @@ export default function Overview(): JSX.Element {
         />
         <StatCard
           label="متوسط وقت الرد"
-          value={`${avgResponse} د`}
+          value={avgResponse === '—' ? '—' : `${avgResponse} د`}
           icon={<Zap className="h-5 w-5" />}
           iconBg="bg-success/15"
           iconColor="text-success"
@@ -84,6 +115,68 @@ export default function Overview(): JSX.Element {
           trend={{ value: 24, positive: true }}
         />
       </div>
+
+      {/* AI assistant card */}
+      <Card className="p-5 lg:p-6 border-l-4 border-l-violet-500 bg-gradient-to-br from-violet-500/[0.04] to-fuchsia-500/[0.04]">
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white flex items-center justify-center flex-shrink-0 shadow-md">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-h2 font-bold">المساعد الذكي</h2>
+                {aiSettings.enabled ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-success/15 text-success font-bold">
+                    <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+                    يعمل الآن
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted-light/15 text-muted-light dark:text-muted-dark font-bold">موقوف</span>
+                )}
+              </div>
+              <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
+                {aiSettings.enabled
+                  ? `يرد تلقائياً على عملاءك — ${aiHandlingPct}% من إجمالي الردود`
+                  : 'فعّله ليرد تلقائياً على عملاءك حتى خارج ساعات الدوام'}
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/ai-settings"
+            className="h-9 px-4 rounded-full bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-small font-medium hover:border-violet-300 hover:text-violet-600 transition-colors flex items-center gap-1.5 flex-shrink-0"
+          >
+            الإعدادات <ChevronLeft className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
+          <div className="rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-3">
+            <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark mb-1">
+              <Bot className="h-3.5 w-3.5" /> ردود المساعد
+            </div>
+            <p className="text-h3 font-extrabold tabular-nums">{aiReplies}</p>
+          </div>
+          <div className="rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-3">
+            <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark mb-1">
+              <MessageCircle className="h-3.5 w-3.5" /> محادثات نشطة
+            </div>
+            <p className="text-h3 font-extrabold tabular-nums">{aiActiveConvs}</p>
+          </div>
+          <div className="rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-3">
+            <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark mb-1">
+              <ArrowLeftRight className="h-3.5 w-3.5" /> محوّلة لموظف
+            </div>
+            <p className="text-h3 font-extrabold tabular-nums">{aiHandoffs}</p>
+          </div>
+          <div className="rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-3">
+            <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark mb-1">
+              <Sparkles className="h-3.5 w-3.5" /> حلّها AI
+            </div>
+            <p className="text-h3 font-extrabold tabular-nums">{aiResolved}</p>
+          </div>
+        </div>
+      </Card>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -145,9 +238,16 @@ export default function Overview(): JSX.Element {
                 >
                   <Avatar name={contact.name} size="sm" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-body font-semibold truncate">{contact.name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-body font-semibold truncate">{contact.name}</p>
+                      {conv.aiActive && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 h-4 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-[9px] font-bold flex-shrink-0">
+                          <Sparkles className="h-2.5 w-2.5" /> AI
+                        </span>
+                      )}
+                    </div>
                     <p className="text-small text-muted-light dark:text-muted-dark truncate">
-                      {agent ? agent.name : 'غير مُسند'}
+                      {conv.aiActive ? 'المساعد الذكي' : agent ? agent.name : 'غير مُسند'}
                     </p>
                   </div>
                   <Badge className={cn('text-[10px]', conversationStatusColor[conv.status])}>

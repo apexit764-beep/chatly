@@ -358,19 +358,39 @@ export default function Inbox(): JSX.Element {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-0.5">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      {conv.status === 'new' ? (
-                        <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" title="جديد" />
-                      ) : conv.status === 'pending' ? (
-                        <span className="h-2 w-2 rounded-full bg-warning flex-shrink-0" title="قيد المعالجة" />
-                      ) : (
-                        <span className="h-2 w-2 rounded-full bg-success flex-shrink-0" title="محلولة" />
-                      )}
                       {isConvBookmarked && <Bookmark className="h-3 w-3 text-warning fill-current flex-shrink-0" />}
                       <p className="text-body font-semibold truncate">{contact.name}</p>
+                      {conv.aiActive && (
+                        <span
+                          className="inline-flex items-center gap-0.5 px-1.5 h-4 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-[9px] font-bold flex-shrink-0"
+                          title="المساعد الذكي يتعامل مع هذه المحادثة"
+                        >
+                          <Sparkles className="h-2.5 w-2.5" />
+                          AI
+                        </span>
+                      )}
+                      {conv.aiHandedOff && !conv.aiActive && (
+                        <span
+                          className="inline-flex items-center gap-0.5 px-1.5 h-4 rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-300 text-[9px] font-bold flex-shrink-0 border border-violet-200 dark:border-violet-700"
+                          title="تم تحويلها من المساعد الذكي"
+                        >
+                          <Sparkles className="h-2.5 w-2.5" />
+                          محوّلة
+                        </span>
+                      )}
                     </div>
-                    <span className="text-[10px] text-muted-light dark:text-muted-dark flex-shrink-0">
-                      {timeAgo(conv.lastMessageAt)}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <span className="text-[10px] text-muted-light dark:text-muted-dark">
+                        {timeAgo(conv.lastMessageAt)}
+                      </span>
+                      {conv.status === 'new' ? (
+                        <span className="h-2 w-2 rounded-full bg-primary" title="جديدة" />
+                      ) : conv.status === 'pending' ? (
+                        <span className="h-2 w-2 rounded-full bg-warning" title="قيد المعالجة" />
+                      ) : (
+                        <span className="h-2 w-2 rounded-full bg-success" title="محلولة" />
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <p className="text-small text-muted-light dark:text-muted-dark truncate flex-1">{conv.lastMessage}</p>
@@ -1769,7 +1789,8 @@ function MessageBubble({
 }): JSX.Element {
   const isOut = msg.direction === 'out';
   const isNote = msg.type === 'note';
-  const name = isOut ? agentName : contactName;
+  const isAI = isOut && msg.sender === 'ai';
+  const name = isOut ? (isAI ? 'المساعد الذكي' : agentName) : contactName;
   const dateLabel = timeAgo(msg.timestamp);
 
   // Subtle footer color: gray for note/incoming, light for outgoing (on primary bg)
@@ -1780,7 +1801,13 @@ function MessageBubble({
   return (
     <div className={cn('flex gap-3 mb-5', isOut && 'flex-row-reverse')}>
       <div className="flex-shrink-0 pt-1">
-        <Avatar name={name} size="sm" />
+        {isAI ? (
+          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white ring-2 ring-white dark:ring-surface-dark shadow-sm">
+            <Sparkles className="h-4 w-4" />
+          </div>
+        ) : (
+          <Avatar name={name} size="sm" />
+        )}
       </div>
       <div className={cn('flex-1 min-w-0 flex flex-col', isOut ? 'items-end' : 'items-start')}>
         <div
@@ -1788,9 +1815,11 @@ function MessageBubble({
             'max-w-[85%] px-3 py-1.5 text-body',
             isNote
               ? 'bg-warning/15 text-current border border-warning/30 rounded-2xl rounded-tl-sm'
-              : isOut
-                ? 'bg-primary text-white rounded-2xl rounded-tl-sm'
-                : 'bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-2xl rounded-tr-sm'
+              : isAI
+                ? 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white rounded-2xl rounded-tl-sm shadow-sm'
+                : isOut
+                  ? 'bg-primary text-white rounded-2xl rounded-tl-sm'
+                  : 'bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-2xl rounded-tr-sm'
           )}
         >
           {msg.type === 'image' ? (
@@ -1801,10 +1830,11 @@ function MessageBubble({
             <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
           )}
           {/* Footer: small name + date below the message */}
-          <div className={cn('flex items-center gap-1.5 text-[10px] mt-1', headerMutedClass)}>
+          <div className={cn('flex items-center gap-1.5 text-[10px] mt-1', isAI ? 'text-white/80' : headerMutedClass)}>
             {isOut ? (
               <>
                 <span className="tabular-nums">{dateLabel}</span>
+                {isAI && <Sparkles className="h-2.5 w-2.5" />}
                 <span className="font-semibold">· {name}</span>
               </>
             ) : (

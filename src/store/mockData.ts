@@ -261,19 +261,19 @@ export const contacts: Contact[] = [
 export const conversations: Conversation[] = [
   {
     id: 'conv1', contactId: 'c1', assignedTo: 'a2', status: 'pending',
-    channelId: 'ch2', departmentId: 'd1',
+    channelId: 'ch2', departmentId: 'd1', aiHandedOff: true,
     lastMessage: 'هل الشقة في الخوض ما زالت متاحة؟',
     lastMessageAt: nowMinus(15), unreadCount: 2,
     notes: ['العميل مهتم جداً، تواصل غداً صباحاً'],
     activityLog: [
-      { id: 'e1', type: 'assign', description: 'تم الإسناد إلى فاطمة البلوشي', by: 'a1', timestamp: nowMinus(20) },
+      { id: 'e1', type: 'assign', description: 'تم تحويل المحادثة من المساعد الذكي إلى فاطمة البلوشي', by: 'a1', timestamp: nowMinus(20) },
       { id: 'e2', type: 'status', description: 'تغيير الحالة إلى قيد المعالجة', by: 'a2', timestamp: nowMinus(18) },
     ],
     messages: [
       { id: 'm1', conversationId: 'conv1', direction: 'in', type: 'text', content: 'السلام عليكم', timestamp: nowMinus(25), read: true, delivered: true },
-      { id: 'm2', conversationId: 'conv1', direction: 'out', type: 'text', content: 'وعليكم السلام ورحمة الله، أهلاً وسهلاً بك في Chatly. كيف يمكنني مساعدتك؟', timestamp: nowMinus(24), read: true, delivered: true },
+      { id: 'm2', conversationId: 'conv1', direction: 'out', type: 'text', content: 'وعليكم السلام ورحمة الله، أهلاً وسهلاً بك في Chatly. كيف يمكنني مساعدتك؟', timestamp: nowMinus(24), read: true, delivered: true, sender: 'ai' },
       { id: 'm3', conversationId: 'conv1', direction: 'in', type: 'text', content: 'أبحث عن شقة للإيجار في مسقط بميزانية 350 ر.ع', timestamp: nowMinus(22), read: true, delivered: true },
-      { id: 'm4', conversationId: 'conv1', direction: 'out', type: 'text', content: 'لدينا عدة خيارات متاحة في الخوض والسيب. هل تفضل غرفة واحدة أم غرفتين؟', timestamp: nowMinus(20), read: true, delivered: true },
+      { id: 'm4', conversationId: 'conv1', direction: 'out', type: 'text', content: 'لدينا عدة خيارات متاحة في الخوض والسيب. هل تفضل غرفة واحدة أم غرفتين؟', timestamp: nowMinus(20), read: true, delivered: true, sender: 'ai' },
       { id: 'm5', conversationId: 'conv1', direction: 'in', type: 'text', content: 'غرفتين من فضلك', timestamp: nowMinus(19), read: true, delivered: true },
       { id: 'm6', conversationId: 'conv1', direction: 'in', type: 'text', content: 'هل الشقة في الخوض ما زالت متاحة؟', timestamp: nowMinus(15), read: false, delivered: true },
     ],
@@ -290,12 +290,12 @@ export const conversations: Conversation[] = [
   },
   {
     id: 'conv3', contactId: 'c3', assignedTo: 'a3', status: 'pending',
-    channelId: 'ch3', departmentId: 'd2',
+    channelId: 'ch3', departmentId: 'd2', aiHandedOff: true,
     lastMessage: 'سنرسل العقد المعدل قريباً', lastMessageAt: nowMinus(120),
     unreadCount: 0, notes: ['مراجعة العقد من القانوني'], activityLog: [],
     messages: [
       { id: 'm20', conversationId: 'conv3', direction: 'in', type: 'text', content: 'صباح الخير، نريد متابعة العقد', timestamp: nowMinus(125), read: true, delivered: true },
-      { id: 'm21', conversationId: 'conv3', direction: 'out', type: 'text', content: 'صباح النور، سنرسل العقد المعدل قريباً', timestamp: nowMinus(120), read: true, delivered: true },
+      { id: 'm21', conversationId: 'conv3', direction: 'out', type: 'text', content: 'صباح النور، سنرسل العقد المعدل قريباً', timestamp: nowMinus(120), read: true, delivered: true, sender: 'ai' },
     ],
   },
   {
@@ -367,12 +367,12 @@ export const conversations: Conversation[] = [
   },
   {
     id: 'conv11', contactId: 'c10', assignedTo: 'a4', status: 'pending',
-    channelId: 'ch4', departmentId: 'd3',
-    lastMessage: 'هل يمكن تأجيل الدفعة الشهرية؟', lastMessageAt: nowMinus(140),
+    channelId: 'ch4', departmentId: 'd3', aiHandedOff: true,
+    lastMessage: 'سيتم التحقق من الطلب وإبلاغك خلال 24 ساعة', lastMessageAt: nowMinus(135),
     unreadCount: 0, notes: [], activityLog: [],
     messages: [
       { id: 'm100', conversationId: 'conv11', direction: 'in', type: 'text', content: 'هل يمكن تأجيل الدفعة الشهرية؟', timestamp: nowMinus(140), read: true, delivered: true },
-      { id: 'm101', conversationId: 'conv11', direction: 'out', type: 'text', content: 'سيتم التحقق من الطلب وإبلاغك خلال 24 ساعة', timestamp: nowMinus(135), read: true, delivered: true },
+      { id: 'm101', conversationId: 'conv11', direction: 'out', type: 'text', content: 'سيتم التحقق من الطلب وإبلاغك خلال 24 ساعة', timestamp: nowMinus(135), read: true, delivered: true, sender: 'ai' },
     ],
   },
   {
@@ -382,6 +382,49 @@ export const conversations: Conversation[] = [
     unreadCount: 1, notes: [], activityLog: [],
     messages: [
       { id: 'm110', conversationId: 'conv12', direction: 'in', type: 'text', content: 'شفت المنشور الجديد عن فيلا الموج', timestamp: nowMinus(50), read: false, delivered: true },
+    ],
+  },
+  // ===== AI-handled conversations =====
+  {
+    id: 'conv13', contactId: 'c6', assignedTo: null, status: 'new',
+    channelId: 'ch1', departmentId: 'd2', aiActive: true,
+    lastMessage: 'شكراً جزيلاً، سأنتظر التواصل', lastMessageAt: nowMinus(5),
+    unreadCount: 0, notes: [], activityLog: [
+      { id: 'e30', type: 'note', description: 'المساعد الذكي يتعامل مع المحادثة', by: 'system', timestamp: nowMinus(12) },
+    ],
+    messages: [
+      { id: 'm130', conversationId: 'conv13', direction: 'in', type: 'text', content: 'مرحباً، ممكن أعرف الباقات والأسعار؟', timestamp: nowMinus(12), read: true, delivered: true },
+      { id: 'm131', conversationId: 'conv13', direction: 'out', type: 'text', content: 'أهلاً وسهلاً! نوفر 4 باقات تناسب جميع الأحجام:\n• المبتدئ: 7 ر.ع/شهر (قناة واحدة، 3 موظفين)\n• الاحترافي: 19 ر.ع/شهر (3 قنوات، 10 موظفين)\n• الأعمال: 38 ر.ع/شهر (10 قنوات، 25 موظف)\n• المؤسسات: 96 ر.ع/شهر (بلا حدود)', timestamp: nowMinus(11), read: true, delivered: true, sender: 'ai' },
+      { id: 'm132', conversationId: 'conv13', direction: 'in', type: 'text', content: 'هل في فترة تجريبية مجانية؟', timestamp: nowMinus(10), read: true, delivered: true },
+      { id: 'm133', conversationId: 'conv13', direction: 'out', type: 'text', content: 'نعم! 14 يوم تجريبية مجانية بدون الحاجة لإدخال بطاقة دفع. تقدر تجرب جميع المزايا قبل الاشتراك.', timestamp: nowMinus(9), read: true, delivered: true, sender: 'ai' },
+      { id: 'm134', conversationId: 'conv13', direction: 'in', type: 'text', content: 'ممتاز، أريد التواصل مع موظف مبيعات لمعرفة المزيد', timestamp: nowMinus(7), read: true, delivered: true },
+      { id: 'm135', conversationId: 'conv13', direction: 'out', type: 'text', content: 'تمام، سيتواصل معك أحد موظفي المبيعات خلال ساعة. تقدر تشاركني رقم تواصل مفضّل؟', timestamp: nowMinus(6), read: true, delivered: true, sender: 'ai' },
+      { id: 'm136', conversationId: 'conv13', direction: 'in', type: 'text', content: 'شكراً جزيلاً، سأنتظر التواصل', timestamp: nowMinus(5), read: true, delivered: true },
+    ],
+  },
+  {
+    id: 'conv14', contactId: 'c8', assignedTo: null, status: 'closed',
+    channelId: 'ch7', departmentId: 'd2', aiActive: true,
+    lastMessage: 'تمام، شكراً لك!', lastMessageAt: nowMinus(60 * 3),
+    unreadCount: 0, notes: [],
+    activityLog: [
+      { id: 'e40', type: 'status', description: 'تم إغلاق المحادثة تلقائياً بواسطة المساعد الذكي', by: 'system', timestamp: nowMinus(60 * 3) },
+    ],
+    messages: [
+      { id: 'm140', conversationId: 'conv14', direction: 'in', type: 'text', content: 'ما هي ساعات العمل؟', timestamp: nowMinus(60 * 3 + 10), read: true, delivered: true },
+      { id: 'm141', conversationId: 'conv14', direction: 'out', type: 'text', content: 'ساعات عملنا من الأحد إلى الخميس، من 9 صباحاً حتى 5 مساءً. وللطوارئ يمكنك التواصل في أي وقت عبر هذه القناة.', timestamp: nowMinus(60 * 3 + 9), read: true, delivered: true, sender: 'ai' },
+      { id: 'm142', conversationId: 'conv14', direction: 'in', type: 'text', content: 'تمام، شكراً لك!', timestamp: nowMinus(60 * 3), read: true, delivered: true },
+    ],
+  },
+  {
+    id: 'conv15', contactId: 'c2', assignedTo: null, status: 'new',
+    channelId: 'ch6', departmentId: 'd2', aiActive: true,
+    lastMessage: 'كيف يمكنني ربط حساب الواتساب؟', lastMessageAt: nowMinus(20),
+    unreadCount: 1, notes: [], activityLog: [],
+    messages: [
+      { id: 'm150', conversationId: 'conv15', direction: 'in', type: 'text', content: 'مرحباً', timestamp: nowMinus(22), read: true, delivered: true },
+      { id: 'm151', conversationId: 'conv15', direction: 'out', type: 'text', content: 'أهلاً بك! كيف أقدر أساعدك اليوم؟', timestamp: nowMinus(21), read: true, delivered: true, sender: 'ai' },
+      { id: 'm152', conversationId: 'conv15', direction: 'in', type: 'text', content: 'كيف يمكنني ربط حساب الواتساب؟', timestamp: nowMinus(20), read: false, delivered: true },
     ],
   },
 ];

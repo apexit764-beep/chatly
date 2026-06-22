@@ -124,6 +124,11 @@ interface DataState {
   markAllNotificationsRead: () => void;
   clearNotifications: () => void;
   markNotificationRead: (id: string) => void;
+  pushNotification: (n: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
+
+  // Live simulator helpers
+  simulateIncomingMessage: (conversationId: string, content: string) => void;
+  simulateAIReply: (conversationId: string, content: string) => void;
 
   // Tags / bookmarks
   addContactTag: (contactId: string, tag: string) => void;
@@ -454,6 +459,69 @@ export const useDataStore = create<DataState>((set) => ({
     set((state) => ({
       notifications: state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
     })),
+
+  pushNotification: (n) =>
+    set((state) => ({
+      notifications: [
+        { ...n, id: newId(), timestamp: new Date().toISOString(), read: false },
+        ...state.notifications,
+      ].slice(0, 50),
+    })),
+
+  simulateIncomingMessage: (conversationId, content) =>
+    set((state) => {
+      const message: Message = {
+        id: newId(),
+        conversationId,
+        direction: 'in',
+        type: 'text',
+        content,
+        timestamp: new Date().toISOString(),
+        read: false,
+        delivered: true,
+      };
+      return {
+        conversations: state.conversations.map((c) =>
+          c.id === conversationId
+            ? {
+                ...c,
+                messages: [...c.messages, message],
+                lastMessage: content,
+                lastMessageAt: message.timestamp,
+                unreadCount: c.unreadCount + 1,
+                status: c.status === 'closed' ? 'new' : c.status,
+              }
+            : c
+        ),
+      };
+    }),
+
+  simulateAIReply: (conversationId, content) =>
+    set((state) => {
+      const message: Message = {
+        id: newId(),
+        conversationId,
+        direction: 'out',
+        type: 'text',
+        content,
+        timestamp: new Date().toISOString(),
+        read: true,
+        delivered: true,
+        sender: 'ai',
+      };
+      return {
+        conversations: state.conversations.map((c) =>
+          c.id === conversationId
+            ? {
+                ...c,
+                messages: [...c.messages, message],
+                lastMessage: content,
+                lastMessageAt: message.timestamp,
+              }
+            : c
+        ),
+      };
+    }),
 
   // Tags
   addContactTag: (contactId, tag) =>

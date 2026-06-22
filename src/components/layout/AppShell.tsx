@@ -6,6 +6,7 @@ import { TopHeader } from './TopHeader';
 import { OnboardingModal } from '@components/onboarding/OnboardingModal';
 import { Toast } from '@components/ui';
 import { useUIStore } from '@/store/useUIStore';
+import { useLiveSimulator } from '@/hooks/useLiveSimulator';
 
 export function AppShell(): JSX.Element {
   const location = useLocation();
@@ -13,6 +14,8 @@ export function AppShell(): JSX.Element {
   const inboxFocus = useUIStore((s) => s.inboxFocus);
   // Focus mode only applies on the inbox page
   const focused = isInbox && inboxFocus;
+  // Drives live activity (new messages, notifications, AI replies)
+  useLiveSimulator();
   return (
     <div className="flex h-screen overflow-hidden bg-bg-light dark:bg-bg-dark text-[14px] text-[#111827] dark:text-[#F1F5F9]">
       {!focused && <IconSidebar />}

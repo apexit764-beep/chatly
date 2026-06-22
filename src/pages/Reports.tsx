@@ -8,12 +8,16 @@ import {
   Clock,
   CheckCircle2,
   ChevronDown,
+  Sparkles,
+  ArrowLeftRight,
+  Bot,
 } from 'lucide-react';
 import { Card, StatCard, Avatar } from '@components/ui';
 import { LineChart } from '@components/charts/LineChart';
 import { BarChart } from '@components/charts/BarChart';
 import { Heatmap } from '@components/charts/Heatmap';
 import { useDataStore } from '@/store/useDataStore';
+import { useAIStore } from '@/store/useAIStore';
 import { useUIStore } from '@/store/useUIStore';
 import { downloadCsv, printAsPdf } from '@/utils/csv';
 import { formatNumber } from '@/utils/format';
@@ -25,6 +29,7 @@ export default function Reports(): JSX.Element {
   const agents = useDataStore((s) => s.agents);
   const conversations = useDataStore((s) => s.conversations);
   const contacts = useDataStore((s) => s.contacts);
+  const aiSettings = useAIStore((s) => s.settings);
   const showToast = useUIStore((s) => s.showToast);
   const [range, setRange] = useState<Range>('week');
 
@@ -91,6 +96,57 @@ export default function Reports(): JSX.Element {
       .map(([tag, count], i) => ({ tag, count, color: tagColors[i] ?? 'bg-muted' }));
   })();
   const tagMax = byTag.length > 0 ? Math.max(...byTag.map((t) => t.count)) : 1;
+
+  // === AI metrics ===
+  const aiReplies = conversations.reduce(
+    (s, c) => s + c.messages.filter((m) => m.direction === 'out' && m.sender === 'ai').length,
+    0,
+  );
+  const humanReplies = conversations.reduce(
+    (s, c) => s + c.messages.filter((m) => m.direction === 'out' && m.sender !== 'ai').length,
+    0,
+  );
+  const totalOutgoing = aiReplies + humanReplies;
+  const aiHandlingPct = totalOutgoing > 0 ? Math.round((aiReplies / totalOutgoing) * 100) : 0;
+  const aiActiveConvs = conversations.filter((c) => c.aiActive).length;
+  const aiHandoffs = conversations.filter((c) => c.aiHandedOff).length;
+  const aiInvolvedConvs = conversations.filter((c) => c.aiActive || c.aiHandedOff).length;
+  const handoffRate = aiInvolvedConvs > 0 ? Math.round((aiHandoffs / aiInvolvedConvs) * 100) : 0;
+  const aiSelfResolved = conversations.filter((c) => c.aiActive && c.status === 'closed').length;
+  const aiResolutionRate = aiInvolvedConvs > 0 ? Math.round((aiSelfResolved / aiInvolvedConvs) * 100) : 0;
+
+  // AI vs Human replies trend (last N days)
+  const aiTrend: number[] = Array.from({ length: daysCount === 1 ? 7 : daysCount }, (_, i) => {
+    const day = new Date(rangeStart); day.setDate(day.getDate() + i);
+    const next = new Date(day); next.setDate(day.getDate() + 1);
+    return conversations.reduce(
+      (s, c) => s + c.messages.filter((m) => {
+        const t = new Date(m.timestamp).getTime();
+        return m.direction === 'out' && m.sender === 'ai' && t >= day.getTime() && t < next.getTime();
+      }).length,
+      0,
+    );
+  });
+  const humanTrend: number[] = Array.from({ length: daysCount === 1 ? 7 : daysCount }, (_, i) => {
+    const day = new Date(rangeStart); day.setDate(day.getDate() + i);
+    const next = new Date(day); next.setDate(day.getDate() + 1);
+    return conversations.reduce(
+      (s, c) => s + c.messages.filter((m) => {
+        const t = new Date(m.timestamp).getTime();
+        return m.direction === 'out' && m.sender !== 'ai' && t >= day.getTime() && t < next.getTime();
+      }).length,
+      0,
+    );
+  });
+
+  // Handoff reasons (mock distribution)
+  const handoffReasons = [
+    { reason: 'طلب تحدث مع موظف', count: Math.max(1, Math.floor(aiHandoffs * 0.45)), color: 'bg-primary' },
+    { reason: 'سؤال خارج المعرفة', count: Math.max(1, Math.floor(aiHandoffs * 0.25)), color: 'bg-info' },
+    { reason: 'كلمة مفتاحية (شكوى/استرداد)', count: Math.max(1, Math.floor(aiHandoffs * 0.18)), color: 'bg-warning' },
+    { reason: 'مشاعر سلبية', count: Math.max(0, aiHandoffs - Math.floor(aiHandoffs * 0.88)), color: 'bg-danger' },
+  ];
+  const handoffMax = Math.max(...handoffReasons.map((r) => r.count), 1);
 
   // Agent performance — handled = assigned conversations, avgReply estimated from message gaps
   const agentRows = agents.filter((a) => a.invitationStatus === 'active').map((a) => {
@@ -258,6 +314,114 @@ export default function Reports(): JSX.Element {
           iconColor="text-success"
         />
       </div>
+
+      {/* ===== AI Assistant Section ===== */}
+      <Card className="p-5 border-l-4 border-l-violet-500 bg-gradient-to-br from-violet-500/[0.03] to-fuchsia-500/[0.03]">
+        <div className="flex items-start justify-between flex-wrap gap-3 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white flex items-center justify-center">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-h2 font-bold flex items-center gap-2">
+                أداء المساعد الذكي
+                {aiSettings.enabled ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/15 text-success font-bold">مُفعّل</span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted-light/15 text-muted-light dark:text-muted-dark font-bold">موقوف</span>
+                )}
+              </h2>
+              <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
+                إحصائيات المساعد الذكي وتأثيره على ردود فريقك
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+          <StatCard
+            label="ردود المساعد"
+            value={formatNumber(aiReplies)}
+            icon={<Bot className="h-5 w-5" />}
+            iconBg="bg-violet-500/10"
+            iconColor="text-violet-500"
+          />
+          <StatCard
+            label="نسبة الردود AI"
+            value={`${aiHandlingPct}%`}
+            icon={<Sparkles className="h-5 w-5" />}
+            iconBg="bg-fuchsia-500/10"
+            iconColor="text-fuchsia-500"
+          />
+          <StatCard
+            label="محادثات نشطة AI"
+            value={formatNumber(aiActiveConvs)}
+            icon={<MessageSquare className="h-5 w-5" />}
+            iconBg="bg-info/10"
+            iconColor="text-info"
+          />
+          <StatCard
+            label="نسبة التحويل لموظف"
+            value={`${handoffRate}%`}
+            icon={<ArrowLeftRight className="h-5 w-5" />}
+            iconBg="bg-warning/10"
+            iconColor="text-warning"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* AI vs Human chart */}
+          <div className="rounded-card bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-body font-bold">المساعد الذكي مقابل الموظفين</h3>
+              <div className="flex items-center gap-3 text-[11px]">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm bg-violet-500" />
+                  المساعد
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm bg-primary" />
+                  الموظفون
+                </span>
+              </div>
+            </div>
+            <LineChart
+              labels={dayLabels}
+              series={[
+                { name: 'المساعد', color: '#8B5CF6', data: aiTrend },
+                { name: 'الموظفون', color: '#2563EB', data: humanTrend },
+              ]}
+              height={200}
+            />
+          </div>
+
+          {/* Handoff reasons */}
+          <div className="rounded-card bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-body font-bold">أسباب التحويل لموظف بشري</h3>
+                <p className="text-[11px] text-muted-light dark:text-muted-dark">{aiHandoffs} محادثة محوّلة</p>
+              </div>
+              <div className="text-[11px] text-success font-bold flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5" /> AI حلّ {aiResolutionRate}%
+              </div>
+            </div>
+            <div className="space-y-3 mt-4">
+              {handoffReasons.map((r) => (
+                <div key={r.reason}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-small font-medium">{r.reason}</span>
+                    <span className="text-small text-muted-light dark:text-muted-dark tabular-nums">{r.count}</span>
+                  </div>
+                  <div className="h-2 bg-bg-light dark:bg-bg-dark rounded-full overflow-hidden">
+                    <div className={cn('h-full rounded-full', r.color)} style={{ width: `${(r.count / handoffMax) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Card>
 
       {/* Row: line + bar */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
