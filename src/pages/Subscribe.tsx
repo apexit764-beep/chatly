@@ -14,8 +14,9 @@ import {
   X,
   CheckCircle2,
   AlertTriangle,
+  ChevronDown,
 } from 'lucide-react';
-import { Card, Input } from '@components/ui';
+import { Card, Input, useConfirm } from '@components/ui';
 import { useAdminStore } from '@/store/useAdminStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
@@ -190,12 +191,15 @@ export default function Subscribe(): JSX.Element {
           {/* FAQ */}
           <Card className="mt-8 p-6">
             <h2 className="text-h2 font-bold mb-4">أسئلة شائعة</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FAQ q="هل يمكنني الترقية أو التخفيض لاحقاً؟" a="نعم، يمكنك تغيير باقتك في أي وقت من صفحة الفوترة. سيتم احتساب الفرق تلقائياً." />
-              <FAQ q="هل هناك فترة تجريبية؟" a="نعم، 14 يوماً مجانية لجميع الباقات. لا تحتاج لإدخال بطاقة الدفع." />
-              <FAQ q="ما طرق الدفع المقبولة؟" a="حالياً نقبل بطاقات Visa فقط عبر بوابة Paymob الآمنة." />
-              <FAQ q="هل تتغير الأسعار حسب الدولة؟" a="نعم، الأسعار معدّلة لتناسب القوة الشرائية في كل دولة." />
-            </div>
+            <FAQList
+              items={[
+                { q: 'هل يمكنني الترقية أو التخفيض لاحقاً؟', a: 'نعم، يمكنك تغيير باقتك في أي وقت من صفحة "الباقات والاشتراك". سيتم احتساب الفرق الزمني المتبقي من باقتك الحالية تلقائياً، وتدفع فقط الفرق وليس قيمة الباقة كاملة.' },
+                { q: 'هل هناك فترة تجريبية؟', a: 'نعم، نوفر فترة تجريبية مجانية لمدة 14 يوماً لجميع الباقات بدون الحاجة لإدخال بطاقة الدفع. تستطيع تجربة كل المزايا قبل الاشتراك.' },
+                { q: 'ما طرق الدفع المقبولة؟', a: 'حالياً نقبل بطاقات Visa و Mastercard عبر بوابة Paymob الآمنة والمشفّرة. الفاتورة تصل تلقائياً على بريدك الإلكتروني بعد كل عملية دفع.' },
+                { q: 'هل تتغير الأسعار حسب الدولة؟', a: 'نعم، الأسعار معدّلة لتناسب القوة الشرائية في كل دولة. يتم اكتشاف دولتك تلقائياً من خلال عنوان IP وعرض الأسعار بالعملة المحلية المناسبة.' },
+                { q: 'هل يمكنني إلغاء اشتراكي في أي وقت؟', a: 'نعم، يمكنك إلغاء اشتراكك في أي وقت بدون أي رسوم إضافية. سيستمر حسابك بالعمل حتى نهاية الفترة المدفوعة، ولن يتم تجديد الاشتراك تلقائياً.' },
+              ]}
+            />
           </Card>
         </>
       )}
@@ -280,11 +284,43 @@ function LimitRow({ label, value }: { label: string; value: number | string }): 
   );
 }
 
-function FAQ({ q, a }: { q: string; a: string }): JSX.Element {
+function FAQList({ items }: { items: { q: string; a: string }[] }): JSX.Element {
+  const [openIdx, setOpenIdx] = useState<number | null>(0);
   return (
-    <div>
-      <p className="text-body font-semibold mb-1">{q}</p>
-      <p className="text-small text-muted-light dark:text-muted-dark">{a}</p>
+    <div className="divide-y divide-border-light dark:divide-border-dark">
+      {items.map((item, i) => {
+        const isOpen = openIdx === i;
+        return (
+          <div key={i}>
+            <button
+              onClick={() => setOpenIdx(isOpen ? null : i)}
+              className="w-full flex items-center justify-between gap-3 py-4 text-start group"
+            >
+              <span className="text-body font-semibold group-hover:text-primary transition-colors">
+                {item.q}
+              </span>
+              <ChevronDown
+                className={cn(
+                  'h-5 w-5 text-muted-light dark:text-muted-dark flex-shrink-0 transition-transform',
+                  isOpen && 'rotate-180 text-primary'
+                )}
+              />
+            </button>
+            <div
+              className={cn(
+                'grid transition-all duration-200',
+                isOpen ? 'grid-rows-[1fr] opacity-100 pb-4' : 'grid-rows-[0fr] opacity-0'
+              )}
+            >
+              <div className="overflow-hidden">
+                <p className="text-small text-muted-light dark:text-muted-dark leading-[1.9]">
+                  {item.a}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -308,11 +344,42 @@ function CheckoutFlow({ plan, country, cycle, onBack, onProcessing, onSuccess, o
 
   const [card, setCard] = useState({ number: testMode ? '5123 4567 8901 2346' : '', name: '', exp: testMode ? '12/29' : '', cvv: testMode ? '123' : '' });
   const [save, setSave] = useState(true);
+  const { confirm } = useConfirm();
 
-  const handlePay = (): void => {
+  const handlePay = async (): Promise<void> => {
     if (!card.number || !card.name || !card.exp || !card.cvv) {
       return;
     }
+    const last4 = card.number.replace(/\s/g, '').slice(-4);
+    const ok = await confirm({
+      title: 'تأكيد الدفع',
+      variant: 'info',
+      confirmText: `ادفع ${formatMoney(total, country.currency)}`,
+      cancelText: 'إلغاء',
+      message: (
+        <div className="space-y-3 text-start">
+          <p className="text-small leading-[1.8] text-muted-light dark:text-muted-dark">
+            راجع تفاصيل العملية قبل التأكيد. سيتم خصم المبلغ من بطاقتك فوراً.
+          </p>
+          <div className="rounded-card border border-border-light dark:border-border-dark divide-y divide-border-light dark:divide-border-dark text-small">
+            <div className="flex justify-between p-3">
+              <span className="text-muted-light dark:text-muted-dark">الباقة</span>
+              <span className="font-semibold">{plan.nameAr} · {cycle === 'monthly' ? 'شهري' : 'سنوي'}</span>
+            </div>
+            <div className="flex justify-between p-3">
+              <span className="text-muted-light dark:text-muted-dark">البطاقة</span>
+              <span className="font-mono">**** **** **** {last4}</span>
+            </div>
+            <div className="flex justify-between p-3">
+              <span className="text-muted-light dark:text-muted-dark">المبلغ</span>
+              <span className="font-bold text-primary">{formatMoney(total, country.currency)}</span>
+            </div>
+          </div>
+        </div>
+      ),
+    });
+    if (!ok) return;
+
     onProcessing();
     // Simulate Paymob's iframe response (in real prod this would be a webhook)
     setTimeout(() => {

@@ -465,18 +465,11 @@ export default function Team(): JSX.Element {
                       isPending && 'opacity-80',
                     )}
                   >
-                    {/* Top toolbar: checkbox + edit + delete, always visible (left of card) */}
+                    {/* Top toolbar: edit + delete, always visible (left of card) */}
                     <div
                       className="absolute top-3 end-3 flex items-center gap-1"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelect(a.id)}
-                        className="h-4 w-4 cursor-pointer"
-                        aria-label="تحديد"
-                      />
                       {isPending ? (
                         <>
                           <button onClick={() => { resendInvitation(a.id); showToast('تم إعادة إرسال الدعوة', 'success'); }} className="h-7 w-7 rounded-lg text-muted-light dark:text-muted-dark hover:bg-primary/10 hover:text-primary flex items-center justify-center" title="إعادة إرسال الدعوة">
@@ -517,52 +510,74 @@ export default function Team(): JSX.Element {
                       </div>
                     </button>
 
-                    {/* Meta: role + departments as compact text rows */}
-                    {(role || agentDepts.length > 0) && (
-                      <div className="space-y-1.5 mb-4">
-                        {role && (
-                          <div className="flex items-center gap-2 text-small">
-                            <Shield className="h-3.5 w-3.5 text-muted-light dark:text-muted-dark flex-shrink-0" />
-                            <span className="text-muted-light dark:text-muted-dark">الدور</span>
-                            <span className="font-semibold truncate">{role.name}</span>
-                          </div>
-                        )}
-                        {agentDepts.length > 0 && (
-                          <div className="flex items-center gap-2 text-small">
-                            <Users className="h-3.5 w-3.5 text-muted-light dark:text-muted-dark flex-shrink-0" />
-                            <span className="text-muted-light dark:text-muted-dark">الأقسام</span>
-                            <span className="font-semibold truncate">
-                              {agentDepts.slice(0, 2).map((d) => d.name).join('، ')}
-                              {agentDepts.length > 2 && (
-                                <span className="text-muted-light dark:text-muted-dark font-normal"> +{agentDepts.length - 2}</span>
-                              )}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Footer: channels + convs (right of card / start in RTL); status pill (left / end) */}
-                    <div className="mt-auto flex items-center justify-between gap-2 pt-3 border-t border-border-light dark:border-border-dark">
-                      <div className="flex items-center gap-3">
-                        <span className="flex items-center gap-1.5 text-small" title="المحادثات المفتوحة">
-                          <MessageSquare className="h-3.5 w-3.5 text-muted-light dark:text-muted-dark" />
-                          <span className="font-bold tabular-nums">{active}</span>
+                    {/* Meta: role + departments + conversations — all in one row */}
+                    <div className="flex items-center flex-wrap gap-x-4 gap-y-1.5 mb-4 text-small">
+                      {role && (
+                        <span className="inline-flex items-center gap-1.5" title="الدور">
+                          <Shield className="h-3.5 w-3.5 text-muted-light dark:text-muted-dark flex-shrink-0" />
+                          <span className="font-semibold truncate">{role.name}</span>
                         </span>
-                        {uniqueChannelTypes.length > 0 && (
-                          <span
-                            className="flex items-center gap-1"
-                            title={agentChannels.map((c) => c.name).join('، ')}
-                          >
-                            {uniqueChannelTypes.slice(0, 4).map((t) => (
-                              <ChannelIcon key={t} type={t} size={14} />
-                            ))}
-                            {uniqueChannelTypes.length > 4 && (
-                              <span className="text-[11px] text-muted-light dark:text-muted-dark">+{uniqueChannelTypes.length - 4}</span>
+                      )}
+                      {agentDepts.length > 0 && (
+                        <span className="inline-flex items-center gap-1.5 min-w-0" title="الأقسام">
+                          <Users className="h-3.5 w-3.5 text-muted-light dark:text-muted-dark flex-shrink-0" />
+                          <span className="font-semibold truncate">
+                            {agentDepts.slice(0, 2).map((d) => d.name).join('، ')}
+                            {agentDepts.length > 2 && (
+                              <span className="text-muted-light dark:text-muted-dark font-normal"> +{agentDepts.length - 2}</span>
                             )}
                           </span>
-                        )}
-                      </div>
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1.5" title="عدد المحادثات">
+                        <MessageSquare className="h-3.5 w-3.5 text-muted-light dark:text-muted-dark flex-shrink-0" />
+                        <span className="font-bold tabular-nums">{active}</span>
+                      </span>
+                    </div>
+
+                    {/* Stats: assigned channels */}
+                    <div className="mb-4">
+                      <p className="text-small text-muted-light dark:text-muted-dark mb-1.5">الحسابات المسندة</p>
+                      {agentChannels.length === 0 ? (
+                        <p className="text-[11px] text-muted-light dark:text-muted-dark italic">لا توجد حسابات</p>
+                      ) : (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {uniqueChannelTypes.map((t) => {
+                            const count = agentChannels.filter((c) => c.type === t).length;
+                            return (
+                              <span
+                                key={t}
+                                className="relative inline-flex h-7 w-7 items-center justify-center rounded-full bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark"
+                                title={agentChannels.filter((c) => c.type === t).map((c) => c.name).join('، ')}
+                              >
+                                <ChannelIcon type={t} size={14} />
+                                {count > 1 && (
+                                  <span className="absolute -top-1 -end-1 h-4 min-w-4 px-1 bg-primary text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white dark:ring-surface-dark">
+                                    {count}
+                                  </span>
+                                )}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer: checkbox (start/right) + toggle (end/left) */}
+                    <div className="mt-auto flex items-center justify-between gap-2 pt-3 border-t border-border-light dark:border-border-dark">
+                      <label
+                        className="inline-flex items-center cursor-pointer"
+                        onClick={(e) => e.stopPropagation()}
+                        title="تحديد"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(a.id)}
+                          className="h-4 w-4 cursor-pointer accent-primary"
+                          aria-label="تحديد"
+                        />
+                      </label>
                       {isPending ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/15 text-warning text-[11px] font-medium">
                           <Clock className="h-3 w-3" /> بانتظار القبول

@@ -164,7 +164,7 @@ export function IconSidebar(): JSX.Element {
           </button>
         </div>
 
-        <nav className="flex flex-col gap-1 flex-1 w-full items-center">
+        <nav className="flex flex-col gap-1 flex-1 w-full items-center overflow-y-auto overflow-x-hidden py-1 min-h-0 scrollbar-thin">
           {groupedNav.map(({ group, items }) => (
             <div key={group} className="flex flex-col gap-1 items-center w-full pb-2">
               {items.map(renderItem)}
@@ -173,7 +173,7 @@ export function IconSidebar(): JSX.Element {
           ))}
         </nav>
 
-        <div className="flex flex-col items-center gap-1 mt-auto w-full">
+        <div className="flex flex-col items-center gap-1 mt-auto w-full flex-shrink-0">
           <OnboardingReminder collapsed />
         </div>
       </aside>
