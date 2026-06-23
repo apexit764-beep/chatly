@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 interface BarChartProps {
   labels: string[];
   data: number[];
@@ -6,6 +8,7 @@ interface BarChartProps {
 }
 
 export function BarChart({ labels, data, color = '#6C63FF', height = 240 }: BarChartProps): JSX.Element {
+  const [hovered, setHovered] = useState<number | null>(null);
   const width = 600;
   const padding = { top: 20, right: 16, bottom: 32, left: 32 };
   const innerW = width - padding.left - padding.right;
@@ -47,8 +50,14 @@ export function BarChart({ labels, data, color = '#6C63FF', height = 240 }: BarC
           const h = (v / max) * innerH;
           const x = padding.left + i * slot + (slot - barW) / 2;
           const y = padding.top + innerH - h;
+          const isActive = hovered === i;
           return (
-            <g key={i}>
+            <g
+              key={i}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+              style={{ cursor: 'pointer' }}
+            >
               <rect
                 x={x}
                 y={y}
@@ -56,19 +65,45 @@ export function BarChart({ labels, data, color = '#6C63FF', height = 240 }: BarC
                 height={h}
                 rx="4"
                 fill={color}
-                fillOpacity="0.85"
+                fillOpacity={hovered !== null && !isActive ? 0.35 : 0.85}
+                style={{ transition: 'fill-opacity 0.2s ease, y 0.15s ease, height 0.15s ease' }}
               />
-              <text
-                x={x + barW / 2}
-                y={y - 4}
-                fontSize="10"
-                textAnchor="middle"
-                fill="currentColor"
-                opacity="0.8"
-                fontWeight="600"
-              >
-                {v}
-              </text>
+              {isActive && (
+                <g style={{ pointerEvents: 'none' }}>
+                  <rect
+                    x={x + barW / 2 - 28}
+                    y={y - 32}
+                    width={56}
+                    height={24}
+                    rx="6"
+                    fill="var(--color-surface-dark, #1e1e2e)"
+                    fillOpacity="0.92"
+                  />
+                  <text
+                    x={x + barW / 2}
+                    y={y - 15}
+                    fontSize="12"
+                    fontWeight="700"
+                    textAnchor="middle"
+                    fill="#fff"
+                  >
+                    {v}
+                  </text>
+                </g>
+              )}
+              {!isActive && (
+                <text
+                  x={x + barW / 2}
+                  y={y - 4}
+                  fontSize="10"
+                  textAnchor="middle"
+                  fill="currentColor"
+                  opacity="0.8"
+                  fontWeight="600"
+                >
+                  {v}
+                </text>
+              )}
             </g>
           );
         })}
@@ -80,7 +115,9 @@ export function BarChart({ labels, data, color = '#6C63FF', height = 240 }: BarC
             fontSize="10"
             textAnchor="middle"
             fill="currentColor"
-            opacity="0.6"
+            opacity={hovered !== null && hovered !== i ? 0.3 : 0.6}
+            style={{ transition: 'opacity 0.2s ease' }}
+            fontWeight={hovered === i ? '600' : '400'}
           >
             {lbl}
           </text>

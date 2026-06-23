@@ -41,10 +41,12 @@ import {
   StickyNote,
   RotateCcw,
   Lock,
+  Star,
 } from 'lucide-react';
 import {
   Avatar,
   ChannelIcon,
+  channelLabel,
   Drawer,
   EmojiPicker,
   Input,
@@ -59,8 +61,23 @@ import { contactTypeLabel } from '@/utils/labels';
 import { formatPhone, formatTime, timeAgo } from '@/utils/format';
 import { downloadCsv } from '@/utils/csv';
 import { cn } from '@/utils/cn';
-import type { Conversation, ConversationStatus, Channel, Department } from '@/types';
+import type { Conversation, ConversationStatus, Channel, Department, Contact } from '@/types';
 import type { InboxView } from '@/store/useInboxStore';
+
+const COUNTRY_CODES = [
+  { code: '+972', flag: '🇵🇸', label: 'فلسطين', iso: 'PS' },
+  { code: '+968', flag: '🇴🇲', label: 'عُمان', iso: 'OM' },
+  { code: '+966', flag: '🇸🇦', label: 'السعودية', iso: 'SA' },
+  { code: '+971', flag: '🇦🇪', label: 'الإمارات', iso: 'AE' },
+  { code: '+965', flag: '🇰🇼', label: 'الكويت', iso: 'KW' },
+  { code: '+974', flag: '🇶🇦', label: 'قطر', iso: 'QA' },
+  { code: '+973', flag: '🇧🇭', label: 'البحرين', iso: 'BH' },
+  { code: '+962', flag: '🇯🇴', label: 'الأردن', iso: 'JO' },
+  { code: '+961', flag: '🇱🇧', label: 'لبنان', iso: 'LB' },
+  { code: '+20', flag: '🇪🇬', label: 'مصر', iso: 'EG' },
+  { code: '+212', flag: '🇲🇦', label: 'المغرب', iso: 'MA' },
+  { code: '+964', flag: '🇮🇶', label: 'العراق', iso: 'IQ' },
+];
 
 export default function Inbox(): JSX.Element {
   const conversations = useDataStore((s) => s.conversations);
@@ -120,6 +137,7 @@ export default function Inbox(): JSX.Element {
           const contact = contacts.find((x) => x.id === c.contactId);
           return contact?.type === 'vip';
         }
+        if (view === 'starred') return bookmarkedConvIds.has(c.id);
         if (view === 'today') {
           const d = new Date(c.lastMessageAt);
           const today = new Date();
@@ -319,6 +337,7 @@ export default function Inbox(): JSX.Element {
               unassigned: conversations.filter((c) => c.assignedTo === null).length,
               closed: conversations.filter((c) => c.status === 'closed').length,
               all: conversations.length,
+              starred: conversations.filter((c) => bookmarkedConvIds.has(c.id)).length,
             }}
           />
         </div>
@@ -358,8 +377,8 @@ export default function Inbox(): JSX.Element {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-0.5">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      {isConvBookmarked && <Bookmark className="h-3 w-3 text-warning fill-current flex-shrink-0" />}
                       <p className="text-body font-semibold truncate">{contact.name}</p>
+                      {isConvBookmarked && <Star className="h-3 w-3 text-warning fill-warning flex-shrink-0" />}
                       {conv.aiActive && (
                         <span
                           className="inline-flex items-center gap-0.5 px-1.5 h-4 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-[9px] font-bold flex-shrink-0"
@@ -458,9 +477,25 @@ export default function Inbox(): JSX.Element {
                 </button>
               )}
 
-              {/* Avatar + name */}
-              <Avatar name={selectedContact.name} size="sm" />
-              <p className="text-body font-bold truncate flex-shrink min-w-0">{selectedContact.name}</p>
+              {/* Avatar + name + channel — click opens details if collapsed */}
+              <button
+                className="flex items-center gap-3 min-w-0 flex-shrink hover:opacity-80 transition-opacity"
+                onClick={() => { if (detailsCollapsed) toggleDetails(); }}
+              >
+                <Avatar name={selectedContact.name} size="sm" />
+                <div className="min-w-0 text-start">
+                  <p className="text-body font-bold truncate">{selectedContact.name}</p>
+                  {(() => {
+                    const ch = channels.find((c) => c.id === selected.channelId);
+                    return ch ? (
+                      <div className="flex items-center gap-1 text-[11px] text-muted-light dark:text-muted-dark -mt-0.5">
+                        <ChannelIcon type={ch.type} size={10} className="!h-3.5 !w-3.5" />
+                        <span>{channelLabel(ch.type)}</span>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+              </button>
 
               {/* Spacer */}
               <div className="flex-1" />
@@ -471,15 +506,17 @@ export default function Inbox(): JSX.Element {
                 onChange={(s) => { setStatus(selected.id, s); showToast('تم تحديث الحالة', 'success'); }}
               />
 
-              {/* Details toggle */}
-              <button
-                onClick={toggleDetails}
-                className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark hidden xl:flex items-center justify-center text-muted-light dark:text-muted-dark"
-                title={detailsCollapsed ? 'إظهار التفاصيل' : 'إخفاء التفاصيل'}
-                aria-label="تبديل لوحة التفاصيل"
-              >
-                {detailsCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
-              </button>
+              {/* Details toggle — only show when details panel is collapsed */}
+              {detailsCollapsed && (
+                <button
+                  onClick={toggleDetails}
+                  className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark hidden xl:flex items-center justify-center text-muted-light dark:text-muted-dark"
+                  title="إظهار التفاصيل"
+                  aria-label="إظهار لوحة التفاصيل"
+                >
+                  <PanelRightOpen className="h-4 w-4" />
+                </button>
+              )}
 
 
               {/* More menu */}
@@ -496,11 +533,10 @@ export default function Inbox(): JSX.Element {
                     <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                     <div className="absolute end-0 mt-1 w-56 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1.5 z-20">
                       <MenuItem icon={<UserCog className="h-4 w-4" />} label="تحويل لموظف آخر" onClick={() => { setTransferOpen(true); setMenuOpen(false); }} />
-                      <MenuItem icon={<Bookmark className={cn('h-4 w-4', isBookmarked && 'fill-current text-warning')} />} label={isBookmarked ? 'إلغاء العلامة' : 'تعليم بنجمة'} onClick={() => { toggleBookmark(selected.id); showToast(isBookmarked ? 'تم إلغاء العلامة' : 'تم التعليم', 'success'); setMenuOpen(false); }} />
+                      <MenuItem icon={<Star className={cn('h-4 w-4', isBookmarked && 'fill-warning text-warning')} />} label={isBookmarked ? 'إلغاء التمييز' : 'تمييز بنجمة'} onClick={() => { toggleBookmark(selected.id); showToast(isBookmarked ? 'تم إلغاء التمييز' : 'تم التمييز بنجمة', 'success'); setMenuOpen(false); }} />
                       <MenuItem icon={<MessageSquarePlus className="h-4 w-4" />} label="محادثة جديدة" onClick={() => { setNewConvOpen(true); setMenuOpen(false); }} />
                       <div className="h-px bg-border-light dark:bg-border-dark my-1" />
                       <MenuItem icon={<Download className="h-4 w-4" />} label="تحميل المحادثة (CSV)" onClick={handleDownloadConv} />
-                      <MenuItem icon={<LayoutGrid className="h-4 w-4" />} label="فتح في نافذة منفصلة" onClick={() => { window.open(`/inbox?conv=${selected.id}`, '_blank'); setMenuOpen(false); }} />
                     </div>
                   </>
                 )}
@@ -715,7 +751,7 @@ export default function Inbox(): JSX.Element {
       )}
 
       {/* New conv modal */}
-      <NewConversationModal open={newConvOpen} onClose={() => setNewConvOpen(false)} />
+      <NewConversationModal open={newConvOpen} onClose={() => setNewConvOpen(false)} preselectedContact={selectedContact} />
     </div>
   );
 }
@@ -760,9 +796,6 @@ function TransferModal({ open, onClose, conversation }: { open: boolean; onClose
       }
     >
       <div className="space-y-3">
-        <p className="text-small text-muted-light dark:text-muted-dark">
-          الموظفون المُدرجون هم الذين لديهم وصول لـ <strong>{channel?.name}</strong>
-        </p>
         <div className="space-y-1.5">
           <label className="text-small font-medium text-muted-light dark:text-muted-dark">حوّل إلى</label>
           <div className="space-y-1 max-h-60 overflow-y-auto">
@@ -803,7 +836,7 @@ function TransferModal({ open, onClose, conversation }: { open: boolean; onClose
   );
 }
 
-function NewConversationModal({ open, onClose }: { open: boolean; onClose: () => void }): JSX.Element {
+function NewConversationModal({ open, onClose, preselectedContact }: { open: boolean; onClose: () => void; preselectedContact?: Contact | null }): JSX.Element {
   const contacts = useDataStore((s) => s.contacts);
   const channels = useDataStore((s) => s.channels);
   const departments = useDataStore((s) => s.departments);
@@ -824,6 +857,8 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
   const [contactDropdownOpen, setContactDropdownOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [phoneCode, setPhoneCode] = useState('+972');
+  const [phoneDropdownOpen, setPhoneDropdownOpen] = useState(false);
   const [departmentId, setDepartmentId] = useState<string>('');
   const [agentId, setAgentId] = useState<string>('');
   const [templateId, setTemplateId] = useState<string>('');
@@ -845,12 +880,13 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
   useEffect(() => {
     if (!open) return;
     setChannelId(connectedChannels[0]?.id ?? '');
-    setContactMode('existing');
-    setExistingContactId(null);
+    setContactMode(preselectedContact ? 'existing' : 'existing');
+    setExistingContactId(preselectedContact?.id ?? null);
     setContactSearch('');
     setContactDropdownOpen(false);
     setNewName('');
     setNewPhone('');
+    setPhoneCode('+972');
     setDepartmentId('');
     setAgentId('');
     setTemplateId('');
@@ -879,9 +915,8 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
 
   const validate = (): string | null => {
     if (!channelId) return 'اختر القناة المُرسلة';
-    if (contactMode === 'existing' && !existingContactId) return 'اختر جهة الاتصال';
+    if (contactMode === 'existing' && !existingContactId) return 'اختر العميل';
     if (contactMode === 'new' && (!newName.trim() || !newPhone.trim())) return 'املأ اسم العميل والرقم';
-    if (requiresTemplate && !templateId) return 'اختر قالب معتمد (مطلوب للواتساب)';
     if (!previewMessage.trim()) return 'الرسالة فارغة';
     return null;
   };
@@ -898,9 +933,10 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
       targetName = existingContact.name;
     } else {
       // Create new contact
+      const fullPhone = phoneCode + newPhone.trim().replace(/^0+/, '');
       addContact({
         name: newName.trim(),
-        phone: newPhone.trim(),
+        phone: fullPhone,
         type: 'lead',
         notes: '',
         channels: channel?.type === 'whatsapp' ? ['whatsapp'] : undefined,
@@ -938,7 +974,7 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
       open={open}
       onClose={onClose}
       title="بدء محادثة جديدة"
-      side="end"
+      side="start"
       width="w-[480px]"
     >
       <div className="space-y-5 pb-20">
@@ -965,7 +1001,7 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
 
         {/* Contact */}
         <Field
-          label="جهة الاتصال"
+          label="العميل"
           required
           action={contactMode === 'existing' ? (
             <button
@@ -1002,7 +1038,7 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
                     <span className="text-[11px] text-muted-light dark:text-muted-dark font-mono">{formatPhone(existingContact.phone)}</span>
                   </span>
                 ) : (
-                  <span className="text-muted-light dark:text-muted-dark">اختر جهة اتصال...</span>
+                  <span className="text-muted-light dark:text-muted-dark">اختر عميل...</span>
                 )}
                 <ChevronDown className={cn('h-4 w-4 text-muted-light dark:text-muted-dark transition-transform flex-shrink-0', contactDropdownOpen && 'rotate-180')} />
               </button>
@@ -1056,12 +1092,52 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="اسم العميل (مثل: أحمد محمد)"
               />
-              <Input
-                value={newPhone}
-                onChange={(e) => setNewPhone(e.target.value)}
-                placeholder={channel?.type === 'whatsapp' ? '+968 9123 4567' : 'الرقم/المعرّف'}
-                icon={<Phone className="h-4 w-4" />}
-              />
+              <div className="relative flex items-center h-10 bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-input focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark pointer-events-none">
+                  <Phone className="h-4 w-4" />
+                </span>
+                <input
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
+                  placeholder="599 123 456"
+                  className="flex-1 h-full bg-transparent ps-10 pe-2 text-body focus:outline-none placeholder:text-muted-light/50 dark:placeholder:text-muted-dark/50"
+                  dir="ltr"
+                  inputMode="tel"
+                />
+                <div className="h-6 w-px bg-border-light dark:bg-border-dark flex-shrink-0" />
+                <button
+                  type="button"
+                  onClick={() => setPhoneDropdownOpen(!phoneDropdownOpen)}
+                  className="flex items-center gap-1.5 h-full px-2.5 text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark rounded-e-input transition-colors flex-shrink-0"
+                >
+                  <ChevronDown className={cn('h-3.5 w-3.5 text-muted-light dark:text-muted-dark transition-transform', phoneDropdownOpen && 'rotate-180')} />
+                  <span className="font-mono text-muted-light dark:text-muted-dark">{phoneCode}</span>
+                  <span className="text-[11px] font-semibold text-muted-light dark:text-muted-dark">{COUNTRY_CODES.find(c => c.code === phoneCode)?.iso}</span>
+                  <span className="text-base leading-none">{COUNTRY_CODES.find(c => c.code === phoneCode)?.flag}</span>
+                </button>
+                {phoneDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setPhoneDropdownOpen(false)} />
+                    <div className="absolute top-full end-0 mt-1 z-50 w-56 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-xl py-1 max-h-52 overflow-y-auto">
+                      {COUNTRY_CODES.map((cc) => (
+                        <button
+                          key={cc.code}
+                          type="button"
+                          onClick={() => { setPhoneCode(cc.code); setPhoneDropdownOpen(false); }}
+                          className={cn(
+                            'flex items-center gap-2.5 w-full px-3 py-2 text-small hover:bg-primary/10 transition-colors',
+                            phoneCode === cc.code && 'bg-primary/10 text-primary font-semibold'
+                          )}
+                        >
+                          <span className="text-base leading-none">{cc.flag}</span>
+                          <span className="flex-1 text-start">{cc.label}</span>
+                          <span className="font-mono text-muted-light dark:text-muted-dark text-[11px]">{cc.code}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </Field>
@@ -1087,6 +1163,7 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
               className="w-full h-10 ps-3 pe-9 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
             >
               <option value="">غير مُسند</option>
+              <option value="__ai__">AI Agent (Default)</option>
               {eligibleAgents.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
@@ -1097,15 +1174,13 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
         {/* Template */}
         <Field
           label="قالب الرسالة"
-          required={requiresTemplate}
-          hint={requiresTemplate ? 'مطلوب — واتساب لا يسمح بالنص الحر' : undefined}
         >
           <select
             value={templateId}
             onChange={(e) => setTemplateId(e.target.value)}
             className="w-full h-10 ps-3 pe-9 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
           >
-            <option value="">{requiresTemplate ? 'اختر قالباً معتمداً...' : 'بدون قالب (نص حر)'}</option>
+            <option value="">بدون قالب (نص حر)</option>
             {templates.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
@@ -1121,22 +1196,22 @@ function NewConversationModal({ open, onClose }: { open: boolean; onClose: () =>
             placeholder="مرحباً، أتواصل معك بخصوص..."
             className="w-full px-3 py-2 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary leading-relaxed"
           />
-          {requiresTemplate && template && (
+          {template && (
             <div className="mt-2 flex items-start gap-2 p-2 rounded-lg bg-info/5 border border-info/20">
               <Sparkles className="h-4 w-4 text-info flex-shrink-0 mt-0.5" />
               <p className="text-[11px] text-info">
-                قالب معتمد من Meta — تعديل النص قد يبطل اعتماده.
+                قالب معتمد — تعديل النص قد يغيّر المحتوى.
               </p>
             </div>
           )}
         </Field>
       </div>
-      <div className="absolute bottom-0 inset-x-0 px-5 py-3 bg-white dark:bg-surface-dark border-t border-border-light dark:border-border-dark flex items-center justify-end gap-2">
-        <button onClick={onClose} className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">
-          إلغاء
-        </button>
+      <div className="absolute bottom-0 inset-x-0 px-5 py-3 bg-white dark:bg-surface-dark border-t border-border-light dark:border-border-dark flex items-center gap-2">
         <button onClick={submit} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2" style={{ color: '#fff' }}>
           <Send className="h-4 w-4" /> إرسال
+        </button>
+        <button onClick={onClose} className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">
+          إلغاء
         </button>
       </div>
     </Drawer>
@@ -1176,7 +1251,9 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
   const agents = useDataStore((s) => s.agents);
   const conversations = useDataStore((s) => s.conversations);
   const departments = useDataStore((s) => s.departments);
+  const channels = useDataStore((s) => s.channels);
   const assign = useDataStore((s) => s.assignConversation);
+  const updateContact = useDataStore((s) => s.updateContact);
   const addContactTag = useDataStore((s) => s.addContactTag);
   const removeContactTag = useDataStore((s) => s.removeContactTag);
   const showToast = useUIStore((s) => s.showToast);
@@ -1190,10 +1267,18 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
   const [generating, setGenerating] = useState(false);
   const [addingTag, setAddingTag] = useState(false);
   const [newTag, setNewTag] = useState('');
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
   const [groupId, setGroupId] = useState<string>(conversation.departmentId ?? '');
+  const [editingName, setEditingName] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [tagsOpen, setTagsOpen] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
 
   if (!contact) return <></>;
   const recent = conversations.filter((c) => c.contactId === contact.id && c.id !== conversation.id).slice(0, 3);
+  const totalContactConvs = conversations.filter((c) => c.contactId === contact.id).length;
+  const convChannel = channels.find((c) => c.id === conversation.channelId);
 
   if (collapsed) return <></>;
 
@@ -1217,6 +1302,26 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
     setAddingTag(false);
   };
 
+  const handleSaveName = (): void => {
+    if (editName.trim() && editName.trim() !== contact.name) {
+      updateContact(contact.id, { name: editName.trim() });
+      showToast('تم تحديث اسم العميل', 'success');
+    }
+    setEditingName(false);
+  };
+
+  const allTags = Array.from(new Set(contacts.flatMap((c) => c.tags)));
+  const contactCategories = ['عميل جديد', 'عميل دائم', 'عميل VIP', 'شريك', 'مورّد', 'محتمل'];
+  const currentCategory = contact.type === 'vip' ? 'عميل VIP' : contact.type === 'customer' ? 'عميل دائم' : contact.type === 'lead' ? 'محتمل' : 'عميل جديد';
+
+  const aiAgentOption = { id: '__ai__', name: 'AI Agent (Default)' };
+  const assigneeOptions = [aiAgentOption, ...agents.map((a) => ({ id: a.id, name: a.name }))];
+
+  const startedAt = conversation.messages[0]?.timestamp ?? conversation.lastMessageAt;
+  const startedDate = new Date(startedAt);
+  const startedFull = startedDate.toLocaleDateString('ar-OM-u-nu-latn', { year: 'numeric', month: 'long', day: 'numeric' }) + ' ' + startedDate.toLocaleTimeString('ar-OM-u-nu-latn', { hour: '2-digit', minute: '2-digit' });
+  const convIdNum = conversation.id.replace(/\D/g, '') || conversation.id;
+
   return (
     <aside className="w-[300px] flex-shrink-0 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card overflow-hidden hidden xl:flex flex-col">
       {/* Section header */}
@@ -1232,21 +1337,39 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
       </div>
       <div className="flex-1 overflow-y-auto">
       {/* Contact header */}
-      <div className="p-5 text-center border-b border-border-light dark:border-border-dark">
-        <Avatar name={contact.name} size="lg" className="mx-auto" />
-        <p className="text-h3 font-bold mt-3">{contact.name}</p>
+      <div className="p-5 flex flex-col items-center text-center border-b border-border-light dark:border-border-dark">
+        <Avatar name={contact.name} size="lg" />
+        {editingName ? (
+          <input
+            autoFocus
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onBlur={handleSaveName}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false); }}
+            className="text-h3 font-bold mt-3 text-center w-full bg-bg-light dark:bg-bg-dark border border-primary rounded-lg px-2 py-1 focus:outline-none"
+          />
+        ) : (
+          <p
+            className="text-h3 font-bold mt-3 group cursor-pointer inline-flex items-center gap-1.5"
+            onClick={() => { setEditName(contact.name); setEditingName(true); }}
+          >
+            {contact.name}
+            <Edit2 className="h-3 w-3 text-muted-light dark:text-muted-dark opacity-0 group-hover:opacity-100 transition-opacity" />
+          </p>
+        )}
         <p className="text-small text-muted-light dark:text-muted-dark mt-0.5 flex items-center justify-center gap-1">
           <Phone className="h-3 w-3" />
           {formatPhone(contact.phone)}
         </p>
         <div className="flex items-center justify-center gap-3 mt-2 text-small text-muted-light dark:text-muted-dark">
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1" title="الدولة">
             <MapPin className="h-3 w-3" />
-            مسقط، عُمان
+            عُمان
           </span>
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1" title="الوقت المحلي للعميل">
             <ClockIcon className="h-3 w-3" />
             {new Date().toLocaleTimeString('ar-OM-u-nu-latn', { hour: '2-digit', minute: '2-digit' })}
+            <span className="text-[10px] opacity-70">محلي</span>
           </span>
         </div>
       </div>
@@ -1256,10 +1379,16 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
         <AssigneeRow
           label="الموظف المسؤول"
           value={conversation.assignedTo}
-          options={agents.map((a) => ({ id: a.id, name: a.name }))}
+          options={assigneeOptions}
           placeholder="غير مُسند"
-          onChange={(id) => { assign(conversation.id, id); showToast(id ? 'تم الإسناد' : 'تم إلغاء الإسناد', 'success'); }}
-          renderIndicator={(opt) => opt ? <Avatar name={opt.name} size="xs" /> : <span className="h-5 w-5 rounded-full bg-bg-light dark:bg-bg-dark border border-dashed border-border-light dark:border-border-dark" />}
+          onChange={(id) => { assign(conversation.id, id === '__ai__' ? null : id); showToast(id ? 'تم الإسناد' : 'تم إلغاء الإسناد', 'success'); }}
+          renderIndicator={(opt) => opt ? (
+            opt.id === '__ai__' ? (
+              <div className="h-5 w-5 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white">
+                <Sparkles className="h-3 w-3" />
+              </div>
+            ) : <Avatar name={opt.name} size="xs" />
+          ) : <span className="h-5 w-5 rounded-full bg-bg-light dark:bg-bg-dark border border-dashed border-border-light dark:border-border-dark" />}
         />
         <AssigneeRow
           label="المجموعة"
@@ -1277,7 +1406,12 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
 
       {/* Tags */}
       <div className="p-4 border-b border-border-light dark:border-border-dark">
-        <p className="text-small text-muted-light dark:text-muted-dark mb-2">الوسوم</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-small text-muted-light dark:text-muted-dark">الوسوم</p>
+          <button onClick={() => setAddingTag(true)} className="text-[11px] font-medium text-primary hover:underline flex items-center gap-0.5">
+            <Plus className="h-3 w-3" /> وسم جديد
+          </button>
+        </div>
         <div className="flex flex-wrap gap-1.5">
           {contact.tags.map((t) => (
             <span key={t} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-small">
@@ -1291,54 +1425,105 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
               </button>
             </span>
           ))}
-          {addingTag ? (
-            <input
-              autoFocus
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              onBlur={handleAddTag}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleAddTag(); if (e.key === 'Escape') { setAddingTag(false); setNewTag(''); } }}
-              placeholder="وسم..."
-              className="h-6 px-2 rounded-full bg-bg-light dark:bg-bg-dark border border-primary/30 text-small w-24 focus:outline-none focus:border-primary"
-            />
-          ) : (
-            <button onClick={() => setAddingTag(true)} className="inline-flex items-center gap-1 text-small text-muted-light dark:text-muted-dark hover:text-primary px-2 py-0.5 rounded-full border border-dashed border-border-light dark:border-border-dark">
-              <Plus className="h-3 w-3" /> إضافة
-            </button>
+          {addingTag && (
+            <div className="relative w-full mt-1">
+              <input
+                autoFocus
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onBlur={handleAddTag}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddTag(); if (e.key === 'Escape') { setAddingTag(false); setNewTag(''); } }}
+                placeholder="اكتب وسم جديد..."
+                className="w-full h-8 px-3 rounded-lg bg-bg-light dark:bg-bg-dark border border-primary/30 text-small focus:outline-none focus:border-primary"
+                list="tag-suggestions"
+              />
+              {allTags.filter((t) => !contact.tags.includes(t) && t.includes(newTag)).length > 0 && newTag && (
+                <div className="absolute top-full mt-1 inset-x-0 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-card-hover py-1 z-20 max-h-32 overflow-y-auto">
+                  {allTags.filter((t) => !contact.tags.includes(t) && t.includes(newTag)).map((t) => (
+                    <button key={t} onClick={() => { addContactTag(contact.id, t); showToast(`تم إضافة: ${t}`, 'success'); setNewTag(''); setAddingTag(false); }} className="w-full px-3 py-1.5 text-small text-start hover:bg-bg-light dark:hover:bg-bg-dark">{t}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Categories */}
+      <div className="p-4 border-b border-border-light dark:border-border-dark">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-small text-muted-light dark:text-muted-dark">التصنيف</p>
+          <button onClick={() => setAddingCategory(true)} className="text-[11px] font-medium text-primary hover:underline flex items-center gap-0.5">
+            <Plus className="h-3 w-3" /> تصنيف جديد
+          </button>
+        </div>
+        <div className="relative">
+          <button
+            onClick={() => setCategoriesOpen((v) => !v)}
+            className="w-full h-8 ps-3 pe-2 rounded-lg bg-bg-light dark:bg-bg-dark text-small flex items-center justify-between hover:border-border-light dark:hover:border-border-dark border border-transparent"
+          >
+            <span className="font-medium">{currentCategory}</span>
+            <ChevronDown className={cn('h-3.5 w-3.5 text-muted-light dark:text-muted-dark transition-transform', categoriesOpen && 'rotate-180')} />
+          </button>
+          {categoriesOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setCategoriesOpen(false)} />
+              <div className="absolute top-full mt-1 inset-x-0 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-card-hover py-1 z-20">
+                {contactCategories.map((cat) => (
+                  <button key={cat} onClick={() => { setCategoriesOpen(false); showToast(`تم تعيين التصنيف: ${cat}`, 'success'); }} className="w-full flex items-center gap-2 px-3 py-2 text-small hover:bg-bg-light dark:hover:bg-bg-dark text-start">
+                    <span className="flex-1">{cat}</span>
+                    {cat === currentCategory && <Check className="h-3.5 w-3.5 text-primary" />}
+                  </button>
+                ))}
+                {addingCategory && (
+                  <div className="px-3 py-1.5">
+                    <input autoFocus value={newCategory} onChange={(e) => setNewCategory(e.target.value)} onBlur={() => { setAddingCategory(false); setNewCategory(''); }} onKeyDown={(e) => { if (e.key === 'Enter' && newCategory.trim()) { showToast(`تم إضافة التصنيف: ${newCategory.trim()}`, 'success'); setAddingCategory(false); setNewCategory(''); setCategoriesOpen(false); } }} placeholder="تصنيف جديد..." className="w-full h-8 px-2 rounded-lg bg-bg-light dark:bg-bg-dark border border-primary/30 text-small focus:outline-none focus:border-primary" />
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>
 
       <Collapsible open={openAttrs} onToggle={() => setOpenAttrs((v) => !v)} title="خصائص المحادثة">
         <Attr label="النوع" value={contactTypeLabel[contact.type]} />
-        <Attr label="المعرّف" value={`#${conversation.id}`} />
-        <Attr label="بدأت" value={timeAgo(conversation.messages[0]?.timestamp ?? conversation.lastMessageAt)} />
-        <Attr label="القناة" value="WhatsApp" />
-        <Attr label="التصنيف" value={contactTypeLabel[contact.type]} />
+        <Attr label="المعرّف" value={`#${convIdNum}`} />
+        <Attr label="بدأت" value={timeAgo(startedAt)} tooltip={startedFull} />
         <Attr
-          label="الأولوية"
-          value={contact.type === 'vip' ? 'عالية' : 'عادية'}
-          valueColor={contact.type === 'vip' ? 'text-danger' : undefined}
+          label="القناة"
+          value={convChannel?.name ?? 'غير محدد'}
+          icon={convChannel ? <ChannelIcon type={convChannel.type} size={10} className="!h-3.5 !w-3.5" /> : undefined}
         />
       </Collapsible>
 
-      <Collapsible open={openRecent} onToggle={() => setOpenRecent((v) => !v)} title="محادثات حديثة">
+      <Collapsible open={openRecent} onToggle={() => setOpenRecent((v) => !v)} title={`محادثات أخرى (${totalContactConvs - 1})`}>
         {recent.length === 0 ? (
           <p className="text-small text-muted-light dark:text-muted-dark italic px-1">لا محادثات أخرى</p>
         ) : (
-          recent.map((c) => (
-            <div key={c.id} className="p-2 rounded-lg bg-bg-light dark:bg-bg-dark mb-1.5 text-small">
-              <p className="line-clamp-1 font-medium">{c.lastMessage}</p>
-              <p className="text-muted-light dark:text-muted-dark text-[11px] mt-0.5">{timeAgo(c.lastMessageAt)}</p>
-            </div>
-          ))
+          <>
+            {recent.map((c) => {
+              const ch = channels.find((x) => x.id === c.channelId);
+              return (
+                <button key={c.id} onClick={() => useInboxStore.getState().setSelectedId(c.id)} className="w-full text-start p-2 rounded-lg bg-bg-light dark:bg-bg-dark mb-1.5 text-small hover:bg-border-light dark:hover:bg-border-dark transition-colors">
+                  <p className="line-clamp-1 font-medium">{c.lastMessage}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {ch && <ChannelIcon type={ch.type} size={10} className="!h-3 !w-3" />}
+                    <span className="text-muted-light dark:text-muted-dark text-[11px]">{timeAgo(c.lastMessageAt)}</span>
+                  </div>
+                </button>
+              );
+            })}
+            {totalContactConvs - 1 > 3 && (
+              <button className="w-full text-center text-[11px] text-primary hover:underline mt-1">عرض الكل ({totalContactConvs - 1})</button>
+            )}
+          </>
         )}
       </Collapsible>
 
       <Collapsible open={openTech} onToggle={() => setOpenTech((v) => !v)} title="معلومات تقنية">
         <Attr label="IP" value="156.220.45.12" icon={<Globe className="h-3 w-3" />} />
-        <Attr label="المنصة" value="Android 14" icon={<Monitor className="h-3 w-3" />} />
-        <Attr label="المتصفح" value="WhatsApp 2.24" />
+        <Attr label="نظام التشغيل" value="Android 14" icon={<Monitor className="h-3 w-3" />} />
       </Collapsible>
 
       <div className="p-4">
@@ -1384,11 +1569,11 @@ function Collapsible({ title, open, onToggle, children }: { title: string; open:
   );
 }
 
-function Attr({ label, value, valueColor, icon }: { label: string; value: string; valueColor?: string; icon?: React.ReactNode }): JSX.Element {
+function Attr({ label, value, valueColor, icon, tooltip }: { label: string; value: string; valueColor?: string; icon?: React.ReactNode; tooltip?: string }): JSX.Element {
   return (
     <div className="flex items-center justify-between text-small">
       <span className="text-muted-light dark:text-muted-dark flex items-center gap-1.5">{icon}{label}</span>
-      <span className={cn('font-medium truncate ms-2', valueColor)}>{value}</span>
+      <span className={cn('font-medium truncate ms-2', valueColor)} title={tooltip}>{value}</span>
     </div>
   );
 }
@@ -1490,7 +1675,7 @@ function StatusDropdown({
       ? 'bg-success/15 text-success'
       : status === 'pending'
       ? 'bg-warning/15 text-warning'
-      : 'bg-primary text-white';
+      : 'bg-primary/15 text-primary';
 
   return (
     <div className="relative">
@@ -1558,7 +1743,7 @@ function InboxFilters({
   setSelectedDepartmentId: (id: string | null) => void;
   channels: Channel[];
   departments: Department[];
-  counts: { mine: number; unassigned: number; closed: number; all: number };
+  counts: { mine: number; unassigned: number; closed: number; all: number; starred: number };
 }): JSX.Element {
   const [viewOpen, setViewOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
@@ -1570,6 +1755,7 @@ function InboxFilters({
     { key: 'all', label: 'الكل', count: counts.all, icon: <Globe className="h-4 w-4 text-slate-500" strokeWidth={2} />, group: 'folder' },
     { key: 'mine', label: 'صندوقي', count: counts.mine, icon: <InboxIcon className="h-4 w-4 text-primary" strokeWidth={2} />, group: 'folder' },
     { key: 'unassigned', label: 'غير مسندة', count: counts.unassigned, icon: <UserX className="h-4 w-4 text-warning" strokeWidth={2} />, group: 'folder' },
+    { key: 'starred', label: 'مميزة', count: counts.starred, icon: <Star className="h-4 w-4 text-warning" strokeWidth={2} />, group: 'folder' },
     { key: 'closed', label: 'مغلقة', count: counts.closed, icon: <CheckCircle2 className="h-4 w-4 text-success" strokeWidth={2} />, group: 'status' },
   ];
   const current = items.find((i) => i.key === view) ?? items[0];
@@ -1793,10 +1979,8 @@ function MessageBubble({
   const name = isOut ? (isAI ? 'المساعد الذكي' : agentName) : contactName;
   const dateLabel = timeAgo(msg.timestamp);
 
-  // Subtle footer color: gray for note/incoming, light for outgoing (on primary bg)
-  const headerMutedClass = isOut && !isNote
-    ? 'text-white/70'
-    : 'text-muted-light dark:text-muted-dark';
+  // Subtle footer color tones — same muted gray across all bubble variants
+  const headerMutedClass = 'text-muted-light dark:text-muted-dark';
 
   return (
     <div className={cn('flex gap-3 mb-5', isOut && 'flex-row-reverse')}>
@@ -1816,9 +2000,9 @@ function MessageBubble({
             isNote
               ? 'bg-warning/15 text-current border border-warning/30 rounded-2xl rounded-tl-sm'
               : isAI
-                ? 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white rounded-2xl rounded-tl-sm shadow-sm'
+                ? 'bg-violet-100 dark:bg-violet-950/40 border border-violet-200/60 dark:border-violet-800/40 rounded-2xl rounded-tl-sm'
                 : isOut
-                  ? 'bg-primary text-white rounded-2xl rounded-tl-sm'
+                  ? 'bg-primary/15 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 rounded-2xl rounded-tl-sm'
                   : 'bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-2xl rounded-tr-sm'
           )}
         >
@@ -1830,7 +2014,7 @@ function MessageBubble({
             <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
           )}
           {/* Footer: small name + date below the message */}
-          <div className={cn('flex items-center gap-1.5 text-[10px] mt-1', isAI ? 'text-white/80' : headerMutedClass)}>
+          <div className={cn('flex items-center gap-1.5 text-[10px] mt-1', headerMutedClass)}>
             {isOut ? (
               <>
                 <span className="tabular-nums">{dateLabel}</span>

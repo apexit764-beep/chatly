@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 interface Series {
   name: string;
@@ -14,6 +14,7 @@ interface LineChartProps {
 }
 
 export function LineChart({ labels, series, height = 240, areaFill = true }: LineChartProps): JSX.Element {
+  const [hoveredCol, setHoveredCol] = useState<number | null>(null);
   const width = 600;
   const padding = { top: 20, right: 20, bottom: 32, left: 32 };
   const innerW = width - padding.left - padding.right;
@@ -29,6 +30,11 @@ export function LineChart({ labels, series, height = 240, areaFill = true }: Lin
     x: padding.left + i * stepX,
     y: padding.top + innerH - (v / maxY) * innerH,
   });
+
+  const rowH = 18;
+  const tw = 130;
+  const tooltipPadY = 8;
+  const headerH = 22;
 
   return (
     <div className="w-full overflow-x-auto">
@@ -66,11 +72,27 @@ export function LineChart({ labels, series, height = 240, areaFill = true }: Lin
             fontSize="10"
             textAnchor="middle"
             fill="currentColor"
-            opacity="0.6"
+            opacity={hoveredCol === i ? 1 : 0.6}
+            fontWeight={hoveredCol === i ? '600' : '400'}
           >
             {lbl}
           </text>
         ))}
+
+        {/* Hover column highlight */}
+        {hoveredCol !== null && (
+          <line
+            x1={padding.left + hoveredCol * stepX}
+            x2={padding.left + hoveredCol * stepX}
+            y1={padding.top}
+            y2={padding.top + innerH}
+            stroke="currentColor"
+            strokeOpacity="0.12"
+            strokeWidth="1"
+            strokeDasharray="4 3"
+          />
+        )}
+
         {series.map((s) => {
           const d = s.data.map((v, i) => {
             const p = point(i, v);
@@ -83,11 +105,71 @@ export function LineChart({ labels, series, height = 240, areaFill = true }: Lin
               <path d={d} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
               {s.data.map((v, i) => {
                 const p = point(i, v);
-                return <circle key={i} cx={p.x} cy={p.y} r="3" fill={s.color} />;
+                const isActive = hoveredCol === i;
+                return (
+                  <circle
+                    key={i}
+                    cx={p.x}
+                    cy={p.y}
+                    r={isActive ? 5 : 3}
+                    fill={isActive ? '#fff' : s.color}
+                    stroke={isActive ? s.color : 'none'}
+                    strokeWidth={isActive ? 2.5 : 0}
+                    style={{ transition: 'r 0.15s ease, fill 0.15s ease' }}
+                  />
+                );
               })}
             </g>
           );
         })}
+
+        {/* Tooltip — shows all series for the hovered column */}
+        {hoveredCol !== null && (() => {
+          const colX = padding.left + hoveredCol * stepX;
+          const th = headerH + tooltipPadY * 2 + series.length * rowH;
+          let tx = colX + 10;
+          if (tx + tw > width - padding.right) tx = colX - tw - 10;
+          const ty = padding.top + 4;
+          const sorted = series.map((s, si) => ({ s, si, v: s.data[hoveredCol] })).sort((a, b) => b.v - a.v);
+          return (
+            <g style={{ pointerEvents: 'none' }}>
+              <rect x={tx} y={ty} width={tw} height={th} rx="8" fill="var(--color-surface-light, #fff)" stroke="var(--color-border-light, #e5e7eb)" strokeWidth="1" />
+              <text x={tx + tw / 2} y={ty + tooltipPadY + 13} fontSize="11" fontWeight="700" textAnchor="middle" fill="currentColor">
+                {labels[hoveredCol]}
+              </text>
+              <line x1={tx + 8} x2={tx + tw - 8} y1={ty + headerH} y2={ty + headerH} stroke="var(--color-border-light, #e5e7eb)" strokeWidth="0.5" />
+              {sorted.map((item, idx) => {
+                const ry = ty + headerH + tooltipPadY + idx * rowH;
+                return (
+                  <g key={item.si}>
+                    <rect x={tx + 10} y={ry - 4} width={7} height={7} rx="2" fill={item.s.color} />
+                    <text x={tx + 22} y={ry + 4} fontSize="10" fill="currentColor" opacity="0.7">
+                      {item.s.name}
+                    </text>
+                    <text x={tx + tw - 10} y={ry + 4} fontSize="11" fontWeight="700" textAnchor="end" fill="currentColor">
+                      {item.v}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          );
+        })()}
+
+        {/* Invisible hit areas per column */}
+        {labels.map((_, i) => (
+          <rect
+            key={`hit-${i}`}
+            x={padding.left + i * stepX - stepX / 2}
+            y={padding.top}
+            width={stepX}
+            height={innerH + padding.bottom}
+            fill="transparent"
+            style={{ cursor: 'pointer' }}
+            onMouseEnter={() => setHoveredCol(i)}
+            onMouseLeave={() => setHoveredCol(null)}
+          />
+        ))}
       </svg>
       <div className="flex flex-wrap gap-3 px-2 mt-2 text-small">
         {series.map((s) => (

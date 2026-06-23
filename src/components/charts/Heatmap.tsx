@@ -1,11 +1,9 @@
+import { useState } from 'react';
 import { cn } from '@/utils/cn';
 
 interface HeatmapProps {
-  /** rows: day labels (Sun → Sat) */
   rows: string[];
-  /** columns: time slot labels (e.g. 12am, 2am, 4am ...) */
   cols: string[];
-  /** values: rows × cols matrix (0–100 typical) */
   values: number[][];
 }
 
@@ -21,20 +19,34 @@ function bucket(v: number, max: number): number {
 }
 
 export function Heatmap({ rows, cols, values }: HeatmapProps): JSX.Element {
+  const [hovered, setHovered] = useState<{ r: number; c: number } | null>(null);
   const max = Math.max(...values.flat(), 1);
+
   return (
     <div className="w-full overflow-x-auto">
       <div className="min-w-[520px]">
         <div className="grid" style={{ gridTemplateColumns: `60px repeat(${cols.length}, minmax(0,1fr))`, gap: 4 }}>
-          {/* corner */}
           <div />
-          {cols.map((c) => (
-            <div key={c} className="text-[10px] text-muted-light dark:text-muted-dark text-center">
+          {cols.map((c, ci) => (
+            <div
+              key={c}
+              className="text-[10px] text-muted-light dark:text-muted-dark text-center transition-opacity"
+              style={{ opacity: hovered !== null && hovered.c !== ci ? 0.35 : 1 }}
+            >
               {c}
             </div>
           ))}
           {rows.map((row, ri) => (
-            <FragmentRow key={row} row={row} bins={values[ri].map((v) => bucket(v, max))} rawValues={values[ri]} />
+            <FragmentRow
+              key={row}
+              row={row}
+              ri={ri}
+              bins={values[ri].map((v) => bucket(v, max))}
+              rawValues={values[ri]}
+              cols={cols}
+              hovered={hovered}
+              onHover={setHovered}
+            />
           ))}
         </div>
         <div className="flex items-center gap-2 mt-3 text-[11px] text-muted-light dark:text-muted-dark">
@@ -53,23 +65,55 @@ export function Heatmap({ rows, cols, values }: HeatmapProps): JSX.Element {
 
 function FragmentRow({
   row,
+  ri,
   bins,
   rawValues,
+  cols,
+  hovered,
+  onHover,
 }: {
   row: string;
+  ri: number;
   bins: number[];
   rawValues: number[];
+  cols: string[];
+  hovered: { r: number; c: number } | null;
+  onHover: (v: { r: number; c: number } | null) => void;
 }): JSX.Element {
   return (
     <>
-      <div className="text-small text-muted-light dark:text-muted-dark self-center">{row}</div>
-      {bins.map((b, ci) => (
-        <div
-          key={`${row}-${ci}`}
-          className={cn('aspect-square rounded-md hover:ring-2 hover:ring-primary/40 transition-all', `heat-${b}`)}
-          title={`${row} · ${rawValues[ci]}`}
-        />
-      ))}
+      <div
+        className="text-small text-muted-light dark:text-muted-dark self-center transition-opacity"
+        style={{ opacity: hovered !== null && hovered.r !== ri ? 0.35 : 1 }}
+      >
+        {row}
+      </div>
+      {bins.map((b, ci) => {
+        const isActive = hovered?.r === ri && hovered?.c === ci;
+        const dimmed = hovered !== null && !isActive;
+        return (
+          <div
+            key={`${row}-${ci}`}
+            className="relative"
+            onMouseEnter={() => onHover({ r: ri, c: ci })}
+            onMouseLeave={() => onHover(null)}
+          >
+            <div
+              className={cn(
+                'aspect-square rounded-md transition-all cursor-pointer',
+                `heat-${b}`,
+                isActive && 'ring-2 ring-primary/50 scale-110'
+              )}
+              style={{ opacity: dimmed ? 0.35 : 1 }}
+            />
+            {isActive && (
+              <div className="absolute -top-9 left-1/2 -translate-x-1/2 z-10 bg-[#1e1e2e]/92 text-white text-[11px] font-medium px-2.5 py-1 rounded-md whitespace-nowrap pointer-events-none shadow-lg">
+                {row} · {cols[ci]} — {rawValues[ci]}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </>
   );
 }
