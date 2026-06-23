@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   ArrowLeft,
@@ -170,11 +171,11 @@ export default function WhatsAppConnectWizard({
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
       <div className="bg-white dark:bg-surface-dark rounded-card shadow-card-hover w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-3 border-b border-border-light dark:border-border-dark flex items-center justify-between flex-shrink-0">
+        <div className="px-5 pt-5 pb-4 border-b border-border-light dark:border-border-dark flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
             {step > 0 && (
               <button onClick={prev} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center text-muted-light dark:text-muted-dark">
@@ -238,7 +239,8 @@ export default function WhatsAppConnectWizard({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
