@@ -267,7 +267,7 @@ export default function Campaigns(): JSX.Element {
     <div className="p-4 lg:p-6 space-y-5 page-fade">
       {/* Page header */}
       <div>
-        <h1 className="text-h1 font-bold">الحملات الإعلانية</h1>
+        <h1 className="text-h1 font-bold">الحملات التسويقية</h1>
         <p className="text-body text-muted-light dark:text-muted-dark mt-1">
           {tab === 'campaigns'
             ? 'أنشئ حملات رسائل جماعية لعملائك وتابع نتائجها'

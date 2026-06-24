@@ -228,7 +228,7 @@ export default function Reports(): JSX.Element {
     <div className="p-4 lg:p-6 space-y-5 page-fade">
       {/* Page header */}
       <div>
-        <h1 className="text-h1 font-bold">التحليلات</h1>
+        <h1 className="text-h1 font-bold">التقارير</h1>
         <p className="text-body text-muted-light dark:text-muted-dark mt-1">
           تابع أداء فريقك ومحادثاتك واتخذ قرارات مبنية على البيانات
         </p>

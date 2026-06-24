@@ -5,8 +5,10 @@ import { SectionSidebar } from './SectionSidebar';
 import { TopHeader } from './TopHeader';
 import { OnboardingModal } from '@components/onboarding/OnboardingModal';
 import { Toast } from '@components/ui';
+import { SupportChat } from '@components/support/SupportChat';
 import { useUIStore } from '@/store/useUIStore';
 import { useLiveSimulator } from '@/hooks/useLiveSimulator';
+import { getAppMode } from '@/utils/mode';
 
 export function AppShell(): JSX.Element {
   const location = useLocation();
@@ -39,6 +41,7 @@ export function AppShell(): JSX.Element {
       </div>
       <OnboardingModal />
       <Toast />
+      {getAppMode() === 'client' && !isInbox && <SupportChat />}
     </div>
   );
 }

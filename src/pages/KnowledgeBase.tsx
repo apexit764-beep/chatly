@@ -102,7 +102,7 @@ export default function KnowledgeBase(): JSX.Element {
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3 mb-5">
         <div>
-          <h1 className="text-h1 font-extrabold">مركز المساعدة</h1>
+          <h1 className="text-h1 font-extrabold">قاعدة المعرفة</h1>
           <p className="text-small text-muted-light dark:text-muted-dark mt-1">
             ابحث في المقالات أو تصفّح حسب التصنيف للعثور على إجابة لسؤالك
           </p>

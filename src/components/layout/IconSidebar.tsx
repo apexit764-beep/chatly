@@ -34,13 +34,12 @@ const mainNav: NavItem[] = [
   { to: '/overview', label: 'نظرة عامة', icon: LayoutDashboard, group: 'main' },
   { to: '/inbox', label: 'المحادثات', icon: InboxIcon, badgeKey: 'inboxUnread', group: 'main' },
   { to: '/contacts', label: 'العملاء', icon: Users, group: 'main' },
-  { to: '/reports', label: 'التحليلات', icon: BarChart3, group: 'main' },
+  { to: '/reports', label: 'التقارير', icon: BarChart3, group: 'main' },
   { to: '/channels', label: 'الحسابات والربط', icon: Smartphone, group: 'manage' },
   { to: '/departments', label: 'الأقسام', icon: Building2, group: 'manage' },
-  { to: '/team', label: 'الموظفون', icon: UsersRound, group: 'manage' },
-  { to: '/campaigns', label: 'الحملات الإعلانية', icon: Megaphone, group: 'manage' },
+  { to: '/team', label: 'فريق العمل', icon: UsersRound, group: 'manage' },
+  { to: '/campaigns', label: 'الحملات التسويقية', icon: Megaphone, group: 'manage' },
   { to: '/saved-replies', label: 'الردود السريعة', icon: MessageSquareQuote, group: 'manage' },
-  { to: '/knowledge-base', label: 'مركز المساعدة', icon: BookOpen, group: 'manage' },
   { to: '/ai-settings', label: 'إعدادات الذكاء الاصطناعي', icon: Sparkles, group: 'manage' },
   { to: '/billing', label: 'الباقات والاشتراك', icon: CreditCard, group: 'system' },
   { to: '/settings', label: 'الإعدادات', icon: Settings, group: 'system' },
@@ -53,7 +52,7 @@ const GROUP_LABELS: Record<NavItem['group'], string> = {
 };
 
 const SIDEBAR_GRADIENT =
-  'bg-[linear-gradient(180deg,#1E3A8A_0%,#1E40AF_45%,#172554_100%)]';
+  'bg-[linear-gradient(180deg,#1E3A8A_0%,#1E40AF_45%,#172554_100%)] dark:bg-[linear-gradient(180deg,#0F172A_0%,#0B1424_50%,#06080F_100%)]';
 
 export function IconSidebar(): JSX.Element {
   const conversations = useDataStore((s) => s.conversations);

@@ -6,16 +6,9 @@ import {
   Users,
   MessageSquare,
   Package,
-  CreditCard,
   Building2,
-  Settings,
-  Inbox,
-  BarChart3,
-  Smartphone,
-  Sparkles,
-  FileText,
   ArrowRight,
-  Globe,
+  UserCircle2,
 } from 'lucide-react';
 import { useDataStore } from '@/store/useDataStore';
 import { useAdminStore } from '@/store/useAdminStore';
@@ -49,7 +42,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): JSX.Elem
   // Client data
   const conversations = useDataStore((s) => s.conversations);
   const contacts = useDataStore((s) => s.contacts);
-  const channels = useDataStore((s) => s.channels);
+  const agents = useDataStore((s) => s.agents);
   const setSelectedId = useInboxStore((s) => s.setSelectedId);
 
   // Admin data
@@ -58,24 +51,8 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): JSX.Elem
 
   const items: Item[] = useMemo(() => {
     const result: Item[] = [];
-    const nav = (path: string, label: string, icon: React.ReactNode, hint?: string): Item => ({
-      id: `nav-${path}`, label, hint, icon, section: 'انتقال سريع',
-      action: () => { navigate(path); onClose(); },
-      keywords: `${label} ${hint ?? ''}`.toLowerCase(),
-    });
 
     if (isAdmin) {
-      result.push(
-        nav('/dashboard', 'لوحة التحكم', <BarChart3 className="h-4 w-4" />, 'نظرة عامة على المنصة'),
-        nav('/clients', 'العملاء', <Users className="h-4 w-4" />, 'إدارة العملاء'),
-        nav('/plans', 'الباقات', <Package className="h-4 w-4" />, 'الباقات والأسعار'),
-        nav('/finance', 'المالية', <CreditCard className="h-4 w-4" />, 'الفواتير والمعاملات'),
-        nav('/payments', 'بوابة الدفع', <CreditCard className="h-4 w-4" />, 'إعدادات Paymob'),
-        nav('/reports', 'التقارير', <BarChart3 className="h-4 w-4" />, 'تحليلات المنصة'),
-        nav('/settings', 'الإعدادات', <Settings className="h-4 w-4" />, 'إعدادات النظام'),
-      );
-
-      // Clients (admin search)
       adminClients.forEach((c) => {
         result.push({
           id: `client-${c.id}`,
@@ -88,7 +65,6 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): JSX.Elem
         });
       });
 
-      // Plans (admin search)
       adminPlans.forEach((p) => {
         result.push({
           id: `plan-${p.id}`,
@@ -101,24 +77,8 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): JSX.Elem
         });
       });
     } else {
-      result.push(
-        nav('/inbox', 'صندوق الوارد', <Inbox className="h-4 w-4" />, 'كل المحادثات'),
-        nav('/contacts', 'جهات الاتصال', <Users className="h-4 w-4" />, 'قاعدة العملاء'),
-        nav('/channels', 'القنوات', <Smartphone className="h-4 w-4" />, 'أرقام وقنوات'),
-        nav('/departments', 'الأقسام', <Building2 className="h-4 w-4" />, 'فرق العمل'),
-        nav('/campaigns', 'الحملات', <FileText className="h-4 w-4" />, 'إرسال جماعي'),
-        nav('/saved-replies', 'الردود المحفوظة', <FileText className="h-4 w-4" />, 'قوالب جاهزة'),
-        nav('/team', 'الفريق', <Users className="h-4 w-4" />, 'الموظفون'),
-        nav('/integrations', 'التكاملات', <Sparkles className="h-4 w-4" />, 'Messenger, Instagram...'),
-        nav('/widget', 'Live Chat Widget', <Globe className="h-4 w-4" />, 'شات الموقع'),
-        nav('/reports', 'التقارير', <BarChart3 className="h-4 w-4" />, 'تحليلات الأداء'),
-        nav('/billing', 'الفوترة', <CreditCard className="h-4 w-4" />, 'الاشتراك والفواتير'),
-        nav('/subscribe', 'الباقات', <Package className="h-4 w-4" />, 'ترقية الاشتراك'),
-        nav('/settings', 'الإعدادات', <Settings className="h-4 w-4" />, 'إعدادات الحساب'),
-      );
-
-      // Recent conversations
-      conversations.slice(0, 20).forEach((conv) => {
+      // المحادثات
+      conversations.forEach((conv) => {
         const contact = contacts.find((c) => c.id === conv.contactId);
         if (!contact) return;
         result.push({
@@ -136,34 +96,34 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): JSX.Elem
         });
       });
 
-      // Contacts
-      contacts.slice(0, 30).forEach((c) => {
+      // العملاء
+      contacts.forEach((c) => {
         result.push({
           id: `contact-${c.id}`,
           label: c.name,
           hint: c.phone,
           icon: <Users className="h-4 w-4" />,
-          section: 'جهات الاتصال',
+          section: 'العملاء',
           action: () => { navigate('/contacts'); onClose(); },
           keywords: `${c.name} ${c.phone}`.toLowerCase(),
         });
       });
 
-      // Channels
-      channels.forEach((ch) => {
+      // الموظفون
+      agents.forEach((a) => {
         result.push({
-          id: `channel-${ch.id}`,
-          label: ch.name,
-          hint: ch.identifier,
-          icon: <Smartphone className="h-4 w-4" />,
-          section: 'القنوات',
-          action: () => { navigate('/channels'); onClose(); },
-          keywords: `${ch.name} ${ch.identifier} ${ch.type}`.toLowerCase(),
+          id: `agent-${a.id}`,
+          label: a.name,
+          hint: a.email,
+          icon: <UserCircle2 className="h-4 w-4" />,
+          section: 'الموظفون',
+          action: () => { navigate('/team'); onClose(); },
+          keywords: `${a.name} ${a.email} ${a.role}`.toLowerCase(),
         });
       });
     }
     return result;
-  }, [isAdmin, navigate, onClose, adminClients, adminPlans, conversations, contacts, channels, setSelectedId]);
+  }, [isAdmin, navigate, onClose, adminClients, adminPlans, conversations, contacts, agents, setSelectedId]);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return items;
@@ -175,16 +135,20 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): JSX.Elem
     );
   }, [items, query]);
 
-  // Group by section
+  // Group by section, in fixed order, capped per group
   const grouped = useMemo(() => {
+    const order = isAdmin ? ['العملاء', 'الباقات'] : ['المحادثات', 'العملاء', 'الموظفون'];
+    const cap = query.trim() ? 8 : 4;
     const map = new Map<string, Item[]>();
     filtered.forEach((it) => {
       const arr = map.get(it.section) ?? [];
-      arr.push(it);
+      if (arr.length < cap) arr.push(it);
       map.set(it.section, arr);
     });
-    return Array.from(map.entries());
-  }, [filtered]);
+    return order
+      .map((k) => [k, map.get(k) ?? []] as [string, Item[]])
+      .filter(([, list]) => list.length > 0);
+  }, [filtered, isAdmin, query]);
 
   // Reset active when query changes
   useEffect(() => { setActive(0); }, [query]);
@@ -242,7 +206,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): JSX.Elem
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={isAdmin ? 'ابحث في العملاء، الباقات، الفواتير...' : 'ابحث في المحادثات، جهات الاتصال، الصفحات...'}
+                placeholder={isAdmin ? 'ابحث في العملاء أو الباقات...' : 'ابحث في المحادثات أو العملاء أو الموظفين...'}
                 className="flex-1 bg-transparent text-body focus:outline-none placeholder-muted-light dark:placeholder-muted-dark"
               />
               <kbd className="px-1.5 py-0.5 rounded text-[10px] bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark border border-border-light dark:border-border-dark">ESC</kbd>

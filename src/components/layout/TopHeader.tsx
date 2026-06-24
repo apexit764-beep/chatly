@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Search,
   Bell,
   Sun,
   Moon,
@@ -14,12 +13,14 @@ import {
   MessageSquare,
   Megaphone,
   UserPlus,
+  BookOpen,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useThemeStore } from '@/store/useThemeStore';
-import { Avatar, CommandPalette } from '@components/ui';
+import { Avatar } from '@components/ui';
+import { HeaderSearch } from '@components/ui/HeaderSearch';
 import { timeAgo } from '@/utils/format';
 import { cn } from '@/utils/cn';
 
@@ -27,17 +28,18 @@ const PAGE_LABELS: Record<string, string> = {
   '/inbox': 'المحادثات',
   '/overview': 'نظرة عامة',
   '/contacts': 'العملاء',
-  '/reports': 'التحليلات',
+  '/reports': 'التقارير',
   '/channels': 'الحسابات والربط',
   '/departments': 'الأقسام',
-  '/team': 'الموظفون',
-  '/campaigns': 'الحملات الإعلانية',
+  '/team': 'فريق العمل',
+  '/campaigns': 'الحملات التسويقية',
   '/saved-replies': 'الردود السريعة',
   '/settings': 'الإعدادات',
   '/billing': 'الباقات والاشتراك',
   '/subscribe': 'الاشتراك',
   '/notifications': 'الإشعارات',
   '/ai-settings': 'إعدادات الذكاء الاصطناعي',
+  '/knowledge-base': 'قاعدة المعرفة',
 };
 
 function currentPageLabel(pathname: string): string {
@@ -63,20 +65,8 @@ export function TopHeader(): JSX.Element {
   const toggleTheme = useThemeStore((s) => s.toggle);
   const unreadNotifs = notifications.filter((n) => !n.read).length;
 
-  const [cmdOpen, setCmdOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const pageLabel = currentPageLabel(location.pathname);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent): void => {
-      if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setCmdOpen((v) => !v);
-      }
-    };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, []);
 
   return (
     <header className="h-14 bg-white dark:bg-surface-dark border-b border-border-light dark:border-border-dark flex items-center gap-3 px-5 sticky top-0 z-20 flex-shrink-0">
@@ -96,16 +86,7 @@ export function TopHeader(): JSX.Element {
       </nav>
 
       {/* Search */}
-      <button
-        onClick={() => setCmdOpen(true)}
-        className="ms-auto w-full max-w-sm h-9 flex items-center gap-2 px-3 rounded-lg bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small text-muted-light dark:text-muted-dark hover:border-primary/40 transition-colors"
-      >
-        <Search className="h-4 w-4 flex-shrink-0" />
-        <span className="flex-1 text-start truncate">ابحث في كل شيء…</span>
-        <kbd className="hidden xl:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark font-mono">
-          ⌘K
-        </kbd>
-      </button>
+      <HeaderSearch />
 
       {/* Action buttons */}
       <div className="flex items-center gap-1">
@@ -136,6 +117,14 @@ export function TopHeader(): JSX.Element {
             />
           )}
         </div>
+        <NavLink
+          to="/knowledge-base"
+          title="قاعدة المعرفة"
+          aria-label="قاعدة المعرفة"
+          className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
+        >
+          <BookOpen className="h-[18px] w-[18px]" />
+        </NavLink>
         <button
           onClick={toggleTheme}
           title={theme === 'dark' ? 'الوضع الفاتح' : 'الوضع الداكن'}
@@ -160,7 +149,6 @@ export function TopHeader(): JSX.Element {
         />
       )}
 
-      <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
     </header>
   );
 }

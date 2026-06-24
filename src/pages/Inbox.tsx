@@ -851,6 +851,7 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
 
   // Form state
   const [channelId, setChannelId] = useState<string>(connectedChannels[0]?.id ?? '');
+  const [channelDropdownOpen, setChannelDropdownOpen] = useState(false);
   const [contactMode, setContactMode] = useState<'existing' | 'new'>('existing');
   const [existingContactId, setExistingContactId] = useState<string | null>(null);
   const [contactSearch, setContactSearch] = useState('');
@@ -985,17 +986,51 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
               لا توجد قنوات متصلة. اذهب إلى صفحة القنوات لربط حساب.
             </div>
           ) : (
-            <select
-              value={channelId}
-              onChange={(e) => setChannelId(e.target.value)}
-              className="w-full h-10 ps-3 pe-9 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
-            >
-              {connectedChannels.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.identifier})
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setChannelDropdownOpen((v) => !v)}
+                className={cn(
+                  'w-full h-10 ps-3 pe-9 rounded-lg bg-bg-light dark:bg-bg-dark border text-body flex items-center gap-2.5 text-start transition-colors',
+                  channelDropdownOpen ? 'border-primary ring-2 ring-primary/20' : 'border-transparent'
+                )}
+              >
+                {(() => {
+                  const sel = connectedChannels.find((c) => c.id === channelId);
+                  if (!sel) return <span className="text-muted-light dark:text-muted-dark">اختر القناة</span>;
+                  return (
+                    <>
+                      <ChannelIcon type={sel.type} size={10} className="!h-5 !w-5" />
+                      <span className="truncate">{sel.name}</span>
+                      <span className="text-[11px] text-muted-light dark:text-muted-dark font-mono">{sel.identifier}</span>
+                    </>
+                  );
+                })()}
+                <ChevronDown className={cn('h-4 w-4 text-muted-light dark:text-muted-dark absolute end-3 top-1/2 -translate-y-1/2 transition-transform', channelDropdownOpen && 'rotate-180')} />
+              </button>
+              {channelDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setChannelDropdownOpen(false)} />
+                  <div className="absolute top-full inset-x-0 mt-1 z-50 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-xl py-1 max-h-52 overflow-y-auto">
+                    {connectedChannels.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => { setChannelId(c.id); setChannelDropdownOpen(false); }}
+                        className={cn(
+                          'flex items-center gap-2.5 w-full px-3 py-2.5 text-small hover:bg-primary/10 transition-colors',
+                          channelId === c.id && 'bg-primary/10 text-primary font-semibold'
+                        )}
+                      >
+                        <ChannelIcon type={c.type} size={10} className="!h-5 !w-5" />
+                        <span className="flex-1 text-start truncate">{c.name}</span>
+                        <span className="font-mono text-[11px] text-muted-light dark:text-muted-dark">{c.identifier}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </Field>
 

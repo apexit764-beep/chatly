@@ -32,9 +32,15 @@ export function LineChart({ labels, series, height = 240, areaFill = true }: Lin
   });
 
   const rowH = 18;
-  const tw = 130;
   const tooltipPadY = 8;
   const headerH = 22;
+  // Tooltip width scales with longest series name (≈ 7px per char) + chips + padding.
+  // Clamped to a sensible range so short names don't shrink it too much and very long names cap out.
+  const longestName = useMemo(
+    () => series.reduce((m, s) => Math.max(m, s.name.length), 0),
+    [series]
+  );
+  const tw = Math.max(140, Math.min(260, longestName * 8 + 70));
 
   return (
     <div className="w-full overflow-x-auto">
@@ -123,7 +129,7 @@ export function LineChart({ labels, series, height = 240, areaFill = true }: Lin
           );
         })}
 
-        {/* Tooltip — shows all series for the hovered column */}
+        {/* Tooltip — uses foreignObject for proper RTL HTML rendering */}
         {hoveredCol !== null && (() => {
           const colX = padding.left + hoveredCol * stepX;
           const th = headerH + tooltipPadY * 2 + series.length * rowH;
@@ -132,27 +138,34 @@ export function LineChart({ labels, series, height = 240, areaFill = true }: Lin
           const ty = padding.top + 4;
           const sorted = series.map((s, si) => ({ s, si, v: s.data[hoveredCol] })).sort((a, b) => b.v - a.v);
           return (
-            <g style={{ pointerEvents: 'none' }}>
-              <rect x={tx} y={ty} width={tw} height={th} rx="8" fill="var(--color-surface-light, #fff)" stroke="var(--color-border-light, #e5e7eb)" strokeWidth="1" />
-              <text x={tx + tw / 2} y={ty + tooltipPadY + 13} fontSize="11" fontWeight="700" textAnchor="middle" fill="currentColor">
-                {labels[hoveredCol]}
-              </text>
-              <line x1={tx + 8} x2={tx + tw - 8} y1={ty + headerH} y2={ty + headerH} stroke="var(--color-border-light, #e5e7eb)" strokeWidth="0.5" />
-              {sorted.map((item, idx) => {
-                const ry = ty + headerH + tooltipPadY + idx * rowH;
-                return (
-                  <g key={item.si}>
-                    <rect x={tx + 10} y={ry - 4} width={7} height={7} rx="2" fill={item.s.color} />
-                    <text x={tx + 22} y={ry + 4} fontSize="10" fill="currentColor" opacity="0.7">
-                      {item.s.name}
-                    </text>
-                    <text x={tx + tw - 10} y={ry + 4} fontSize="11" fontWeight="700" textAnchor="end" fill="currentColor">
-                      {item.v}
-                    </text>
-                  </g>
-                );
-              })}
-            </g>
+            <foreignObject x={tx} y={ty} width={tw} height={th} style={{ pointerEvents: 'none', overflow: 'visible' }}>
+              <div
+                xmlns="http://www.w3.org/1999/xhtml"
+                dir="rtl"
+                style={{
+                  width: tw,
+                  background: 'var(--tooltip-bg, #fff)',
+                  border: '1px solid var(--tooltip-border, #e5e7eb)',
+                  borderRadius: 8,
+                  padding: `${tooltipPadY}px 10px`,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                  fontSize: 11,
+                  color: 'inherit',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <div style={{ textAlign: 'center', fontWeight: 700, paddingBottom: 6, marginBottom: 4, borderBottom: '1px solid var(--tooltip-border, #e5e7eb)' }}>
+                  {labels[hoveredCol]}
+                </div>
+                {sorted.map((item) => (
+                  <div key={item.si} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: item.s.color, flexShrink: 0, display: 'inline-block' }} />
+                    <span style={{ opacity: 0.75, whiteSpace: 'nowrap' }}>{item.s.name}</span>
+                    <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{item.v}</span>
+                  </div>
+                ))}
+              </div>
+            </foreignObject>
           );
         })()}
 

@@ -270,7 +270,7 @@ export default function Team(): JSX.Element {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-h1 font-bold">الموظفون</h1>
+          <h1 className="text-h1 font-bold">فريق العمل</h1>
           <p className="text-body text-muted-light dark:text-muted-dark mt-1">
             أدر فريقك، أدِر صلاحياتهم وادعُ موظفين جدد
           </p>

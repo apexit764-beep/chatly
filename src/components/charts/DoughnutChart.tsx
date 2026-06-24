@@ -87,21 +87,25 @@ export function DoughnutChart({ data, size = 200 }: DoughnutChartProps): JSX.Ele
           )}
         </div>
       </div>
-      <div className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 w-full">
+      <div className="flex flex-col gap-2 w-full">
         {arcs.map((arc) => (
           <div
             key={arc.label}
-            className="flex items-center gap-2 cursor-pointer transition-opacity"
+            className="flex items-center justify-between gap-3 cursor-pointer transition-opacity"
             style={{ opacity: hovered !== null && hovered !== arc.idx ? 0.4 : 1 }}
             onMouseEnter={() => setHovered(arc.idx)}
             onMouseLeave={() => setHovered(null)}
           >
-            <span className="h-2.5 w-2.5 rounded-sm flex-shrink-0" style={{ background: arc.color }} />
-            <span className="text-small">{arc.label}</span>
-            <span className="text-small font-semibold">{arc.value}</span>
-            <span className="text-[11px] text-muted-light dark:text-muted-dark">
-              {Math.round(arc.fraction * 100)}%
-            </span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="h-2.5 w-2.5 rounded-sm flex-shrink-0" style={{ background: arc.color }} />
+              <span className="text-small truncate">{arc.label}</span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-small font-semibold">{arc.value}</span>
+              <span className="text-[11px] text-muted-light dark:text-muted-dark">
+                {Math.round(arc.fraction * 100)}%
+              </span>
+            </div>
           </div>
         ))}
       </div>
