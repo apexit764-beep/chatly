@@ -140,7 +140,6 @@ export function LineChart({ labels, series, height = 240, areaFill = true }: Lin
           return (
             <foreignObject x={tx} y={ty} width={tw} height={th} style={{ pointerEvents: 'none', overflow: 'visible' }}>
               <div
-                xmlns="http://www.w3.org/1999/xhtml"
                 dir="rtl"
                 style={{
                   width: tw,
