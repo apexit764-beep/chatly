@@ -9,6 +9,7 @@ import {
   Database,
   Upload,
   AlertTriangle,
+  Star,
 } from 'lucide-react';
 import { Avatar, useConfirm } from '@components/ui';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -34,6 +35,7 @@ export default function Settings(): JSX.Element {
       {tab === 'notifications' && <NotificationsTab />}
       {tab === 'appearance' && <AppearanceTab />}
       {tab === 'security' && <SecurityTab />}
+      {tab === 'rating' && <RatingTab />}
       {tab === 'language' && <LanguageTab />}
       {tab === 'data' && <DataTab />}
     </div>
@@ -73,21 +75,58 @@ function GeneralTab(): JSX.Element {
   const showToast = useUIStore((s) => s.showToast);
   const [siteName, setSiteName] = useState(general.siteName);
   const [siteUrl, setSiteUrl] = useState(general.siteUrl);
+  const [companyLogo, setCompanyLogo] = useState(general.companyLogo);
   const [siteNameError, setSiteNameError] = useState<string | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
+
+  const onLogoChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { showToast('الرجاء اختيار صورة صالحة', 'error'); return; }
+    if (file.size > 1024 * 1024) { showToast('حجم الصورة يجب أن يكون أقل من 1MB', 'error'); return; }
+    const reader = new FileReader();
+    reader.onload = () => setCompanyLogo(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
   const save = (): void => {
     let ok = true;
     if (!siteName.trim()) { setSiteNameError('الاسم مطلوب'); ok = false; }
     if (!/^https?:\/\/.+/.test(siteUrl.trim())) { setUrlError('يجب أن يبدأ بـ http(s)://'); ok = false; }
     if (!ok) return;
-    setGeneral({ siteName, siteUrl });
+    setGeneral({ siteName, siteUrl, companyLogo });
     showToast('تم حفظ الإعدادات', 'success');
   };
 
   return (
     <div>
       <TabHeader icon={<Building className="h-5 w-5" />} title="الإعدادات العامة" subtitle="إعدادات الموقع والمعلومات الأساسية" />
+      <Row label="شعار الشركة" hint="يظهر في البانر والصفحات الأخرى (PNG/JPG, الحد الأقصى 1MB)">
+        <div className="flex items-center gap-3">
+          <div className="h-16 w-16 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark flex items-center justify-center overflow-hidden flex-shrink-0">
+            {companyLogo ? (
+              <img src={companyLogo} alt="logo" className="h-full w-full object-cover" />
+            ) : (
+              <Building className="h-6 w-6 text-muted-light dark:text-muted-dark" />
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="h-9 px-4 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium cursor-pointer inline-flex items-center" style={{ color: '#fff' }}>
+              {companyLogo ? 'تغيير الشعار' : 'رفع شعار'}
+              <input type="file" accept="image/*" onChange={onLogoChange} className="hidden" />
+            </label>
+            {companyLogo && (
+              <button
+                type="button"
+                onClick={() => setCompanyLogo(null)}
+                className="h-9 px-3 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark"
+              >
+                إزالة
+              </button>
+            )}
+          </div>
+        </div>
+      </Row>
       <Row label="اسم الموقع" hint="يظهر في عنوان الصفحة والإيميلات" error={siteNameError}>
         <input value={siteName} onChange={(e) => { setSiteName(e.target.value); setSiteNameError(null); }} className={cn('w-full h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border text-body focus:outline-none', siteNameError ? 'border-danger focus:border-danger' : 'border-transparent focus:border-primary')} />
       </Row>
@@ -246,6 +285,83 @@ function AppearanceTab(): JSX.Element {
           </button>
         </div>
       </Row>
+    </div>
+  );
+}
+
+function RatingTab(): JSX.Element {
+  const rating = useSettingsStore((s) => s.rating);
+  const setRating = useSettingsStore((s) => s.setRating);
+  const showToast = useUIStore((s) => s.showToast);
+  const [enabled, setEnabled] = useState(rating.enabled);
+  const [message, setMessage] = useState(rating.message);
+  const [expireDays, setExpireDays] = useState(rating.expireDays);
+  const [askAgentRating, setAskAgentRating] = useState(rating.askAgentRating);
+
+  const save = (): void => {
+    if (!message.trim()) { showToast('نص الرسالة مطلوب', 'error'); return; }
+    if (expireDays < 1 || expireDays > 90) { showToast('مدة الصلاحية بين 1 و 90 يوم', 'error'); return; }
+    setRating({ enabled, message, expireDays, askAgentRating });
+    showToast('تم حفظ إعدادات التقييم', 'success');
+  };
+
+  return (
+    <div>
+      <TabHeader icon={<Star className="h-5 w-5" />} title="تقييم العملاء" subtitle="إعدادات استبيان رضا العملاء بعد إغلاق المحادثة" />
+
+      <Row label="تفعيل التقييم" hint="إرسال رابط تقييم تلقائياً بعد إغلاق المحادثة">
+        <button
+          type="button"
+          onClick={() => setEnabled(!enabled)}
+          className={cn('relative h-6 w-11 rounded-full transition-colors', enabled ? 'bg-primary' : 'bg-border-light dark:bg-border-dark')}
+          role="switch"
+          aria-checked={enabled}
+        >
+          <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all', enabled ? 'start-0.5' : 'end-0.5')} />
+        </button>
+      </Row>
+
+      <Row label="نص الرسالة" hint="الرسالة التي ترسل للعميل مع رابط التقييم">
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          rows={3}
+          disabled={!enabled}
+          className={cn('w-full px-3 py-2 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent focus:border-primary focus:outline-none text-body resize-none', !enabled && 'opacity-50')}
+        />
+      </Row>
+
+      <Row label="صلاحية الرابط" hint="عدد الأيام التي يكون فيها الرابط فعّال">
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min={1}
+            max={90}
+            value={expireDays}
+            disabled={!enabled}
+            onChange={(e) => setExpireDays(Math.max(1, Math.min(90, Number(e.target.value) || 1)))}
+            className={cn('w-24 h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent focus:border-primary focus:outline-none text-body', !enabled && 'opacity-50')}
+          />
+          <span className="text-muted-light dark:text-muted-dark text-small">يوم</span>
+        </div>
+      </Row>
+
+      <Row label="تقييم الموظف" hint="السماح للعميل بتقييم الموظف الذي تعامل معه">
+        <button
+          type="button"
+          onClick={() => setAskAgentRating(!askAgentRating)}
+          disabled={!enabled}
+          className={cn('relative h-6 w-11 rounded-full transition-colors', askAgentRating && enabled ? 'bg-primary' : 'bg-border-light dark:bg-border-dark', !enabled && 'opacity-50')}
+          role="switch"
+          aria-checked={askAgentRating}
+        >
+          <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all', askAgentRating ? 'start-0.5' : 'end-0.5')} />
+        </button>
+      </Row>
+
+      <div className="flex justify-end pt-6">
+        <button onClick={save} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">حفظ التغييرات</button>
+      </div>
     </div>
   );
 }

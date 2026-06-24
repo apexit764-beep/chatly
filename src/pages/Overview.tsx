@@ -6,6 +6,8 @@ import { DoughnutChart } from '@components/charts/DoughnutChart';
 import { useDataStore } from '@/store/useDataStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useAIStore } from '@/store/useAIStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
+import { Building, Smartphone, UsersRound } from 'lucide-react';
 import {
   agentStatusColor,
   agentStatusLabel,
@@ -21,8 +23,11 @@ export default function Overview(): JSX.Element {
   const agents = useDataStore((s) => s.agents);
   const user = useAuthStore((s) => s.user);
   const aiSettings = useAIStore((s) => s.settings);
+  const general = useSettingsStore((s) => s.general);
+  const channels = useDataStore((s) => s.channels);
 
   const firstName = user?.name?.split(' ')[0] ?? 'صديقي';
+  const connectedChannels = channels.filter((c) => c.status === 'connected').length;
 
   // === Real metrics from store ===
   const todayConvs = conversations.length;
@@ -68,14 +73,47 @@ export default function Overview(): JSX.Element {
   return (
     <div className="p-4 lg:p-6 space-y-6 page-fade">
       {/* Banner */}
-      <div className="bg-gradient-to-l from-primary to-primary-dark text-white rounded-card p-5 lg:p-6 flex items-center justify-between flex-wrap gap-3 shadow-lg">
-        <div>
-          <p className="text-h2 font-bold mb-1">أهلاً، {firstName} 👋</p>
-          <p className="text-body opacity-90">إليك ملخص اليوم — {todayConvs} محادثة، {openConvs} مفتوحة</p>
-        </div>
-        <div className="flex items-center gap-2 bg-white/15 backdrop-blur px-4 py-2 rounded-card">
-          <span className="h-2.5 w-2.5 rounded-full bg-success animate-pulse" />
-          <span className="text-small font-medium">واتساب متصل · {onlineAgents}/{agents.length} وكلاء متاحون</span>
+      <div className="relative overflow-hidden bg-gradient-to-l from-primary to-primary-dark text-white rounded-card p-5 lg:p-6 shadow-lg">
+        <div className="flex items-center justify-between flex-wrap gap-5">
+          <div className="flex items-center gap-5">
+            <div className="h-20 w-20 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center overflow-hidden flex-shrink-0 ring-1 ring-white/20">
+              {general.companyLogo ? (
+                <img src={general.companyLogo} alt={general.siteName} className="h-full w-full object-cover" />
+              ) : (
+                <Building className="h-10 w-10 text-white/80" />
+              )}
+            </div>
+            <div>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur ring-1 ring-white/20 text-[11px] font-semibold mb-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                {general.siteName}
+              </span>
+              <p className="text-h1 font-bold leading-tight">أهلاً، {firstName} 👋</p>
+              <p className="text-small opacity-90 mt-1">{todayConvs} محادثة اليوم، {openConvs} مفتوحة</p>
+            </div>
+          </div>
+
+          {/* Compact metric pills */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2.5 bg-white/10 backdrop-blur px-3.5 py-2.5 rounded-xl ring-1 ring-white/15">
+              <div className="h-8 w-8 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
+                <Smartphone className="h-4 w-4" />
+              </div>
+              <div className="leading-tight">
+                <p className="text-[10px] opacity-75 font-medium">حسابات متصلة</p>
+                <p className="text-body font-bold tabular-nums">{connectedChannels}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 bg-white/10 backdrop-blur px-3.5 py-2.5 rounded-xl ring-1 ring-white/15">
+              <div className="h-8 w-8 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
+                <UsersRound className="h-4 w-4" />
+              </div>
+              <div className="leading-tight">
+                <p className="text-[10px] opacity-75 font-medium">موظفون متصلون</p>
+                <p className="text-body font-bold tabular-nums">{onlineAgents}<span className="opacity-60">/{agents.length}</span></p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

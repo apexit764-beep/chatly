@@ -46,7 +46,7 @@ export default function Contacts(): JSX.Element {
   const { confirm } = useConfirm();
 
   const [typeFilter, setTypeFilter] = useState<'all' | ContactType>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'blocked'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'blocked'>('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
@@ -61,7 +61,8 @@ export default function Contacts(): JSX.Element {
   const filtered = useMemo(() => {
     return contacts.filter((c) => {
       if (typeFilter !== 'all' && c.type !== typeFilter) return false;
-      if (statusFilter === 'active' && c.blocked) return false;
+      if (statusFilter === 'active' && (c.active === false || c.blocked)) return false;
+      if (statusFilter === 'inactive' && c.active !== false) return false;
       if (statusFilter === 'blocked' && !c.blocked) return false;
       return true;
     });
@@ -114,10 +115,19 @@ export default function Contacts(): JSX.Element {
     }
   };
 
-  const toggleBlock = (c: Contact): void => {
-    updateContact(c.id, { blocked: !c.blocked });
-    showToast(c.blocked ? 'تم إلغاء الحظر' : 'تم الحظر', 'success');
+  const toggleBlock = async (c: Contact): Promise<void> => {
     setOpenMenu(null);
+    const ok = await confirm({
+      title: c.blocked ? `إلغاء حظر "${c.name}"؟` : `حظر "${c.name}"؟`,
+      message: c.blocked
+        ? 'سيتمكن العميل من إرسال الرسائل وستظهر محادثاته في صندوق الوارد.'
+        : 'لن تستقبل رسائل من هذا العميل وسيتم إخفاء محادثاته من صندوق الوارد.',
+      variant: c.blocked ? 'info' : 'danger',
+      confirmText: c.blocked ? 'إلغاء الحظر' : 'حظر',
+    });
+    if (!ok) return;
+    updateContact(c.id, { blocked: !c.blocked });
+    showToast(c.blocked ? 'تم إلغاء الحظر' : 'تم حظر العميل', 'success');
   };
 
   const handleExport = (rows: Contact[]): void => {
@@ -169,27 +179,34 @@ export default function Contacts(): JSX.Element {
     { key: 'last', header: 'آخر تواصل', accessor: (r) => r.lastContact, hideOn: 'lg', cell: (r) => <span className="text-small text-muted-light dark:text-muted-dark">{timeAgo(r.lastContact)}</span> },
     { key: 'conv', header: 'المحادثات', accessor: (r) => r.conversationCount, hideOn: 'lg' },
     {
-      key: 'status', header: 'الحالة', accessor: (r) => r.blocked ? 1 : 0, align: 'center',
-      cell: (r) => (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); toggleBlock(r); }}
-          className={cn(
-            'relative h-5 w-9 rounded-full transition-colors mx-auto block',
-            !r.blocked ? 'bg-primary' : 'bg-border-light dark:bg-border-dark'
-          )}
-          role="switch"
-          aria-checked={!r.blocked}
-          title={r.blocked ? 'محظور — اضغط لإلغاء الحظر' : 'نشط — اضغط للحظر'}
-        >
-          <span
+      key: 'status', header: 'الحالة', accessor: (r) => (r.active === false ? 0 : 1), align: 'center',
+      cell: (r) => {
+        const isActive = r.active !== false;
+        return (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              updateContact(r.id, { active: !isActive });
+              showToast(isActive ? 'تم تعطيل الحساب' : 'تم تفعيل الحساب', 'success');
+            }}
             className={cn(
-              'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all',
-              !r.blocked ? 'start-0.5' : 'end-0.5'
+              'relative h-5 w-9 rounded-full transition-colors mx-auto block',
+              isActive ? 'bg-primary' : 'bg-border-light dark:bg-border-dark'
             )}
-          />
-        </button>
-      ),
+            role="switch"
+            aria-checked={isActive}
+            title={isActive ? 'فعّال — اضغط للتعطيل' : 'معطّل — اضغط للتفعيل'}
+          >
+            <span
+              className={cn(
+                'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all',
+                isActive ? 'start-0.5' : 'end-0.5'
+              )}
+            />
+          </button>
+        );
+      },
     },
     {
       key: 'actions', header: '', sortable: false, width: '80px', align: 'end',
@@ -266,7 +283,8 @@ export default function Contacts(): JSX.Element {
               onChange={(v) => setStatusFilter(v as typeof statusFilter)}
               options={[
                 { value: 'all', label: 'الكل' },
-                { value: 'active', label: 'نشط', leading: <span className="h-2 w-2 rounded-full bg-success" /> },
+                { value: 'active', label: 'فعّال', leading: <span className="h-2 w-2 rounded-full bg-success" /> },
+                { value: 'inactive', label: 'معطّل', leading: <span className="h-2 w-2 rounded-full bg-muted-light" /> },
                 { value: 'blocked', label: 'محظور', leading: <span className="h-2 w-2 rounded-full bg-danger" /> },
               ]}
             />

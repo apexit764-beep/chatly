@@ -19,6 +19,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useThemeStore } from '@/store/useThemeStore';
+import { useLanguageStore } from '@/store/useLanguageStore';
 import { Avatar } from '@components/ui';
 import { HeaderSearch } from '@components/ui/HeaderSearch';
 import { timeAgo } from '@/utils/format';
@@ -63,6 +64,8 @@ export function TopHeader(): JSX.Element {
   const toggleNotifications = useUIStore((s) => s.toggleNotifications);
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggle);
+  const language = useLanguageStore((s) => s.language);
+  const toggleLanguage = useLanguageStore((s) => s.toggle);
   const unreadNotifs = notifications.filter((n) => !n.read).length;
 
   const [profileOpen, setProfileOpen] = useState(false);
@@ -86,7 +89,9 @@ export function TopHeader(): JSX.Element {
       </nav>
 
       {/* Search */}
-      <HeaderSearch />
+      <div className="flex-1 flex justify-center">
+        <HeaderSearch />
+      </div>
 
       {/* Action buttons */}
       <div className="flex items-center gap-1">
@@ -132,6 +137,14 @@ export function TopHeader(): JSX.Element {
           className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
         >
           {theme === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+        </button>
+        <button
+          onClick={toggleLanguage}
+          title={language === 'ar' ? 'English' : 'العربية'}
+          aria-label="تبديل اللغة"
+          className="h-9 min-w-9 px-2 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
+        >
+          <span className="text-[12px] font-bold uppercase tracking-wide">{language === 'ar' ? 'EN' : 'AR'}</span>
         </button>
       </div>
 

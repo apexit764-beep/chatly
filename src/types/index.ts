@@ -151,6 +151,7 @@ export interface Contact {
   notes?: string;
   tags: string[];
   blocked: boolean;
+  active?: boolean;
   conversationCount: number;
   lastContact: string;
   createdAt: string;

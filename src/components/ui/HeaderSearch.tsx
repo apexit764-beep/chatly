@@ -172,7 +172,7 @@ export function HeaderSearch(): JSX.Element {
 
   let runningIdx = 0;
   return (
-    <div ref={containerRef} className="relative ms-auto w-full max-w-sm">
+    <div ref={containerRef} className="relative mx-auto w-full max-w-md">
       <div className={cn(
         'h-9 flex items-center gap-2 px-3 rounded-lg bg-bg-light dark:bg-bg-dark border transition-colors',
         open ? 'border-primary ring-2 ring-primary/20' : 'border-border-light dark:border-border-dark hover:border-primary/40'

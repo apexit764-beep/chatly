@@ -7,9 +7,13 @@ import {
   Mail,
   Shield,
   ArrowRight,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useThemeStore } from '@/store/useThemeStore';
+import { useLanguageStore } from '@/store/useLanguageStore';
 import { AuthHero } from '@components/auth/AuthHero';
 import { cn } from '@/utils/cn';
 
@@ -29,6 +33,10 @@ export default function Login(): JSX.Element {
   const [pwdError, setPwdError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [remember, setRemember] = useState(true);
+  const theme = useThemeStore((s) => s.theme);
+  const toggleTheme = useThemeStore((s) => s.toggle);
+  const language = useLanguageStore((s) => s.language);
+  const toggleLanguage = useLanguageStore((s) => s.toggle);
 
   if (isAuthenticated) {
     return <Navigate to={from} replace />;
@@ -66,6 +74,28 @@ export default function Login(): JSX.Element {
     <div className="min-h-screen bg-bg-light dark:bg-bg-dark flex">
       {/* Right (RTL): form column */}
       <div className="w-full lg:w-1/2 flex flex-col justify-between bg-white dark:bg-surface-dark p-6 lg:p-10 relative">
+        {/* Top-end controls: theme + language */}
+        <div className="absolute top-5 end-5 flex items-center gap-1 z-10">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'الوضع الفاتح' : 'الوضع الداكن'}
+            aria-label="تبديل المظهر"
+            className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
+          >
+            {theme === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+          </button>
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            title={language === 'ar' ? 'English' : 'العربية'}
+            aria-label="تبديل اللغة"
+            className="h-9 min-w-9 px-2 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
+          >
+            <span className="text-[12px] font-bold uppercase tracking-wide">{language === 'ar' ? 'EN' : 'AR'}</span>
+          </button>
+        </div>
+
         {/* Spacer for top alignment */}
         <div className="h-9" />
 

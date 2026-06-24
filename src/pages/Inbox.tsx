@@ -57,6 +57,8 @@ import {
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useInboxStore } from '@/store/useInboxStore';
+import { useRatingStore } from '@/store/useRatingStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
 import { contactTypeLabel } from '@/utils/labels';
 import { formatPhone, formatTime, timeAgo } from '@/utils/format';
 import { downloadCsv } from '@/utils/csv';
@@ -196,17 +198,36 @@ export default function Inbox(): JSX.Element {
   };
 
   const closeConversation = async (): Promise<void> => {
-    if (!selected) return;
+    if (!selected || !selectedContact) return;
+    const ratingPrefs = useSettingsStore.getState().rating;
     const ok = await confirm({
       title: 'إغلاق المحادثة؟',
-      message: 'سيتم وضع علامة "محلولة" على المحادثة. يمكن إعادة فتحها لاحقاً',
+      message: ratingPrefs.enabled
+        ? 'سيتم وضع علامة "محلولة" على المحادثة وإرسال رابط تقييم للعميل تلقائياً.'
+        : 'سيتم وضع علامة "محلولة" على المحادثة. يمكن إعادة فتحها لاحقاً',
       variant: 'info',
       confirmText: 'إغلاق',
     });
-    if (ok) {
-      setStatus(selected.id, 'closed');
-      showToast('تم إغلاق المحادثة', 'success');
+    if (!ok) return;
+    setStatus(selected.id, 'closed');
+
+    if (ratingPrefs.enabled) {
+      const agentId = selected.assignedTo ?? currentUserId;
+      const agent = agents.find((a) => a.id === agentId);
+      const channel = channels.find((c) => c.id === selected.channelId);
+      const token = useRatingStore.getState().generateToken({
+        conversationId: selected.id,
+        contactId: selectedContact.id,
+        contactName: selectedContact.name,
+        agentId: agentId ?? '',
+        agentName: agent?.name ?? 'فريق الدعم',
+        channelType: channel?.type ?? 'whatsapp',
+        channelName: channel?.name ?? '',
+      });
+      const url = `${window.location.origin}/feedback/${token}`;
+      sendMessage(selected.id, `${ratingPrefs.message}\n${url}`);
     }
+    showToast('تم إغلاق المحادثة', 'success');
   };
 
   const insertTemplate = (body: string): void => {
@@ -507,7 +528,14 @@ export default function Inbox(): JSX.Element {
               {/* Status pill */}
               <StatusDropdown
                 status={selected.status}
-                onChange={(s) => { setStatus(selected.id, s); showToast('تم تحديث الحالة', 'success'); }}
+                onChange={(s) => {
+                  if (s === 'closed' && selected.status !== 'closed') {
+                    closeConversation();
+                    return;
+                  }
+                  setStatus(selected.id, s);
+                  showToast('تم تحديث الحالة', 'success');
+                }}
               />
 
               {/* Details toggle — only show when details panel is collapsed */}

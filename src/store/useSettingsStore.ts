@@ -22,21 +22,31 @@ export interface GeneralPrefs {
   language: 'ar' | 'en';
   timezone: string;
   dateFormat: string;
+  companyLogo: string | null;
+}
+
+export interface RatingPrefs {
+  enabled: boolean;
+  message: string;
+  expireDays: number;
+  askAgentRating: boolean;
 }
 
 interface SettingsState {
   notifications: NotificationPrefs;
   security: SecurityPrefs;
   general: GeneralPrefs;
+  rating: RatingPrefs;
   setNotifications: (patch: Partial<NotificationPrefs>) => void;
   setSecurity: (patch: Partial<SecurityPrefs>) => void;
   setGeneral: (patch: Partial<GeneralPrefs>) => void;
+  setRating: (patch: Partial<RatingPrefs>) => void;
   reset: () => void;
 }
 
 const KEY = 'sekaa_settings_v1';
 
-const defaultState: Pick<SettingsState, 'notifications' | 'security' | 'general'> = {
+const defaultState: Pick<SettingsState, 'notifications' | 'security' | 'general' | 'rating'> = {
   notifications: { newConv: true, newMsg: true, campaigns: true, browser: false, sound: true },
   security: { twoFactor: false, ipRestriction: false, sessionTimeoutMin: 60 },
   general: {
@@ -47,10 +57,17 @@ const defaultState: Pick<SettingsState, 'notifications' | 'security' | 'general'
     language: 'ar',
     timezone: 'Asia/Muscat',
     dateFormat: 'DD/MM/YYYY',
+    companyLogo: null,
+  },
+  rating: {
+    enabled: true,
+    message: 'شكراً لتواصلك معنا! يهمنا رأيك، نرجو تقييم تجربتك من خلال الرابط التالي:',
+    expireDays: 7,
+    askAgentRating: true,
   },
 };
 
-function read(): Pick<SettingsState, 'notifications' | 'security' | 'general'> {
+function read(): Pick<SettingsState, 'notifications' | 'security' | 'general' | 'rating'> {
   if (typeof window === 'undefined') return defaultState;
   try {
     const raw = localStorage.getItem(KEY);
@@ -61,13 +78,14 @@ function read(): Pick<SettingsState, 'notifications' | 'security' | 'general'> {
   }
 }
 
-function persist(state: Pick<SettingsState, 'notifications' | 'security' | 'general'>): void {
+function persist(state: Pick<SettingsState, 'notifications' | 'security' | 'general' | 'rating'>): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(KEY, JSON.stringify({
       notifications: state.notifications,
       security: state.security,
       general: state.general,
+      rating: state.rating,
     }));
   } catch {/* ignore */}
 }
@@ -86,6 +104,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
   setGeneral: (patch) => {
     set((s) => ({ general: { ...s.general, ...patch } }));
+    persist(get());
+  },
+  setRating: (patch) => {
+    set((s) => ({ rating: { ...s.rating, ...patch } }));
     persist(get());
   },
   reset: () => {

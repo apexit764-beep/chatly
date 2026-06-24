@@ -27,6 +27,7 @@ const AISettings = lazy(() => import('@pages/AISettings'));
 const KnowledgeBase = lazy(() => import('@pages/KnowledgeBase'));
 const Feedback = lazy(() => import('@pages/Feedback'));
 const Tags = lazy(() => import('@pages/Tags'));
+const RatingPublic = lazy(() => import('@pages/RatingPublic'));
 
 // Admin pages
 const AdminDashboard = lazy(() => import('@pages/admin/Dashboard'));
@@ -82,6 +83,7 @@ export default function App(): JSX.Element {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/feedback/:token" element={<RatingPublic />} />
         <Route
           element={
             <ProtectedRoute>
