@@ -72,10 +72,10 @@ export interface TemplateCategoryItem {
 }
 export type ChannelType =
   // Communication
-  | 'whatsapp' | 'messenger' | 'instagram' | 'telegram' | 'x' | 'widget' | 'email'
+  | 'whatsapp' | 'messenger' | 'instagram' | 'telegram' | 'widget' | 'email'
   // E-commerce
   | 'salla' | 'zid' | 'shopify' | 'woocommerce';
-export type ChannelCategory = 'communication' | 'ecommerce';
+export type ChannelCategory = 'communication' | 'email' | 'ecommerce';
 export type ChannelStatus = 'connected' | 'disconnected' | 'pending';
 
 export interface Channel {
@@ -141,6 +141,8 @@ export interface Agent {
   timezone?: string;
   /** Working hours — used for routing + status display */
   workingHours?: WorkingHours;
+  /** Hide customer phone numbers from this agent */
+  hidePhoneNumbers?: boolean;
 }
 
 export interface Contact {
@@ -211,6 +213,8 @@ export interface Template {
   createdAt: string;
 }
 
+export type CampaignChannelType = 'whatsapp' | 'email';
+
 export interface Campaign {
   id: string;
   name: string;
@@ -221,6 +225,8 @@ export interface Campaign {
   status: CampaignStatus;
   scheduledAt: string | null;
   createdAt: string;
+  channelType?: CampaignChannelType;
+  attachmentName?: string;
 }
 
 export type CampaignTemplateCategory = 'welcome' | 'promo' | 'reminder' | 'followup' | 'announcement' | 'custom';

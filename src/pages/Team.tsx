@@ -68,6 +68,7 @@ export default function Team(): JSX.Element {
     whEnd: string;
     whEnabled: boolean;
     whDays: number[];
+    hidePhoneNumbers: boolean;
   }>({
     name: '',
     email: '',
@@ -80,6 +81,7 @@ export default function Team(): JSX.Element {
     whEnd: '18:00',
     whEnabled: true,
     whDays: [0, 1, 2, 3, 4],
+    hidePhoneNumbers: false,
   });
 
   // Filters
@@ -173,6 +175,7 @@ export default function Team(): JSX.Element {
       whEnd: '18:00',
       whEnabled: true,
       whDays: [0, 1, 2, 3, 4],
+      hidePhoneNumbers: false,
     });
     setInviteOpen(true);
   };
@@ -190,10 +193,12 @@ export default function Team(): JSX.Element {
       whEnd: a.workingHours?.end ?? '18:00',
       whEnabled: a.workingHours?.enabled ?? true,
       whDays: a.workingHours?.days ?? [0, 1, 2, 3, 4],
+      hidePhoneNumbers: a.hidePhoneNumbers ?? false,
     });
     setInviteOpen(true);
   };
   const submit = (): void => {
+    if (!form.name.trim()) { showToast('أدخل اسم الموظف', 'error'); return; }
     if (!form.email.trim()) { showToast('أدخل البريد الإلكتروني', 'error'); return; }
     if (!/^\S+@\S+\.\S+$/.test(form.email)) { showToast('بريد إلكتروني غير صحيح', 'error'); return; }
     const workingHours = { enabled: form.whEnabled, start: form.whStart, end: form.whEnd, days: form.whDays };
@@ -207,6 +212,7 @@ export default function Team(): JSX.Element {
         maxConcurrent: form.maxConcurrent,
         timezone: form.timezone,
         workingHours,
+        hidePhoneNumbers: form.hidePhoneNumbers,
       });
       showToast('تم تحديث الموظف', 'success');
     } else {
@@ -905,10 +911,10 @@ export default function Team(): JSX.Element {
             placeholder="employee@company.com"
           />
           <Input
-            label="الاسم (اختياري)"
+            label="الاسم"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="يمكن للموظف تعيين اسمه بنفسه"
+            placeholder="اسم الموظف"
           />
           <div className="space-y-1.5">
             <label className="text-small font-medium text-muted-light dark:text-muted-dark block">الدور</label>
@@ -951,6 +957,22 @@ export default function Team(): JSX.Element {
               })}
             </div>
           </div>
+
+          <label className="flex items-center justify-between p-3 rounded-card bg-bg-light dark:bg-bg-dark cursor-pointer">
+            <div>
+              <p className="text-small font-medium">إخفاء أرقام العملاء</p>
+              <p className="text-[10px] text-muted-light dark:text-muted-dark">عند التفعيل، لن يرى هذا الموظف أرقام هواتف العملاء</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, hidePhoneNumbers: !form.hidePhoneNumbers })}
+              className={cn('relative h-5 w-9 rounded-full transition-colors flex-shrink-0', form.hidePhoneNumbers ? 'bg-primary' : 'bg-border-light dark:bg-border-dark')}
+              role="switch"
+              aria-checked={form.hidePhoneNumbers}
+            >
+              <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all', form.hidePhoneNumbers ? 'start-0.5' : 'end-0.5')} />
+            </button>
+          </label>
 
           {/* Workload + timezone — only meaningful when editing an active agent */}
           {editing && (

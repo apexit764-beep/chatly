@@ -38,9 +38,7 @@ export default function Departments(): JSX.Element {
     agents: [] as string[],
     channels: [] as string[],
     slaMinutes: 30,
-    routingKeywords: [] as string[],
   });
-  const [keywordInput, setKeywordInput] = useState('');
 
   const openCreate = (): void => {
     setEditing(null);
@@ -51,7 +49,6 @@ export default function Departments(): JSX.Element {
       agents: [],
       channels: [],
       slaMinutes: 30,
-      routingKeywords: [],
     });
     setModalOpen(true);
   };
@@ -65,17 +62,8 @@ export default function Departments(): JSX.Element {
       agents: d.agents,
       channels: d.channels,
       slaMinutes: d.slaMinutes ?? 30,
-      routingKeywords: d.routingKeywords ?? [],
     });
     setModalOpen(true);
-  };
-
-  const addKeyword = (): void => {
-    const kw = keywordInput.trim();
-    if (kw && !form.routingKeywords.includes(kw)) {
-      setForm({ ...form, routingKeywords: [...form.routingKeywords, kw] });
-    }
-    setKeywordInput('');
   };
 
   const submit = (): void => {
@@ -91,7 +79,6 @@ export default function Departments(): JSX.Element {
         agents: form.agents,
         channels: form.channels,
         slaMinutes: form.slaMinutes,
-        routingKeywords: form.routingKeywords,
       });
       // sync agents
       agents.forEach((a) => {
@@ -115,7 +102,6 @@ export default function Departments(): JSX.Element {
         agents: form.agents,
         channels: form.channels,
         slaMinutes: form.slaMinutes,
-        routingKeywords: form.routingKeywords,
       });
       showToast('تمت إضافة القسم', 'success');
     }
@@ -276,50 +262,6 @@ export default function Departments(): JSX.Element {
             </p>
           </div>
 
-          {/* Routing keywords */}
-          <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">
-              التوجيه التلقائي بالكلمات المفتاحية
-            </label>
-            <p className="text-[10px] text-muted-light dark:text-muted-dark mb-2">
-              المحادثات التي تحتوي على هذه الكلمات في الرسالة الأولى تُوجّه تلقائياً لهذا القسم
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={keywordInput}
-                onChange={(e) => setKeywordInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } }}
-                placeholder="مثال: شكوى، فاتورة، استرجاع..."
-                className="flex-1 h-10 px-3 rounded-input bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-              />
-              <button
-                type="button"
-                onClick={addKeyword}
-                className="h-10 px-4 rounded-input bg-primary text-small font-medium hover:bg-primary-dark"
-                style={{ color: '#fff' }}
-              >
-                إضافة
-              </button>
-            </div>
-            {form.routingKeywords.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {form.routingKeywords.map((kw) => (
-                  <span key={kw} className="inline-flex items-center gap-1 ps-2 pe-1 py-0.5 rounded-full bg-primary/10 text-primary text-[12px] font-medium">
-                    {kw}
-                    <button
-                      type="button"
-                      onClick={() => setForm({ ...form, routingKeywords: form.routingKeywords.filter((k) => k !== kw) })}
-                      className="h-4 w-4 rounded-full hover:bg-danger/20 hover:text-danger flex items-center justify-center"
-                      aria-label={`إزالة ${kw}`}
-                    >
-                      <X className="h-2.5 w-2.5" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
         {/* Sticky drawer footer */}
         <div className="absolute bottom-0 inset-x-0 px-5 py-3 bg-white dark:bg-surface-dark border-t border-border-light dark:border-border-dark flex items-center justify-end gap-2">

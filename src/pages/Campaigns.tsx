@@ -17,6 +17,8 @@ import {
   Download,
   FileText,
   Sparkles,
+  Paperclip,
+  Mail,
 } from 'lucide-react';
 import {
   Badge,
@@ -42,7 +44,7 @@ import {
 import { formatDate, formatNumber } from '@/utils/format';
 import { downloadCsv } from '@/utils/csv';
 import { cn } from '@/utils/cn';
-import type { Campaign, CampaignStatus, CampaignTemplate, CampaignTemplateCategory, CampaignTemplateType, ContactType } from '@/types';
+import type { Campaign, CampaignChannelType, CampaignStatus, CampaignTemplate, CampaignTemplateCategory, CampaignTemplateType, ContactType } from '@/types';
 
 export default function Campaigns(): JSX.Element {
   const campaigns = useDataStore((s) => s.campaigns);
@@ -52,6 +54,7 @@ export default function Campaigns(): JSX.Element {
   const { confirm } = useConfirm();
 
   const [tab, setTab] = useState<'campaigns' | 'templates'>('campaigns');
+  const [channelFilter, setChannelFilter] = useState<CampaignChannelType>('whatsapp');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Campaign | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -68,14 +71,18 @@ export default function Campaigns(): JSX.Element {
     scheduledAt: string;
     minDelay: number;
     maxDelay: number;
-  }>({ name: '', message: '', audience: 'all', schedule: 'now', scheduledAt: '', minDelay: 15, maxDelay: 45 });
+    channelType: CampaignChannelType;
+    attachmentName: string;
+  }>({ name: '', message: '', audience: 'all', schedule: 'now', scheduledAt: '', minDelay: 15, maxDelay: 45, channelType: 'whatsapp', attachmentName: '' });
   const [errors, setErrors] = useState<{ name?: string; message?: string }>({});
 
+  const filteredCampaigns = campaigns.filter((c) => (c.channelType ?? 'whatsapp') === channelFilter);
+
   const stats = {
-    total: campaigns.length,
-    sent: campaigns.reduce((acc, c) => acc + c.sentCount, 0),
-    avgOpen: campaigns.length ? Math.round(campaigns.reduce((a, c) => a + c.openRate, 0) / campaigns.length) : 0,
-    scheduled: campaigns.filter((c) => c.status === 'scheduled').length,
+    total: filteredCampaigns.length,
+    sent: filteredCampaigns.reduce((acc, c) => acc + c.sentCount, 0),
+    avgOpen: filteredCampaigns.length ? Math.round(filteredCampaigns.reduce((a, c) => a + c.openRate, 0) / filteredCampaigns.length) : 0,
+    scheduled: filteredCampaigns.filter((c) => c.status === 'scheduled').length,
   };
 
   const targetCount = (): number => {
@@ -85,7 +92,7 @@ export default function Campaigns(): JSX.Element {
 
   const openCreate = (): void => {
     setEditing(null);
-    setForm({ name: '', message: '', audience: 'all', schedule: 'now', scheduledAt: '', minDelay: 15, maxDelay: 45 });
+    setForm({ name: '', message: '', audience: 'all', schedule: 'now', scheduledAt: '', minDelay: 15, maxDelay: 45, channelType: channelFilter, attachmentName: '' });
     setErrors({});
     setMessageMode('custom');
     setSelectedTemplateId(null);
@@ -102,6 +109,8 @@ export default function Campaigns(): JSX.Element {
       scheduledAt: c.scheduledAt ? new Date(c.scheduledAt).toISOString().slice(0, 16) : '',
       minDelay: 15,
       maxDelay: 45,
+      channelType: c.channelType ?? 'whatsapp',
+      attachmentName: c.attachmentName ?? '',
     });
     setErrors({});
     setMessageMode('custom');
@@ -310,6 +319,8 @@ export default function Campaigns(): JSX.Element {
               scheduledAt: '',
               minDelay: t.defaultMinDelay,
               maxDelay: t.defaultMaxDelay,
+              channelType: channelFilter,
+              attachmentName: '',
             });
             setEditing(null);
             setErrors({});
@@ -320,6 +331,34 @@ export default function Campaigns(): JSX.Element {
       ) : (
       <>
 
+      {/* Channel sub-tabs */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setChannelFilter('whatsapp')}
+          className={cn(
+            'h-9 px-4 rounded-full text-small font-medium flex items-center gap-2 transition-colors border',
+            channelFilter === 'whatsapp'
+              ? 'bg-[#25D366]/10 border-[#25D366]/40 text-[#25D366]'
+              : 'border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:border-[#25D366]/30'
+          )}
+        >
+          <Megaphone className="h-3.5 w-3.5" />
+          حملات WhatsApp
+        </button>
+        <button
+          onClick={() => setChannelFilter('email')}
+          className={cn(
+            'h-9 px-4 rounded-full text-small font-medium flex items-center gap-2 transition-colors border',
+            channelFilter === 'email'
+              ? 'bg-[#EA4335]/10 border-[#EA4335]/40 text-[#EA4335]'
+              : 'border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:border-[#EA4335]/30'
+          )}
+        >
+          <Mail className="h-3.5 w-3.5" />
+          حملات Email
+        </button>
+      </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="إجمالي الحملات" value={stats.total} icon={<Megaphone className="h-5 w-5" />} />
         <StatCard label="رسائل مُرسلة" value={formatNumber(stats.sent)} icon={<Send className="h-5 w-5" />} iconBg="bg-success/15" iconColor="text-success" />
@@ -328,7 +367,7 @@ export default function Campaigns(): JSX.Element {
       </div>
 
       <DataTable
-        data={campaigns}
+        data={filteredCampaigns}
         columns={columns}
         rowKey={(c) => c.id}
         searchPlaceholder="ابحث عن حملة..."
@@ -433,6 +472,32 @@ export default function Campaigns(): JSX.Element {
             <p className="text-[10px] text-muted-light dark:text-muted-dark mt-1 text-end">
               {form.message.length} / 1024 حرف
             </p>
+
+            {/* Attachment */}
+            <div className="mt-2">
+              {form.attachmentName ? (
+                <div className="flex items-center gap-2 p-2.5 rounded-card bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark">
+                  <Paperclip className="h-4 w-4 text-primary flex-shrink-0" />
+                  <span className="text-small flex-1 truncate">{form.attachmentName}</span>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, attachmentName: '' })}
+                    className="h-6 w-6 rounded-full hover:bg-danger/10 text-muted-light hover:text-danger flex items-center justify-center"
+                  >
+                    <XCircle className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, attachmentName: 'مرفق-حملة.pdf' })}
+                  className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark hover:text-primary transition-colors"
+                >
+                  <Paperclip className="h-4 w-4" />
+                  إرفاق ملف
+                </button>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">

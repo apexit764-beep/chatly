@@ -14,7 +14,6 @@ import {
   Copy,
   Loader2,
   ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 import { Avatar, Input } from '@components/ui';
 import { useDataStore } from '@/store/useDataStore';
@@ -43,33 +42,19 @@ const COUNTRIES = [
   { code: '+91', flag: '🇮🇳', name: 'الهند' },
 ];
 
-const BUSINESS_CATEGORIES = [
-  { value: 'retail', label: 'تجزئة' },
-  { value: 'realestate', label: 'عقارات' },
-  { value: 'ecommerce', label: 'التجارة الإلكترونية' },
-  { value: 'services', label: 'خدمات' },
-  { value: 'restaurant', label: 'مطاعم' },
-  { value: 'health', label: 'صحة' },
-  { value: 'education', label: 'تعليم' },
-  { value: 'finance', label: 'مالية' },
-  { value: 'travel', label: 'سفر وسياحة' },
-  { value: 'other', label: 'أخرى' },
-];
-
 type ConnectionMethod = 'cloud' | 'qr' | 'pairing';
 
 interface WizardState {
   method: ConnectionMethod | null;
   channelName: string;
-  displayName: string;
   countryCode: string;
   phone: string;
-  metaBusinessId: string;
-  metaAccessToken: string;
-  category: string;
-  description: string;
-  welcomeMessage: string;
-  awayMessage: string;
+  phoneNumberId: string;
+  wabaId: string;
+  accessToken: string;
+  graphApiVersion: string;
+  callbackUrl: string;
+  verifyToken: string;
   departmentId: string;
   agentIds: string[];
 }
@@ -77,15 +62,14 @@ interface WizardState {
 const initialState: WizardState = {
   method: null,
   channelName: '',
-  displayName: '',
   countryCode: '+968',
   phone: '',
-  metaBusinessId: '',
-  metaAccessToken: '',
-  category: '',
-  description: '',
-  welcomeMessage: 'أهلاً بك! سنرد على استفسارك خلال دقائق.',
-  awayMessage: 'شكراً لتواصلك. نحن خارج ساعات العمل وسنرد عند بدء الدوام.',
+  phoneNumberId: '',
+  wabaId: '',
+  accessToken: '',
+  graphApiVersion: 'v23.0 (latest)',
+  callbackUrl: '',
+  verifyToken: '',
   departmentId: '',
   agentIds: [],
 };
@@ -347,55 +331,61 @@ function MethodStep({
 function ConnectStep({
   state, setState,
 }: { state: WizardState; setState: (s: WizardState) => void }): JSX.Element {
-  const [advancedOpen, setAdvancedOpen] = useState(false);
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <Input
+        label="اسم القناة الداخلي"
+        value={state.channelName}
+        onChange={(e) => setState({ ...state, channelName: e.target.value })}
+        placeholder="مثال: المبيعات"
+      />
+      <PhoneField state={state} setState={setState} />
+
+      <div className="space-y-3 p-3 rounded-card bg-bg-light dark:bg-bg-dark">
+        <p className="text-[11px] text-muted-light dark:text-muted-dark">
+          من <a className="text-primary underline" href="https://business.facebook.com" target="_blank" rel="noreferrer">business.facebook.com</a> ← الإعدادات ← WhatsApp Accounts
+        </p>
         <Input
-          label="اسم القناة الداخلي"
-          value={state.channelName}
-          onChange={(e) => setState({ ...state, channelName: e.target.value })}
-          placeholder="مثال: المبيعات"
+          label="Phone Number ID"
+          value={state.phoneNumberId}
+          onChange={(e) => setState({ ...state, phoneNumberId: e.target.value })}
+          placeholder="123456789012345"
         />
         <Input
-          label="اسم العرض للعميل"
-          value={state.displayName}
-          onChange={(e) => setState({ ...state, displayName: e.target.value })}
-          placeholder="مثال: Chatly العقارية"
+          label="WhatsApp Business Account ID"
+          value={state.wabaId}
+          onChange={(e) => setState({ ...state, wabaId: e.target.value })}
+          placeholder="123456789012345"
+        />
+        <div className="space-y-1.5">
+          <label className="text-small font-medium text-muted-light dark:text-muted-dark">Access Token</label>
+          <textarea
+            value={state.accessToken}
+            onChange={(e) => setState({ ...state, accessToken: e.target.value })}
+            rows={2}
+            placeholder="EAAxxxx..."
+            className="w-full px-3 py-2 rounded-input bg-white dark:bg-surface-dark border border-transparent font-mono text-[11px] focus:outline-none focus:border-primary"
+          />
+        </div>
+        <Input
+          label="Graph API Version"
+          value={state.graphApiVersion}
+          onChange={(e) => setState({ ...state, graphApiVersion: e.target.value })}
+          placeholder="v23.0 (latest)"
+        />
+        <Input
+          label="Callback URL"
+          value={state.callbackUrl}
+          onChange={(e) => setState({ ...state, callbackUrl: e.target.value })}
+          placeholder="https://yourserver.com/webhook/whatsapp"
+        />
+        <Input
+          label="Verify Token"
+          value={state.verifyToken}
+          onChange={(e) => setState({ ...state, verifyToken: e.target.value })}
+          placeholder="your-verify-token"
         />
       </div>
-      <PhoneField state={state} setState={setState} />
-      <button
-        type="button"
-        onClick={() => setAdvancedOpen((v) => !v)}
-        className="w-full flex items-center justify-between text-small font-semibold py-2 hover:text-primary transition-colors"
-      >
-        <span>بيانات Meta Business (للـ Cloud API)</span>
-        {advancedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-      </button>
-      {advancedOpen && (
-        <div className="space-y-3 p-3 rounded-card bg-bg-light dark:bg-bg-dark">
-          <p className="text-[11px] text-muted-light dark:text-muted-dark">
-            من <a className="text-primary underline" href="https://business.facebook.com" target="_blank" rel="noreferrer">business.facebook.com</a> ← الإعدادات ← WhatsApp Accounts
-          </p>
-          <Input
-            label="Business Manager ID"
-            value={state.metaBusinessId}
-            onChange={(e) => setState({ ...state, metaBusinessId: e.target.value })}
-            placeholder="123456789012345"
-          />
-          <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark">Access Token</label>
-            <textarea
-              value={state.metaAccessToken}
-              onChange={(e) => setState({ ...state, metaAccessToken: e.target.value })}
-              rows={2}
-              placeholder="EAAxxxx..."
-              className="w-full px-3 py-2 rounded-input bg-white dark:bg-surface-dark border border-transparent font-mono text-[11px] focus:outline-none focus:border-primary"
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -408,8 +398,6 @@ function CustomizeStep({
   departments: Array<{ id: string; name: string; color: string }>;
   agents: Array<{ id: string; name: string; email: string; departments: string[] }>;
 }): JSX.Element {
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [replyOpen, setReplyOpen] = useState(false);
   const eligibleAgents = state.departmentId
     ? agents.filter((a) => a.departments.includes(state.departmentId))
     : agents;
@@ -423,7 +411,6 @@ function CustomizeStep({
   };
   return (
     <div className="space-y-3">
-      {/* Always-visible: routing */}
       <section className="space-y-3">
         <div className="space-y-1.5">
           <label className="text-small font-medium text-muted-light dark:text-muted-dark">القسم المسؤول</label>
@@ -458,58 +445,6 @@ function CustomizeStep({
           </div>
         </div>
       </section>
-
-      {/* Collapsible: profile */}
-      <CollapsibleSection title="الملف التجاري (اختياري)" open={profileOpen} onToggle={() => setProfileOpen((v) => !v)}>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark">فئة العمل</label>
-            <select
-              value={state.category}
-              onChange={(e) => setState({ ...state, category: e.target.value })}
-              className="w-full h-10 ps-3 pe-9 rounded-input bg-white dark:bg-surface-dark border border-transparent text-body focus:outline-none focus:border-primary"
-            >
-              <option value="">اختر...</option>
-              {BUSINESS_CATEGORIES.map((c) => (<option key={c.value} value={c.value}>{c.label}</option>))}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark">وصف العمل</label>
-            <textarea
-              value={state.description}
-              onChange={(e) => setState({ ...state, description: e.target.value.slice(0, 250) })}
-              rows={2}
-              placeholder="وصف مختصر..."
-              className="w-full px-3 py-2 rounded-input bg-white dark:bg-surface-dark border border-transparent text-body focus:outline-none focus:border-primary"
-            />
-            <p className="text-[10px] text-muted-light dark:text-muted-dark text-end">{state.description.length}/250</p>
-          </div>
-        </div>
-      </CollapsibleSection>
-
-      {/* Collapsible: auto-reply */}
-      <CollapsibleSection title="الردود التلقائية (اختياري)" open={replyOpen} onToggle={() => setReplyOpen((v) => !v)}>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark">رسالة الترحيب</label>
-            <textarea
-              value={state.welcomeMessage}
-              onChange={(e) => setState({ ...state, welcomeMessage: e.target.value })}
-              rows={2}
-              className="w-full px-3 py-2 rounded-input bg-white dark:bg-surface-dark border border-transparent text-body focus:outline-none focus:border-primary"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark">رسالة خارج الدوام</label>
-            <textarea
-              value={state.awayMessage}
-              onChange={(e) => setState({ ...state, awayMessage: e.target.value })}
-              rows={2}
-              className="w-full px-3 py-2 rounded-input bg-white dark:bg-surface-dark border border-transparent text-body focus:outline-none focus:border-primary"
-            />
-          </div>
-        </div>
-      </CollapsibleSection>
     </div>
   );
 }
@@ -723,20 +658,3 @@ function PhoneField({
   );
 }
 
-function CollapsibleSection({
-  title, open, onToggle, children,
-}: { title: string; open: boolean; onToggle: () => void; children: React.ReactNode }): JSX.Element {
-  return (
-    <div className="rounded-card border border-border-light dark:border-border-dark overflow-hidden">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-3 py-2.5 text-small font-semibold hover:bg-bg-light dark:hover:bg-bg-dark"
-      >
-        <span>{title}</span>
-        {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-      </button>
-      {open && <div className="p-3 border-t border-border-light dark:border-border-dark">{children}</div>}
-    </div>
-  );
-}

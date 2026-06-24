@@ -45,6 +45,7 @@ export default function Channels(): JSX.Element {
       {/* Sections by category */}
       {[
         { key: 'communication' as const, title: 'قنوات التواصل', subtitle: 'القنوات التي يستخدمها عملاؤك للتواصل معك' },
+        { key: 'email' as const, title: 'البريد الإلكتروني', subtitle: 'إرسال الحملات التسويقية والإشعارات — يُدار بشكل منفصل عن المحادثات' },
         { key: 'ecommerce' as const, title: 'منصات التجارة الإلكترونية', subtitle: 'اربط متجرك لمزامنة الطلبات والعملاء تلقائياً' },
       ].map((section) => {
         const items = filteredTypes.filter((m) => m.category === section.key);

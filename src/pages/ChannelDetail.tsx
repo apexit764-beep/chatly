@@ -333,13 +333,13 @@ export default function ChannelDetail(): JSX.Element {
                               />
                               <MenuItem
                                 icon={<RefreshCw className="h-4 w-4" />}
-                                label="إعادة الاتصال"
+                                label="تجربة الاتصال"
                                 onClick={() => {
-                                  showToast('جارٍ إعادة الاتصال...', 'info');
+                                  showToast('جارٍ اختبار الاتصال...', 'info');
                                   setOpenMenu(null);
                                   setTimeout(() => {
                                     updateChannel(channel.id, { status: 'connected' });
-                                    showToast('تم إعادة الاتصال بنجاح', 'success');
+                                    showToast('الاتصال يعمل بنجاح ✓', 'success');
                                   }, 1200);
                                 }}
                               />

@@ -69,8 +69,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     label: 'الحملات',
     icon: 'Megaphone',
     permissions: [
-      { key: 'campaigns.view', label: 'عرض الحملات', description: 'متابعة حملات الإرسال الجماعي' },
-      { key: 'campaigns.create', label: 'إنشاء حملة', description: 'تكوين حملة جديدة' },
+      { key: 'campaigns.view', label: 'عرض الحملات', description: 'متابعة حملات WhatsApp والبريد الإلكتروني' },
+      { key: 'campaigns.create', label: 'إنشاء حملة', description: 'تكوين حملة WhatsApp أو Email جديدة' },
       { key: 'campaigns.send', label: 'تشغيل/إرسال حملة', description: 'إرسال جماعي للعملاء — حساس' },
     ],
   },
