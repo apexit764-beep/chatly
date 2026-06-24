@@ -25,6 +25,8 @@ const Billing = lazy(() => import('@pages/Billing'));
 const Notifications = lazy(() => import('@pages/Notifications'));
 const AISettings = lazy(() => import('@pages/AISettings'));
 const KnowledgeBase = lazy(() => import('@pages/KnowledgeBase'));
+const Feedback = lazy(() => import('@pages/Feedback'));
+const Tags = lazy(() => import('@pages/Tags'));
 
 // Admin pages
 const AdminDashboard = lazy(() => import('@pages/admin/Dashboard'));
@@ -108,6 +110,8 @@ export default function App(): JSX.Element {
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/ai-settings" element={<AISettings />} />
           <Route path="/knowledge-base" element={<KnowledgeBase />} />
+          <Route path="/feedback" element={<Feedback />} />
+          <Route path="/tags" element={<Tags />} />
           <Route path="*" element={<Navigate to="/overview" replace />} />
         </Route>
       </Routes>

@@ -481,6 +481,19 @@ export default function Team(): JSX.Element {
                         </>
                       ) : (
                         <>
+                          {!isSuspended && (
+                            <button
+                              onClick={() => {
+                                const s = a.status === 'busy' ? 'online' : 'busy';
+                                updateAgent(a.id, { status: s });
+                                showToast(s === 'busy' ? 'تم تعيين الحالة: مشغول' : 'تم تعيين الحالة: متاح', 'success');
+                              }}
+                              className={cn('h-7 w-7 rounded-lg flex items-center justify-center', a.status === 'busy' ? 'text-warning hover:bg-warning/10' : 'text-muted-light dark:text-muted-dark hover:bg-warning/10 hover:text-warning')}
+                              title={a.status === 'busy' ? 'متاح — إلغاء وضع مشغول' : 'مشغول — تفعيل وضع مشغول'}
+                            >
+                              <Pause className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                           <button onClick={() => openEdit(a)} className="h-7 w-7 rounded-lg text-muted-light dark:text-muted-dark hover:bg-primary/10 hover:text-primary flex items-center justify-center" title="تعديل">
                             <Edit2 className="h-3.5 w-3.5" />
                           </button>
@@ -497,7 +510,7 @@ export default function Team(): JSX.Element {
                       className="flex items-center gap-3 text-start mb-4"
                     >
                       <div className="relative flex-shrink-0">
-                        <Avatar name={a.name} size="lg" status={isPending ? 'offline' : a.status} />
+                        <Avatar name={a.name} size="lg" status={isPending || isSuspended ? 'offline' : a.status} />
                         {isPending && (
                           <span className="absolute -bottom-0.5 -end-0.5 h-4 w-4 rounded-full bg-warning ring-2 ring-white dark:ring-surface-dark flex items-center justify-center">
                             <Clock className="h-2.5 w-2.5 text-white" />
@@ -588,7 +601,7 @@ export default function Team(): JSX.Element {
                             'text-[11px] font-semibold',
                             !isSuspended ? 'text-primary' : 'text-muted-light dark:text-muted-dark',
                           )}>
-                            {!isSuspended ? 'مُفعّل' : 'مُعطّل'}
+                            {!isSuspended ? 'فعّال' : 'معطّل'}
                           </span>
                           <button
                             type="button"
@@ -599,7 +612,7 @@ export default function Team(): JSX.Element {
                             )}
                             role="switch"
                             aria-checked={!isSuspended}
-                            title={isSuspended ? 'مُعطّل — اضغط للتفعيل' : 'مُفعّل — اضغط للتعطيل'}
+                            title={isSuspended ? 'معطّل — اضغط للتفعيل' : 'فعّال — اضغط للتعطيل'}
                           >
                             <span
                               className={cn(
@@ -661,7 +674,7 @@ export default function Team(): JSX.Element {
                         <td className="px-4 py-3">
                           <button onClick={() => setDrawer(a)} className="flex items-center gap-3 hover:text-primary text-start">
                             <div className="relative">
-                              <Avatar name={a.name} size="sm" status={isPending ? 'offline' : a.status} />
+                              <Avatar name={a.name} size="sm" status={isPending || isSuspended ? 'offline' : a.status} />
                               {isPending && (
                                 <span className="absolute -bottom-0.5 -end-0.5 h-3.5 w-3.5 rounded-full bg-warning ring-2 ring-white dark:ring-surface-dark flex items-center justify-center">
                                   <Clock className="h-2 w-2 text-white" />
@@ -760,16 +773,16 @@ export default function Team(): JSX.Element {
                               onClick={() => toggleSuspend(a)}
                               className={cn(
                                 'relative h-5 w-9 rounded-full transition-colors mx-auto block',
-                                !isSuspended ? 'bg-primary' : 'bg-border-light dark:bg-border-dark'
+                                !isSuspended ? 'bg-primary' : 'bg-border-light dark:bg-border-dark',
                               )}
                               role="switch"
                               aria-checked={!isSuspended}
-                              title={isSuspended ? 'مُعطّل — اضغط للتفعيل' : 'مُفعّل — اضغط للتعطيل'}
+                              title={isSuspended ? 'معطّل — اضغط للتفعيل' : 'فعّال — اضغط للتعطيل'}
                             >
                               <span
                                 className={cn(
                                   'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all',
-                                  !isSuspended ? 'start-0.5' : 'end-0.5'
+                                  !isSuspended ? 'start-0.5' : 'end-0.5',
                                 )}
                               />
                             </button>
@@ -801,6 +814,20 @@ export default function Team(): JSX.Element {
                               </>
                             ) : (
                               <>
+                                {!isSuspended && (
+                                  <button
+                                    onClick={() => {
+                                      const s = a.status === 'busy' ? 'online' : 'busy';
+                                      updateAgent(a.id, { status: s });
+                                      showToast(s === 'busy' ? 'تم تعيين الحالة: مشغول' : 'تم تعيين الحالة: متاح', 'success');
+                                    }}
+                                    className={cn('h-8 w-8 rounded-lg flex items-center justify-center', a.status === 'busy' ? 'text-warning hover:bg-warning/10' : 'text-muted-light dark:text-muted-dark hover:bg-warning/10 hover:text-warning')}
+                                    title={a.status === 'busy' ? 'متاح — إلغاء وضع مشغول' : 'مشغول — تفعيل وضع مشغول'}
+                                    aria-label="تبديل مشغول"
+                                  >
+                                    <Pause className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
                                 <button onClick={() => openEdit(a)} className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title="تعديل" aria-label="تعديل">
                                   <Edit2 className="h-3.5 w-3.5" />
                                 </button>
@@ -1034,11 +1061,37 @@ export default function Team(): JSX.Element {
             </div>
             <div className="space-y-2 text-small">
               <Row label="الدور" value={roles.find((r) => r.id === drawer.roleId)?.name ?? '—'} />
-              <Row label="الحالة" value={
-                drawer.invitationStatus === 'pending' ? 'بانتظار قبول الدعوة'
-                  : drawer.invitationStatus === 'suspended' ? 'معلّق'
-                  : agentStatusLabel[drawer.status]
-              } />
+              <div className="flex items-center justify-between gap-3 pb-2 border-b border-border-light dark:border-border-dark">
+                <span className="text-muted-light dark:text-muted-dark">الحالة</span>
+                {drawer.invitationStatus === 'active' ? (
+                  <div className="flex items-center gap-2">
+                    <span className={cn('h-2 w-2 rounded-full', agentStatusColor[drawer.status])} />
+                    <span className="font-medium">{agentStatusLabel[drawer.status]}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newStatus = drawer.status === 'busy' ? 'online' : 'busy';
+                        updateAgent(drawer.id, { status: newStatus });
+                        setDrawer({ ...drawer, status: newStatus });
+                        showToast(newStatus === 'busy' ? 'تم تعيين الحالة: مشغول' : 'تم تعيين الحالة: متاح', 'success');
+                      }}
+                      className={cn(
+                        'relative h-5 w-9 rounded-full transition-colors flex-shrink-0',
+                        drawer.status === 'busy' ? 'bg-warning' : 'bg-success',
+                      )}
+                      role="switch"
+                      aria-checked={drawer.status === 'busy'}
+                      title={drawer.status === 'busy' ? 'مشغول — اضغط للتحويل إلى متاح' : 'متاح — اضغط للتحويل إلى مشغول'}
+                    >
+                      <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all', drawer.status === 'busy' ? 'start-0.5' : 'end-0.5')} />
+                    </button>
+                  </div>
+                ) : (
+                  <span className="font-medium">
+                    {drawer.invitationStatus === 'pending' ? 'بانتظار قبول الدعوة' : 'معلّق'}
+                  </span>
+                )}
+              </div>
               <Row label="الأقسام" value={drawer.departments.map((id) => departments.find((d) => d.id === id)?.name).filter(Boolean).join('، ') || '—'} />
               <Row label="القنوات" value={`${drawer.channels.length} قناة`} />
               <Row label={drawer.invitationStatus === 'pending' ? 'تاريخ الدعوة' : 'آخر نشاط'} value={timeAgo(drawer.invitationStatus === 'pending' && drawer.invitedAt ? drawer.invitedAt : drawer.lastActive)} />

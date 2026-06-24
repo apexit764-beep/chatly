@@ -15,6 +15,8 @@ import {
   PanelRightClose,
   PanelRightOpen,
   BookOpen,
+  MessageSquareWarning,
+  Tag,
 } from 'lucide-react';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -40,7 +42,9 @@ const mainNav: NavItem[] = [
   { to: '/team', label: 'فريق العمل', icon: UsersRound, group: 'manage' },
   { to: '/campaigns', label: 'الحملات التسويقية', icon: Megaphone, group: 'manage' },
   { to: '/saved-replies', label: 'الردود السريعة', icon: MessageSquareQuote, group: 'manage' },
+  { to: '/tags', label: 'الوسوم', icon: Tag, group: 'manage' },
   { to: '/ai-settings', label: 'إعدادات الذكاء الاصطناعي', icon: Sparkles, group: 'manage' },
+  { to: '/feedback', label: 'الشكاوى والاقتراحات', icon: MessageSquareWarning, group: 'system' },
   { to: '/billing', label: 'الباقات والاشتراك', icon: CreditCard, group: 'system' },
   { to: '/settings', label: 'الإعدادات', icon: Settings, group: 'system' },
 ];

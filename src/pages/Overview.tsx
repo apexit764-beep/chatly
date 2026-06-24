@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MessageCircle, Clock, Zap, UserPlus, ArrowLeft, Activity, Sparkles, Bot, ArrowLeftRight, ChevronLeft } from 'lucide-react';
+import { MessageCircle, Clock, Zap, UserPlus, ArrowLeft, Activity, Sparkles, Bot, ArrowLeftRight, ChevronLeft, Users, FolderOpen, FolderClosed } from 'lucide-react';
 import { Card, StatCard, Avatar, Badge } from '@components/ui';
 import { LineChart } from '@components/charts/LineChart';
 import { DoughnutChart } from '@components/charts/DoughnutChart';
@@ -41,9 +41,8 @@ export default function Overview(): JSX.Element {
   });
   const avgResponse = replyGaps.length > 0 ? (replyGaps.reduce((s, n) => s + n, 0) / replyGaps.length).toFixed(1) : '—';
 
-  // New contacts today (createdAt within last 24h)
-  const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
-  const newContactsToday = contacts.filter((c) => new Date(c.createdAt).getTime() > dayAgo).length;
+  const closedConvs = conversations.filter((c) => c.status === 'closed').length;
+  const totalContacts = contacts.length;
 
   // === AI metrics ===
   const aiReplies = conversations.reduce(
@@ -83,36 +82,36 @@ export default function Overview(): JSX.Element {
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
-          label="محادثات اليوم"
+          label="إجمالي العملاء"
+          value={totalContacts}
+          icon={<Users className="h-5 w-5" />}
+          iconBg="bg-info/15"
+          iconColor="text-info"
+          trend={{ value: 12, positive: true }}
+        />
+        <StatCard
+          label="إجمالي المحادثات"
           value={todayConvs}
           icon={<MessageCircle className="h-5 w-5" />}
           iconBg="bg-primary/15"
           iconColor="text-primary"
-          trend={{ value: 12, positive: true }}
+          trend={{ value: 8, positive: true }}
         />
         <StatCard
-          label="محادثات مفتوحة"
+          label="إجمالي المحادثات المفتوحة"
           value={openConvs}
-          icon={<Clock className="h-5 w-5" />}
+          icon={<FolderOpen className="h-5 w-5" />}
           iconBg="bg-warning/15"
           iconColor="text-warning"
-          trend={{ value: 8, positive: false }}
+          trend={{ value: 5, positive: false }}
         />
         <StatCard
-          label="متوسط وقت الرد"
-          value={avgResponse === '—' ? '—' : `${avgResponse} د`}
-          icon={<Zap className="h-5 w-5" />}
+          label="إجمالي المحادثات المغلقة"
+          value={closedConvs}
+          icon={<FolderClosed className="h-5 w-5" />}
           iconBg="bg-success/15"
           iconColor="text-success"
           trend={{ value: 18, positive: true }}
-        />
-        <StatCard
-          label="عملاء جدد اليوم"
-          value={newContactsToday}
-          icon={<UserPlus className="h-5 w-5" />}
-          iconBg="bg-info/15"
-          iconColor="text-info"
-          trend={{ value: 24, positive: true }}
         />
       </div>
 
@@ -153,25 +152,25 @@ export default function Overview(): JSX.Element {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
           <div className="rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-3">
             <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark mb-1">
-              <Bot className="h-3.5 w-3.5" /> ردود المساعد
+              <Bot className="h-3.5 w-3.5" /> إجمالي ردود المساعد
             </div>
             <p className="text-h3 font-extrabold tabular-nums">{aiReplies}</p>
           </div>
           <div className="rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-3">
             <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark mb-1">
-              <MessageCircle className="h-3.5 w-3.5" /> محادثات نشطة
+              <MessageCircle className="h-3.5 w-3.5" /> إجمالي المحادثات النشطة
             </div>
             <p className="text-h3 font-extrabold tabular-nums">{aiActiveConvs}</p>
           </div>
           <div className="rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-3">
             <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark mb-1">
-              <ArrowLeftRight className="h-3.5 w-3.5" /> محوّلة لموظف
+              <ArrowLeftRight className="h-3.5 w-3.5" /> إجمالي المحوّلة لموظف
             </div>
             <p className="text-h3 font-extrabold tabular-nums">{aiHandoffs}</p>
           </div>
           <div className="rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-3">
             <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark mb-1">
-              <Sparkles className="h-3.5 w-3.5" /> حلّها AI
+              <Sparkles className="h-3.5 w-3.5" /> إجمالي حلّها AI
             </div>
             <p className="text-h3 font-extrabold tabular-nums">{aiResolved}</p>
           </div>
@@ -271,15 +270,21 @@ export default function Overview(): JSX.Element {
           </div>
           <div className="divide-y divide-border-light dark:divide-border-dark">
             {agents.map((agent) => {
-              const handled = conversations.filter((c) => c.assignedTo === agent.id).length;
+              const assigned = conversations.filter((c) => c.assignedTo === agent.id).length;
+              const closed = conversations.filter((c) => c.assignedTo === agent.id && c.status === 'closed').length;
+              const newConv = conversations.filter((c) => c.assignedTo === agent.id && c.status === 'new').length;
               return (
                 <div key={agent.id} className="flex items-center gap-3 px-5 py-3">
                   <Avatar name={agent.name} size="sm" status={agent.status} />
                   <div className="flex-1 min-w-0">
                     <p className="text-body font-semibold truncate">{agent.name}</p>
-                    <p className="text-small text-muted-light dark:text-muted-dark">
-                      {handled} محادثة · {Math.round(2 + Math.random() * 4)} د متوسط
-                    </p>
+                    <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark">
+                      <span>{assigned} مسندة</span>
+                      <span>·</span>
+                      <span>{closed} مغلقة</span>
+                      <span>·</span>
+                      <span>{newConv} جديدة</span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className={cn('h-2 w-2 rounded-full', agentStatusColor[agent.status])} />

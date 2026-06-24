@@ -116,6 +116,15 @@
   }
 }
 
+/* Phone numbers — always LTR */
+[data-phone],
+input[type='tel'],
+input[inputmode='tel'] {
+  direction: ltr;
+  unicode-bidi: embed;
+  text-align: right;
+}
+
 /* Custom scroll for chat */
 .chat-scroll {
   scroll-behavior: smooth;

@@ -313,25 +313,29 @@ export default function Inbox(): JSX.Element {
           </div>
         </div>
         <div className="p-3 border-b border-border-light dark:border-border-dark space-y-2">
-          <div className="relative">
-            <Search className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark" />
-            <input
-              type="text"
-              placeholder="ابحث عن محادثة..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-9 ps-3 pe-9 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary"
+          <div className="flex items-center gap-1.5">
+            <div className="relative flex-1">
+              <Search className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark" />
+              <input
+                type="text"
+                placeholder="ابحث عن محادثة..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full h-9 ps-3 pe-9 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary"
+              />
+            </div>
+            <InboxFilterButton
+              selectedChannelId={selectedChannelId}
+              setSelectedChannelId={(id) => useInboxStore.getState().setSelectedChannelId(id)}
+              selectedDepartmentId={selectedDepartmentId}
+              setSelectedDepartmentId={(id) => useInboxStore.getState().setSelectedDepartmentId(id)}
+              channels={channels}
+              departments={departments}
             />
           </div>
           <InboxFilters
             view={view}
             setView={(v) => useInboxStore.getState().setView(v)}
-            selectedChannelId={selectedChannelId}
-            setSelectedChannelId={(id) => useInboxStore.getState().setSelectedChannelId(id)}
-            selectedDepartmentId={selectedDepartmentId}
-            setSelectedDepartmentId={(id) => useInboxStore.getState().setSelectedDepartmentId(id)}
-            channels={channels}
-            departments={departments}
             counts={{
               mine: conversations.filter((c) => c.assignedTo === currentUserId && c.status !== 'closed').length,
               unassigned: conversations.filter((c) => c.assignedTo === null).length,
@@ -1070,7 +1074,7 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
                   <span className="flex items-center gap-2 flex-1 min-w-0">
                     <Avatar name={existingContact.name} size="xs" />
                     <span className="font-medium truncate">{existingContact.name}</span>
-                    <span className="text-[11px] text-muted-light dark:text-muted-dark font-mono">{formatPhone(existingContact.phone)}</span>
+                    <span className="text-[11px] text-muted-light dark:text-muted-dark font-mono" dir="ltr">{formatPhone(existingContact.phone)}</span>
                   </span>
                 ) : (
                   <span className="text-muted-light dark:text-muted-dark">اختر عميل...</span>
@@ -1109,7 +1113,7 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
                             <Avatar name={c.name} size="sm" />
                             <div className="flex-1 min-w-0">
                               <p className="text-body font-semibold truncate">{c.name}</p>
-                              <p className="text-[11px] text-muted-light dark:text-muted-dark truncate font-mono">{formatPhone(c.phone)}</p>
+                              <p className="text-[11px] text-muted-light dark:text-muted-dark truncate font-mono" dir="ltr">{formatPhone(c.phone)}</p>
                             </div>
                             {existingContactId === c.id && <Check className="h-4 w-4 text-primary flex-shrink-0" />}
                           </button>
@@ -1289,6 +1293,8 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
   const channels = useDataStore((s) => s.channels);
   const assign = useDataStore((s) => s.assignConversation);
   const updateContact = useDataStore((s) => s.updateContact);
+  const storeTags = useDataStore((s) => s.tags);
+  const addTag = useDataStore((s) => s.addTag);
   const addContactTag = useDataStore((s) => s.addContactTag);
   const removeContactTag = useDataStore((s) => s.removeContactTag);
   const showToast = useUIStore((s) => s.showToast);
@@ -1329,10 +1335,12 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
     }, 700);
   };
 
-  const handleAddTag = (): void => {
+  const handleCreateTag = (): void => {
     if (!newTag.trim()) { setAddingTag(false); return; }
-    addContactTag(contact.id, newTag.trim());
-    showToast(`تم إضافة الوسم: ${newTag.trim()}`, 'success');
+    const tag = newTag.trim();
+    addTag(tag);
+    addContactTag(contact.id, tag);
+    showToast(`تم إنشاء وإضافة الوسم: ${tag}`, 'success');
     setNewTag('');
     setAddingTag(false);
   };
@@ -1345,7 +1353,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
     setEditingName(false);
   };
 
-  const allTags = Array.from(new Set(contacts.flatMap((c) => c.tags)));
+  const allTags = storeTags;
   const contactCategories = ['عميل جديد', 'عميل دائم', 'عميل VIP', 'شريك', 'مورّد', 'محتمل'];
   const currentCategory = contact.type === 'vip' ? 'عميل VIP' : contact.type === 'customer' ? 'عميل دائم' : contact.type === 'lead' ? 'محتمل' : 'عميل جديد';
 
@@ -1394,7 +1402,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
         )}
         <p className="text-small text-muted-light dark:text-muted-dark mt-0.5 flex items-center justify-center gap-1">
           <Phone className="h-3 w-3" />
-          {formatPhone(contact.phone)}
+          <span dir="ltr">{formatPhone(contact.phone)}</span>
         </p>
         <div className="flex items-center justify-center gap-3 mt-2 text-small text-muted-light dark:text-muted-dark">
           <span className="flex items-center gap-1" title="الدولة">
@@ -1426,7 +1434,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
           ) : <span className="h-5 w-5 rounded-full bg-bg-light dark:bg-bg-dark border border-dashed border-border-light dark:border-border-dark" />}
         />
         <AssigneeRow
-          label="المجموعة"
+          label="القسم"
           value={groupId || null}
           options={departments.map((d) => ({ id: d.id, name: d.name, color: d.color }))}
           placeholder="بدون قسم"
@@ -1447,12 +1455,15 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
             <Plus className="h-3 w-3" /> وسم جديد
           </button>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div
+          className="relative flex flex-wrap items-center gap-1.5 min-h-[36px] px-2.5 py-1.5 rounded-lg border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark cursor-pointer"
+          onClick={() => { if (!tagsOpen) setTagsOpen(true); }}
+        >
           {contact.tags.map((t) => (
             <span key={t} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-small">
               {t}
               <button
-                onClick={() => { removeContactTag(contact.id, t); showToast(`تم إزالة: ${t}`, 'success'); }}
+                onClick={(e) => { e.stopPropagation(); removeContactTag(contact.id, t); showToast(`تم إزالة: ${t}`, 'success'); }}
                 className="hover:bg-primary/20 rounded-full p-0.5"
                 aria-label={`إزالة ${t}`}
               >
@@ -1460,29 +1471,59 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
               </button>
             </span>
           ))}
-          {addingTag && (
-            <div className="relative w-full mt-1">
-              <input
-                autoFocus
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onBlur={handleAddTag}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAddTag(); if (e.key === 'Escape') { setAddingTag(false); setNewTag(''); } }}
-                placeholder="اكتب وسم جديد..."
-                className="w-full h-8 px-3 rounded-lg bg-bg-light dark:bg-bg-dark border border-primary/30 text-small focus:outline-none focus:border-primary"
-                list="tag-suggestions"
-              />
-              {allTags.filter((t) => !contact.tags.includes(t) && t.includes(newTag)).length > 0 && newTag && (
-                <div className="absolute top-full mt-1 inset-x-0 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-card-hover py-1 z-20 max-h-32 overflow-y-auto">
-                  {allTags.filter((t) => !contact.tags.includes(t) && t.includes(newTag)).map((t) => (
-                    <button key={t} onClick={() => { addContactTag(contact.id, t); showToast(`تم إضافة: ${t}`, 'success'); setNewTag(''); setAddingTag(false); }} className="w-full px-3 py-1.5 text-small text-start hover:bg-bg-light dark:hover:bg-bg-dark">{t}</button>
-                  ))}
-                </div>
-              )}
-            </div>
+          {contact.tags.length === 0 && !tagsOpen && (
+            <span className="text-small text-muted-light dark:text-muted-dark">اختر وسم...</span>
           )}
+          {tagsOpen && (() => {
+            const available = allTags.filter((t) => !contact.tags.includes(t));
+            return (
+              <div className="absolute top-full mt-1 inset-x-0 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-card-hover py-1 z-20 max-h-40 overflow-y-auto">
+                {available.length > 0 ? available.map((t) => (
+                  <button key={t} onMouseDown={(e) => e.preventDefault()} onClick={(e) => { e.stopPropagation(); addContactTag(contact.id, t); showToast(`تم إضافة: ${t}`, 'success'); setTagsOpen(false); }} className="w-full px-3 py-1.5 text-small text-start hover:bg-bg-light dark:hover:bg-bg-dark">{t}</button>
+                )) : (
+                  <p className="px-3 py-1.5 text-small text-muted-light dark:text-muted-dark italic">لا توجد وسوم متاحة</p>
+                )}
+              </div>
+            );
+          })()}
         </div>
+        {tagsOpen && <div className="fixed inset-0 z-10" onClick={() => setTagsOpen(false)} />}
       </div>
+
+      {/* Create new tag popup */}
+      {addingTag && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setAddingTag(false); setNewTag(''); }}>
+          <div className="bg-white dark:bg-surface-dark rounded-xl shadow-xl w-80 p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-h3 font-bold mb-4 text-center">إضافة وسم جديد</h3>
+            <input
+              autoFocus
+              value={newTag}
+              onChange={(e) => setNewTag(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newTag.trim()) handleCreateTag();
+                if (e.key === 'Escape') { setAddingTag(false); setNewTag(''); }
+              }}
+              placeholder="اسم الوسم..."
+              className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 mb-4"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleCreateTag}
+                disabled={!newTag.trim()}
+                className="flex-1 h-10 rounded-lg bg-primary hover:bg-primary-dark text-white font-medium text-body transition-colors disabled:opacity-50"
+              >
+                إضافة
+              </button>
+              <button
+                onClick={() => { setAddingTag(false); setNewTag(''); }}
+                className="flex-1 h-10 rounded-lg border border-border-light dark:border-border-dark text-body font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Categories */}
       <div className="p-4 border-b border-border-light dark:border-border-dark">
@@ -1510,21 +1551,50 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
                     {cat === currentCategory && <Check className="h-3.5 w-3.5 text-primary" />}
                   </button>
                 ))}
-                {addingCategory && (
-                  <div className="px-3 py-1.5">
-                    <input autoFocus value={newCategory} onChange={(e) => setNewCategory(e.target.value)} onBlur={() => { setAddingCategory(false); setNewCategory(''); }} onKeyDown={(e) => { if (e.key === 'Enter' && newCategory.trim()) { showToast(`تم إضافة التصنيف: ${newCategory.trim()}`, 'success'); setAddingCategory(false); setNewCategory(''); setCategoriesOpen(false); } }} placeholder="تصنيف جديد..." className="w-full h-8 px-2 rounded-lg bg-bg-light dark:bg-bg-dark border border-primary/30 text-small focus:outline-none focus:border-primary" />
-                  </div>
-                )}
               </div>
             </>
           )}
         </div>
       </div>
 
+      {/* Create new category popup */}
+      {addingCategory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setAddingCategory(false); setNewCategory(''); }}>
+          <div className="bg-white dark:bg-surface-dark rounded-xl shadow-xl w-80 p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-h3 font-bold mb-4 text-center">إضافة تصنيف جديد</h3>
+            <input
+              autoFocus
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newCategory.trim()) { showToast(`تم إضافة التصنيف: ${newCategory.trim()}`, 'success'); setAddingCategory(false); setNewCategory(''); }
+                if (e.key === 'Escape') { setAddingCategory(false); setNewCategory(''); }
+              }}
+              placeholder="اسم التصنيف..."
+              className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 mb-4"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => { if (newCategory.trim()) { showToast(`تم إضافة التصنيف: ${newCategory.trim()}`, 'success'); setAddingCategory(false); setNewCategory(''); } }}
+                disabled={!newCategory.trim()}
+                className="flex-1 h-10 rounded-lg bg-primary hover:bg-primary-dark text-white font-medium text-body transition-colors disabled:opacity-50"
+              >
+                إضافة
+              </button>
+              <button
+                onClick={() => { setAddingCategory(false); setNewCategory(''); }}
+                className="flex-1 h-10 rounded-lg border border-border-light dark:border-border-dark text-body font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Collapsible open={openAttrs} onToggle={() => setOpenAttrs((v) => !v)} title="خصائص المحادثة">
-        <Attr label="النوع" value={contactTypeLabel[contact.type]} />
-        <Attr label="المعرّف" value={`#${convIdNum}`} />
-        <Attr label="بدأت" value={timeAgo(startedAt)} tooltip={startedFull} />
+        <Attr label="المعرّف" value={`#${convIdNum.padStart(4, '0')}`} />
+        <Attr label="بدأت" value={startedFull} />
         <Attr
           label="القناة"
           value={convChannel?.name ?? 'غير محدد'}
@@ -1607,8 +1677,17 @@ function Collapsible({ title, open, onToggle, children }: { title: string; open:
 function Attr({ label, value, valueColor, icon, tooltip }: { label: string; value: string; valueColor?: string; icon?: React.ReactNode; tooltip?: string }): JSX.Element {
   return (
     <div className="flex items-center justify-between text-small">
-      <span className="text-muted-light dark:text-muted-dark flex items-center gap-1.5">{icon}{label}</span>
-      <span className={cn('font-medium truncate ms-2', valueColor)} title={tooltip}>{value}</span>
+      <span className="text-muted-light dark:text-muted-dark">{label}</span>
+      {tooltip ? (
+        <span className="relative group font-medium truncate ms-2 flex items-center gap-1.5 cursor-default">
+          {icon}{value}
+          <span className="pointer-events-none absolute bottom-full mb-1.5 end-0 whitespace-nowrap rounded-md bg-[#1e293b] text-white text-[11px] px-2.5 py-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-30">
+            {tooltip}
+          </span>
+        </span>
+      ) : (
+        <span className={cn('font-medium truncate ms-2 flex items-center gap-1.5', valueColor)}>{icon}{value}</span>
+      )}
     </div>
   );
 }
@@ -1759,30 +1838,86 @@ function StatusDropdown({
   );
 }
 
-function InboxFilters({
-  view,
-  setView,
+function InboxFilterButton({
   selectedChannelId,
   setSelectedChannelId,
   selectedDepartmentId,
   setSelectedDepartmentId,
   channels,
   departments,
-  counts,
 }: {
-  view: InboxView;
-  setView: (v: InboxView) => void;
   selectedChannelId: string | null;
   setSelectedChannelId: (id: string | null) => void;
   selectedDepartmentId: string | null;
   setSelectedDepartmentId: (id: string | null) => void;
   channels: Channel[];
   departments: Department[];
+}): JSX.Element {
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterActive = !!selectedChannelId || !!selectedDepartmentId;
+  const activeFilterCount = (selectedChannelId ? 1 : 0) + (selectedDepartmentId ? 1 : 0);
+
+  return (
+    <>
+      <button
+        onClick={() => setFilterOpen(true)}
+        className={cn(
+          'h-9 w-9 rounded-full flex items-center justify-center transition-colors relative flex-shrink-0',
+          filterActive
+            ? 'bg-primary/10 text-primary'
+            : 'text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark'
+        )}
+        aria-expanded={filterOpen}
+        title="فلترة"
+      >
+        <SlidersHorizontal className="h-4 w-4" strokeWidth={1.75} />
+        {filterActive && (
+          <span className="absolute -top-0.5 -end-0.5 h-3.5 min-w-3.5 px-1 bg-primary text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+            {activeFilterCount}
+          </span>
+        )}
+      </button>
+      <Drawer open={filterOpen} onClose={() => setFilterOpen(false)} title="تصفية" side="start" width="w-[360px]">
+        <div className="space-y-6">
+          {filterActive && (
+            <button
+              onClick={() => { setSelectedChannelId(null); setSelectedDepartmentId(null); }}
+              className="w-full h-9 rounded-btn border border-danger/30 text-danger text-small font-medium hover:bg-danger/5 transition-colors"
+            >
+              مسح كل الفلاتر ({activeFilterCount})
+            </button>
+          )}
+          <FilterPanel
+            title="القناة"
+            options={channels.map((c) => ({ id: c.id, label: c.name, indicator: <ChannelIcon type={c.type} size={10} className="!h-4 !w-4" /> }))}
+            selectedId={selectedChannelId}
+            onSelect={setSelectedChannelId}
+            allLabel="كل القنوات"
+          />
+          <FilterPanel
+            title="القسم"
+            options={departments.map((d) => ({ id: d.id, label: d.name, indicator: <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} /> }))}
+            selectedId={selectedDepartmentId}
+            onSelect={setSelectedDepartmentId}
+            allLabel="كل الأقسام"
+          />
+        </div>
+      </Drawer>
+    </>
+  );
+}
+
+function InboxFilters({
+  view,
+  setView,
+  counts,
+}: {
+  view: InboxView;
+  setView: (v: InboxView) => void;
   counts: { mine: number; unassigned: number; closed: number; all: number; starred: number };
 }): JSX.Element {
   const [viewOpen, setViewOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
   const [sortKey, setSortKey] = useState<'recent' | 'oldest' | 'unread'>('recent');
 
   type ViewItem = { key: InboxView; label: string; count: number; icon: JSX.Element; group: 'folder' | 'status' };
@@ -1795,8 +1930,6 @@ function InboxFilters({
   ];
   const current = items.find((i) => i.key === view) ?? items[0];
   const sortLabel = { recent: 'الأحدث أولاً', oldest: 'الأقدم أولاً', unread: 'غير المقروءة أولاً' }[sortKey];
-  const filterActive = !!selectedChannelId || !!selectedDepartmentId;
-  const activeFilterCount = (selectedChannelId ? 1 : 0) + (selectedDepartmentId ? 1 : 0);
 
   return (
     <div className="flex items-center justify-between gap-2">
@@ -1828,83 +1961,34 @@ function InboxFilters({
         )}
       </div>
 
-      {/* Right group: Sort pill + Filter button (left/end in RTL) */}
-      <div className="flex items-center gap-1.5">
-        {/* Sort pill */}
-        <div className="relative">
-          <button
-            onClick={() => setSortOpen((v) => !v)}
-            className="h-7 ps-2.5 pe-1.5 rounded-full border border-border-light dark:border-border-dark text-[12px] font-medium flex items-center gap-1.5 text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
-            aria-haspopup="menu"
-            aria-expanded={sortOpen}
-          >
-            <span>{sortLabel}</span>
-            <ArrowDownUp className="h-3 w-3" strokeWidth={1.75} />
-          </button>
-          {sortOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setSortOpen(false)} />
-              <div className="absolute end-0 mt-1 w-44 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1 z-20">
-                {(['recent', 'oldest', 'unread'] as const).map((k) => (
-                  <button
-                    key={k}
-                    onClick={() => { setSortKey(k); setSortOpen(false); }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-small hover:bg-bg-light dark:hover:bg-bg-dark text-start"
-                  >
-                    <span className="flex-1">{ { recent: 'الأحدث أولاً', oldest: 'الأقدم أولاً', unread: 'غير المقروءة أولاً' }[k] }</span>
-                    {sortKey === k && <Check className="h-3.5 w-3.5 text-primary" />}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Filter button */}
+      {/* Sort pill */}
+      <div className="relative">
         <button
-          onClick={() => setFilterOpen(true)}
-          className={cn(
-            'h-7 w-7 rounded-full flex items-center justify-center transition-colors relative',
-            filterActive
-              ? 'bg-primary/10 text-primary'
-              : 'text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark'
-          )}
-          aria-expanded={filterOpen}
-          title="فلترة"
+          onClick={() => setSortOpen((v) => !v)}
+          className="h-7 ps-2.5 pe-1.5 rounded-full border border-border-light dark:border-border-dark text-[12px] font-medium flex items-center gap-1.5 text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
+          aria-haspopup="menu"
+          aria-expanded={sortOpen}
         >
-          <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={1.75} />
-          {filterActive && (
-            <span className="absolute -top-0.5 -end-0.5 h-3.5 min-w-3.5 px-1 bg-primary text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-              {activeFilterCount}
-            </span>
-          )}
+          <span>{sortLabel}</span>
+          <ArrowDownUp className="h-3 w-3" strokeWidth={1.75} />
         </button>
-        <Drawer open={filterOpen} onClose={() => setFilterOpen(false)} title="تصفية" side="start" width="w-[360px]">
-          <div className="space-y-6">
-            {filterActive && (
-              <button
-                onClick={() => { setSelectedChannelId(null); setSelectedDepartmentId(null); }}
-                className="w-full h-9 rounded-btn border border-danger/30 text-danger text-small font-medium hover:bg-danger/5 transition-colors"
-              >
-                مسح كل الفلاتر ({activeFilterCount})
-              </button>
-            )}
-            <FilterPanel
-              title="القناة"
-              options={channels.map((c) => ({ id: c.id, label: c.name, indicator: <ChannelIcon type={c.type} size={10} className="!h-4 !w-4" /> }))}
-              selectedId={selectedChannelId}
-              onSelect={setSelectedChannelId}
-              allLabel="كل القنوات"
-            />
-            <FilterPanel
-              title="القسم"
-              options={departments.map((d) => ({ id: d.id, label: d.name, indicator: <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} /> }))}
-              selectedId={selectedDepartmentId}
-              onSelect={setSelectedDepartmentId}
-              allLabel="كل الأقسام"
-            />
-          </div>
-        </Drawer>
+        {sortOpen && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setSortOpen(false)} />
+            <div className="absolute end-0 mt-1 w-44 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1 z-20">
+              {(['recent', 'oldest', 'unread'] as const).map((k) => (
+                <button
+                  key={k}
+                  onClick={() => { setSortKey(k); setSortOpen(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-small hover:bg-bg-light dark:hover:bg-bg-dark text-start"
+                >
+                  <span className="flex-1">{ { recent: 'الأحدث أولاً', oldest: 'الأقدم أولاً', unread: 'غير المقروءة أولاً' }[k] }</span>
+                  {sortKey === k && <Check className="h-3.5 w-3.5 text-primary" />}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -2054,11 +2138,11 @@ function MessageBubble({
               <>
                 <span className="tabular-nums">{dateLabel}</span>
                 {isAI && <Sparkles className="h-2.5 w-2.5" />}
-                <span className="font-semibold">· {name}</span>
+                <span>· {name}</span>
               </>
             ) : (
               <>
-                <span className="font-semibold">{name}</span>
+                <span>{name}</span>
                 <span className="tabular-nums">· {dateLabel}</span>
               </>
             )}

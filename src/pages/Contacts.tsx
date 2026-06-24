@@ -12,6 +12,7 @@ import {
   ArrowDownUp,
   ChevronDown,
   FileText,
+  Tag,
 } from 'lucide-react';
 import {
   Avatar,
@@ -55,6 +56,7 @@ export default function Contacts(): JSX.Element {
     name: '', phone: '', type: 'lead', notes: '',
   });
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
+  const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
 
   const filtered = useMemo(() => {
     return contacts.filter((c) => {
@@ -157,12 +159,12 @@ export default function Contacts(): JSX.Element {
           <Avatar name={r.name} size="sm" />
           <div className="min-w-0">
             <p className="font-semibold truncate">{r.name}</p>
-            <p className="text-small text-muted-light dark:text-muted-dark md:hidden">{formatPhone(r.phone)}</p>
+            <p className="text-small text-muted-light dark:text-muted-dark md:hidden" dir="ltr">{formatPhone(r.phone)}</p>
           </div>
         </div>
       ),
     },
-    { key: 'phone', header: 'الواتساب', accessor: (r) => r.phone, hideOn: 'md', cell: (r) => <span className="text-muted-light dark:text-muted-dark font-mono text-small">{formatPhone(r.phone)}</span> },
+    { key: 'phone', header: 'الواتساب', accessor: (r) => r.phone, hideOn: 'md', cell: (r) => <span className="text-muted-light dark:text-muted-dark font-mono text-small" dir="ltr">{formatPhone(r.phone)}</span> },
     { key: 'type', header: 'النوع', accessor: (r) => r.type, cell: (r) => <Badge className={contactTypeColor[r.type]}>{contactTypeLabel[r.type]}</Badge> },
     { key: 'last', header: 'آخر تواصل', accessor: (r) => r.lastContact, hideOn: 'lg', cell: (r) => <span className="text-small text-muted-light dark:text-muted-dark">{timeAgo(r.lastContact)}</span> },
     { key: 'conv', header: 'المحادثات', accessor: (r) => r.conversationCount, hideOn: 'lg' },
@@ -272,6 +274,12 @@ export default function Contacts(): JSX.Element {
         }
         toolbar={
           <>
+            <button
+              onClick={() => setCategoryDrawerOpen(true)}
+              className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex items-center gap-2"
+            >
+              <Tag className="h-4 w-4" /> إدارة التصنيفات
+            </button>
             <ImportExportMenu onImport={() => setImportOpen(true)} onExport={() => handleExport(filtered)} />
             <button onClick={openCreate} className="h-9 px-4 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2">
               <Plus className="h-4 w-4" /> عميل جديد
@@ -315,6 +323,8 @@ export default function Contacts(): JSX.Element {
       <Drawer open={!!drawer} onClose={() => setDrawer(null)} title="تفاصيل جهة الاتصال" side="end" width="w-[420px]">
         {drawer && <ContactDrawerBody contact={drawer} onEdit={() => { openEdit(drawer); setDrawer(null); }} onDelete={() => remove(drawer)} />}
       </Drawer>
+
+      <ContactCategoriesDrawer open={categoryDrawerOpen} onClose={() => setCategoryDrawerOpen(false)} />
     </div>
   );
 }
@@ -327,7 +337,7 @@ function ContactDrawerBody({ contact, onEdit, onDelete }: { contact: Contact; on
       <div className="text-center">
         <Avatar name={contact.name} size="lg" className="mx-auto" />
         <p className="text-h2 font-bold mt-3">{contact.name}</p>
-        <p className="text-small text-muted-light dark:text-muted-dark">{formatPhone(contact.phone)}</p>
+        <p className="text-small text-muted-light dark:text-muted-dark" dir="ltr">{formatPhone(contact.phone)}</p>
         <Badge className={cn('mt-2', contactTypeColor[contact.type])}>{contactTypeLabel[contact.type]}</Badge>
       </div>
 
@@ -380,6 +390,147 @@ function ContactDrawerBody({ contact, onEdit, onDelete }: { contact: Contact; on
         </div>
       </div>
     </div>
+  );
+}
+
+const CAT_PALETTE = ['#2563EB', '#06B6D4', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#94A3B8'];
+
+function ContactCategoriesDrawer({ open, onClose }: { open: boolean; onClose: () => void }): JSX.Element {
+  const categories = useDataStore((s) => s.contactCategories);
+  const contacts = useDataStore((s) => s.contacts);
+  const addCategory = useDataStore((s) => s.addContactCategory);
+  const updateCategory = useDataStore((s) => s.updateContactCategory);
+  const deleteCategory = useDataStore((s) => s.deleteContactCategory);
+  const showToast = useUIStore((s) => s.showToast);
+  const { confirm } = useConfirm();
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<{ name: string; color: string }>({ name: '', color: CAT_PALETTE[0] });
+  const [newName, setNewName] = useState('');
+  const [newColor, setNewColor] = useState(CAT_PALETTE[0]);
+
+  const startEdit = (c: { id: string; name: string; color: string }): void => {
+    setEditingId(c.id);
+    setDraft({ name: c.name, color: c.color });
+  };
+
+  const saveEdit = (): void => {
+    if (!editingId) return;
+    if (!draft.name.trim()) { showToast('الاسم مطلوب', 'error'); return; }
+    updateCategory(editingId, { name: draft.name.trim(), color: draft.color });
+    setEditingId(null);
+    showToast('تم تحديث التصنيف', 'success');
+  };
+
+  const addNew = (): void => {
+    if (!newName.trim()) { showToast('اسم التصنيف مطلوب', 'error'); return; }
+    addCategory({ name: newName.trim(), color: newColor });
+    setNewName('');
+    setNewColor(CAT_PALETTE[0]);
+    showToast('تم إضافة التصنيف', 'success');
+  };
+
+  const remove = async (c: { id: string; name: string }): Promise<void> => {
+    const ok = await confirm({
+      title: `حذف تصنيف "${c.name}"؟`,
+      message: 'سيتم إزالة هذا التصنيف من القائمة.',
+      variant: 'danger',
+      confirmText: 'حذف',
+    });
+    if (ok) {
+      deleteCategory(c.id);
+      showToast('تم حذف التصنيف', 'success');
+    }
+  };
+
+  return (
+    <Drawer open={open} onClose={onClose} title="إدارة تصنيفات العملاء" side="end" width="w-[420px]">
+      <div className="space-y-4 pb-4">
+        <p className="text-small text-muted-light dark:text-muted-dark">
+          أنشئ تصنيفات خاصة لتنظيم العملاء (مثل: عميل VIP، شريك، مورّد).
+        </p>
+
+        <div className="p-3 rounded-card bg-bg-light dark:bg-bg-dark space-y-2">
+          <p className="text-small font-semibold flex items-center gap-1.5">
+            <Plus className="h-3.5 w-3.5 text-primary" />
+            تصنيف جديد
+          </p>
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="مثال: عميل مميز"
+            className="w-full h-9 px-3 rounded-input bg-white dark:bg-surface-dark border border-transparent text-body focus:outline-none focus:border-primary"
+            onKeyDown={(e) => { if (e.key === 'Enter') addNew(); }}
+          />
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {CAT_PALETTE.map((c) => (
+              <button
+                key={c}
+                onClick={() => setNewColor(c)}
+                className={cn('h-6 w-6 rounded-full border-2 transition-all', newColor === c ? 'border-[#111827] dark:border-white scale-110' : 'border-transparent')}
+                style={{ background: c }}
+              />
+            ))}
+          </div>
+          <button onClick={addNew} className="w-full h-9 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center justify-center gap-1.5" style={{ color: '#fff' }}>
+            <Plus className="h-3.5 w-3.5" />
+            إضافة
+          </button>
+        </div>
+
+        <div>
+          <p className="text-small font-semibold mb-2 flex items-center gap-1.5">
+            <Tag className="h-3.5 w-3.5" />
+            التصنيفات الحالية ({categories.length})
+          </p>
+          <div className="space-y-1.5">
+            {categories.map((c) => {
+              const isEditing = editingId === c.id;
+              if (isEditing) {
+                return (
+                  <div key={c.id} className="p-3 rounded-card border border-primary/30 bg-primary/5 space-y-2">
+                    <input
+                      value={draft.name}
+                      onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                      autoFocus
+                      className="w-full h-9 px-3 rounded-input bg-white dark:bg-surface-dark border border-transparent text-body focus:outline-none focus:border-primary"
+                    />
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {CAT_PALETTE.map((col) => (
+                        <button
+                          key={col}
+                          onClick={() => setDraft({ ...draft, color: col })}
+                          className={cn('h-6 w-6 rounded-full border-2 transition-all', draft.color === col ? 'border-[#111827] dark:border-white scale-110' : 'border-transparent')}
+                          style={{ background: col }}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <button onClick={() => setEditingId(null)} className="h-8 px-3 rounded-full border border-border-light dark:border-border-dark text-[12px] font-medium hover:bg-bg-light dark:hover:bg-bg-dark">إلغاء</button>
+                      <button onClick={saveEdit} className="h-8 px-3 rounded-full bg-primary text-white text-[12px] font-medium" style={{ color: '#fff' }}>حفظ</button>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div key={c.id} className="p-2.5 rounded-card border border-border-light dark:border-border-dark hover:border-primary/30 transition-colors flex items-center gap-3">
+                  <span className="h-3 w-3 rounded-full flex-shrink-0" style={{ background: c.color }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-body font-medium truncate">{c.name}</p>
+                  </div>
+                  <button onClick={() => startEdit(c)} className="h-7 w-7 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title="تعديل">
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => remove(c)} className="h-7 w-7 rounded-lg hover:bg-danger/10 text-muted-light dark:text-muted-dark hover:text-danger flex items-center justify-center" title="حذف" disabled={categories.length <= 1}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </Drawer>
   );
 }
 

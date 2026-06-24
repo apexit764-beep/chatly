@@ -130,7 +130,16 @@ interface DataState {
   simulateIncomingMessage: (conversationId: string, content: string) => void;
   simulateAIReply: (conversationId: string, content: string) => void;
 
+  // Contact categories
+  contactCategories: { id: string; name: string; color: string }[];
+  addContactCategory: (cat: { name: string; color: string }) => void;
+  updateContactCategory: (id: string, patch: Partial<{ name: string; color: string }>) => void;
+  deleteContactCategory: (id: string) => void;
+
   // Tags / bookmarks
+  tags: string[];
+  addTag: (tag: string) => void;
+  removeTag: (tag: string) => void;
   addContactTag: (contactId: string, tag: string) => void;
   removeContactTag: (contactId: string, tag: string) => void;
   toggleBookmark: (conversationId: string) => void;
@@ -155,6 +164,15 @@ export const useDataStore = create<DataState>((set) => ({
   channels: initialChannels,
   departments: initialDepartments,
   roles: defaultRoles,
+  tags: Array.from(new Set(initialContacts.flatMap((c) => c.tags))),
+  contactCategories: [
+    { id: 'cc1', name: 'عميل جديد', color: '#06B6D4' },
+    { id: 'cc2', name: 'عميل دائم', color: '#10B981' },
+    { id: 'cc3', name: 'عميل VIP', color: '#EF4444' },
+    { id: 'cc4', name: 'شريك', color: '#8B5CF6' },
+    { id: 'cc5', name: 'مورّد', color: '#F59E0B' },
+    { id: 'cc6', name: 'محتمل', color: '#94A3B8' },
+  ],
   integrations: initialIntegrations,
   appSettings: {
     siteName: 'Chatly',
@@ -523,7 +541,36 @@ export const useDataStore = create<DataState>((set) => ({
       };
     }),
 
+  // Contact categories
+  addContactCategory: (cat) =>
+    set((state) => ({
+      contactCategories: [...state.contactCategories, { ...cat, id: newId() }],
+    })),
+
+  updateContactCategory: (id, patch) =>
+    set((state) => ({
+      contactCategories: state.contactCategories.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+    })),
+
+  deleteContactCategory: (id) =>
+    set((state) => ({
+      contactCategories: state.contactCategories.filter((c) => c.id !== id),
+    })),
+
   // Tags
+  addTag: (tag) =>
+    set((state) => ({
+      tags: state.tags.includes(tag) ? state.tags : [...state.tags, tag],
+    })),
+
+  removeTag: (tag) =>
+    set((state) => ({
+      tags: state.tags.filter((t) => t !== tag),
+      contacts: state.contacts.map((c) =>
+        c.tags.includes(tag) ? { ...c, tags: c.tags.filter((t) => t !== tag) } : c
+      ),
+    })),
+
   addContactTag: (contactId, tag) =>
     set((state) => ({
       contacts: state.contacts.map((c) =>
