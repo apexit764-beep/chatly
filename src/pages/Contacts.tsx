@@ -22,6 +22,7 @@ import {
   FilterDropdown,
   Input,
   Modal,
+  PhoneField,
   Select,
   Textarea,
   useConfirm,
@@ -52,8 +53,8 @@ export default function Contacts(): JSX.Element {
   const [editing, setEditing] = useState<Contact | null>(null);
   const [drawer, setDrawer] = useState<Contact | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [form, setForm] = useState<{ name: string; phone: string; type: ContactType; notes: string }>({
-    name: '', phone: '', type: 'lead', notes: '',
+  const [form, setForm] = useState<{ name: string; countryCode: string; phone: string; type: ContactType; notes: string }>({
+    name: '', countryCode: '+968', phone: '', type: 'lead', notes: '',
   });
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
@@ -70,14 +71,18 @@ export default function Contacts(): JSX.Element {
 
   const openCreate = (): void => {
     setEditing(null);
-    setForm({ name: '', phone: '', type: 'lead', notes: '' });
+    setForm({ name: '', countryCode: '+968', phone: '', type: 'lead', notes: '' });
     setErrors({});
     setModalOpen(true);
   };
 
   const openEdit = (c: Contact): void => {
     setEditing(c);
-    setForm({ name: c.name, phone: c.phone, type: c.type, notes: c.notes ?? '' });
+    // Split a saved phone like "+96891234567" into country code + national digits
+    const match = c.phone?.match(/^(\+\d{1,4})\s*(.*)$/);
+    const cc = match ? match[1] : '+968';
+    const local = match ? match[2].replace(/\D/g, '') : c.phone?.replace(/\D/g, '') ?? '';
+    setForm({ name: c.name, countryCode: cc, phone: local, type: c.type, notes: c.notes ?? '' });
     setErrors({});
     setModalOpen(true);
     setOpenMenu(null);
@@ -85,16 +90,18 @@ export default function Contacts(): JSX.Element {
 
   const submit = (): void => {
     const e: typeof errors = {};
+    const fullPhone = `${form.countryCode}${form.phone.replace(/^0+/, '')}`;
     if (!form.name.trim()) e.name = 'الاسم مطلوب';
     if (!form.phone.trim()) e.phone = 'الرقم مطلوب';
-    else if (!/^\+?\d{8,}$/.test(form.phone.replace(/\s/g, ''))) e.phone = 'رقم غير صحيح';
+    else if (!/^\+?\d{8,}$/.test(fullPhone.replace(/\s/g, ''))) e.phone = 'رقم غير صحيح';
     setErrors(e);
     if (Object.keys(e).length > 0) return;
+    const payload = { name: form.name, phone: fullPhone, type: form.type, notes: form.notes };
     if (editing) {
-      updateContact(editing.id, form);
+      updateContact(editing.id, payload);
       showToast('تم التحديث', 'success');
     } else {
-      addContact(form);
+      addContact(payload);
       showToast('تمت الإضافة', 'success');
     }
     setModalOpen(false);
@@ -327,7 +334,15 @@ export default function Contacts(): JSX.Element {
       >
         <div className="space-y-3">
           <Input label="الاسم الكامل" value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors({ ...errors, name: undefined }); }} placeholder="مثال: أحمد الشعيلي" error={errors.name ?? undefined} />
-          <Input label="رقم الواتساب" value={form.phone} onChange={(e) => { setForm({ ...form, phone: e.target.value }); setErrors({ ...errors, phone: undefined }); }} placeholder="+96891234567" error={errors.phone ?? undefined} />
+          <PhoneField
+            label="رقم الواتساب"
+            countryCode={form.countryCode}
+            phone={form.phone}
+            onCountryCodeChange={(c) => setForm({ ...form, countryCode: c })}
+            onPhoneChange={(p) => { setForm({ ...form, phone: p }); setErrors({ ...errors, phone: undefined }); }}
+            placeholder="9999 1111"
+            error={errors.phone ?? undefined}
+          />
           <Select label="النوع" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as ContactType })}>
             <option value="customer">عميل</option>
             <option value="lead">محتمل</option>

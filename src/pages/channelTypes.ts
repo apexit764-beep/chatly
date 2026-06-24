@@ -10,6 +10,14 @@ export interface CredentialField {
   hint?: string;
 }
 
+/** A discrete way to connect this channel — shown as a collapsible block in "كيفية الربط". */
+export interface ConnectionMethodInfo {
+  key: string;
+  name: string;
+  steps: string[];
+  badge?: { label: string; cls: string };
+}
+
 export interface ChannelTypeMeta {
   type: ChannelType;
   category: ChannelCategory;
@@ -18,8 +26,12 @@ export interface ChannelTypeMeta {
   description: string;
   brandColor: string;
   steps: string[];
+  /** If present, "كيفية الربط" renders these as collapsible methods instead of `steps`. */
+  methods?: ConnectionMethodInfo[];
   identifierLabel: string;
   identifierPlaceholder: string;
+  /** Render the identifier field as a phone input with country code dropdown. */
+  identifierType?: 'text' | 'phone';
   /** Extra secret fields shown in the connect modal (beyond name + identifier). */
   credentials?: CredentialField[];
   /** Whether this channel needs a webhook URL copied into the platform. */
@@ -42,8 +54,43 @@ export const CHANNEL_TYPES: ChannelTypeMeta[] = [
       'اضغط "ربط جهاز" وامسح رمز QR الذي سيظهر',
       'سيتم تأكيد الاتصال خلال ثوانٍ',
     ],
+    methods: [
+      {
+        key: 'cloud',
+        name: 'Meta Business Cloud API',
+        badge: { label: 'موصى به ★', cls: 'bg-success/15 text-success' },
+        steps: [
+          'سجّل الدخول في business.facebook.com وأنشئ حساب أعمال',
+          'من الإعدادات ← WhatsApp Accounts، أنشئ تطبيقاً واربط رقم الواتساب',
+          'انسخ Phone Number ID و WABA ID و Access Token من Meta',
+          'الصق البيانات في نموذج الربط وفعّل الـ Webhook',
+        ],
+      },
+      {
+        key: 'pairing',
+        name: 'كود الاقتران (8 أحرف)',
+        badge: { label: 'الأسهل', cls: 'bg-primary/15 text-primary' },
+        steps: [
+          'أدخل رقم هاتفك مع رمز الدولة الصحيح',
+          'احصل على كود اقتران من 8 أحرف من Chatly',
+          'افتح واتساب ← الإعدادات ← الأجهزة المرتبطة ← الربط برقم الهاتف',
+          'أدخل الكود في الهاتف وسيتم الاتصال خلال ثوانٍ',
+        ],
+      },
+      {
+        key: 'qr',
+        name: 'رمز QR',
+        steps: [
+          'افتح تطبيق واتساب على هاتفك',
+          'اذهب إلى الإعدادات ← الأجهزة المرتبطة',
+          'اضغط "ربط جهاز" وامسح رمز QR الذي سيظهر',
+          'سيتم تأكيد الاتصال خلال ثوانٍ',
+        ],
+      },
+    ],
     identifierLabel: 'رقم الواتساب',
-    identifierPlaceholder: '+968 9999 1111',
+    identifierPlaceholder: '9999 1111',
+    identifierType: 'phone',
   },
   {
     type: 'messenger',
@@ -91,20 +138,47 @@ export const CHANNEL_TYPES: ChannelTypeMeta[] = [
     type: 'telegram',
     category: 'communication',
     name: 'Telegram',
-    tagline: 'بوت احترافي بدون قيود',
+    tagline: 'اربط حسابك الشخصي عبر MTProto',
     description:
-      'اربط بوت Telegram لخدمة عملائك. يدعم النص، الأزرار التفاعلية، الوسائط، وعمليات بدون حد للرسائل اليومية.',
+      'اربط حساب Telegram الخاص بك (الشخصي أو Business) باستخدام بروتوكول MTProto الرسمي. تستقبل وترسل الرسائل من حسابك مباشرة بدون الحاجة لإنشاء بوت.',
     brandColor: '#0088CC',
     steps: [
-      'افتح BotFather على Telegram وأرسل /newbot',
-      'اختر اسماً وusername للبوت',
-      'انسخ التوكن الذي يرسله لك BotFather',
-      'الصق التوكن والبيانات في النموذج واضغط ربط',
+      'افتح my.telegram.org/apps وسجّل الدخول برقم هاتفك',
+      'أنشئ تطبيقاً جديداً واحصل على API ID و API Hash',
+      'أدخل رقم الهاتف و API ID و API Hash في النموذج',
+      'سيُرسل Telegram كود تحقق إلى حسابك — أدخله لإكمال الربط',
     ],
-    identifierLabel: 'اسم المستخدم (Username)',
-    identifierPlaceholder: 'MyBusinessBot',
+    identifierLabel: 'رقم الهاتف',
+    identifierPlaceholder: '9999 1111',
+    identifierType: 'phone',
     credentials: [
-      { key: 'botToken', label: 'رمز البوت (Bot Token)', placeholder: '123456:ABCdefGhIJklmNoPQRstUVwxyz', type: 'password', hint: 'التوكن الذي يرسله BotFather بعد إنشاء البوت' },
+      { key: 'apiId', label: 'API ID', placeholder: '1234567', type: 'text', hint: 'من my.telegram.org/apps بعد إنشاء التطبيق' },
+      { key: 'apiHash', label: 'API Hash', placeholder: 'abcdef1234567890abcdef1234567890', type: 'password', hint: 'الكود السري المرتبط بـ API ID' },
+      { key: 'loginCode', label: 'كود التحقق', placeholder: '12345', type: 'text', hint: 'الكود المُرسل إلى حساب Telegram الخاص بك بعد إدخال الرقم' },
+      { key: 'twoFactorPassword', label: 'كلمة مرور التحقق بخطوتين (اختياري)', placeholder: '••••••••', type: 'password', hint: 'فقط إذا كان مفعّلاً على حسابك' },
+    ],
+    docsUrl: 'https://core.telegram.org/api/obtaining_api_id',
+  },
+  {
+    type: 'x',
+    category: 'communication',
+    name: 'X (Twitter)',
+    tagline: 'استقبل الرسائل المباشرة من X',
+    description:
+      'اربط حساب X الخاص بأعمالك لاستقبال الرسائل المباشرة (DMs) والرد عليها من Chatly. يدعم النص والوسائط.',
+    brandColor: '#111111',
+    steps: [
+      'سجّل الدخول في developer.x.com وأنشئ تطبيقاً جديداً',
+      'انسخ API Key و API Secret و Access Token',
+      'الصق البيانات في النموذج أدناه',
+      'انسخ Webhook URL وأضفه في إعدادات التطبيق',
+    ],
+    identifierLabel: 'اسم المستخدم',
+    identifierPlaceholder: '@username',
+    credentials: [
+      { key: 'apiKey', label: 'API Key', placeholder: 'xxxx...', type: 'text' },
+      { key: 'apiSecret', label: 'API Secret', placeholder: 'xxxx...', type: 'password' },
+      { key: 'accessToken', label: 'Access Token', placeholder: 'xxxx...', type: 'textarea' },
     ],
     needsWebhook: true,
   },
@@ -131,13 +205,46 @@ export const CHANNEL_TYPES: ChannelTypeMeta[] = [
     name: 'البريد الإلكتروني',
     tagline: 'إرسال حملات تسويقية وإشعارات عبر الإيميل',
     description:
-      'اربط حساب بريد إلكتروني (Gmail / Outlook / SMTP) لإرسال الحملات التسويقية والإشعارات. يُدار بشكل منفصل عن قنوات المحادثات.',
+      'اربط حساب بريد إلكتروني (Gmail / Microsoft / SMTP مخصص) لإرسال الحملات التسويقية والإشعارات. يُدار بشكل منفصل عن قنوات المحادثات.',
     brandColor: '#EA4335',
     steps: [
-      'اختر مزود البريد (Gmail / Outlook / SMTP)',
+      'اختر مزود البريد (Gmail / Microsoft / SMTP)',
       'أدخل بيانات SMTP لإرسال الرسائل',
       'أدخل بيانات IMAP لتتبع الردود (اختياري)',
       'أرسل بريد تجريبي للتأكد من الإعدادات',
+    ],
+    methods: [
+      {
+        key: 'gmail',
+        name: 'Gmail / Google Workspace',
+        badge: { label: 'موصى به ★', cls: 'bg-success/15 text-success' },
+        steps: [
+          'فعّل التحقق بخطوتين على حسابك من myaccount.google.com/security',
+          'أنشئ كلمة مرور تطبيق (App Password) من Security ← App passwords',
+          'أدخل بريدك الإلكتروني وكلمة مرور التطبيق في النموذج',
+          'سيستخدم النظام smtp.gmail.com:587 تلقائياً',
+        ],
+      },
+      {
+        key: 'microsoft',
+        name: 'Microsoft 365 / Outlook',
+        steps: [
+          'سجّل الدخول في portal.azure.com وأنشئ App Registration',
+          'فعّل صلاحيات Mail.Send و Mail.Read على Microsoft Graph',
+          'انسخ Client ID و Client Secret و Tenant ID',
+          'الصق البيانات في النموذج لإكمال الربط',
+        ],
+      },
+      {
+        key: 'smtp',
+        name: 'SMTP مخصص',
+        steps: [
+          'احصل على بيانات SMTP من مزوّد البريد (Host / Port / User / Pass)',
+          'أدخل البيانات في النموذج — يفضّل المنفذ 587 مع TLS',
+          'اختياري: أضف بيانات IMAP لتتبع الردود الواردة',
+          'أرسل بريداً تجريبياً للتأكد من نجاح الإعداد',
+        ],
+      },
     ],
     identifierLabel: 'البريد الإلكتروني',
     identifierPlaceholder: 'support@example.com',

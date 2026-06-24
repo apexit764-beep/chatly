@@ -1,5 +1,7 @@
 export { Button } from './Button';
 export { Input, Textarea } from './Input';
+export { PhoneField, PHONE_COUNTRIES } from './PhoneField';
+export type { CountryOption, PhoneFieldProps } from './PhoneField';
 export { Select } from './Select';
 export { Badge } from './Badge';
 export { Avatar } from './Avatar';

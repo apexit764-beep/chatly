@@ -12,6 +12,7 @@ const Overview = lazy(() => import('@pages/Overview'));
 const Inbox = lazy(() => import('@pages/Inbox'));
 const Contacts = lazy(() => import('@pages/Contacts'));
 const Campaigns = lazy(() => import('@pages/Campaigns'));
+const CampaignTemplates = lazy(() => import('@pages/CampaignTemplates'));
 const SavedReplies = lazy(() => import('@pages/SavedReplies'));
 const Team = lazy(() => import('@pages/Team'));
 const Roles = lazy(() => import('@pages/Roles'));
@@ -99,6 +100,7 @@ export default function App(): JSX.Element {
           <Route path="/channels/:type" element={<ChannelDetail />} />
           <Route path="/departments" element={<Departments />} />
           <Route path="/campaigns" element={<Campaigns />} />
+          <Route path="/campaigns/templates" element={<CampaignTemplates />} />
           <Route path="/saved-replies" element={<SavedReplies />} />
           <Route path="/templates" element={<Navigate to="/saved-replies" replace />} />
           <Route path="/team" element={<Team />} />

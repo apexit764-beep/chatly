@@ -8,39 +8,18 @@ import {
   Cloud,
   QrCode,
   AlertTriangle,
-  Search,
-  Phone,
   KeyRound,
   Copy,
+  Eye,
+  EyeOff,
+  RefreshCw,
   Loader2,
-  ChevronDown,
 } from 'lucide-react';
-import { Avatar, Input } from '@components/ui';
+import { Avatar, Input, PhoneField as SharedPhoneField } from '@components/ui';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { cn } from '@/utils/cn';
 import { WhatsAppIcon } from '@components/ui/BrandIcons';
-
-const COUNTRIES = [
-  { code: '+968', flag: '🇴🇲', name: 'عُمان' },
-  { code: '+971', flag: '🇦🇪', name: 'الإمارات' },
-  { code: '+966', flag: '🇸🇦', name: 'السعودية' },
-  { code: '+974', flag: '🇶🇦', name: 'قطر' },
-  { code: '+973', flag: '🇧🇭', name: 'البحرين' },
-  { code: '+965', flag: '🇰🇼', name: 'الكويت' },
-  { code: '+962', flag: '🇯🇴', name: 'الأردن' },
-  { code: '+961', flag: '🇱🇧', name: 'لبنان' },
-  { code: '+20', flag: '🇪🇬', name: 'مصر' },
-  { code: '+212', flag: '🇲🇦', name: 'المغرب' },
-  { code: '+213', flag: '🇩🇿', name: 'الجزائر' },
-  { code: '+216', flag: '🇹🇳', name: 'تونس' },
-  { code: '+1', flag: '🇺🇸', name: 'أمريكا/كندا' },
-  { code: '+44', flag: '🇬🇧', name: 'بريطانيا' },
-  { code: '+33', flag: '🇫🇷', name: 'فرنسا' },
-  { code: '+49', flag: '🇩🇪', name: 'ألمانيا' },
-  { code: '+90', flag: '🇹🇷', name: 'تركيا' },
-  { code: '+91', flag: '🇮🇳', name: 'الهند' },
-];
 
 type ConnectionMethod = 'cloud' | 'qr' | 'pairing';
 
@@ -211,6 +190,22 @@ export default function WhatsAppConnectWizard({
             >
               إلغاء
             </button>
+            {currentKey === 'connect' && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!state.phoneNumberId.trim() || !state.accessToken.trim()) {
+                    showToast('أدخل Phone Number ID و Access Token أولاً', 'error');
+                    return;
+                  }
+                  showToast('تم اختبار الاتصال بنجاح ✓', 'success');
+                }}
+                className="h-10 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex items-center gap-2"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                اختبار الاتصال
+              </button>
+            )}
             <button
               onClick={next}
               disabled={currentKey === 'method' && !state.method}
@@ -331,61 +326,166 @@ function MethodStep({
 function ConnectStep({
   state, setState,
 }: { state: WizardState; setState: (s: WizardState) => void }): JSX.Element {
+  const showToast = useUIStore((s) => s.showToast);
+  const [showToken, setShowToken] = useState(false);
+
+  const copy = (text: string, label: string): void => {
+    if (!text) { showToast(`لا يوجد ${label} للنسخ`, 'error'); return; }
+    void navigator.clipboard.writeText(text);
+    showToast(`تم نسخ ${label}`, 'success');
+  };
+  const regenerateVerifyToken = (): void => {
+    const token = Array.from({ length: 16 }, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]).join('');
+    setState({ ...state, verifyToken: `wh_${token}` });
+    showToast('تم توليد Verify Token جديد', 'success');
+  };
+
   return (
     <div className="space-y-3">
-      <Input
-        label="اسم القناة الداخلي"
-        value={state.channelName}
-        onChange={(e) => setState({ ...state, channelName: e.target.value })}
-        placeholder="مثال: المبيعات"
-      />
-      <PhoneField state={state} setState={setState} />
-
-      <div className="space-y-3 p-3 rounded-card bg-bg-light dark:bg-bg-dark">
-        <p className="text-[11px] text-muted-light dark:text-muted-dark">
-          من <a className="text-primary underline" href="https://business.facebook.com" target="_blank" rel="noreferrer">business.facebook.com</a> ← الإعدادات ← WhatsApp Accounts
-        </p>
+      {/* Row 1 — display name + WhatsApp number */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input
-          label="Phone Number ID"
-          value={state.phoneNumberId}
-          onChange={(e) => setState({ ...state, phoneNumberId: e.target.value })}
-          placeholder="123456789012345"
+          label="اسم الرقم (للعرض)"
+          value={state.channelName}
+          onChange={(e) => setState({ ...state, channelName: e.target.value })}
+          placeholder="مثال: الرقم الرئيسي"
         />
-        <Input
-          label="WhatsApp Business Account ID"
-          value={state.wabaId}
-          onChange={(e) => setState({ ...state, wabaId: e.target.value })}
-          placeholder="123456789012345"
-        />
-        <div className="space-y-1.5">
-          <label className="text-small font-medium text-muted-light dark:text-muted-dark">Access Token</label>
-          <textarea
-            value={state.accessToken}
-            onChange={(e) => setState({ ...state, accessToken: e.target.value })}
-            rows={2}
-            placeholder="EAAxxxx..."
-            className="w-full px-3 py-2 rounded-input bg-white dark:bg-surface-dark border border-transparent font-mono text-[11px] focus:outline-none focus:border-primary"
-          />
-        </div>
-        <Input
-          label="Graph API Version"
-          value={state.graphApiVersion}
-          onChange={(e) => setState({ ...state, graphApiVersion: e.target.value })}
-          placeholder="v23.0 (latest)"
-        />
-        <Input
-          label="Callback URL"
-          value={state.callbackUrl}
-          onChange={(e) => setState({ ...state, callbackUrl: e.target.value })}
-          placeholder="https://yourserver.com/webhook/whatsapp"
-        />
-        <Input
-          label="Verify Token"
-          value={state.verifyToken}
-          onChange={(e) => setState({ ...state, verifyToken: e.target.value })}
-          placeholder="your-verify-token"
+        <SharedPhoneField
+          label="رقم الواتساب"
+          countryCode={state.countryCode}
+          phone={state.phone}
+          onCountryCodeChange={(c) => setState({ ...state, countryCode: c })}
+          onPhoneChange={(p) => setState({ ...state, phone: p.replace(/\D/g, '') })}
+          placeholder="9212 3456"
         />
       </div>
+
+      {/* Phone Number ID */}
+      <FieldGroup label="Phone Number ID" hint="معرّف الرقم في Meta — في إعدادات API Setup ← WhatsApp">
+        <Input
+          value={state.phoneNumberId}
+          onChange={(e) => setState({ ...state, phoneNumberId: e.target.value })}
+          placeholder="104872819283746"
+        />
+      </FieldGroup>
+
+      {/* WABA ID */}
+      <FieldGroup label="WhatsApp Business Account ID" hint="معرّف حساب الأعمال الذي يضمّ الأرقام (WABA ID)">
+        <Input
+          value={state.wabaId}
+          onChange={(e) => setState({ ...state, wabaId: e.target.value })}
+          placeholder="237456891023456"
+        />
+      </FieldGroup>
+
+      {/* Access Token */}
+      <FieldGroup label="Access Token" hint="رمز المصادقة الدائم من System User في Business Settings في Meta">
+        <div className="relative">
+          <span className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark pointer-events-none">
+            <KeyRound className="h-4 w-4" />
+          </span>
+          <input
+            type={showToken ? 'text' : 'password'}
+            value={state.accessToken}
+            onChange={(e) => setState({ ...state, accessToken: e.target.value })}
+            placeholder="EAAG..."
+            className="w-full h-10 ps-10 pe-10 rounded-input bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-mono text-[12px]"
+          />
+          <button
+            type="button"
+            onClick={() => setShowToken((v) => !v)}
+            className="absolute start-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark flex items-center justify-center"
+            aria-label="إظهار/إخفاء"
+          >
+            {showToken ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          </button>
+        </div>
+      </FieldGroup>
+
+      {/* Row 5 — Callback URL + Graph API Version */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <FieldGroup label="Callback URL" hint="انسخ هذا الرابط والصقه في إعدادات Webhook بـ Meta">
+          <FieldWithAction
+            value={state.callbackUrl}
+            onChange={(v) => setState({ ...state, callbackUrl: v })}
+            placeholder="https://yourserver.com/webhook/whatsapp"
+            actions={[
+              { icon: Copy, label: 'نسخ', onClick: () => copy(state.callbackUrl, 'Callback URL') },
+            ]}
+          />
+        </FieldGroup>
+        <FieldGroup label="إصدار Graph API" hint="إصدار Graph API المستخدم في طلبات الإرسال — استخدم آخر إصدار مستقر">
+          <select
+            value={state.graphApiVersion}
+            onChange={(e) => setState({ ...state, graphApiVersion: e.target.value })}
+            className="w-full h-10 ps-3 pe-9 rounded-input bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary"
+          >
+            <option value="v23.0 (latest)">v23.0 (latest)</option>
+            <option value="v22.0">v22.0</option>
+            <option value="v21.0">v21.0</option>
+            <option value="v20.0">v20.0</option>
+            <option value="v19.0">v19.0</option>
+          </select>
+        </FieldGroup>
+      </div>
+
+      {/* Verify Token */}
+      <FieldGroup label="Verify Token" hint="نفس القيمة تُكتب هنا وفي إعدادات Webhook في Meta — استخدم زر التوليد لإنشاء قيمة آمنة">
+        <FieldWithAction
+          value={state.verifyToken}
+          onChange={(v) => setState({ ...state, verifyToken: v })}
+          placeholder="wh_xxxxxxxxxxxxxxxx"
+          actions={[
+            { icon: RefreshCw, label: 'توليد', onClick: regenerateVerifyToken },
+            { icon: Copy, label: 'نسخ', onClick: () => copy(state.verifyToken, 'Verify Token') },
+          ]}
+        />
+      </FieldGroup>
+    </div>
+  );
+}
+
+function FieldGroup({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }): JSX.Element {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-small font-medium block">{label}</label>
+      {children}
+      {hint && <p className="text-[11px] text-muted-light dark:text-muted-dark leading-relaxed">{hint}</p>}
+    </div>
+  );
+}
+
+function FieldWithAction({
+  value, onChange, placeholder, actions,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  actions: Array<{ icon: typeof Copy; label: string; onClick: () => void }>;
+}): JSX.Element {
+  return (
+    <div className="flex items-stretch gap-2">
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        dir="ltr"
+        className="flex-1 min-w-0 h-10 px-3 rounded-input bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-mono text-[12px]"
+      />
+      {actions.map((a) => {
+        const Icon = a.icon;
+        return (
+          <button
+            key={a.label}
+            type="button"
+            onClick={a.onClick}
+            title={a.label}
+            className="h-10 w-10 rounded-input border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:text-current hover:border-primary flex items-center justify-center flex-shrink-0"
+          >
+            <Icon className="h-4 w-4" />
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -532,7 +632,14 @@ function PairingStep({
         <p className="text-small text-muted-light dark:text-muted-dark text-center">
           أدخل رقم الهاتف للحصول على كود اقتران من 8 أحرف
         </p>
-        <PhoneField state={state} setState={setState} />
+        <SharedPhoneField
+        label="رقم الهاتف"
+        countryCode={state.countryCode}
+        phone={state.phone}
+        onCountryCodeChange={(c) => setState({ ...state, countryCode: c })}
+        onPhoneChange={(p) => setState({ ...state, phone: p.replace(/\D/g, '') })}
+        placeholder="9999 1111"
+      />
         <button
           onClick={generate}
           className="w-full h-11 rounded-full text-white text-small font-semibold hover:opacity-90"
@@ -586,75 +693,4 @@ function PairingStep({
   );
 }
 
-/* ===== Reusable bits ===== */
-
-function PhoneField({
-  state, setState,
-}: { state: WizardState; setState: (s: WizardState) => void }): JSX.Element {
-  const [countryOpen, setCountryOpen] = useState(false);
-  const [countrySearch, setCountrySearch] = useState('');
-  const filtered = COUNTRIES.filter((c) => !countrySearch || c.name.includes(countrySearch) || c.code.includes(countrySearch));
-  const current = COUNTRIES.find((c) => c.code === state.countryCode);
-  return (
-    <div className="grid grid-cols-[150px_1fr] gap-2">
-      <div>
-        <label className="text-small font-medium text-muted-light dark:text-muted-dark mb-1.5 block">الدولة</label>
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setCountryOpen((v) => !v)}
-            className="w-full h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body flex items-center gap-2 hover:border-border-light dark:hover:border-border-dark"
-          >
-            <span className="text-base">{current?.flag}</span>
-            <span className="tabular-nums font-semibold">{state.countryCode}</span>
-            <ChevronDown className="h-3 w-3 ms-auto text-muted-light" />
-          </button>
-          {countryOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setCountryOpen(false)} />
-              <div className="absolute start-0 mt-1 w-72 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1 z-20">
-                <div className="relative p-2">
-                  <Search className="h-3.5 w-3.5 absolute end-4 top-1/2 -translate-y-1/2 text-muted-light" />
-                  <input
-                    autoFocus
-                    type="text"
-                    placeholder="ابحث..."
-                    value={countrySearch}
-                    onChange={(e) => setCountrySearch(e.target.value)}
-                    className="w-full h-8 ps-3 pe-8 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary"
-                  />
-                </div>
-                <div className="max-h-60 overflow-y-auto">
-                  {filtered.map((c) => (
-                    <button
-                      key={c.code}
-                      onClick={() => {
-                        setState({ ...state, countryCode: c.code });
-                        setCountryOpen(false);
-                        setCountrySearch('');
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-small hover:bg-bg-light dark:hover:bg-bg-dark text-start"
-                    >
-                      <span className="text-base">{c.flag}</span>
-                      <span className="flex-1">{c.name}</span>
-                      <span className="text-muted-light dark:text-muted-dark tabular-nums">{c.code}</span>
-                      {state.countryCode === c.code && <Check className="h-3.5 w-3.5 text-primary" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-      <Input
-        label="رقم الهاتف"
-        value={state.phone}
-        onChange={(e) => setState({ ...state, phone: e.target.value.replace(/\D/g, '') })}
-        placeholder="9999 1111"
-        icon={<Phone className="h-4 w-4" />}
-      />
-    </div>
-  );
-}
 

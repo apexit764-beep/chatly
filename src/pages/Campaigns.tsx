@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Plus,
   Megaphone,
@@ -53,7 +54,8 @@ export default function Campaigns(): JSX.Element {
   const showToast = useUIStore((s) => s.showToast);
   const { confirm } = useConfirm();
 
-  const [tab, setTab] = useState<'campaigns' | 'templates'>('campaigns');
+  const navigate = useNavigate();
+  const location = useLocation();
   const [channelFilter, setChannelFilter] = useState<CampaignChannelType>('whatsapp');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Campaign | null>(null);
@@ -75,6 +77,28 @@ export default function Campaigns(): JSX.Element {
     attachmentName: string;
   }>({ name: '', message: '', audience: 'all', schedule: 'now', scheduledAt: '', minDelay: 15, maxDelay: 45, channelType: 'whatsapp', attachmentName: '' });
   const [errors, setErrors] = useState<{ name?: string; message?: string }>({});
+
+  // Pre-fill from a template that the user picked on /campaigns/templates
+  useEffect(() => {
+    const tpl = (location.state as { useTemplate?: CampaignTemplate } | null)?.useTemplate;
+    if (!tpl) return;
+    setForm({
+      name: '',
+      message: tpl.message,
+      audience: tpl.defaultAudience,
+      schedule: 'now',
+      scheduledAt: '',
+      minDelay: tpl.defaultMinDelay,
+      maxDelay: tpl.defaultMaxDelay,
+      channelType: channelFilter,
+      attachmentName: '',
+    });
+    setEditing(null);
+    setErrors({});
+    setModalOpen(true);
+    navigate(location.pathname, { replace: true, state: null });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   const filteredCampaigns = campaigns.filter((c) => (c.channelType ?? 'whatsapp') === channelFilter);
 
@@ -275,61 +299,20 @@ export default function Campaigns(): JSX.Element {
   return (
     <div className="p-4 lg:p-6 space-y-5 page-fade">
       {/* Page header */}
-      <div>
-        <h1 className="text-h1 font-bold">الحملات التسويقية</h1>
-        <p className="text-body text-muted-light dark:text-muted-dark mt-1">
-          {tab === 'campaigns'
-            ? 'أنشئ حملات رسائل جماعية لعملائك وتابع نتائجها'
-            : 'قوالب جاهزة لحملاتك المتكررة — استخدمها مع نقرة واحدة'}
-        </p>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-h1 font-bold">الحملات التسويقية</h1>
+          <p className="text-body text-muted-light dark:text-muted-dark mt-1">
+            أنشئ حملات رسائل جماعية لعملائك وتابع نتائجها
+          </p>
+        </div>
         <button
-          onClick={() => setTab('campaigns')}
-          className={cn(
-            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2',
-            tab === 'campaigns' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
-          )}
+          onClick={() => navigate('/campaigns/templates')}
+          className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex items-center gap-2"
         >
-          <Megaphone className="h-4 w-4" />
-          الحملات
-        </button>
-        <button
-          onClick={() => setTab('templates')}
-          className={cn(
-            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2',
-            tab === 'templates' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
-          )}
-        >
-          <FileText className="h-4 w-4" />
-          القوالب
+          <FileText className="h-4 w-4" /> إدارة القوالب
         </button>
       </div>
-
-      {tab === 'templates' ? (
-        <CampaignTemplatesSection
-          onUseTemplate={(t) => {
-            setForm({
-              name: '',
-              message: t.message,
-              audience: t.defaultAudience,
-              schedule: 'now',
-              scheduledAt: '',
-              minDelay: t.defaultMinDelay,
-              maxDelay: t.defaultMaxDelay,
-              channelType: channelFilter,
-              attachmentName: '',
-            });
-            setEditing(null);
-            setErrors({});
-            setModalOpen(true);
-            setTab('campaigns');
-          }}
-        />
-      ) : (
-      <>
 
       {/* Channel sub-tabs */}
       <div className="flex items-center gap-2">
@@ -384,8 +367,6 @@ export default function Campaigns(): JSX.Element {
           </>
         }
       />
-      </>
-      )}
 
       {/* Create/Edit drawer */}
       <Drawer
@@ -608,7 +589,7 @@ interface FormState {
  * CRUD (create / edit / delete) lives here. Selecting "استخدم" calls back to the
  * parent to switch to the campaigns tab with the form pre-filled.
  */
-function CampaignTemplatesSection({
+export function CampaignTemplatesSection({
   onUseTemplate,
 }: {
   onUseTemplate: (t: CampaignTemplate) => void;
@@ -1168,7 +1149,6 @@ function SendingSpeedSection({
   recipients: number;
   onChange: (min: number, max: number) => void;
 }): JSX.Element {
-  const MAX = 180;
   const avg = (minDelay + maxDelay) / 2;
   const risk =
     avg < 5 ? { level: 'high', label: 'خطر مرتفع', color: 'text-danger', bg: 'bg-danger/10', border: 'border-danger/30', track: 'bg-danger', msg: 'فترة قصيرة جداً — قد يُعتبر إرسالاً جماعياً ويُحظر حسابك خلال دقائق.' } :
@@ -1187,9 +1167,6 @@ function SendingSpeedSection({
     return `${h} ساعة${m > 0 ? ` و${m} دقيقة` : ''}`;
   })();
 
-  const minPct = (minDelay / MAX) * 100;
-  const maxPct = (maxDelay / MAX) * 100;
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -1199,64 +1176,18 @@ function SendingSpeedSection({
         </span>
       </div>
 
-      {/* Dual-range slider visualization */}
-      <div className="rounded-card border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark p-3 space-y-3">
-        {/* Min slider */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] text-muted-light dark:text-muted-dark">أقل ثوانٍ</span>
-            <span className="text-small font-bold tabular-nums">{minDelay} <span className="text-[10px] font-normal text-muted-light dark:text-muted-dark">ث</span></span>
-          </div>
-          <input
-            type="range"
-            min={1}
-            max={MAX}
-            value={minDelay}
-            onChange={(e) => {
-              const v = Math.min(Number(e.target.value), maxDelay);
-              onChange(v, maxDelay);
-            }}
-            className={cn('w-full h-1.5 appearance-none cursor-pointer rounded-full accent-primary', risk.track.replace('bg-', 'accent-'))}
-            style={{
-              background: `linear-gradient(to left, var(--tw-color, currentColor) 0%, var(--tw-color, currentColor) ${minPct}%, rgba(0,0,0,0.08) ${minPct}%, rgba(0,0,0,0.08) 100%)`,
-            }}
-          />
-        </div>
-        {/* Max slider */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] text-muted-light dark:text-muted-dark">أكثر ثوانٍ</span>
-            <span className="text-small font-bold tabular-nums">{maxDelay} <span className="text-[10px] font-normal text-muted-light dark:text-muted-dark">ث</span></span>
-          </div>
-          <input
-            type="range"
-            min={1}
-            max={MAX}
-            value={maxDelay}
-            onChange={(e) => {
-              const v = Math.max(Number(e.target.value), minDelay);
-              onChange(minDelay, v);
-            }}
-            className="w-full h-1.5 appearance-none cursor-pointer rounded-full accent-primary"
-            style={{
-              background: `linear-gradient(to left, var(--tw-color, currentColor) 0%, var(--tw-color, currentColor) ${maxPct}%, rgba(0,0,0,0.08) ${maxPct}%, rgba(0,0,0,0.08) 100%)`,
-            }}
-          />
-        </div>
-
-        {/* Range visualization */}
-        <div className="pt-1.5 border-t border-border-light dark:border-border-dark flex items-center justify-between text-[11px]">
-          <span className="text-muted-light dark:text-muted-dark">متوسط: <strong className="text-current tabular-nums">{Math.round(avg)} ث</strong></span>
-          <span className="text-muted-light dark:text-muted-dark">المدة المتوقعة: <strong className="text-current tabular-nums">{totalLabel}</strong></span>
-        </div>
+      {/* Preset options */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <PresetChip title="سريع" range="5-15 ث" active={minDelay === 5 && maxDelay === 15} onClick={() => onChange(5, 15)} />
+        <PresetChip title="معتدل" range="15-45 ث" active={minDelay === 15 && maxDelay === 45} onClick={() => onChange(15, 45)} recommended />
+        <PresetChip title="حذر" range="30-90 ث" active={minDelay === 30 && maxDelay === 90} onClick={() => onChange(30, 90)} />
+        <PresetChip title="آمن جداً" range="60-180 ث" active={minDelay === 60 && maxDelay === 180} onClick={() => onChange(60, 180)} />
       </div>
 
-      {/* Preset chips */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <PresetChip label="سريع (5-15ث)" active={minDelay === 5 && maxDelay === 15} onClick={() => onChange(5, 15)} />
-        <PresetChip label="معتدل (15-45ث)" active={minDelay === 15 && maxDelay === 45} onClick={() => onChange(15, 45)} recommended />
-        <PresetChip label="حذر (30-90ث)" active={minDelay === 30 && maxDelay === 90} onClick={() => onChange(30, 90)} />
-        <PresetChip label="آمن جداً (60-180ث)" active={minDelay === 60 && maxDelay === 180} onClick={() => onChange(60, 180)} />
+      {/* Estimated total duration */}
+      <div className="flex items-center justify-between text-[11px] text-muted-light dark:text-muted-dark px-1">
+        <span>متوسط: <strong className="text-current tabular-nums">{Math.round(avg)} ث</strong></span>
+        <span>المدة المتوقعة: <strong className="text-current tabular-nums">{totalLabel}</strong></span>
       </div>
 
       {/* Risk message */}
@@ -1270,13 +1201,13 @@ function SendingSpeedSection({
   );
 }
 
-function PresetChip({ label, active, recommended, onClick }: { label: string; active: boolean; recommended?: boolean; onClick: () => void }): JSX.Element {
+function PresetChip({ title, range, active, recommended, onClick }: { title: string; range: string; active: boolean; recommended?: boolean; onClick: () => void }): JSX.Element {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        'h-7 px-2.5 rounded-full text-[11px] font-medium transition-colors border',
+        'h-16 px-3 rounded-card text-center transition-colors border-2 flex flex-col items-center justify-center gap-0.5',
         active
           ? 'bg-primary text-white border-primary'
           : recommended
@@ -1285,7 +1216,8 @@ function PresetChip({ label, active, recommended, onClick }: { label: string; ac
       )}
       style={active ? { color: '#fff' } : undefined}
     >
-      {label}
+      <span className="text-body font-bold leading-none">{title}</span>
+      <span className={cn('text-[11px] tabular-nums leading-none', active ? 'text-white/80' : 'opacity-70')}>{range}</span>
     </button>
   );
 }

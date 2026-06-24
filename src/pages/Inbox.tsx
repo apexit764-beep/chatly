@@ -51,6 +51,7 @@ import {
   EmojiPicker,
   Input,
   Modal,
+  PhoneField,
   Select,
   useConfirm,
 } from '@components/ui';
@@ -65,21 +66,6 @@ import { downloadCsv } from '@/utils/csv';
 import { cn } from '@/utils/cn';
 import type { Conversation, ConversationStatus, Channel, Department, Contact } from '@/types';
 import type { InboxView } from '@/store/useInboxStore';
-
-const COUNTRY_CODES = [
-  { code: '+972', flag: '🇵🇸', label: 'فلسطين', iso: 'PS' },
-  { code: '+968', flag: '🇴🇲', label: 'عُمان', iso: 'OM' },
-  { code: '+966', flag: '🇸🇦', label: 'السعودية', iso: 'SA' },
-  { code: '+971', flag: '🇦🇪', label: 'الإمارات', iso: 'AE' },
-  { code: '+965', flag: '🇰🇼', label: 'الكويت', iso: 'KW' },
-  { code: '+974', flag: '🇶🇦', label: 'قطر', iso: 'QA' },
-  { code: '+973', flag: '🇧🇭', label: 'البحرين', iso: 'BH' },
-  { code: '+962', flag: '🇯🇴', label: 'الأردن', iso: 'JO' },
-  { code: '+961', flag: '🇱🇧', label: 'لبنان', iso: 'LB' },
-  { code: '+20', flag: '🇪🇬', label: 'مصر', iso: 'EG' },
-  { code: '+212', flag: '🇲🇦', label: 'المغرب', iso: 'MA' },
-  { code: '+964', flag: '🇮🇶', label: 'العراق', iso: 'IQ' },
-];
 
 export default function Inbox(): JSX.Element {
   const conversations = useDataStore((s) => s.conversations);
@@ -891,7 +877,6 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [phoneCode, setPhoneCode] = useState('+972');
-  const [phoneDropdownOpen, setPhoneDropdownOpen] = useState(false);
   const [departmentId, setDepartmentId] = useState<string>('');
   const [agentId, setAgentId] = useState<string>('');
   const [templateId, setTemplateId] = useState<string>('');
@@ -1159,52 +1144,13 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="اسم العميل (مثل: أحمد محمد)"
               />
-              <div className="relative flex items-center h-10 bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-input focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-                <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark pointer-events-none">
-                  <Phone className="h-4 w-4" />
-                </span>
-                <input
-                  value={newPhone}
-                  onChange={(e) => setNewPhone(e.target.value)}
-                  placeholder="599 123 456"
-                  className="flex-1 h-full bg-transparent ps-10 pe-2 text-body focus:outline-none placeholder:text-muted-light/50 dark:placeholder:text-muted-dark/50"
-                  dir="ltr"
-                  inputMode="tel"
-                />
-                <div className="h-6 w-px bg-border-light dark:bg-border-dark flex-shrink-0" />
-                <button
-                  type="button"
-                  onClick={() => setPhoneDropdownOpen(!phoneDropdownOpen)}
-                  className="flex items-center gap-1.5 h-full px-2.5 text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark rounded-e-input transition-colors flex-shrink-0"
-                >
-                  <ChevronDown className={cn('h-3.5 w-3.5 text-muted-light dark:text-muted-dark transition-transform', phoneDropdownOpen && 'rotate-180')} />
-                  <span className="font-mono text-muted-light dark:text-muted-dark">{phoneCode}</span>
-                  <span className="text-[11px] font-semibold text-muted-light dark:text-muted-dark">{COUNTRY_CODES.find(c => c.code === phoneCode)?.iso}</span>
-                  <span className="text-base leading-none">{COUNTRY_CODES.find(c => c.code === phoneCode)?.flag}</span>
-                </button>
-                {phoneDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setPhoneDropdownOpen(false)} />
-                    <div className="absolute top-full end-0 mt-1 z-50 w-56 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-xl py-1 max-h-52 overflow-y-auto">
-                      {COUNTRY_CODES.map((cc) => (
-                        <button
-                          key={cc.code}
-                          type="button"
-                          onClick={() => { setPhoneCode(cc.code); setPhoneDropdownOpen(false); }}
-                          className={cn(
-                            'flex items-center gap-2.5 w-full px-3 py-2 text-small hover:bg-primary/10 transition-colors',
-                            phoneCode === cc.code && 'bg-primary/10 text-primary font-semibold'
-                          )}
-                        >
-                          <span className="text-base leading-none">{cc.flag}</span>
-                          <span className="flex-1 text-start">{cc.label}</span>
-                          <span className="font-mono text-muted-light dark:text-muted-dark text-[11px]">{cc.code}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
+              <PhoneField
+                countryCode={phoneCode}
+                phone={newPhone}
+                onCountryCodeChange={setPhoneCode}
+                onPhoneChange={setNewPhone}
+                placeholder="599 123 456"
+              />
             </div>
           )}
         </Field>

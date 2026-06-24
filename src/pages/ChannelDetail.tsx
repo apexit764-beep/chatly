@@ -17,12 +17,14 @@ import {
   Settings as SettingsIcon,
   Code,
   KeyRound,
+  ChevronDown,
 } from 'lucide-react';
 import {
   Avatar,
   ChannelIcon,
   Input,
   Modal,
+  PhoneField,
   Select,
   useConfirm,
 } from '@components/ui';
@@ -57,12 +59,13 @@ export default function ChannelDetail(): JSX.Element {
 
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<Channel | null>(null);
-  const [form, setForm] = useState({ name: '', identifier: '', departmentId: '' });
+  const [form, setForm] = useState({ name: '', identifier: '', countryCode: '+968', departmentId: '' });
   const [creds, setCreds] = useState<Record<string, string>>({});
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [whatsappWizardOpen, setWhatsappWizardOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('overview');
+  const [openMethod, setOpenMethod] = useState<string | null>(meta?.methods?.[0]?.key ?? null);
 
   // Per-channel tabs. Base channels keep a single "overview" tab; widget adds settings tabs.
   const tabs: ChannelTab[] = meta?.type === 'widget'
@@ -92,14 +95,20 @@ export default function ChannelDetail(): JSX.Element {
       return;
     }
     setEditing(null);
-    setForm({ name: '', identifier: '', departmentId: '' });
+    setForm({ name: '', identifier: '', countryCode: '+968', departmentId: '' });
     setCreds({});
     setAddOpen(true);
   };
 
   const openEdit = (c: Channel): void => {
     setEditing(c);
-    setForm({ name: c.name, identifier: c.identifier, departmentId: c.departmentId ?? '' });
+    let cc = '+968';
+    let local = c.identifier;
+    if (meta?.identifierType === 'phone') {
+      const m = c.identifier.match(/^(\+\d{1,4})\s*(.*)$/);
+      if (m) { cc = m[1]; local = m[2].replace(/\D/g, ''); }
+    }
+    setForm({ name: c.name, identifier: local, countryCode: cc, departmentId: c.departmentId ?? '' });
     setCreds(c.credentials ?? {});
     setAddOpen(true);
     setOpenMenu(null);
@@ -110,6 +119,9 @@ export default function ChannelDetail(): JSX.Element {
       showToast('الاسم والمعرّف مطلوبان', 'error');
       return;
     }
+    const fullIdentifier = meta?.identifierType === 'phone'
+      ? `${form.countryCode}${form.identifier.replace(/^0+/, '')}`
+      : form.identifier;
     // Require all declared credential fields before connecting
     const missing = (meta.credentials ?? []).filter((f) => !creds[f.key]?.trim());
     if (missing.length > 0) {
@@ -120,7 +132,7 @@ export default function ChannelDetail(): JSX.Element {
     if (editing) {
       updateChannel(editing.id, {
         name: form.name,
-        identifier: form.identifier,
+        identifier: fullIdentifier,
         departmentId: form.departmentId || null,
         ...(hasCreds ? { credentials: creds } : {}),
       });
@@ -129,7 +141,7 @@ export default function ChannelDetail(): JSX.Element {
       addChannel({
         type: meta.type,
         name: form.name,
-        identifier: form.identifier,
+        identifier: fullIdentifier,
         status: 'pending',
         departmentId: form.departmentId || null,
         ...(hasCreds ? { credentials: creds } : {}),
@@ -394,19 +406,67 @@ export default function ChannelDetail(): JSX.Element {
         <div className="space-y-5">
           <section className="bg-white dark:bg-surface-dark rounded-card border border-border-light dark:border-border-dark p-5 sticky top-4">
             <h2 className="text-h3 font-bold mb-4">كيفية الربط</h2>
-            <ol className="space-y-3">
-              {meta.steps.map((step, i) => (
-                <li key={i} className="flex gap-3">
-                  <span
-                    className="h-7 w-7 rounded-full text-white text-small font-bold flex items-center justify-center flex-shrink-0"
-                    style={{ background: meta.brandColor }}
-                  >
-                    {i + 1}
-                  </span>
-                  <span className="text-body pt-1 leading-relaxed">{step}</span>
-                </li>
-              ))}
-            </ol>
+            {meta.methods && meta.methods.length > 0 ? (
+              <div className="space-y-2">
+                {meta.methods.map((m) => {
+                  const isOpen = openMethod === m.key;
+                  return (
+                    <div
+                      key={m.key}
+                      className="rounded-card border border-border-light dark:border-border-dark overflow-hidden"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setOpenMethod(isOpen ? null : m.key)}
+                        className="w-full flex items-center gap-2 px-3.5 py-3 hover:bg-bg-light dark:hover:bg-bg-dark transition-colors text-start"
+                      >
+                        <span className="text-body font-bold flex-1">{m.name}</span>
+                        {m.badge && (
+                          <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded-full', m.badge.cls)}>
+                            {m.badge.label}
+                          </span>
+                        )}
+                        <ChevronDown
+                          className={cn(
+                            'h-4 w-4 text-muted-light dark:text-muted-dark transition-transform',
+                            isOpen && 'rotate-180',
+                          )}
+                        />
+                      </button>
+                      {isOpen && (
+                        <ol className="space-y-3 px-3.5 pb-4 pt-1 border-t border-border-light dark:border-border-dark">
+                          {m.steps.map((step, i) => (
+                            <li key={i} className="flex gap-3">
+                              <span
+                                className="h-7 w-7 rounded-full text-white text-small font-bold flex items-center justify-center flex-shrink-0"
+                                style={{ background: meta.brandColor }}
+                              >
+                                {i + 1}
+                              </span>
+                              <span className="text-body pt-1 leading-relaxed">{step}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <ol className="space-y-3">
+                {meta.steps.map((step, i) => (
+                  <li key={i} className="flex gap-3">
+                    <span
+                      className="h-7 w-7 rounded-full text-white text-small font-bold flex items-center justify-center flex-shrink-0"
+                      style={{ background: meta.brandColor }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="text-body pt-1 leading-relaxed">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            )}
             {meta.docsUrl && (
               <a
                 href={meta.docsUrl}
@@ -454,12 +514,23 @@ export default function ChannelDetail(): JSX.Element {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder={`مثال: ${meta.name} - الفرع الرئيسي`}
           />
-          <Input
-            label={meta.identifierLabel}
-            value={form.identifier}
-            onChange={(e) => setForm({ ...form, identifier: e.target.value })}
-            placeholder={meta.identifierPlaceholder}
-          />
+          {meta.identifierType === 'phone' ? (
+            <PhoneField
+              label={meta.identifierLabel}
+              countryCode={form.countryCode}
+              phone={form.identifier}
+              onCountryCodeChange={(c) => setForm({ ...form, countryCode: c })}
+              onPhoneChange={(p) => setForm({ ...form, identifier: p })}
+              placeholder={meta.identifierPlaceholder}
+            />
+          ) : (
+            <Input
+              label={meta.identifierLabel}
+              value={form.identifier}
+              onChange={(e) => setForm({ ...form, identifier: e.target.value })}
+              placeholder={meta.identifierPlaceholder}
+            />
+          )}
 
           {/* Connection credentials (per channel type) */}
           {meta.credentials && meta.credentials.length > 0 && (
