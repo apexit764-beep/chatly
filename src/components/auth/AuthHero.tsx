@@ -65,7 +65,7 @@ export function AuthHero(): JSX.Element {
             <SekaaLogo className="h-9 w-9" />
           </div>
           <div className="text-start">
-            <p className="text-2xl font-extrabold leading-tight">Chatly</p>
+            <p className="text-2xl font-extrabold leading-tight">Qhub</p>
             <p className="text-[11px] opacity-70 leading-tight">Multi-channel CRM</p>
           </div>
         </div>

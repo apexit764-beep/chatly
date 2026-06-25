@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-const KEY = 'chatly_onboarding_v1';
+const KEY = 'qhub_onboarding_v1';
 
 interface Persisted {
   /** User chose "skip for now" — modal hidden, sidebar reminder shown */

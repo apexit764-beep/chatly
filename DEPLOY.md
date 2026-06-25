@@ -1,4 +1,4 @@
-# Chatly — Deployment guide
+# Qhub — Deployment guide
 
 Production site: **https://chats-product.apexes.click/**
 
@@ -17,8 +17,8 @@ which git  >/dev/null || sudo apt-get install -y git
 sudo mkdir -p /var/www/apexes.click
 cd /var/www/apexes.click
 sudo chown $USER:$USER .
-git clone https://github.com/apexit764-beep/chatly.git chatly-src
-cd chatly-src
+git clone https://github.com/apexit764-beep/qhub.git qhub-src
+cd qhub-src
 
 # 3. Build + deploy
 chmod +x deploy.sh
@@ -32,7 +32,7 @@ After this, the live site at `https://chats-product.apexes.click/` should show t
 Every time you `git push` from your local machine, ssh into the server and run:
 
 ```bash
-cd /var/www/apexes.click/chatly-src
+cd /var/www/apexes.click/qhub-src
 ./deploy.sh
 ```
 

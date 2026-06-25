@@ -33,7 +33,7 @@ function readInitial(): { isAuthenticated: boolean; user: AuthUser | null } {
 
 const initial = readInitial();
 
-const CLIENT_CREDS = { email: 'admin@chatly.com', password: 'admin123', name: 'سالم الرواحي' };
+const CLIENT_CREDS = { email: 'admin@qhub.com', password: 'admin123', name: 'سالم الرواحي' };
 const ADMIN_CREDS = { email: 'admin@apexes.click', password: 'admin123', name: 'محمد الكندي' };
 
 export const useAuthStore = create<AuthState>((set) => ({

@@ -260,7 +260,7 @@ export default function ForgotPassword(): JSX.Element {
 
         {/* Footer */}
         <div className="flex items-center justify-between text-small text-muted-light dark:text-muted-dark">
-          <p>&copy; 2026 Chatly &mdash; جميع الحقوق محفوظة</p>
+          <p>&copy; 2026 Qhub &mdash; جميع الحقوق محفوظة</p>
           <div className="flex items-center gap-3">
             <a href="#" className="hover:text-current">الخصوصية</a>
             <a href="#" className="hover:text-current">الشروط</a>

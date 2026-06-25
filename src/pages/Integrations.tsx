@@ -36,7 +36,7 @@ interface IntegrationMeta {
 }
 
 const allIntegrations: IntegrationMeta[] = [
-  { type: 'messenger', name: 'Facebook Messenger', description: 'استقبل رسائل صفحتك على فيسبوك في صندوق Chatly', icon: <Facebook className="h-6 w-6" />, color: 'text-[#0084FF]', bg: 'bg-[#0084FF]/10', category: 'messaging', featured: true },
+  { type: 'messenger', name: 'Facebook Messenger', description: 'استقبل رسائل صفحتك على فيسبوك في صندوق Qhub', icon: <Facebook className="h-6 w-6" />, color: 'text-[#0084FF]', bg: 'bg-[#0084FF]/10', category: 'messaging', featured: true },
   { type: 'instagram', name: 'Instagram Direct', description: 'الرد على الـ DMs والتعليقات في انستجرام', icon: <Instagram className="h-6 w-6" />, color: 'text-[#E4405F]', bg: 'bg-[#E4405F]/10', category: 'messaging', featured: true },
   { type: 'telegram', name: 'Telegram', description: 'بوت تيليجرام لاستقبال الاستفسارات', icon: <TelegramIcon className="h-6 w-6" />, color: 'text-[#0088CC]', bg: 'bg-[#0088CC]/10', category: 'messaging', featured: true },
   { type: 'x', name: 'X (Twitter)', description: 'Direct messages ومنشن من X', icon: <Twitter className="h-6 w-6" />, color: 'text-[#111]', bg: 'bg-[#111]/10', category: 'messaging', featured: true },
@@ -86,7 +86,7 @@ export default function Integrations(): JSX.Element {
             </div>
             <div>
               <h2 className="text-h1 font-bold">التكاملات</h2>
-              <p className="text-body opacity-90">اربط Chatly بالأدوات والمنصات التي تستخدمها يومياً</p>
+              <p className="text-body opacity-90">اربط Qhub بالأدوات والمنصات التي تستخدمها يومياً</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -355,7 +355,7 @@ function ConnectModal({
         </div>
       ) : (
         <div className="space-y-3">
-          <p className="text-small font-semibold">سيتم منح Chatly الصلاحيات التالية:</p>
+          <p className="text-small font-semibold">سيتم منح Qhub الصلاحيات التالية:</p>
           <ul className="space-y-2 text-small">
             <li className="flex items-start gap-2"><Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" /> قراءة الرسائل الواردة</li>
             <li className="flex items-start gap-2"><Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" /> إرسال ردود من خلال {meta.name}</li>

@@ -436,7 +436,7 @@ function DataTab(): JSX.Element {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `chatly-data-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `qhub-data-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
     showToast('تم تصدير البيانات', 'success');

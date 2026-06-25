@@ -126,9 +126,9 @@ export const plans: Plan[] = [
 export const clients: Client[] = [
   {
     id: 'client_1',
-    companyName: 'Chatly',
+    companyName: 'Qhub',
     contactName: 'محمد الكندي',
-    email: 'admin@chatly.com',
+    email: 'admin@qhub.com',
     phone: '+96891234567',
     country: 'OM',
     industry: 'عقارات وتأجير',

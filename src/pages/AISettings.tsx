@@ -756,7 +756,7 @@ export default function AISettings(): JSX.Element {
             <textarea
               value={form.prompt}
               onChange={(e) => update('prompt', e.target.value)}
-              placeholder="مثال: شركة Chatly منصة محادثات متعددة القنوات للشركات. خدماتنا تشمل: ربط واتساب وإنستغرام وفيسبوك ميسنجر، إدارة فرق الدعم، الردود التلقائية بالذكاء الاصطناعي، الحملات التسويقية والقوالب الجاهزة. الأسعار تبدأ من 7 ر.ع/شهر..."
+              placeholder="مثال: شركة Qhub منصة محادثات متعددة القنوات للشركات. خدماتنا تشمل: ربط واتساب وإنستغرام وفيسبوك ميسنجر، إدارة فرق الدعم، الردود التلقائية بالذكاء الاصطناعي، الحملات التسويقية والقوالب الجاهزة. الأسعار تبدأ من 7 ر.ع/شهر..."
               className="w-full min-h-[220px] p-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-y leading-relaxed"
             />
             <div className="flex items-center justify-between gap-2 mt-2 text-[11px]">

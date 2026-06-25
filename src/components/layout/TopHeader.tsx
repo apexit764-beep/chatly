@@ -96,7 +96,7 @@ export function TopHeader(): JSX.Element {
 
       {/* Breadcrumb */}
       <nav className="hidden md:flex items-center gap-1.5 text-small">
-        <span className="text-muted-light dark:text-muted-dark">Chatly</span>
+        <span className="text-muted-light dark:text-muted-dark">Qhub</span>
         <ChevronLeft className="h-3.5 w-3.5 text-muted-light dark:text-muted-dark" />
         <span className="font-semibold">{pageLabel}</span>
       </nav>

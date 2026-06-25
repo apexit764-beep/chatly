@@ -64,7 +64,7 @@ interface AIState {
   reset: () => void;
 }
 
-const DEFAULT_PROMPT = `Chatly منصة محادثات متعددة القنوات للشركات والمتاجر. نساعد العملاء على إدارة كل محادثاتهم من واتساب والبريد وإنستغرام وميسنجر وتلغرام في لوحة واحدة.
+const DEFAULT_PROMPT = `Qhub منصة محادثات متعددة القنوات للشركات والمتاجر. نساعد العملاء على إدارة كل محادثاتهم من واتساب والبريد وإنستغرام وميسنجر وتلغرام في لوحة واحدة.
 
 الخدمات والأسعار:
 - باقة المبتدئ: 7 ر.ع/شهر — 3 موظفين، قناة واحدة، 1000 محادثة شهرياً
@@ -85,7 +85,7 @@ const DEFAULT_PROMPT = `Chatly منصة محادثات متعددة القنوا
 - حملات تسويقية وقوالب جاهزة
 - API كامل و Webhooks (في الباقات الأعلى)
 
-الموقع: https://chatly-apex.netlify.app`;
+الموقع: https://qhub-apex.netlify.app`;
 
 const DEFAULT_FORBIDDEN = `أسعار المنافسين أو مقارنات معهم
 وعود بمدد إنجاز خارج المعلن
@@ -135,7 +135,7 @@ const DEFAULT_SETTINGS: AISettings = {
   offHoursMessage: 'أهلاً! خارج ساعات الدوام حالياً، لكن سجّلت طلبك وسيتواصل معك أحد الموظفين أول الدوام. لأي استفسار سريع تقدر تعتمد عليّ.',
 };
 
-const STORAGE_KEY = 'chatly_ai_settings';
+const STORAGE_KEY = 'qhub_ai_settings';
 
 function loadInitial(): AISettings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS;

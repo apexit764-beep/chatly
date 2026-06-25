@@ -94,12 +94,12 @@ export default function Team(): JSX.Element {
   // View mode (cards default)
   const [view, setView] = useState<'cards' | 'table'>(() => {
     if (typeof window === 'undefined') return 'cards';
-    const saved = localStorage.getItem('chatly_team_view') as 'cards' | 'table' | null;
+    const saved = localStorage.getItem('qhub_team_view') as 'cards' | 'table' | null;
     return saved ?? 'cards';
   });
   const setViewPersisted = (v: 'cards' | 'table'): void => {
     setView(v);
-    try { localStorage.setItem('chatly_team_view', v); } catch { /* ignore */ }
+    try { localStorage.setItem('qhub_team_view', v); } catch { /* ignore */ }
   };
 
   // Pagination

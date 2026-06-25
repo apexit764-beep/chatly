@@ -110,7 +110,7 @@ export default function Feedback(): JSX.Element {
         <div>
           <h1 className="text-h1 font-bold">الشكاوى والاقتراحات</h1>
           <p className="text-body text-muted-light dark:text-muted-dark mt-1">
-            تواصل مع فريق Chatly — قدّم شكوى أو اقتراح لتحسين الخدمة
+            تواصل مع فريق Qhub — قدّم شكوى أو اقتراح لتحسين الخدمة
           </p>
         </div>
         <button
@@ -359,7 +359,7 @@ export default function Feedback(): JSX.Element {
 
           <div className="p-3 rounded-card bg-bg-light dark:bg-bg-dark">
             <p className="text-[11px] text-muted-light dark:text-muted-dark leading-relaxed">
-              سيتم مراجعة طلبك من قبل فريق الدعم الفني في Chatly والرد عليك في أقرب وقت.
+              سيتم مراجعة طلبك من قبل فريق الدعم الفني في Qhub والرد عليك في أقرب وقت.
               التذاكر ذات الأولوية العالية يتم التعامل معها خلال 24 ساعة.
             </p>
           </div>
@@ -445,7 +445,7 @@ function TicketDetail({ ticket }: { ticket: FeedbackTicket }): JSX.Element {
         <div className="space-y-2">
           <p className="text-small font-semibold flex items-center gap-1.5">
             <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-            رد فريق Chatly
+            رد فريق Qhub
           </p>
           <div className="p-4 rounded-card border border-success/20 bg-success/5">
             <p className="text-body leading-relaxed whitespace-pre-wrap">{ticket.adminReply}</p>
@@ -460,7 +460,7 @@ function TicketDetail({ ticket }: { ticket: FeedbackTicket }): JSX.Element {
           <div>
             <p className="text-body font-medium">بانتظار الرد</p>
             <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
-              سيقوم فريق Chatly بالرد على طلبك في أقرب وقت ممكن
+              سيقوم فريق Qhub بالرد على طلبك في أقرب وقت ممكن
             </p>
           </div>
         </div>
@@ -485,7 +485,7 @@ function TicketDetail({ ticket }: { ticket: FeedbackTicket }): JSX.Element {
           )}
           {ticket.adminReply && (
             <TimelineItem
-              label="تم الرد من فريق Chatly"
+              label="تم الرد من فريق Qhub"
               date={ticket.repliedAt!}
               color="#10B981"
             />

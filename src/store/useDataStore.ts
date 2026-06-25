@@ -175,7 +175,7 @@ export const useDataStore = create<DataState>((set) => ({
   ],
   integrations: initialIntegrations,
   appSettings: {
-    siteName: 'Chatly',
+    siteName: 'Qhub',
     siteUrl: 'yourstore.com',
     whatsappPhoneNumberId: '',
     whatsappAccessToken: '',

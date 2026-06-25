@@ -103,7 +103,7 @@ export function SupportChat(): JSX.Element {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-body font-bold leading-tight flex items-center gap-1.5">
-                  الدعم الفني · Chatly
+                  الدعم الفني · Qhub
                   <Sparkles className="h-3.5 w-3.5 opacity-80" />
                 </p>
                 <p className="text-[11px] opacity-90 mt-0.5">

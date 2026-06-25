@@ -46,7 +46,7 @@ export function HelpDrawer({ open, onClose }: HelpDrawerProps): JSX.Element {
           <p className="text-small font-semibold text-muted-light dark:text-muted-dark uppercase tracking-wider mb-3">روابط سريعة</p>
           <div className="grid grid-cols-2 gap-2">
             <QuickLink icon={<BookOpen className="h-4 w-4" />} label="مركز المساعدة" desc="مقالات شاملة" onClick={() => window.open('https://help.example.com', '_blank')} />
-            <QuickLink icon={<Video className="h-4 w-4" />} label="فيديوهات تعليمية" desc="دروس قصيرة" onClick={() => window.open('https://youtube.com/@chatly', '_blank')} />
+            <QuickLink icon={<Video className="h-4 w-4" />} label="فيديوهات تعليمية" desc="دروس قصيرة" onClick={() => window.open('https://youtube.com/@qhub', '_blank')} />
             <QuickLink icon={<MessageCircle className="h-4 w-4" />} label="دردشة مباشرة" desc="فريق الدعم" onClick={() => undefined} />
             <QuickLink icon={<Sparkles className="h-4 w-4" />} label="ما الجديد" desc="آخر التحديثات" onClick={() => undefined} />
           </div>

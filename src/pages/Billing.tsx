@@ -132,7 +132,7 @@ export default function Billing(): JSX.Element {
           </div>
           <h2 className="text-h1 font-bold mb-1">لا يوجد اشتراك نشط</h2>
           <p className="text-body text-muted-light dark:text-muted-dark mb-5">
-            اختر باقة لبدء استخدام كل ميزات Chatly
+            اختر باقة لبدء استخدام كل ميزات Qhub
           </p>
           <Link to="/subscribe" className="inline-flex items-center gap-2 h-11 px-6 rounded-full bg-primary hover:bg-primary-dark text-white text-body font-semibold">
             استعرض الباقات

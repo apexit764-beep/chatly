@@ -35,8 +35,8 @@ interface SupportState {
   reset: () => void;
 }
 
-const SUPPORT_AGENT = 'يوسف · فريق Chatly';
-const SUPPORT_AI = 'مساعد Chatly الذكي';
+const SUPPORT_AGENT = 'يوسف · فريق Qhub';
+const SUPPORT_AI = 'مساعد Qhub الذكي';
 
 // ===== Business hours (Oman timezone, UTC+4) =====
 // Working days: Sunday (0) → Thursday (4)
@@ -153,7 +153,7 @@ function initialMessages(): SupportMessage[] {
     {
       id: 'm1',
       direction: 'in',
-      text: 'أهلاً بك في الدعم الفني تاع Chatly 👋',
+      text: 'أهلاً بك في الدعم الفني تاع Qhub 👋',
       senderName: SUPPORT_AI,
       timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
     },
@@ -300,7 +300,7 @@ export const useSupportStore = create<SupportState>()(
       }),
     }),
     {
-      name: 'chatly-support-chat',
+      name: 'qhub-support-chat',
       partialize: (s) => ({
         messages: s.messages,
         unread: s.unread,

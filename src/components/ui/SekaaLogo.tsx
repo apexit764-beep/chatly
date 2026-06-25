@@ -1,43 +1,28 @@
-interface SekaaLogoProps {
+interface QhubLogoProps {
   className?: string;
   size?: number;
 }
 
-export function SekaaLogo({ className, size }: SekaaLogoProps): JSX.Element {
+export function QhubLogo({ className, size }: QhubLogoProps): JSX.Element {
   return (
     <svg
-      viewBox="0 0 100 100"
+      viewBox="0 0 810 720"
       width={size}
       height={size}
       className={className}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="Chatly"
+      aria-label="Qhub"
     >
+      <path d="M650.338 561.782C650.338 560.67 655.075 552.344 660.936 543.088C733.753 427.991 731.291 278.477 655.075 166.902C547.08 8.87883 339.226 -36.8223 177.522 62.1728C90.521 115.27 33.3993 198.726 13.5425 301.609C8.81916 325.854 8.81916 395.054 13.5425 418.369C21.1025 455.757 30.7499 483.694 46.2581 514.039C74.0629 568.066 113.977 612.759 162.763 645.827C211.562 678.909 269.246 700.365 332.603 707.958C340.35 708.887 359.645 709.254 375.153 708.887C425.464 707.788 446.645 698.532 498.468 655.973C509.441 646.901 519.463 639.504 520.6 639.871L594.166 708.9L677.193 709.45L800 710L650.338 561.782ZM519.463 591.944L518.901 635.8L457.43 575.842L396.147 515.702L323.143 515.152L261.07 514.68C257.551 514.654 254.045 514.209 250.647 513.358C247.261 512.507 243.97 511.251 240.865 509.601C227.431 502.754 215.71 490.724 208.899 476.664L207.186 473.155C204.457 467.539 203.025 461.413 202.985 455.194L202.476 367.667C202.102 282.915 202.289 269.418 204.938 260.346C211.187 239.44 226.321 222.604 245.04 215.758C254.687 212.236 259.598 212.053 361.92 212.053C464.241 212.053 468.964 212.236 478.986 215.758C485.422 218.167 492.273 222.801 498.428 228.6C504.57 234.4 510.016 241.39 513.602 248.512C517.094 255.581 518.914 263.318 518.941 271.173L519.463 403.576C519.65 482.961 519.65 567.7 519.463 591.944Z" fill="url(#paint0_qhub_symbol)" />
       <defs>
-        <linearGradient id="sekaa-grad-top" x1="50" y1="0" x2="0" y2="50" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#7DD3FC" />
-          <stop offset="100%" stopColor="#2563EB" />
-        </linearGradient>
-        <linearGradient id="sekaa-grad-bottom" x1="100" y1="50" x2="50" y2="100" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#3B82F6" />
-          <stop offset="100%" stopColor="#1D4ED8" />
+        <linearGradient id="paint0_qhub_symbol" x1="196.351" y1="41.8182" x2="436.394" y2="579.751" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#75D8FC" />
+          <stop offset="1" stopColor="#0072E5" />
         </linearGradient>
       </defs>
-      <path
-        d="M 50 4 L 50 34 C 50 43 43 50 34 50 L 4 50"
-        stroke="url(#sekaa-grad-top)"
-        strokeWidth="14"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M 96 50 L 66 50 C 57 50 50 57 50 66 L 50 96"
-        stroke="url(#sekaa-grad-bottom)"
-        strokeWidth="14"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
     </svg>
   );
 }
+
+export { QhubLogo as SekaaLogo };

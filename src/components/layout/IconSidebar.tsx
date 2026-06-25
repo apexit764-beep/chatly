@@ -153,7 +153,7 @@ export function IconSidebar(): JSX.Element {
           <NavLink
             to="/overview"
             className="absolute inset-0 rounded-lg bg-white flex items-center justify-center group-hover:opacity-0 transition-opacity shadow-md"
-            aria-label="Chatly"
+            aria-label="Qhub"
           >
             <SekaaLogo className="h-7 w-7" />
           </NavLink>
@@ -193,12 +193,12 @@ export function IconSidebar(): JSX.Element {
     >
       {/* Brand block */}
       <div className="h-14 px-4 flex items-center gap-2.5 border-b border-white/10 flex-shrink-0">
-        <NavLink to="/overview" className="flex items-center gap-2.5 flex-1 min-w-0" aria-label="Chatly">
+        <NavLink to="/overview" className="flex items-center gap-2.5 flex-1 min-w-0" aria-label="Qhub">
           <span className="h-9 w-9 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
             <SekaaLogo className="h-6 w-6" />
           </span>
           <div className="min-w-0">
-            <p className="text-h3 font-bold text-white leading-tight">Chatly</p>
+            <p className="text-h3 font-bold text-white leading-tight">Qhub</p>
             <p className="text-[10px] text-white/60 leading-tight">Multi-channel CRM</p>
           </div>
         </NavLink>

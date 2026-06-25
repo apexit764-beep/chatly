@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Chatly deploy script — run on the server inside the cloned repo
+# Qhub deploy script — run on the server inside the cloned repo
 # Usage: ./deploy.sh
 set -euo pipefail
 

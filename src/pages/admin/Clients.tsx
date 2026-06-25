@@ -354,7 +354,7 @@ export default function AdminClients(): JSX.Element {
         }
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input label="اسم الشركة" value={form.companyName} onChange={(e) => { setForm({ ...form, companyName: e.target.value }); setErrors({ ...errors, companyName: undefined }); }} placeholder="مثال: Chatly" error={errors.companyName ?? undefined} />
+          <Input label="اسم الشركة" value={form.companyName} onChange={(e) => { setForm({ ...form, companyName: e.target.value }); setErrors({ ...errors, companyName: undefined }); }} placeholder="مثال: Qhub" error={errors.companyName ?? undefined} />
           <Input label="جهة الاتصال" value={form.contactName} onChange={(e) => { setForm({ ...form, contactName: e.target.value }); setErrors({ ...errors, contactName: undefined }); }} placeholder="الاسم الكامل" error={errors.contactName ?? undefined} />
           <Input label="البريد الإلكتروني" type="email" value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setErrors({ ...errors, email: undefined }); }} icon={<Mail className="h-4 w-4" />} error={errors.email ?? undefined} />
           <Input label="رقم الجوال" value={form.phone} onChange={(e) => { setForm({ ...form, phone: e.target.value }); setErrors({ ...errors, phone: undefined }); }} icon={<Phone className="h-4 w-4" />} error={errors.phone ?? undefined} />

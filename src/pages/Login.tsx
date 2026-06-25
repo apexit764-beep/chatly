@@ -108,7 +108,7 @@ export default function Login(): JSX.Element {
         >
           <h1 className="text-display font-extrabold mb-2">مرحباً بعودتك</h1>
           <p className="text-body text-muted-light dark:text-muted-dark mb-8">
-            سجّل دخولك لإدارة محادثاتك في Chatly
+            سجّل دخولك لإدارة محادثاتك في Qhub
           </p>
 
           <form onSubmit={onSubmit} className="space-y-4">
@@ -217,7 +217,7 @@ export default function Login(): JSX.Element {
 
         {/* Footer */}
         <div className="flex items-center justify-between text-small text-muted-light dark:text-muted-dark">
-          <p>&copy; 2026 Chatly — جميع الحقوق محفوظة</p>
+          <p>&copy; 2026 Qhub — جميع الحقوق محفوظة</p>
           <div className="flex items-center gap-3">
             <a href="#" className="hover:text-current">الخصوصية</a>
             <a href="#" className="hover:text-current">الشروط</a>

@@ -78,7 +78,7 @@ export const useFeedbackStore = create<FeedbackState>()(
       },
     }),
     {
-      name: 'chatly-feedback',
+      name: 'qhub-feedback',
       partialize: (s) => ({ tickets: s.tickets }),
     },
   ),

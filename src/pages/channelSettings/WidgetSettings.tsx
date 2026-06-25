@@ -160,7 +160,7 @@ function MessagesPanel(): JSX.Element {
   const updateConfig = useDataStore((s) => s.updateWidgetConfig);
   return (
     <div className="space-y-5">
-      <Input label="اسم الفريق" value={config.teamName} onChange={(e) => updateConfig({ teamName: e.target.value })} placeholder="فريق Chatly" icon={<ImageIcon className="h-4 w-4" />} />
+      <Input label="اسم الفريق" value={config.teamName} onChange={(e) => updateConfig({ teamName: e.target.value })} placeholder="فريق Qhub" icon={<ImageIcon className="h-4 w-4" />} />
       <Textarea label="رسالة الترحيب" value={config.welcomeMessage} onChange={(e) => updateConfig({ welcomeMessage: e.target.value })} rows={3} placeholder="مرحباً 👋 كيف يمكننا مساعدتك اليوم؟" />
       <Input label="وقت الاستجابة المتوقع" value={config.responseTime} onChange={(e) => updateConfig({ responseTime: e.target.value })} placeholder="نرد عادةً خلال دقائق" />
     </div>
@@ -209,22 +209,22 @@ function BehaviorPanel(): JSX.Element {
 function InstallPanel(): JSX.Element {
   const showToast = useUIStore((s) => s.showToast);
   const [copied, setCopied] = useState(false);
-  const widgetId = 'wdgt_chatly_8f3a2b';
-  const installCode = `<!-- Chatly Live Chat Widget -->
+  const widgetId = 'wdgt_qhub_8f3a2b';
+  const installCode = `<!-- Qhub Live Chat Widget -->
 <script>
   (function(s,e,k,a){
-    s.ChatlyChat=k;
+    s.QhubChat=k;
     s[k]=s[k]||function(){(s[k].q=s[k].q||[]).push(arguments)};
     var d=e.createElement('script'),x=e.getElementsByTagName('script')[0];
     d.async=1;d.src='https://chat-client.apexes.click/widget.js';
     d.setAttribute('data-id',a);x.parentNode.insertBefore(d,x);
-  })(window,document,'chatly','${widgetId}');
+  })(window,document,'qhub','${widgetId}');
 </script>`;
-  const npmInstall = `npm install @chatly/chat-widget
+  const npmInstall = `npm install @qhub/chat-widget
 
 // In your app:
-import ChatlyChat from '@chatly/chat-widget';
-ChatlyChat.init({ widgetId: '${widgetId}' });`;
+import QhubChat from '@qhub/chat-widget';
+QhubChat.init({ widgetId: '${widgetId}' });`;
 
   const copy = (text: string): void => {
     navigator.clipboard.writeText(text).catch(() => undefined);
@@ -328,7 +328,7 @@ function WidgetPreview({ config }: { config: WidgetConfig }): JSX.Element {
             <input placeholder="اكتب رسالتك..." className="flex-1 min-w-0 h-9 bg-bg-light rounded-full px-3 text-small focus:outline-none border-0" />
             <button className="h-9 w-9 rounded-full text-white flex items-center justify-center flex-shrink-0" style={{ background: config.primaryColor }}><Send className="h-4 w-4" /></button>
           </div>
-          <div className="text-center py-1.5 text-[10px] text-muted-light border-t border-border-light/60">🚀 يعمل بواسطة Chatly</div>
+          <div className="text-center py-1.5 text-[10px] text-muted-light border-t border-border-light/60">🚀 يعمل بواسطة Qhub</div>
         </div>
       )}
       <button

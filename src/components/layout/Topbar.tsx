@@ -40,7 +40,7 @@ export function Topbar(): JSX.Element {
   const clients = useAdminStore((s) => s.clients);
   const plans = useAdminStore((s) => s.plans);
   const unreadCount = notifications.filter((n) => !n.read).length;
-  const title = titleMap[location.pathname] ?? 'Chatly';
+  const title = titleMap[location.pathname] ?? 'Qhub';
   const [cmdOpen, setCmdOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const client = clients.find((c) => c.id === CURRENT_CLIENT_ID);

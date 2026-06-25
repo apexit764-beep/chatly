@@ -53,7 +53,7 @@ export function OnboardingModal(): JSX.Element | null {
           <div className="h-12 w-12 rounded-2xl bg-white flex items-center justify-center mb-3 shadow-lg">
             <SekaaLogo className="h-8 w-8" />
           </div>
-          <h2 className="text-h2 font-extrabold">أهلاً بك في Chatly 👋</h2>
+          <h2 className="text-h2 font-extrabold">أهلاً بك في Qhub 👋</h2>
           <p className="text-body opacity-90 mt-1">
             خمس خطوات سريعة تجهّز نظامك بالكامل. أكمِلها متى ما ناسبك.
           </p>
