@@ -9,12 +9,12 @@ import {
   Loader2,
   ArrowLeft,
   Sparkles,
-  Globe2,
   Infinity as InfinityIcon,
   X,
   CheckCircle2,
   AlertTriangle,
   ChevronDown,
+  Plus,
 } from 'lucide-react';
 import { Card, Input, useConfirm } from '@components/ui';
 import { useAdminStore } from '@/store/useAdminStore';
@@ -43,7 +43,7 @@ export default function Subscribe(): JSX.Element {
   const selectedCountry = countries.find((c) => c.code === client?.country) ?? countries[0];
   const country = selectedCountry.code;
 
-  const [cycle, setCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [cycle, setCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [step, setStep] = useState<Step>('select');
 
@@ -103,14 +103,6 @@ export default function Subscribe(): JSX.Element {
                 </span>
               </button>
             </div>
-          </div>
-
-          {/* Auto-detected country indicator */}
-          <div className="flex items-center justify-center mb-8">
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-light dark:text-muted-dark">
-              <Globe2 className="h-3 w-3" />
-              الأسعار بـ {selectedCountry.currency} لـ {selectedCountry.nameAr} (تلقائياً)
-            </span>
           </div>
 
           {/* Plans grid */}
@@ -196,7 +188,6 @@ export default function Subscribe(): JSX.Element {
                 { q: 'هل يمكنني الترقية أو التخفيض لاحقاً؟', a: 'نعم، يمكنك تغيير باقتك في أي وقت من صفحة "الباقات والاشتراك". سيتم احتساب الفرق الزمني المتبقي من باقتك الحالية تلقائياً، وتدفع فقط الفرق وليس قيمة الباقة كاملة.' },
                 { q: 'هل هناك فترة تجريبية؟', a: 'نعم، نوفر فترة تجريبية مجانية لمدة 14 يوماً لجميع الباقات بدون الحاجة لإدخال بطاقة الدفع. تستطيع تجربة كل المزايا قبل الاشتراك.' },
                 { q: 'ما طرق الدفع المقبولة؟', a: 'حالياً نقبل بطاقات Visa و Mastercard عبر بوابة Paymob الآمنة والمشفّرة. الفاتورة تصل تلقائياً على بريدك الإلكتروني بعد كل عملية دفع.' },
-                { q: 'هل تتغير الأسعار حسب الدولة؟', a: 'نعم، الأسعار معدّلة لتناسب القوة الشرائية في كل دولة. يتم اكتشاف دولتك تلقائياً من خلال عنوان IP وعرض الأسعار بالعملة المحلية المناسبة.' },
                 { q: 'هل يمكنني إلغاء اشتراكي في أي وقت؟', a: 'نعم، يمكنك إلغاء اشتراكك في أي وقت بدون أي رسوم إضافية. سيستمر حسابك بالعمل حتى نهاية الفترة المدفوعة، ولن يتم تجديد الاشتراك تلقائياً.' },
               ]}
             />
@@ -344,6 +335,7 @@ function CheckoutFlow({ plan, country, cycle, onBack, onProcessing, onSuccess, o
 
   const [card, setCard] = useState({ number: testMode ? '5123 4567 8901 2346' : '', name: '', exp: testMode ? '12/29' : '', cvv: testMode ? '123' : '' });
   const [save, setSave] = useState(true);
+  const [selectedCardId, setSelectedCardId] = useState<string>('card_1');
   const { confirm } = useConfirm();
 
   const handlePay = async (): Promise<void> => {
@@ -398,22 +390,6 @@ function CheckoutFlow({ plan, country, cycle, onBack, onProcessing, onSuccess, o
           <ArrowLeft className="h-4 w-4" /> العودة للباقات
         </button>
 
-        <div className="flex items-center gap-3 mb-5">
-          <div className="h-10 px-3 rounded-card bg-[#D71921] text-white font-extrabold flex items-center">PAYMOB</div>
-          <div>
-            <p className="text-h3 font-bold">الدفع الآمن</p>
-            <p className="text-small text-muted-light dark:text-muted-dark flex items-center gap-1"><Lock className="h-3 w-3" /> اتصال مشفّر SSL</p>
-          </div>
-        </div>
-
-        {testMode && (
-          <div className="mb-4 p-3 rounded-card bg-warning/10 border border-warning/30 flex items-start gap-2">
-            <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
-            <p className="text-small">
-              <strong>وضع الاختبار:</strong> تم ملء بطاقة Visa التجريبية تلقائياً. اضغط "ادفع" لإكمال محاكاة العملية
-            </p>
-          </div>
-        )}
 
         <div className="space-y-4">
           <div className="space-y-1.5">
@@ -442,16 +418,8 @@ function CheckoutFlow({ plan, country, cycle, onBack, onProcessing, onSuccess, o
 
           <button onClick={handlePay} className="w-full h-12 rounded-full bg-primary hover:bg-primary-dark text-white text-body font-semibold flex items-center justify-center gap-2 transition-colors mt-2">
             <Lock className="h-4 w-4" />
-            ادفع {formatMoney(total, country.currency)} عبر Paymob
+            ادفع {formatMoney(total, country.currency)}
           </button>
-
-          <div className="flex items-center justify-center gap-3 text-[10px] text-muted-light dark:text-muted-dark pt-2">
-            <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> PCI DSS</span>
-            <span>•</span>
-            <span>3D Secure</span>
-            <span>•</span>
-            <span>SSL 256-bit</span>
-          </div>
         </div>
       </Card>
 
@@ -467,10 +435,6 @@ function CheckoutFlow({ plan, country, cycle, onBack, onProcessing, onSuccess, o
             <span className="text-muted-light dark:text-muted-dark">دورة الفوترة</span>
             <span className="font-semibold">{cycle === 'monthly' ? 'شهري' : 'سنوي'}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-muted-light dark:text-muted-dark">الدولة</span>
-            <span className="font-semibold">{country.flag} {country.nameAr}</span>
-          </div>
         </div>
 
         <div className="space-y-2 text-small mb-4 pb-4 border-b border-border-light dark:border-border-dark">
@@ -484,7 +448,7 @@ function CheckoutFlow({ plan, country, cycle, onBack, onProcessing, onSuccess, o
           </div>
         </div>
 
-        <div className="flex justify-between items-baseline mb-4">
+        <div className="flex justify-between items-baseline mb-4 pb-4 border-b border-border-light dark:border-border-dark">
           <span className="text-body font-semibold">الإجمالي</span>
           <div className="text-end">
             <p className="text-h2 font-extrabold">{formatMoney(total, country.currency)}</p>
@@ -492,13 +456,78 @@ function CheckoutFlow({ plan, country, cycle, onBack, onProcessing, onSuccess, o
           </div>
         </div>
 
-        <div className="text-small text-muted-light dark:text-muted-dark space-y-1.5 mt-4 pt-4 border-t border-border-light dark:border-border-dark">
-          <p className="flex items-center gap-1.5"><Check className="h-3 w-3 text-success" /> {plan.limits.agents === -1 ? 'موظفون غير محدودين' : `${plan.limits.agents} موظفين`}</p>
-          <p className="flex items-center gap-1.5"><Check className="h-3 w-3 text-success" /> {plan.limits.channels === -1 ? 'قنوات غير محدودة' : `${plan.limits.channels} قنوات`}</p>
-          <p className="flex items-center gap-1.5"><Check className="h-3 w-3 text-success" /> إلغاء في أي وقت</p>
-          <p className="flex items-center gap-1.5"><Check className="h-3 w-3 text-success" /> دعم مباشر</p>
-        </div>
+        {/* Saved cards / add new card */}
+        <SavedCardPicker
+          cards={SAVED_CARDS}
+          selectedId={selectedCardId}
+          onSelect={setSelectedCardId}
+        />
       </Card>
+    </div>
+  );
+}
+
+const SAVED_CARDS: { id: string; brand: 'visa' | 'mastercard'; last4: string; expiry: string; holder: string }[] = [
+  { id: 'card_1', brand: 'visa', last4: '5123', expiry: '12/29', holder: 'Mohammed Al Kindi' },
+  { id: 'card_2', brand: 'mastercard', last4: '8842', expiry: '08/27', holder: 'Mohammed Al Kindi' },
+];
+
+function SavedCardPicker({
+  cards,
+  selectedId,
+  onSelect,
+}: {
+  cards: typeof SAVED_CARDS;
+  selectedId: string;
+  onSelect: (id: string) => void;
+}): JSX.Element {
+  return (
+    <div className="space-y-2">
+      <p className="text-small font-semibold">طريقة الدفع</p>
+      {cards.map((c) => {
+        const active = selectedId === c.id;
+        return (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onSelect(c.id)}
+            className={cn(
+              'w-full p-3 rounded-card border-2 text-start flex items-center gap-3 transition-all',
+              active ? 'border-primary bg-primary/5' : 'border-border-light dark:border-border-dark hover:border-primary/40',
+            )}
+          >
+            <span className={cn(
+              'h-4 w-4 rounded-full border-2 flex items-center justify-center flex-shrink-0',
+              active ? 'border-primary' : 'border-border-light dark:border-border-dark',
+            )}>
+              {active && <span className="h-2 w-2 rounded-full bg-primary" />}
+            </span>
+            <span className={cn(
+              'h-8 px-2 rounded text-white text-[10px] font-extrabold italic flex items-center',
+              c.brand === 'visa' ? 'bg-gradient-to-r from-[#1a1f71] to-[#0f1c5e]' : 'bg-gradient-to-r from-[#eb001b] to-[#f79e1b]',
+            )}>
+              {c.brand === 'visa' ? 'VISA' : 'MC'}
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-small font-semibold tabular-nums">•••• {c.last4}</p>
+              <p className="text-[10px] text-muted-light dark:text-muted-dark">صلاحية {c.expiry}</p>
+            </div>
+          </button>
+        );
+      })}
+      <button
+        type="button"
+        onClick={() => onSelect('new')}
+        className={cn(
+          'w-full p-3 rounded-card border-2 border-dashed text-start flex items-center gap-2.5 transition-all',
+          selectedId === 'new'
+            ? 'border-primary bg-primary/5 text-primary'
+            : 'border-border-light dark:border-border-dark hover:border-primary/40 text-muted-light dark:text-muted-dark',
+        )}
+      >
+        <Plus className="h-4 w-4" />
+        <span className="text-small font-semibold">إضافة بطاقة جديدة</span>
+      </button>
     </div>
   );
 }

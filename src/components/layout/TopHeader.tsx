@@ -9,6 +9,8 @@ import {
   CreditCard,
   Settings as SettingsIcon,
   LogOut,
+  User as UserIcon,
+  MessageSquareWarning,
   CheckCheck,
   MessageSquare,
   Megaphone,
@@ -20,7 +22,7 @@ import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
-import { Avatar } from '@components/ui';
+import { Avatar, useConfirm } from '@components/ui';
 import { HeaderSearch } from '@components/ui/HeaderSearch';
 import { timeAgo } from '@/utils/format';
 import { cn } from '@/utils/cn';
@@ -56,6 +58,17 @@ export function TopHeader(): JSX.Element {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const { confirm } = useConfirm();
+  const handleLogout = async (): Promise<void> => {
+    const ok = await confirm({
+      title: 'تسجيل الخروج؟',
+      message: 'هل أنت متأكد من تسجيل الخروج من حسابك؟ ستحتاج لتسجيل الدخول مرة أخرى للوصول إلى لوحة التحكم.',
+      variant: 'warning',
+      confirmText: 'تسجيل الخروج',
+      cancelText: 'إلغاء',
+    });
+    if (ok) logout();
+  };
   const notifications = useDataStore((s) => s.notifications);
   const markAllNotifsRead = useDataStore((s) => s.markAllNotificationsRead);
   const markNotifRead = useDataStore((s) => s.markNotificationRead);
@@ -158,7 +171,7 @@ export function TopHeader(): JSX.Element {
           open={profileOpen}
           onToggle={() => setProfileOpen((v) => !v)}
           onClose={() => setProfileOpen(false)}
-          onLogout={logout}
+          onLogout={handleLogout}
         />
       )}
 
@@ -191,22 +204,33 @@ function ProfileChip({
           <Avatar name={user.name} size="sm" />
           <span className="absolute -bottom-0.5 -end-0.5 h-2.5 w-2.5 rounded-full bg-success ring-2 ring-white dark:ring-surface-dark" />
         </div>
-        <div className="hidden sm:block text-end leading-tight">
+        <div className="hidden sm:block text-right leading-tight">
           <p className="text-small font-semibold">{user.name}</p>
-          <p className="text-[10.5px] text-muted-light dark:text-muted-dark">{roleLabel}</p>
+          <p className="text-[10.5px] text-muted-light dark:text-muted-dark text-right">{roleLabel}</p>
         </div>
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={onClose} />
           <div className="absolute end-0 top-full mt-2 w-60 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1.5 z-40">
-            <div className="px-3 py-2 border-b border-border-light dark:border-border-dark">
-              <p className="text-body font-semibold truncate">{user.name}</p>
-              <p className="text-[11px] text-muted-light dark:text-muted-dark truncate">{user.email}</p>
+            <div className="px-3 py-2.5 border-b border-border-light dark:border-border-dark flex items-center gap-2.5">
+              <Avatar name={user.name} size="sm" />
+              <div className="flex-1 min-w-0">
+                <p className="text-body font-semibold truncate">{user.name}</p>
+                <p className="text-[11px] text-muted-light dark:text-muted-dark truncate">{user.email}</p>
+              </div>
             </div>
+            <NavLink to="/settings?tab=profile" onClick={onClose} className="flex items-center gap-2.5 px-3 py-2 text-body hover:bg-bg-light dark:hover:bg-bg-dark">
+              <UserIcon className="h-4 w-4 text-muted-light dark:text-muted-dark" />
+              <span>الملف الشخصي</span>
+            </NavLink>
             <NavLink to="/billing" onClick={onClose} className="flex items-center gap-2.5 px-3 py-2 text-body hover:bg-bg-light dark:hover:bg-bg-dark">
               <CreditCard className="h-4 w-4 text-muted-light dark:text-muted-dark" />
               <span>الفوترة والاشتراك</span>
+            </NavLink>
+            <NavLink to="/feedback" onClick={onClose} className="flex items-center gap-2.5 px-3 py-2 text-body hover:bg-bg-light dark:hover:bg-bg-dark">
+              <MessageSquareWarning className="h-4 w-4 text-muted-light dark:text-muted-dark" />
+              <span>الشكاوي والاقتراحات</span>
             </NavLink>
             <NavLink to="/settings" onClick={onClose} className="flex items-center gap-2.5 px-3 py-2 text-body hover:bg-bg-light dark:hover:bg-bg-dark">
               <SettingsIcon className="h-4 w-4 text-muted-light dark:text-muted-dark" />

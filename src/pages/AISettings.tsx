@@ -26,7 +26,8 @@ import {
   Database,
 } from 'lucide-react';
 import { Card, ChannelIcon, Select, useConfirm } from '@components/ui';
-import { useAIStore, type AISettings as AISettingsType, type AILanguage, type AITone, type AIDialect, type AIModel, type DaySchedule } from '@/store/useAIStore';
+import { OpenAIIcon, ClaudeIcon, GeminiIcon } from '@components/ui/BrandIcons';
+import { useAIStore, type AISettings as AISettingsType, type AILanguage, type AITone, type AIDialect, type AIGulfCountry, type AIModel, type AIProvider, type DaySchedule } from '@/store/useAIStore';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { cn } from '@/utils/cn';
@@ -45,18 +46,84 @@ const TONES: { value: AITone; label: string; desc: string; Icon: typeof Zap }[] 
 
 const DIALECTS: { value: AIDialect; label: string; desc: string }[] = [
   { value: 'msa', label: 'فصحى مبسّطة', desc: 'مفهومة لكل العرب' },
-  { value: 'gulf', label: 'خليجية / عُمانية', desc: 'مناسبة لدول الخليج' },
+  { value: 'gulf', label: 'خليجية', desc: 'اختر دولة الخليج المُحدّدة' },
   { value: 'egyptian', label: 'مصرية', desc: 'لهجة مصرية شعبية' },
   { value: 'levantine', label: 'شامية', desc: 'سوريا، لبنان، الأردن، فلسطين' },
 ];
 
+const GULF_COUNTRIES: { value: AIGulfCountry; name: string; flag: string }[] = [
+  { value: 'sa', name: 'السعودية', flag: '🇸🇦' },
+  { value: 'ae', name: 'الإمارات', flag: '🇦🇪' },
+  { value: 'om', name: 'عُمان', flag: '🇴🇲' },
+  { value: 'kw', name: 'الكويت', flag: '🇰🇼' },
+  { value: 'qa', name: 'قطر', flag: '🇶🇦' },
+  { value: 'bh', name: 'البحرين', flag: '🇧🇭' },
+];
+
 const DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
-const MODELS: { value: AIModel; label: string; hint: string }[] = [
-  { value: 'gpt-4o-mini', label: 'GPT-4o mini · موصى به', hint: 'سريع واقتصادي — مناسب لمعظم الردود' },
-  { value: 'gpt-4o', label: 'GPT-4o', hint: 'الأذكى — جودة عالية للحالات المعقدة' },
-  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo', hint: 'متوازن في الأداء والسعر' },
-  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo', hint: 'الأسرع والأرخص — للردود الأساسية' },
+interface ProviderInfo {
+  value: AIProvider;
+  name: string;
+  tagline: string;
+  brandColor: string;
+  Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  apiKeyPlaceholder: string;
+  apiKeyDocsUrl: string;
+  apiKeyDocsLabel: string;
+  defaultModel: AIModel;
+  models: { value: AIModel; label: string; hint: string }[];
+}
+
+const PROVIDERS: ProviderInfo[] = [
+  {
+    value: 'openai',
+    name: 'ChatGPT',
+    tagline: 'الأشهر — مجموعة GPT-4o',
+    brandColor: '#10A37F',
+    Icon: OpenAIIcon,
+    apiKeyPlaceholder: 'sk-...',
+    apiKeyDocsUrl: 'https://platform.openai.com/api-keys',
+    apiKeyDocsLabel: 'احصل على مفتاح API',
+    defaultModel: 'gpt-4o-mini',
+    models: [
+      { value: 'gpt-4o-mini', label: 'GPT-4o mini · موصى به', hint: 'سريع واقتصادي — مناسب لمعظم الردود' },
+      { value: 'gpt-4o', label: 'GPT-4o', hint: 'الأذكى — جودة عالية للحالات المعقدة' },
+      { value: 'gpt-4-turbo', label: 'GPT-4 Turbo', hint: 'متوازن في الأداء والسعر' },
+      { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo', hint: 'الأسرع والأرخص — للردود الأساسية' },
+    ],
+  },
+  {
+    value: 'anthropic',
+    name: 'Claude',
+    tagline: 'الأذكى في التحليل والمحادثات الطويلة',
+    brandColor: '#D97757',
+    Icon: ClaudeIcon,
+    apiKeyPlaceholder: 'sk-ant-...',
+    apiKeyDocsUrl: 'https://console.anthropic.com/settings/keys',
+    apiKeyDocsLabel: 'احصل على مفتاح API',
+    defaultModel: 'claude-haiku-4-5',
+    models: [
+      { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 · موصى به', hint: 'سريع واقتصادي — مناسب لمعظم الردود' },
+      { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', hint: 'متوازن — أداء قوي بسعر معقول' },
+      { value: 'claude-opus-4-6', label: 'Claude Opus 4.6', hint: 'الأذكى — للمهام الأصعب والتحليل العميق' },
+    ],
+  },
+  {
+    value: 'google',
+    name: 'Gemini',
+    tagline: 'سياق طويل ودعم وسائط متعددة',
+    brandColor: '#4285F4',
+    Icon: GeminiIcon,
+    apiKeyPlaceholder: 'AIza...',
+    apiKeyDocsUrl: 'https://aistudio.google.com/app/apikey',
+    apiKeyDocsLabel: 'احصل على مفتاح API',
+    defaultModel: 'gemini-2.0-flash',
+    models: [
+      { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash · موصى به', hint: 'سريع جداً — مثالي للردود في الوقت الحقيقي' },
+      { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', hint: 'الأذكى — جودة عالية وسياق طويل جداً' },
+    ],
+  },
 ];
 
 export default function AISettings(): JSX.Element {
@@ -80,6 +147,8 @@ export default function AISettings(): JSX.Element {
     setDirty(true);
   };
 
+  const currentProvider = PROVIDERS.find((p) => p.value === form.provider) ?? PROVIDERS[0];
+
   const toggleLanguage = (code: AILanguage): void => {
     const next = form.languages.includes(code)
       ? form.languages.filter((l) => l !== code)
@@ -91,11 +160,38 @@ export default function AISettings(): JSX.Element {
     update('languages', next);
   };
 
-  const toggleChannel = (channelId: string): void => {
-    const next = form.enabledChannels.includes(channelId)
+  const toggleChannel = async (channelId: string): Promise<void> => {
+    const wasEnabled = form.enabledChannels.includes(channelId);
+    const channelName = channels.find((c) => c.id === channelId)?.name ?? 'هذه القناة';
+    const ok = await confirm({
+      title: wasEnabled ? `إلغاء تفعيل ${channelName}؟` : `تفعيل ${channelName}؟`,
+      message: wasEnabled
+        ? `سيتوقف المساعد عن الرد على عملاء "${channelName}" حتى تعيد تفعيلها.`
+        : `سيبدأ المساعد بالرد تلقائياً على عملاء "${channelName}" حسب الإعدادات.`,
+      variant: wasEnabled ? 'warning' : 'info',
+      confirmText: wasEnabled ? 'إلغاء التفعيل' : 'تفعيل',
+      cancelText: 'إلغاء',
+    });
+    if (!ok) return;
+    const next = wasEnabled
       ? form.enabledChannels.filter((c) => c !== channelId)
       : [...form.enabledChannels, channelId];
     update('enabledChannels', next);
+  };
+
+  const toggleAllChannels = async (): Promise<void> => {
+    const enablingAll = form.enabledChannels.length !== channels.length;
+    const ok = await confirm({
+      title: enablingAll ? 'تفعيل جميع القنوات؟' : 'إلغاء تفعيل جميع القنوات؟',
+      message: enablingAll
+        ? `سيبدأ المساعد بالرد على ${channels.length} قناة. تأكد من جاهزية الإعدادات.`
+        : 'سيتوقف المساعد عن الرد على جميع القنوات حتى تعيد تفعيلها.',
+      variant: enablingAll ? 'info' : 'warning',
+      confirmText: enablingAll ? 'تفعيل الكل' : 'إلغاء تفعيل الكل',
+      cancelText: 'إلغاء',
+    });
+    if (!ok) return;
+    update('enabledChannels', enablingAll ? channels.map((c) => c.id) : []);
   };
 
   const updateSchedule = (day: number, patch: Partial<DaySchedule>): void => {
@@ -113,7 +209,34 @@ export default function AISettings(): JSX.Element {
     })));
   };
 
-  const save = (): void => {
+  const save = async (): Promise<void> => {
+    const modelLabel = (currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '');
+    const summary: { label: string; value: string }[] = [
+      { label: 'المزوّد', value: currentProvider.name },
+      { label: 'النموذج', value: modelLabel },
+      { label: 'القنوات المُفعّلة', value: `${form.enabledChannels.length} / ${channels.length}` },
+      { label: 'حالة المساعد', value: form.enabled ? 'مُفعّل' : 'مُعطّل' },
+    ];
+    const ok = await confirm({
+      title: 'تأكيد حفظ التغييرات',
+      message: (
+        <div className="space-y-2">
+          <p className="text-small">سيتم حفظ الإعدادات التالية:</p>
+          <ul className="space-y-1.5 text-small bg-bg-light dark:bg-bg-dark rounded-lg p-3">
+            {summary.map((row) => (
+              <li key={row.label} className="flex items-center justify-between gap-3">
+                <span className="text-muted-light dark:text-muted-dark">{row.label}</span>
+                <span className="font-semibold text-current">{row.value}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ),
+      confirmText: 'حفظ',
+      cancelText: 'إلغاء',
+      variant: 'info',
+    });
+    if (!ok) return;
     setSettings(form);
     setDirty(false);
     showToast('تم حفظ إعدادات المساعد', 'success');
@@ -241,11 +364,11 @@ export default function AISettings(): JSX.Element {
       {/* ═══ Tab 1: الربط والنموذج ═══ */}
       {tab === 'connection' && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
-          {/* OpenAI connection */}
+          {/* AI provider connection */}
           <SectionCard
             icon={<KeyRound className="h-5 w-5" />}
-            title="ربط OpenAI"
-            description="مفتاح الـ API والنموذج المُستخدم لتوليد ردود المساعد. المفتاح محفوظ عندك ولا يُشارك مع أي طرف ثالث."
+            title="ربط مزوّد الذكاء الاصطناعي"
+            description="اختر مزوّد الـ AI (Claude / ChatGPT / Gemini) ثم أدخل مفتاح الـ API. المفتاح محفوظ عندك ولا يُشارك مع أي طرف ثالث."
             headerExtra={
               form.apiKey ? (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/15 text-success text-[11px] font-semibold">
@@ -261,6 +384,51 @@ export default function AISettings(): JSX.Element {
             }
           >
             <div className="space-y-4">
+              {/* Provider picker */}
+              <div>
+                <label className="text-small font-semibold block mb-2">المصدر</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {PROVIDERS.map((p) => {
+                    const selected = form.provider === p.value;
+                    const Icon = p.Icon;
+                    return (
+                      <button
+                        key={p.value}
+                        type="button"
+                        onClick={() => {
+                          if (form.provider === p.value) return;
+                          // Switching provider invalidates the key + chooses the provider's default model
+                          update('provider', p.value);
+                          update('model', p.defaultModel);
+                          update('apiKey', '');
+                        }}
+                        className={cn(
+                          'p-3 rounded-card text-start border-2 transition-all flex items-start gap-3',
+                          selected
+                            ? 'bg-primary/5'
+                            : 'border-border-light dark:border-border-dark hover:border-primary/30',
+                        )}
+                        style={selected ? { borderColor: p.brandColor } : undefined}
+                      >
+                        <span
+                          className="h-9 w-9 rounded-lg flex items-center justify-center text-white flex-shrink-0"
+                          style={{ background: p.brandColor }}
+                        >
+                          <Icon className="h-5 w-5" />
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-small font-bold truncate">{p.name}</p>
+                          <p className="text-[11px] text-muted-light dark:text-muted-dark leading-relaxed">{p.tagline}</p>
+                        </div>
+                        {selected && (
+                          <Check className="h-4 w-4 flex-shrink-0" style={{ color: p.brandColor }} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* API Key */}
               <div>
                 <label className="text-small font-semibold block mb-1.5">مفتاح API</label>
@@ -269,7 +437,7 @@ export default function AISettings(): JSX.Element {
                     type={showApiKey ? 'text' : 'password'}
                     value={form.apiKey}
                     onChange={(e) => update('apiKey', e.target.value)}
-                    placeholder="sk-..."
+                    placeholder={currentProvider.apiKeyPlaceholder}
                     className="w-full h-11 ps-4 pe-12 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small font-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                   />
                   <button
@@ -282,12 +450,12 @@ export default function AISettings(): JSX.Element {
                   </button>
                 </div>
                 <a
-                  href="https://platform.openai.com/api-keys"
+                  href={currentProvider.apiKeyDocsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 mt-1.5 text-[11px] text-primary font-medium hover:underline"
                 >
-                  احصل على مفتاحك من OpenAI
+                  {currentProvider.apiKeyDocsLabel}
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
@@ -301,12 +469,12 @@ export default function AISettings(): JSX.Element {
                     onChange={(e) => update('model', e.target.value as AIModel)}
                     className="!h-11 !rounded-xl !bg-bg-light dark:!bg-bg-dark"
                   >
-                    {MODELS.map((m) => (
+                    {currentProvider.models.map((m) => (
                       <option key={m.value} value={m.value}>{m.label}</option>
                     ))}
                   </Select>
                   <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1.5 leading-relaxed">
-                    {MODELS.find((m) => m.value === form.model)?.hint}
+                    {currentProvider.models.find((m) => m.value === form.model)?.hint}
                   </p>
                 </div>
 
@@ -356,7 +524,7 @@ export default function AISettings(): JSX.Element {
                 <div className="flex items-center justify-between text-[11px] text-muted-light dark:text-muted-dark mb-1">
                   <span>{form.enabledChannels.length} / {channels.length} قناة مُفعّلة</span>
                   <button
-                    onClick={() => update('enabledChannels', form.enabledChannels.length === channels.length ? [] : channels.map((c) => c.id))}
+                    onClick={toggleAllChannels}
                     className="text-primary font-semibold hover:underline"
                   >
                     {form.enabledChannels.length === channels.length ? 'إلغاء الكل' : 'تحديد الكل'}
@@ -386,7 +554,7 @@ export default function AISettings(): JSX.Element {
                         </div>
                         <Toggle
                           checked={active}
-                          onChange={() => toggleChannel(c.id)}
+                          onChange={() => { void toggleChannel(c.id); }}
                         />
                       </div>
                     );
@@ -511,6 +679,35 @@ export default function AISettings(): JSX.Element {
                   );
                 })}
               </div>
+
+              {/* Gulf country picker — shown only when the Gulf dialect is selected */}
+              {form.dialect === 'gulf' && (
+                <div className="mt-4 p-4 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark">
+                  <label className="text-small font-semibold block mb-2">دولة الخليج</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {GULF_COUNTRIES.map((c) => {
+                      const selected = form.gulfCountry === c.value;
+                      return (
+                        <button
+                          key={c.value}
+                          type="button"
+                          onClick={() => update('gulfCountry', c.value)}
+                          className={cn(
+                            'h-11 px-3 rounded-lg border-2 flex items-center gap-2 transition-all text-start',
+                            selected
+                              ? 'border-primary bg-primary/5 text-primary'
+                              : 'border-border-light dark:border-border-dark bg-white dark:bg-surface-dark hover:border-primary/40'
+                          )}
+                        >
+                          <span className="text-lg leading-none">{c.flag}</span>
+                          <span className="text-small font-semibold flex-1">{c.name}</span>
+                          {selected && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </SectionCard>
           )}
         </div>
@@ -582,12 +779,29 @@ export default function AISettings(): JSX.Element {
             title="مواضيع ممنوعة"
             description="مواضيع يجب ألا يتحدث عنها المساعد أبداً — موضوع في كل سطر."
           >
-            <textarea
-              value={form.forbiddenTopics}
-              onChange={(e) => update('forbiddenTopics', e.target.value)}
-              placeholder={'أسعار المنافسين\nوعود بإنجاز خارج المدة المعلنة\nمعلومات داخلية عن الشركة'}
-              className="w-full min-h-[120px] p-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-y leading-relaxed"
-            />
+            <div className="space-y-4">
+              <div>
+                <label className="text-small font-semibold block mb-1.5">قائمة المواضيع</label>
+                <textarea
+                  value={form.forbiddenTopics}
+                  onChange={(e) => update('forbiddenTopics', e.target.value)}
+                  placeholder={'أسعار المنافسين\nوعود بإنجاز خارج المدة المعلنة\nمعلومات داخلية عن الشركة'}
+                  className="w-full min-h-[120px] p-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-y leading-relaxed"
+                />
+              </div>
+              <div>
+                <label className="text-small font-semibold block mb-1.5">رسالة الرد على المواضيع الممنوعة</label>
+                <textarea
+                  value={form.forbiddenReply}
+                  onChange={(e) => update('forbiddenReply', e.target.value)}
+                  placeholder="عذراً، لا أستطيع المساعدة في هذا الموضوع — سيتواصل معك أحد موظفينا قريباً."
+                  className="w-full min-h-[80px] p-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-y leading-relaxed"
+                />
+                <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1.5 leading-relaxed">
+                  هذه الرسالة يرسلها المساعد للعميل تلقائياً عندما يطلب أحد المواضيع أعلاه.
+                </p>
+              </div>
+            </div>
           </SectionCard>
         </div>
       )}
@@ -608,7 +822,7 @@ export default function AISettings(): JSX.Element {
                   <RuleRow
                     checked={form.transferOnRequest}
                     onChange={(v) => update('transferOnRequest', v)}
-                    title="عند طلب العميل صراحة"
+                    title="عند طلب العميل التحدث مع موظف بشكل مباشر"
                   />
                   <RuleRow
                     checked={form.transferOnFailure}

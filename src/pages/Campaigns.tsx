@@ -50,6 +50,7 @@ import type { Campaign, CampaignChannelType, CampaignStatus, CampaignTemplate, C
 export default function Campaigns(): JSX.Element {
   const campaigns = useDataStore((s) => s.campaigns);
   const contacts = useDataStore((s) => s.contacts);
+  const channels = useDataStore((s) => s.channels);
   const addCampaign = useDataStore((s) => s.addCampaign);
   const showToast = useUIStore((s) => s.showToast);
   const { confirm } = useConfirm();
@@ -59,7 +60,7 @@ export default function Campaigns(): JSX.Element {
   const [channelFilter, setChannelFilter] = useState<CampaignChannelType>('whatsapp');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Campaign | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ message: string; attachmentName?: string } | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [messageMode, setMessageMode] = useState<'custom' | 'template'>('custom');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
@@ -74,8 +75,10 @@ export default function Campaigns(): JSX.Element {
     minDelay: number;
     maxDelay: number;
     channelType: CampaignChannelType;
+    /** ID of the WhatsApp/Email channel that sends the campaign */
+    senderChannelId: string;
     attachmentName: string;
-  }>({ name: '', message: '', audience: 'all', schedule: 'now', scheduledAt: '', minDelay: 15, maxDelay: 45, channelType: 'whatsapp', attachmentName: '' });
+  }>({ name: '', message: '', audience: 'all', schedule: 'now', scheduledAt: '', minDelay: 15, maxDelay: 45, channelType: 'whatsapp', senderChannelId: '', attachmentName: '' });
   const [errors, setErrors] = useState<{ name?: string; message?: string }>({});
 
   // Pre-fill from a template that the user picked on /campaigns/templates
@@ -114,9 +117,14 @@ export default function Campaigns(): JSX.Element {
     return contacts.filter((c) => c.type === form.audience).length;
   };
 
+  const eligibleSenders = channels.filter((c) =>
+    channelFilter === 'whatsapp' ? c.type === 'whatsapp' : c.type === 'email',
+  );
+  const defaultSenderId = eligibleSenders[0]?.id ?? '';
+
   const openCreate = (): void => {
     setEditing(null);
-    setForm({ name: '', message: '', audience: 'all', schedule: 'now', scheduledAt: '', minDelay: 15, maxDelay: 45, channelType: channelFilter, attachmentName: '' });
+    setForm({ name: '', message: '', audience: 'all', schedule: 'now', scheduledAt: '', minDelay: 15, maxDelay: 45, channelType: channelFilter, senderChannelId: defaultSenderId, attachmentName: '' });
     setErrors({});
     setMessageMode('custom');
     setSelectedTemplateId(null);
@@ -134,6 +142,7 @@ export default function Campaigns(): JSX.Element {
       minDelay: 15,
       maxDelay: 45,
       channelType: c.channelType ?? 'whatsapp',
+      senderChannelId: c.senderChannelId ?? defaultSenderId,
       attachmentName: c.attachmentName ?? '',
     });
     setErrors({});
@@ -163,6 +172,11 @@ export default function Campaigns(): JSX.Element {
     else if (form.message.length > 1024) e.message = 'الرسالة طويلة جداً (حد أقصى 1024 حرف)';
     setErrors(e);
     if (Object.keys(e).length > 0) return;
+    if (!form.senderChannelId) {
+      const label = channelFilter === 'whatsapp' ? 'رقم الإرسال' : 'حساب الإرسال';
+      showToast(`اختر ${label} أولاً`, 'error');
+      return;
+    }
 
     const status: CampaignStatus = form.schedule === 'now' ? 'completed' : 'scheduled';
     addCampaign({
@@ -171,6 +185,9 @@ export default function Campaigns(): JSX.Element {
       targetCount: targetCount(),
       status,
       scheduledAt: form.schedule === 'later' && form.scheduledAt ? new Date(form.scheduledAt).toISOString() : new Date().toISOString(),
+      channelType: form.channelType,
+      senderChannelId: form.senderChannelId,
+      attachmentName: form.attachmentName || undefined,
     });
     showToast(form.schedule === 'now' ? `تم إرسال الحملة لـ ${targetCount()} مستلم` : 'تمت جدولة الحملة', 'success');
     setModalOpen(false);
@@ -272,7 +289,7 @@ export default function Campaigns(): JSX.Element {
       key: 'actions', header: '', sortable: false, width: '80px',
       cell: (r) => (
         <div className="flex items-center gap-1 justify-end">
-          <button onClick={(e) => { e.stopPropagation(); setPreview(r.message); }} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title="معاينة">
+          <button onClick={(e) => { e.stopPropagation(); setPreview({ message: r.message, attachmentName: r.attachmentName }); }} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title="معاينة">
             <Eye className="h-4 w-4" />
           </button>
           <div className="relative" onClick={(e) => e.stopPropagation()}>
@@ -314,30 +331,30 @@ export default function Campaigns(): JSX.Element {
         </button>
       </div>
 
-      {/* Channel sub-tabs */}
-      <div className="flex items-center gap-2">
+      {/* Channel sub-tabs — underline style to match other pages */}
+      <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2">
         <button
           onClick={() => setChannelFilter('whatsapp')}
           className={cn(
-            'h-9 px-4 rounded-full text-small font-medium flex items-center gap-2 transition-colors border',
+            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2',
             channelFilter === 'whatsapp'
-              ? 'bg-[#25D366]/10 border-[#25D366]/40 text-[#25D366]'
-              : 'border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:border-[#25D366]/30'
+              ? 'border-primary text-current'
+              : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
           )}
         >
-          <Megaphone className="h-3.5 w-3.5" />
+          <Megaphone className="h-4 w-4" />
           حملات WhatsApp
         </button>
         <button
           onClick={() => setChannelFilter('email')}
           className={cn(
-            'h-9 px-4 rounded-full text-small font-medium flex items-center gap-2 transition-colors border',
+            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2',
             channelFilter === 'email'
-              ? 'bg-[#EA4335]/10 border-[#EA4335]/40 text-[#EA4335]'
-              : 'border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:border-[#EA4335]/30'
+              ? 'border-primary text-current'
+              : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
           )}
         >
-          <Mail className="h-3.5 w-3.5" />
+          <Mail className="h-4 w-4" />
           حملات Email
         </button>
       </div>
@@ -377,13 +394,47 @@ export default function Campaigns(): JSX.Element {
         side="end"
       >
         <div className="space-y-4 pb-20">
-          <Input
-            label="اسم الحملة"
-            value={form.name}
-            onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors({ ...errors, name: undefined }); }}
-            error={errors.name ?? undefined}
-            placeholder="مثال: عروض شهر رمضان"
-          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label="اسم الحملة"
+              value={form.name}
+              onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors({ ...errors, name: undefined }); }}
+              error={errors.name ?? undefined}
+              placeholder="مثال: عروض شهر رمضان"
+            />
+
+            {/* Sender channel / account */}
+            <div className="space-y-1.5">
+              <label className="text-small font-medium text-muted-light dark:text-muted-dark block">
+                {channelFilter === 'whatsapp' ? 'رقم الإرسال' : 'حساب الإرسال'}
+              </label>
+              {eligibleSenders.length === 0 ? (
+                <div className="p-3 rounded-card border border-dashed border-border-light dark:border-border-dark text-center">
+                  <p className="text-small text-muted-light dark:text-muted-dark mb-1">
+                    لا يوجد {channelFilter === 'whatsapp' ? 'رقم واتساب' : 'حساب بريد'} مربوط بعد
+                  </p>
+                  <a
+                    href={channelFilter === 'whatsapp' ? '/channels/whatsapp' : '/channels/email'}
+                    className="text-small text-primary font-medium hover:underline"
+                  >
+                    ربط أول {channelFilter === 'whatsapp' ? 'رقم' : 'حساب'} ←
+                  </a>
+                </div>
+              ) : (
+                <select
+                  value={form.senderChannelId}
+                  onChange={(e) => setForm({ ...form, senderChannelId: e.target.value })}
+                  className="w-full h-10 ps-3 pe-9 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
+                >
+                  {eligibleSenders.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} — {c.identifier}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
 
           {/* Message mode tabs */}
           <div>
@@ -454,30 +505,37 @@ export default function Campaigns(): JSX.Element {
               {form.message.length} / 1024 حرف
             </p>
 
-            {/* Attachment */}
-            <div className="mt-2">
-              {form.attachmentName ? (
-                <div className="flex items-center gap-2 p-2.5 rounded-card bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark">
-                  <Paperclip className="h-4 w-4 text-primary flex-shrink-0" />
-                  <span className="text-small flex-1 truncate">{form.attachmentName}</span>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, attachmentName: '' })}
-                    className="h-6 w-6 rounded-full hover:bg-danger/10 text-muted-light hover:text-danger flex items-center justify-center"
-                  >
-                    <XCircle className="h-3.5 w-3.5" />
-                  </button>
+            {/* Attachment field — looks like a regular input with an action button */}
+            <div className="mt-3 space-y-1.5">
+              <label className="text-small font-medium text-muted-light dark:text-muted-dark block">
+                المرفق
+              </label>
+              <div className="flex items-stretch h-10 rounded-input border border-border-light dark:border-border-dark overflow-hidden">
+                <div className="flex-1 min-w-0 flex items-center h-full px-3 bg-surface-light dark:bg-bg-dark">
+                  <Paperclip className={cn('h-4 w-4 flex-shrink-0', form.attachmentName ? 'text-primary' : 'text-muted-light dark:text-muted-dark')} />
+                  <span className={cn('mx-2 text-small flex-1 truncate', !form.attachmentName && 'text-muted-light/60 dark:text-muted-dark/60')}>
+                    {form.attachmentName || 'لم يتم اختيار ملف'}
+                  </span>
+                  {form.attachmentName && (
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, attachmentName: '' })}
+                      className="h-6 w-6 rounded-full hover:bg-danger/10 text-muted-light hover:text-danger flex items-center justify-center flex-shrink-0"
+                      aria-label="إزالة المرفق"
+                    >
+                      <XCircle className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
-              ) : (
                 <button
                   type="button"
-                  onClick={() => setForm({ ...form, attachmentName: 'مرفق-حملة.pdf' })}
-                  className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark hover:text-primary transition-colors"
+                  onClick={() => setForm({ ...form, attachmentName: form.attachmentName || 'عرض-صيف-2026.jpg' })}
+                  className="h-full px-4 bg-bg-light dark:bg-bg-dark/60 hover:bg-border-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-current text-small font-medium border-s border-border-light dark:border-border-dark flex items-center gap-1.5 flex-shrink-0 transition-colors"
                 >
-                  <Paperclip className="h-4 w-4" />
-                  إرفاق ملف
+                  <Paperclip className="h-3.5 w-3.5" />
+                  {form.attachmentName ? 'استبدال' : 'إرفاق'}
                 </button>
-              )}
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -529,7 +587,7 @@ export default function Campaigns(): JSX.Element {
         {/* Sticky drawer footer */}
         <div className="absolute bottom-0 inset-x-0 px-5 py-3 bg-white dark:bg-surface-dark border-t border-border-light dark:border-border-dark flex items-center justify-end gap-2 flex-wrap">
           <button
-            onClick={() => setPreview(form.message || 'الرسالة فارغة')}
+            onClick={() => setPreview({ message: form.message || 'الرسالة فارغة', attachmentName: form.attachmentName || undefined })}
             className="h-10 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex items-center gap-2"
           >
             <Eye className="h-4 w-4" /> معاينة
@@ -553,9 +611,12 @@ export default function Campaigns(): JSX.Element {
       <Modal open={!!preview} onClose={() => setPreview(null)} title="معاينة الرسالة" size="sm">
         <div className="flex justify-center">
           <div className="max-w-xs w-full bg-[#0d1418] dark:bg-[#0a0f12] rounded-card p-6" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(37,211,102,0.08), transparent 60%)' }}>
-            <div className="bg-[#005c4b] text-white p-3 rounded-card rounded-be-sm shadow-md">
-              <p className="text-body whitespace-pre-wrap break-words">{preview}</p>
-              <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-white/70">
+            <div className="bg-[#005c4b] text-white p-1.5 rounded-card rounded-be-sm shadow-md space-y-1.5">
+              {preview?.attachmentName && <CampaignMediaAttachment name={preview.attachmentName} />}
+              {preview?.message && (
+                <p className="text-body whitespace-pre-wrap break-words px-2 pt-1">{preview.message}</p>
+              )}
+              <div className="flex items-center justify-end gap-1 text-[10px] text-white/70 px-2 pb-1">
                 <span>الآن</span>
                 <Tag className="h-3 w-3" />
               </div>
@@ -1219,5 +1280,64 @@ function PresetChip({ title, range, active, recommended, onClick }: { title: str
       <span className="text-body font-bold leading-none">{title}</span>
       <span className={cn('text-[11px] tabular-nums leading-none', active ? 'text-white/80' : 'opacity-70')}>{range}</span>
     </button>
+  );
+}
+
+/**
+ * Renders the attachment inside the WhatsApp-style preview bubble.
+ * Detects image / video by extension. Demo media uses a colorful inline SVG
+ * placeholder so the prototype works without external assets.
+ */
+function CampaignMediaAttachment({ name }: { name: string }): JSX.Element {
+  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg'].includes(ext);
+  const isVideo = ['mp4', 'webm', 'mov', 'm4v'].includes(ext);
+
+  // Demo placeholder image — inline gradient SVG so we don't need a remote asset.
+  const placeholderSvg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 400'>
+    <defs>
+      <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
+        <stop offset='0' stop-color='%23F59E0B'/>
+        <stop offset='0.5' stop-color='%23EF4444'/>
+        <stop offset='1' stop-color='%237C3AED'/>
+      </linearGradient>
+    </defs>
+    <rect fill='url(%23g)' width='600' height='400'/>
+    <text x='50%' y='48%' fill='white' font-size='52' font-weight='800' text-anchor='middle' font-family='IBM Plex Sans Arabic, sans-serif'>عروض الصيف</text>
+    <text x='50%' y='62%' fill='rgba(255,255,255,0.85)' font-size='28' font-weight='600' text-anchor='middle' font-family='IBM Plex Sans Arabic, sans-serif'>%2050 خصم على كل الباقات</text>
+  </svg>`;
+  const placeholder = `data:image/svg+xml;utf8,${placeholderSvg.replace(/\n\s*/g, '')}`;
+
+  if (isImage) {
+    return (
+      <div className="rounded-lg overflow-hidden bg-black/30">
+        <img src={placeholder} alt={name} className="block w-full aspect-[3/2] object-cover" />
+      </div>
+    );
+  }
+  if (isVideo) {
+    return (
+      <div className="relative rounded-lg overflow-hidden bg-black/30">
+        <img src={placeholder} alt={name} className="block w-full aspect-[3/2] object-cover opacity-80" />
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <span className="h-12 w-12 rounded-full bg-black/55 flex items-center justify-center">
+            <svg viewBox="0 0 24 24" className="h-6 w-6 text-white" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+          </span>
+        </div>
+        <span className="absolute top-1.5 end-1.5 px-1.5 py-0.5 rounded bg-black/60 text-white text-[10px] font-semibold tabular-nums">0:24</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/10">
+      <span className="h-9 w-9 rounded-md bg-white/15 flex items-center justify-center flex-shrink-0">
+        <FileText className="h-5 w-5 text-white" />
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-small font-semibold truncate" dir="ltr">{name}</p>
+        <p className="text-[10px] text-white/70 uppercase">{ext || 'FILE'} · 1.2 MB</p>
+      </div>
+      <Paperclip className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
+    </div>
   );
 }

@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -27,15 +26,11 @@ const ICONS = {
 
 export function OnboardingModal(): JSX.Element | null {
   const navigate = useNavigate();
-  const { skipped, finished, skip, finish } = useOnboardingStore();
+  const { skipped, finished, skip } = useOnboardingStore();
   const { steps, doneCount, total, allComplete, progress } = useOnboardingSteps();
 
-  // Disappears permanently once every step is satisfied.
-  useEffect(() => {
-    if (allComplete && !finished) finish();
-  }, [allComplete, finished, finish]);
-
-  const visible = !finished && !skipped && !allComplete;
+  // Modal hides once skipped (sidebar reminder remains so the user can reopen).
+  const visible = !finished && !skipped;
   if (!visible) return null;
 
   const goToStep = (step: OnboardingStep): void => {
@@ -142,11 +137,12 @@ export function OnboardingModal(): JSX.Element | null {
  * until every step is complete. Clicking it reopens the full checklist.
  */
 export function OnboardingReminder({ collapsed = false }: { collapsed?: boolean }): JSX.Element | null {
-  const { skipped, finished } = useOnboardingStore();
+  const { finished } = useOnboardingStore();
   const reopen = useOnboardingStore((s) => s.reopen);
-  const { doneCount, total, allComplete, progress } = useOnboardingSteps();
+  const { doneCount, total, progress } = useOnboardingSteps();
 
-  if (finished || allComplete || !skipped) return null;
+  // Prototype: keep the reminder visible until the user explicitly finishes onboarding.
+  if (finished) return null;
 
   if (collapsed) {
     return (

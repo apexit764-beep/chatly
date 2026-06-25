@@ -774,6 +774,106 @@ export default function Inbox(): JSX.Element {
   );
 }
 
+function AgentSearchSelect({
+  agents,
+  departments,
+  value,
+  onChange,
+}: {
+  agents: { id: string; name: string; email: string; status: 'online' | 'busy' | 'offline'; departments: string[] }[];
+  departments: { id: string; name: string }[];
+  value: string;
+  onChange: (id: string) => void;
+}): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const selected = agents.find((a) => a.id === value);
+  const filtered = agents.filter((a) => {
+    if (!query.trim()) return true;
+    const q = query.trim().toLowerCase();
+    return a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
+  });
+  const statusLabel: Record<string, { label: string; cls: string }> = {
+    online: { label: 'متاح', cls: 'text-success' },
+    busy: { label: 'مشغول', cls: 'text-warning' },
+    offline: { label: 'غير متصل', cls: 'text-muted-light dark:text-muted-dark' },
+  };
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          'w-full h-11 px-3 rounded-input bg-bg-light dark:bg-bg-dark border text-start flex items-center gap-2.5 transition-colors',
+          open ? 'border-primary ring-2 ring-primary/10' : 'border-transparent hover:border-border-light dark:hover:border-border-dark',
+        )}
+      >
+        {selected ? (
+          <>
+            <Avatar name={selected.name} size="xs" status={selected.status} />
+            <div className="flex-1 min-w-0">
+              <p className="text-small font-semibold truncate">{selected.name}</p>
+              <p className="text-[10px] text-muted-light dark:text-muted-dark truncate">
+                {departments.find((d) => selected.departments.includes(d.id))?.name ?? selected.email}
+              </p>
+            </div>
+            <span className={cn('text-[10px] font-medium', statusLabel[selected.status].cls)}>{statusLabel[selected.status].label}</span>
+          </>
+        ) : (
+          <span className="text-small text-muted-light dark:text-muted-dark flex-1">اختر موظفاً...</span>
+        )}
+        <ChevronDown className={cn('h-4 w-4 text-muted-light dark:text-muted-dark transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => { setOpen(false); setQuery(''); }} />
+          <div className="absolute start-0 end-0 mt-1 z-20 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1.5">
+            <div className="px-2 pb-1.5">
+              <input
+                autoFocus
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="ابحث بالاسم أو البريد..."
+                className="w-full h-9 ps-3 pe-3 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div className="max-h-60 overflow-y-auto">
+              {filtered.length === 0 ? (
+                <p className="px-3 py-4 text-small text-muted-light dark:text-muted-dark text-center">لا نتائج</p>
+              ) : (
+                filtered.map((a) => {
+                  const dept = departments.find((d) => a.departments.includes(d.id));
+                  const selectedRow = value === a.id;
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => { onChange(a.id); setOpen(false); setQuery(''); }}
+                      className={cn(
+                        'w-full flex items-center gap-2.5 px-3 py-2 text-start transition-colors',
+                        selectedRow ? 'bg-primary/5' : 'hover:bg-bg-light dark:hover:bg-bg-dark',
+                      )}
+                    >
+                      <Avatar name={a.name} size="xs" status={a.status} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-small font-semibold truncate">{a.name}</p>
+                        <p className="text-[10px] text-muted-light dark:text-muted-dark truncate">{dept?.name ?? a.email}</p>
+                      </div>
+                      <span className={cn('text-[10px] font-medium', statusLabel[a.status].cls)}>{statusLabel[a.status].label}</span>
+                      {selectedRow && <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function TransferModal({ open, onClose, conversation }: { open: boolean; onClose: () => void; conversation: Conversation }): JSX.Element {
   const agents = useDataStore((s) => s.agents);
   const departments = useDataStore((s) => s.departments);
@@ -816,28 +916,12 @@ function TransferModal({ open, onClose, conversation }: { open: boolean; onClose
       <div className="space-y-3">
         <div className="space-y-1.5">
           <label className="text-small font-medium text-muted-light dark:text-muted-dark">حوّل إلى</label>
-          <div className="space-y-1 max-h-60 overflow-y-auto">
-            {eligibleAgents.map((a) => {
-              const dept = departments.find((d) => a.departments.includes(d.id));
-              return (
-                <label
-                  key={a.id}
-                  className={cn(
-                    'flex items-center gap-2.5 p-2.5 rounded-lg cursor-pointer border transition-colors',
-                    target === a.id ? 'border-primary/40 bg-primary/5' : 'border-transparent bg-bg-light dark:bg-bg-dark hover:border-border-light dark:hover:border-border-dark'
-                  )}
-                >
-                  <input type="radio" name="transferTarget" value={a.id} checked={target === a.id} onChange={() => setTarget(a.id)} className="h-4 w-4 accent-primary" />
-                  <Avatar name={a.name} size="xs" status={a.status} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-small font-semibold">{a.name}</p>
-                    <p className="text-[10px] text-muted-light dark:text-muted-dark">{dept?.name ?? a.email}</p>
-                  </div>
-                  {a.status === 'online' && <span className="text-[10px] text-success font-medium">متاح</span>}
-                </label>
-              );
-            })}
-          </div>
+          <AgentSearchSelect
+            agents={eligibleAgents}
+            departments={departments}
+            value={target}
+            onChange={setTarget}
+          />
         </div>
         <div className="space-y-1.5">
           <label className="text-small font-medium text-muted-light dark:text-muted-dark">ملاحظة داخلية (اختياري)</label>

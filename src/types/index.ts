@@ -226,6 +226,8 @@ export interface Campaign {
   scheduledAt: string | null;
   createdAt: string;
   channelType?: CampaignChannelType;
+  /** ID of the WhatsApp/Email channel used to send this campaign */
+  senderChannelId?: string;
   attachmentName?: string;
 }
 

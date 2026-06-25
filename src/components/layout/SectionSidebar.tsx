@@ -30,7 +30,6 @@ import { cn } from '@/utils/cn';
 const settingsItems: { key: string; label: string; icon: ReactNode }[] = [
   { key: 'general', label: 'عام', icon: <Building className="h-4 w-4" /> },
   { key: 'profile', label: 'الحساب', icon: <User className="h-4 w-4" /> },
-  { key: 'billing', label: 'الفوترة والاشتراك', icon: <CreditCard className="h-4 w-4" /> },
   { key: 'notifications', label: 'الإشعارات', icon: <Bell className="h-4 w-4" /> },
   { key: 'appearance', label: 'المظهر', icon: <Palette className="h-4 w-4" /> },
   { key: 'security', label: 'الأمان', icon: <Shield className="h-4 w-4" /> },

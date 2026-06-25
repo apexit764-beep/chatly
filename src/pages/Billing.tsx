@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Download,
+  Eye,
+  Search,
   ArrowUpRight,
   Sparkles,
   Check,
@@ -15,7 +17,7 @@ import {
   MessageSquare,
   Radio,
 } from 'lucide-react';
-import { Card, useConfirm } from '@components/ui';
+import { Card, Modal, useConfirm } from '@components/ui';
 import { useAdminStore } from '@/store/useAdminStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
@@ -53,8 +55,10 @@ export default function Billing(): JSX.Element {
   const navigate = useNavigate();
   const { confirm } = useConfirm();
 
-  const [cycle, setCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [cycle, setCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'all'>('all');
+  const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
+  const [invSearch, setInvSearch] = useState('');
 
   const client = clients.find((c) => c.id === CURRENT_CLIENT_ID);
   const sub = subscriptions.find((s) => s.clientId === CURRENT_CLIENT_ID && s.status === 'active');
@@ -64,9 +68,14 @@ export default function Billing(): JSX.Element {
   const clientInvoices = invoices
     .filter((i) => i.clientId === CURRENT_CLIENT_ID)
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
-  const filteredInvoices = statusFilter === 'all'
-    ? clientInvoices
-    : clientInvoices.filter((i) => i.status === statusFilter);
+  const filteredInvoices = clientInvoices
+    .filter((i) => statusFilter === 'all' || i.status === statusFilter)
+    .filter((i) => {
+      const q = invSearch.trim().toLowerCase();
+      if (!q) return true;
+      const text = `${i.number} ${i.items.map((it) => it.description).join(' ')} ${formatDate(i.dueDate)}`.toLowerCase();
+      return text.includes(q);
+    });
 
   const paidCount = clientInvoices.filter((i) => i.status === 'paid').length;
   const pendingCount = clientInvoices.filter((i) => i.status === 'pending').length;
@@ -137,14 +146,20 @@ export default function Billing(): JSX.Element {
   return (
     <div className="p-4 lg:p-8 page-fade max-w-6xl mx-auto space-y-6">
       {/* Current plan */}
-      <Card className="p-6 bg-gradient-to-l from-primary to-primary-dark text-white border-0">
+      <Card className="p-5 bg-gradient-to-l from-primary to-primary-dark text-white border-0">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur text-[10px] font-bold uppercase tracking-wider mb-2">
-              <Sparkles className="h-3 w-3" /> اشتراكك الحالي
-            </span>
+            <div className="flex items-center gap-2 flex-wrap mb-2">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur text-[10px] font-bold uppercase tracking-wider">
+                <Sparkles className="h-3 w-3" /> اشتراكك الحالي
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur text-[11px] font-semibold">
+                <Calendar className="h-3 w-3" />
+                ينتهي في {formatDate(sub.currentPeriodEnd)}
+              </span>
+            </div>
             <h2 className="text-h1 font-extrabold mb-1">{plan.nameAr}</h2>
-            <p className="text-body opacity-90 mb-4">{plan.tagline}</p>
+            <p className="text-body opacity-90 mb-3">{plan.tagline}</p>
             <div className="flex items-baseline gap-2">
               <p className="text-display font-extrabold">{formatMoney(sub.amount, sub.currency)}</p>
               <span className="text-body opacity-90">/{sub.billingCycle === 'monthly' ? 'شهر' : 'سنة'}</span>
@@ -152,164 +167,14 @@ export default function Billing(): JSX.Element {
           </div>
           <div className="flex flex-col gap-2">
             <Link to="/subscribe" className="h-10 px-5 rounded-full bg-white text-primary text-small font-semibold flex items-center gap-2 hover:bg-white/90 transition-colors">
-              <ArrowUpRight className="h-4 w-4" /> ترقية / تخفيض
+              <ArrowUpRight className="h-4 w-4" /> ترقية
             </Link>
             <button onClick={handleCancel} className="h-10 px-5 rounded-full bg-white/15 backdrop-blur text-white text-small font-semibold hover:bg-white/25 transition-colors">
               إلغاء الاشتراك
             </button>
           </div>
         </div>
-
-        <div className="mt-5 pt-5 border-t border-white/20 grid grid-cols-1 sm:grid-cols-2 gap-4 text-small">
-          <div className="flex items-center gap-2.5">
-            <Calendar className="h-4 w-4 opacity-80" />
-            <div>
-              <p className="opacity-80 text-[11px]">يتجدد في</p>
-              <p className="font-semibold">{formatDate(sub.currentPeriodEnd)}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <span className="text-base">{country.flag}</span>
-            <div>
-              <p className="opacity-80 text-[11px]">الدولة</p>
-              <p className="font-semibold">{country.nameAr}</p>
-            </div>
-          </div>
-        </div>
       </Card>
-
-      {/* Available plans */}
-      <div>
-        <div className="flex items-end justify-between gap-4 flex-wrap mb-4">
-          <div>
-            <h2 className="text-h2 font-bold">الباقات المتاحة</h2>
-            <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
-              قارن بين الباقات وارقِ متى ما احتجت
-            </p>
-          </div>
-          <div className="flex items-center gap-1 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-full p-1">
-            <button
-              onClick={() => setCycle('monthly')}
-              className={cn(
-                'px-4 py-1.5 rounded-full text-small font-medium transition-colors',
-                cycle === 'monthly' ? 'bg-primary text-white shadow' : 'text-muted-light dark:text-muted-dark'
-              )}
-              style={cycle === 'monthly' ? { color: '#fff' } : undefined}
-            >
-              شهري
-            </button>
-            <button
-              onClick={() => setCycle('yearly')}
-              className={cn(
-                'px-4 py-1.5 rounded-full text-small font-medium transition-colors flex items-center gap-1.5',
-                cycle === 'yearly' ? 'bg-primary text-white shadow' : 'text-muted-light dark:text-muted-dark'
-              )}
-              style={cycle === 'yearly' ? { color: '#fff' } : undefined}
-            >
-              سنوي
-              <span
-                className={cn(
-                  'text-[10px] px-1.5 py-0.5 rounded-full font-bold',
-                  cycle === 'yearly'
-                    ? 'bg-white text-primary'
-                    : 'bg-success/15 text-success',
-                )}
-                style={cycle === 'yearly' ? { color: '#2563EB' } : undefined}
-              >
-                وفّر شهرين
-              </span>
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {activePlans.map((p) => {
-            const price = p.pricesPerCountry[country.code] ?? { monthly: 0, yearly: 0 };
-            const isCurrent = p.id === client.planId;
-            const display = cycle === 'monthly' ? price.monthly : Math.round(price.yearly / 12);
-            return (
-              <Card
-                key={p.id}
-                className={cn(
-                  'p-5 relative transition-all flex flex-col',
-                  isCurrent
-                    ? 'border-2 border-success shadow-card-hover bg-success/[0.03]'
-                    : p.popular
-                      ? 'border-2 border-primary/30 hover:border-primary'
-                      : 'hover:border-primary/30'
-                )}
-              >
-                {p.popular && !isCurrent && (
-                  <span className="absolute -top-3 start-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary text-white text-[10px] font-bold shadow-lg" style={{ color: '#fff' }}>
-                    <Star className="h-3 w-3 fill-current" /> الأكثر شعبية
-                  </span>
-                )}
-                {isCurrent && (
-                  <span className="absolute -top-3 start-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-success text-white text-[10px] font-bold shadow-lg shadow-success/30" style={{ color: '#fff' }}>
-                    <Check className="h-3 w-3" /> باقتك الحالية
-                  </span>
-                )}
-                <h3 className="text-h3 font-extrabold">{p.nameAr}</h3>
-                <p className="text-small text-muted-light dark:text-muted-dark mt-1 mb-4 min-h-[2.5em]">{p.tagline}</p>
-
-                <div className="mb-4 pb-4 border-b border-border-light dark:border-border-dark">
-                  <div className="flex items-baseline gap-1">
-                    <p className="text-h1 font-extrabold">{formatMoney(display, country.currency)}</p>
-                    <span className="text-small text-muted-light dark:text-muted-dark">/شهر</span>
-                  </div>
-                  {cycle === 'yearly' && (
-                    <p className="text-[11px] text-success font-medium mt-0.5">
-                      {formatMoney(price.yearly, country.currency)} سنوياً
-                    </p>
-                  )}
-                </div>
-
-                {/* Limits — integrated as the first feature rows */}
-                <ul className="space-y-2 mb-5 flex-1 text-small">
-                  <LimitItem
-                    icon={<Users2 className="h-4 w-4" />}
-                    value={p.limits.agents === -1 ? 'موظفون بلا حدود' : `حتى ${p.limits.agents} موظف`}
-                  />
-                  <LimitItem
-                    icon={<Radio className="h-4 w-4" />}
-                    value={p.limits.channels === -1 ? 'قنوات بلا حدود' : `${p.limits.channels} ${p.limits.channels === 1 ? 'قناة تواصل' : 'قنوات تواصل'}`}
-                  />
-                  <LimitItem
-                    icon={<MessageSquare className="h-4 w-4" />}
-                    value={p.limits.conversations === -1 ? 'محادثات بلا حدود' : `${p.limits.conversations.toLocaleString('en-US')} محادثة/شهر`}
-                  />
-                  <LimitItem
-                    icon={<Users className="h-4 w-4" />}
-                    value={p.limits.contacts === -1 ? 'جهات اتصال بلا حدود' : `${p.limits.contacts.toLocaleString('en-US')} جهة اتصال`}
-                  />
-                  <li className="h-px bg-border-light dark:bg-border-dark my-2" />
-                  {p.features.slice(0, 6).map((f, i) => (
-                    <li key={i} className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <button
-                  onClick={() => goToCheckout(p)}
-                  disabled={isCurrent}
-                  className={cn(
-                    'w-full h-10 rounded-full text-small font-semibold transition-colors inline-flex items-center justify-center gap-1.5',
-                    isCurrent
-                      ? 'bg-success/15 text-success cursor-default'
-                      : 'bg-primary hover:bg-primary-dark text-white'
-                  )}
-                  style={isCurrent ? undefined : { color: '#fff' }}
-                >
-                  {isCurrent && <Check className="h-3.5 w-3.5" />}
-                  {isCurrent ? 'مفعّلة' : 'اختر هذه الباقة'}
-                </button>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
 
       {/* Invoices */}
       <Card className="overflow-hidden">
@@ -342,20 +207,32 @@ export default function Billing(): JSX.Element {
             </div>
           </div>
 
-          {/* Status filter pills */}
-          <div className="mt-3 flex items-center gap-1.5 overflow-x-auto">
-            <FilterPill active={statusFilter === 'all'} onClick={() => setStatusFilter('all')}>
-              الكل ({clientInvoices.length})
-            </FilterPill>
-            {(['paid', 'pending', 'failed', 'refunded'] as InvoiceStatus[]).map((s) => {
-              const n = clientInvoices.filter((i) => i.status === s).length;
-              if (n === 0) return null;
-              return (
-                <FilterPill key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>
-                  {invStatusLabel[s]} ({n})
-                </FilterPill>
-              );
-            })}
+          {/* Toolbar — search + status filter pills */}
+          <div className="mt-3 flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px] max-w-md">
+              <Search className="h-3.5 w-3.5 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark pointer-events-none" />
+              <input
+                type="text"
+                value={invSearch}
+                onChange={(e) => setInvSearch(e.target.value)}
+                placeholder="ابحث برقم الفاتورة أو البيان..."
+                className="w-full h-9 ps-3 pe-9 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              <FilterPill active={statusFilter === 'all'} onClick={() => setStatusFilter('all')}>
+                الكل ({clientInvoices.length})
+              </FilterPill>
+              {(['paid', 'pending', 'failed', 'refunded'] as InvoiceStatus[]).map((s) => {
+                const n = clientInvoices.filter((i) => i.status === s).length;
+                if (n === 0) return null;
+                return (
+                  <FilterPill key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>
+                    {invStatusLabel[s]} ({n})
+                  </FilterPill>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -368,7 +245,7 @@ export default function Billing(): JSX.Element {
                 <th className="text-start font-medium px-4 py-3">التاريخ</th>
                 <th className="text-end font-medium px-4 py-3">المبلغ</th>
                 <th className="text-center font-medium px-4 py-3">الحالة</th>
-                <th className="text-center font-medium px-4 py-3 w-1">PDF</th>
+                <th className="text-center font-medium px-4 py-3 w-1">الإجراء</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
@@ -387,11 +264,11 @@ export default function Billing(): JSX.Element {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <button
-                        onClick={() => handleDownload(inv)}
-                        className="h-8 w-8 rounded-full hover:bg-primary/10 text-muted-light dark:text-muted-dark hover:text-primary inline-flex items-center justify-center transition-colors"
-                        title="تحميل PDF"
+                        onClick={() => setPreviewInvoice(inv)}
+                        className="h-8 px-3 rounded-full bg-primary/10 text-primary hover:bg-primary/20 inline-flex items-center gap-1.5 text-small font-semibold transition-colors"
                       >
-                        <Download className="h-4 w-4" />
+                        <Eye className="h-3.5 w-3.5" />
+                        عرض
                       </button>
                     </td>
                   </tr>
@@ -400,7 +277,7 @@ export default function Billing(): JSX.Element {
               {filteredInvoices.length === 0 && (
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-muted-light dark:text-muted-dark">
-                    {statusFilter === 'all' ? 'لا توجد فواتير بعد' : `لا توجد فواتير ${invStatusLabel[statusFilter]}`}
+                    {invSearch.trim() ? 'لا توجد فواتير تطابق البحث' : statusFilter === 'all' ? 'لا توجد فواتير بعد' : `لا توجد فواتير ${invStatusLabel[statusFilter]}`}
                   </td>
                 </tr>
               )}
@@ -408,6 +285,101 @@ export default function Billing(): JSX.Element {
           </table>
         </div>
       </Card>
+
+      {/* Invoice preview — opens a PDF-like view that the user can download */}
+      <Modal
+        open={!!previewInvoice}
+        onClose={() => setPreviewInvoice(null)}
+        title={previewInvoice ? `معاينة الفاتورة ${previewInvoice.number}` : ''}
+        size="lg"
+        footer={
+          <>
+            <button
+              onClick={() => setPreviewInvoice(null)}
+              className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark"
+            >
+              إغلاق
+            </button>
+            <button
+              onClick={() => previewInvoice && handleDownload(previewInvoice)}
+              className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              تحميل PDF
+            </button>
+          </>
+        }
+      >
+        {previewInvoice && (
+          <div className="bg-white text-gray-900 rounded-lg shadow-inner border border-border-light p-8 max-h-[60vh] overflow-y-auto" dir="rtl">
+            <div className="flex items-start justify-between mb-6 pb-4 border-b border-gray-200">
+              <div>
+                <h2 className="text-h2 font-bold">فاتورة {previewInvoice.number}</h2>
+                <p className="text-small text-gray-500 mt-1">
+                  {formatDate(previewInvoice.createdAt)}
+                </p>
+              </div>
+              <div className="text-end">
+                <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-1">الحالة</p>
+                <span className={cn('inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold', invStatusColor[previewInvoice.status])}>
+                  {invStatusLabel[previewInvoice.status]}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6 mb-6 text-small">
+              <div>
+                <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-1">إلى</p>
+                <p className="font-bold text-body">{client?.companyName ?? ''}</p>
+                <p className="text-gray-600 mt-0.5">{client?.email ?? ''}</p>
+                <p className="text-gray-600">{client?.phone ?? ''}</p>
+              </div>
+              <div className="text-end">
+                <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-1">تاريخ الاستحقاق</p>
+                <p className="font-semibold">{formatDate(previewInvoice.dueDate)}</p>
+              </div>
+            </div>
+
+            <table className="w-full mb-6 text-small">
+              <thead>
+                <tr className="bg-gray-50 text-gray-600 text-[11px] uppercase tracking-wider">
+                  <th className="text-start font-semibold px-3 py-2">البيان</th>
+                  <th className="text-center font-semibold px-3 py-2 w-16">الكمية</th>
+                  <th className="text-end font-semibold px-3 py-2 w-28">السعر</th>
+                  <th className="text-end font-semibold px-3 py-2 w-28">المجموع</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {previewInvoice.items.map((it, i) => (
+                  <tr key={i}>
+                    <td className="px-3 py-3">{it.description}</td>
+                    <td className="px-3 py-3 text-center tabular-nums">{it.quantity}</td>
+                    <td className="px-3 py-3 text-end tabular-nums">{formatMoney(it.unitPrice, previewInvoice.currency)}</td>
+                    <td className="px-3 py-3 text-end font-semibold tabular-nums">{formatMoney(it.total, previewInvoice.currency)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="flex justify-end">
+              <div className="w-72 space-y-2 text-small">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">المجموع الفرعي</span>
+                  <span className="tabular-nums">{formatMoney(previewInvoice.amount, previewInvoice.currency)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600">ضريبة 5%</span>
+                  <span className="tabular-nums">{formatMoney(previewInvoice.tax, previewInvoice.currency)}</span>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-gray-200 text-body font-bold">
+                  <span>الإجمالي المستحق</span>
+                  <span className="tabular-nums">{formatMoney(previewInvoice.total, previewInvoice.currency)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

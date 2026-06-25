@@ -3,7 +3,15 @@ import { create } from 'zustand';
 export type AILanguage = 'ar' | 'en';
 export type AITone = 'short' | 'friendly' | 'formal' | 'luxury';
 export type AIDialect = 'msa' | 'gulf' | 'egyptian' | 'levantine';
-export type AIModel = 'gpt-4o' | 'gpt-4o-mini' | 'gpt-4-turbo' | 'gpt-3.5-turbo';
+export type AIGulfCountry = 'sa' | 'ae' | 'om' | 'kw' | 'qa' | 'bh';
+export type AIProvider = 'openai' | 'anthropic' | 'google';
+export type AIModel =
+  // OpenAI
+  | 'gpt-4o' | 'gpt-4o-mini' | 'gpt-4-turbo' | 'gpt-3.5-turbo'
+  // Anthropic (Claude)
+  | 'claude-opus-4-6' | 'claude-sonnet-4-6' | 'claude-haiku-4-5'
+  // Google (Gemini)
+  | 'gemini-2.5-pro' | 'gemini-2.0-flash';
 
 export interface DaySchedule {
   enabled: boolean;
@@ -13,7 +21,8 @@ export interface DaySchedule {
 
 export interface AISettings {
   enabled: boolean;
-  /** OpenAI connection */
+  /** AI provider connection */
+  provider: AIProvider;
   apiKey: string;
   model: AIModel;
   /** Max tokens in the assistant's reply */
@@ -23,8 +32,12 @@ export interface AISettings {
   languages: AILanguage[];
   tone: AITone;
   dialect: AIDialect;
+  /** Country within the Gulf dialect — only meaningful when dialect === 'gulf' */
+  gulfCountry?: AIGulfCountry;
   prompt: string;
   forbiddenTopics: string;
+  /** Reply the AI sends when a forbidden topic is detected */
+  forbiddenReply: string;
   /** Use the Help Center / Knowledge Base as a data source for the AI */
   useKnowledgeBase: boolean;
   /** Transfer-to-staff rules */
@@ -85,6 +98,7 @@ const WEEKEND: DaySchedule = { enabled: false, start: '09:00', end: '17:00' };
 
 const DEFAULT_SETTINGS: AISettings = {
   enabled: true,
+  provider: 'openai',
   apiKey: '',
   model: 'gpt-4o-mini',
   maxResponseTokens: 600,
@@ -92,8 +106,10 @@ const DEFAULT_SETTINGS: AISettings = {
   languages: ['ar', 'en'],
   tone: 'friendly',
   dialect: 'msa',
+  gulfCountry: 'om',
   prompt: DEFAULT_PROMPT,
   forbiddenTopics: DEFAULT_FORBIDDEN,
+  forbiddenReply: 'عذراً، لا أستطيع المساعدة في هذا الموضوع. للحصول على إجابة دقيقة سيتواصل معك أحد موظفينا قريباً 🌷',
   useKnowledgeBase: true,
   transferOnRequest: true,
   transferOnFailure: true,

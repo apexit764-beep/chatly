@@ -91,6 +91,7 @@ export default function ChannelDetail(): JSX.Element {
 
   const openAdd = (): void => {
     if (meta?.type === 'whatsapp') {
+      setEditing(null);
       setWhatsappWizardOpen(true);
       return;
     }
@@ -102,6 +103,12 @@ export default function ChannelDetail(): JSX.Element {
 
   const openEdit = (c: Channel): void => {
     setEditing(c);
+    setOpenMenu(null);
+    // WhatsApp uses the same multi-step wizard for both add and edit
+    if (meta?.type === 'whatsapp') {
+      setWhatsappWizardOpen(true);
+      return;
+    }
     let cc = '+968';
     let local = c.identifier;
     if (meta?.identifierType === 'phone') {
@@ -111,7 +118,6 @@ export default function ChannelDetail(): JSX.Element {
     setForm({ name: c.name, identifier: local, countryCode: cc, departmentId: c.departmentId ?? '' });
     setCreds(c.credentials ?? {});
     setAddOpen(true);
-    setOpenMenu(null);
   };
 
   const submit = (): void => {
@@ -615,11 +621,12 @@ export default function ChannelDetail(): JSX.Element {
         </div>
       </Modal>
 
-      {/* WhatsApp connection wizard */}
+      {/* WhatsApp connection wizard — used for both add and edit */}
       <WhatsAppConnectWizard
         open={whatsappWizardOpen}
-        onClose={() => setWhatsappWizardOpen(false)}
+        onClose={() => { setWhatsappWizardOpen(false); setEditing(null); }}
         brandColor={meta.brandColor}
+        editingChannel={whatsappWizardOpen ? editing : null}
       />
 
       {/* QR for WhatsApp */}

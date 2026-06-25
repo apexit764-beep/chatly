@@ -20,6 +20,7 @@ import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { cn } from '@/utils/cn';
 import { WhatsAppIcon } from '@components/ui/BrandIcons';
+import type { Channel } from '@/types';
 
 type ConnectionMethod = 'cloud' | 'qr' | 'pairing';
 
@@ -57,33 +58,68 @@ export default function WhatsAppConnectWizard({
   open,
   onClose,
   brandColor,
+  editingChannel,
 }: {
   open: boolean;
   onClose: () => void;
   brandColor: string;
+  /** If provided, the wizard runs in edit mode — pre-filled, skips method selection, updates instead of creates. */
+  editingChannel?: Channel | null;
 }): JSX.Element | null {
   const departments = useDataStore((s) => s.departments);
   const agents = useDataStore((s) => s.agents);
   const addChannel = useDataStore((s) => s.addChannel);
+  const updateChannel = useDataStore((s) => s.updateChannel);
   const showToast = useUIStore((s) => s.showToast);
+
+  const isEditing = !!editingChannel;
+
+  const buildEditState = (c: Channel): WizardState => {
+    const creds = c.credentials ?? {};
+    const m = c.identifier.match(/^(\+\d{1,4})\s*(.*)$/);
+    return {
+      method: 'cloud',
+      channelName: c.name,
+      countryCode: m ? m[1] : '+968',
+      phone: m ? m[2].replace(/\D/g, '') : c.identifier.replace(/\D/g, ''),
+      phoneNumberId: creds.phoneNumberId ?? '',
+      wabaId: creds.wabaId ?? '',
+      accessToken: creds.accessToken ?? '',
+      graphApiVersion: creds.graphApiVersion || 'v23.0 (latest)',
+      callbackUrl: creds.callbackUrl ?? '',
+      verifyToken: creds.verifyToken ?? '',
+      departmentId: c.departmentId ?? '',
+      agentIds: [],
+    };
+  };
 
   const [step, setStep] = useState(0);
   const [state, setState] = useState<WizardState>(initialState);
 
-  // Reset when modal closes
+  // Reset / hydrate when the modal opens or the target channel changes
   useEffect(() => {
     if (!open) {
       setStep(0);
       setState(initialState);
+      return;
     }
-  }, [open]);
+    if (editingChannel) {
+      setState(buildEditState(editingChannel));
+      setStep(0); // first usable step is 'connect' (skips method selection in edit mode)
+    } else {
+      setState(initialState);
+      setStep(0);
+    }
+  }, [open, editingChannel]);
 
   // Step layouts per method:
   // - cloud:   [method] [connect+meta] [customize]
   // - qr:      [method] [qr-scan]
   // - pairing: [method] [pairing-code]
-  const steps =
-    state.method === 'cloud'
+  // In edit mode we skip the method picker — the channel always uses cloud creds.
+  const steps = isEditing
+    ? ['connect', 'customize'] as const
+    : state.method === 'cloud'
       ? ['method', 'connect', 'customize'] as const
       : state.method === 'pairing'
       ? ['method', 'pairing'] as const
@@ -92,7 +128,7 @@ export default function WhatsAppConnectWizard({
       : ['method'] as const;
 
   const currentKey = steps[step];
-  const isLast = step === steps.length - 1 && state.method !== null;
+  const isLast = step === steps.length - 1 && (isEditing || state.method !== null);
 
   const stepTitle: Record<string, string> = {
     method: 'اختر طريقة الربط',
@@ -121,14 +157,34 @@ export default function WhatsAppConnectWizard({
   const prev = (): void => setStep((s) => Math.max(0, s - 1));
 
   const submit = (): void => {
-    addChannel({
-      type: 'whatsapp',
-      name: state.channelName || `${state.countryCode} ${state.phone}`,
-      identifier: `${state.countryCode}${state.phone}`,
-      status: 'pending',
-      departmentId: state.departmentId || null,
-    });
-    showToast('تم بدء الربط — تحقق من حالة التفعيل خلال دقائق', 'success');
+    const credentials: Record<string, string> = {};
+    if (isEditing || state.method === 'cloud') {
+      if (state.phoneNumberId) credentials.phoneNumberId = state.phoneNumberId;
+      if (state.wabaId) credentials.wabaId = state.wabaId;
+      if (state.accessToken) credentials.accessToken = state.accessToken;
+      if (state.graphApiVersion) credentials.graphApiVersion = state.graphApiVersion;
+      if (state.callbackUrl) credentials.callbackUrl = state.callbackUrl;
+      if (state.verifyToken) credentials.verifyToken = state.verifyToken;
+    }
+    if (isEditing && editingChannel) {
+      updateChannel(editingChannel.id, {
+        name: state.channelName || `${state.countryCode} ${state.phone}`,
+        identifier: `${state.countryCode}${state.phone}`,
+        departmentId: state.departmentId || null,
+        ...(Object.keys(credentials).length > 0 ? { credentials } : {}),
+      });
+      showToast('تم تحديث القناة', 'success');
+    } else {
+      addChannel({
+        type: 'whatsapp',
+        name: state.channelName || `${state.countryCode} ${state.phone}`,
+        identifier: `${state.countryCode}${state.phone}`,
+        status: 'pending',
+        departmentId: state.departmentId || null,
+        ...(Object.keys(credentials).length > 0 ? { credentials } : {}),
+      });
+      showToast('تم بدء الربط — تحقق من حالة التفعيل خلال دقائق', 'success');
+    }
     onClose();
   };
 
@@ -149,7 +205,7 @@ export default function WhatsAppConnectWizard({
               <WhatsAppIcon className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-h3 font-bold">ربط WhatsApp</h2>
+              <h2 className="text-h3 font-bold">{isEditing ? `تعديل: ${editingChannel?.name}` : 'ربط WhatsApp'}</h2>
               <p className="text-[11px] text-muted-light dark:text-muted-dark">{stepTitle[currentKey]}</p>
             </div>
           </div>
@@ -212,7 +268,7 @@ export default function WhatsAppConnectWizard({
               className="h-10 px-5 rounded-full text-white text-small font-medium flex items-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: brandColor }}
             >
-              {isLast ? 'تأكيد الربط' : 'التالي'}
+              {isLast ? (isEditing ? 'حفظ التغييرات' : 'تأكيد الربط') : 'التالي'}
               {!isLast && <ArrowLeft className="h-4 w-4" />}
             </button>
           </div>

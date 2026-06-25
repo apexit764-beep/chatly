@@ -91,6 +91,14 @@ export const CHANNEL_TYPES: ChannelTypeMeta[] = [
     identifierLabel: 'رقم الواتساب',
     identifierPlaceholder: '9999 1111',
     identifierType: 'phone',
+    credentials: [
+      { key: 'phoneNumberId', label: 'Phone Number ID', placeholder: '104872819283746', type: 'text', hint: 'معرّف الرقم في Meta — في إعدادات API Setup ← WhatsApp' },
+      { key: 'wabaId', label: 'WhatsApp Business Account ID', placeholder: '237456891023456', type: 'text', hint: 'معرّف حساب الأعمال الذي يضمّ الأرقام (WABA ID)' },
+      { key: 'accessToken', label: 'Access Token', placeholder: 'EAAG...', type: 'password', hint: 'رمز المصادقة الدائم من System User في Business Settings في Meta' },
+      { key: 'graphApiVersion', label: 'إصدار Graph API', placeholder: 'v23.0 (latest)', type: 'text', hint: 'إصدار Graph API المستخدم في طلبات الإرسال' },
+      { key: 'callbackUrl', label: 'Callback URL', placeholder: 'https://yourserver.com/webhook/whatsapp', type: 'text', hint: 'انسخ هذا الرابط والصقه في إعدادات Webhook بـ Meta' },
+      { key: 'verifyToken', label: 'Verify Token', placeholder: 'wh_xxxxxxxxxxxxxxxx', type: 'password', hint: 'نفس القيمة تُكتب هنا وفي إعدادات Webhook في Meta' },
+    ],
   },
   {
     type: 'messenger',

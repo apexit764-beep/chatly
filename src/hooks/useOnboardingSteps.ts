@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useDataStore } from '@/store/useDataStore';
-import { widgetConfig as initialWidgetConfig } from '@/store/mockData';
 
 export interface OnboardingStep {
   key: string;
@@ -27,12 +26,8 @@ export function useOnboardingSteps(): {
   const channels = useDataStore((s) => s.channels);
   const departments = useDataStore((s) => s.departments);
   const agents = useDataStore((s) => s.agents);
-  const templates = useDataStore((s) => s.templates);
-  const widget = useDataStore((s) => s.widgetConfig);
 
   return useMemo(() => {
-    const widgetCustomized = JSON.stringify(widget) !== JSON.stringify(initialWidgetConfig);
-
     const steps: OnboardingStep[] = [
       {
         key: 'channels',
@@ -58,22 +53,6 @@ export function useOnboardingSteps(): {
         icon: 'team',
         done: agents.length > 1,
       },
-      {
-        key: 'replies',
-        title: 'جهّز الردود السريعة',
-        description: 'اكتب قوالب جاهزة لتسريع ردود فريقك',
-        to: '/saved-replies',
-        icon: 'replies',
-        done: templates.length > 0,
-      },
-      {
-        key: 'widget',
-        title: 'خصّص الويدجت',
-        description: 'عدّل ألوان ورسائل أداة الدردشة على موقعك',
-        to: '/channels/widget',
-        icon: 'widget',
-        done: widgetCustomized,
-      },
     ];
 
     const doneCount = steps.filter((s) => s.done).length;
@@ -85,5 +64,5 @@ export function useOnboardingSteps(): {
       allComplete: doneCount === total,
       progress: Math.round((doneCount / total) * 100),
     };
-  }, [channels, departments, agents, templates, widget]);
+  }, [channels, departments, agents]);
 }
