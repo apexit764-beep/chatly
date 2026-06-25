@@ -94,6 +94,7 @@ export default function Campaigns(): JSX.Element {
       minDelay: tpl.defaultMinDelay,
       maxDelay: tpl.defaultMaxDelay,
       channelType: channelFilter,
+      senderChannelId: '',
       attachmentName: '',
     });
     setEditing(null);
