@@ -6,14 +6,18 @@ import {
   Palette,
   Shield,
   Languages,
-  Database,
   Upload,
   AlertTriangle,
   Star,
+  Pencil,
+  KeyRound,
+  Phone,
+  MapPin,
+  Users,
+  Briefcase,
 } from 'lucide-react';
 import { Avatar, useConfirm } from '@components/ui';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useDataStore } from '@/store/useDataStore';
 import { useInboxStore } from '@/store/useInboxStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useThemeStore } from '@/store/useThemeStore';
@@ -21,23 +25,61 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { cn } from '@/utils/cn';
 import Billing from './Billing';
 
+const SETTINGS_TABS: { key: string; label: string; icon: ReactNode }[] = [
+  { key: 'profile', label: 'الملف الشخصي', icon: <User className="h-4 w-4" /> },
+  { key: 'general', label: 'إعدادات الشركة', icon: <Building className="h-4 w-4" /> },
+  { key: 'notifications', label: 'الإشعارات', icon: <Bell className="h-4 w-4" /> },
+  { key: 'appearance', label: 'المظهر', icon: <Palette className="h-4 w-4" /> },
+  { key: 'security', label: 'الأمان', icon: <Shield className="h-4 w-4" /> },
+  { key: 'rating', label: 'تقييم العملاء', icon: <Star className="h-4 w-4" /> },
+  { key: 'language', label: 'اللغة والمنطقة', icon: <Languages className="h-4 w-4" /> },
+];
+
 export default function Settings(): JSX.Element {
   const tab = useInboxStore((s) => s.settingsTab);
+  const setTab = useInboxStore((s) => s.setSettingsTab);
 
   if (tab === 'billing') {
     return <Billing />;
   }
 
   return (
-    <div className="p-4 lg:p-8 page-fade max-w-4xl">
-      {tab === 'general' && <GeneralTab />}
-      {tab === 'profile' && <ProfileTab />}
-      {tab === 'notifications' && <NotificationsTab />}
-      {tab === 'appearance' && <AppearanceTab />}
-      {tab === 'security' && <SecurityTab />}
-      {tab === 'rating' && <RatingTab />}
-      {tab === 'language' && <LanguageTab />}
-      {tab === 'data' && <DataTab />}
+    <div className="p-4 lg:p-6 page-fade">
+      <div className="mb-6">
+        <h1 className="text-h1 font-bold">الإعدادات</h1>
+        <p className="text-body text-muted-light dark:text-muted-dark mt-1">إدارة إعدادات النظام وتخصيص تجربة الاستخدام</p>
+      </div>
+      <div className="flex gap-6 items-start">
+        {/* Sidebar tabs */}
+        <nav className="w-[200px] flex-shrink-0 bg-white dark:bg-surface-dark rounded-card shadow-card dark:shadow-card-dark p-3 space-y-1 sticky top-4">
+          {SETTINGS_TABS.map((it) => (
+            <button
+              key={it.key}
+              onClick={() => setTab(it.key)}
+              className={cn(
+                'flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-body font-medium transition-colors',
+                tab === it.key
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-[#374151] dark:text-[#D1D5DB] hover:bg-bg-light dark:hover:bg-bg-dark'
+              )}
+            >
+              <span className="opacity-80 flex-shrink-0">{it.icon}</span>
+              {it.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 bg-white dark:bg-surface-dark rounded-card shadow-card dark:shadow-card-dark p-6 lg:p-8">
+          {tab === 'general' && <GeneralTab />}
+          {tab === 'profile' && <ProfileTab />}
+          {tab === 'notifications' && <NotificationsTab />}
+          {tab === 'appearance' && <AppearanceTab />}
+          {tab === 'security' && <SecurityTab />}
+          {tab === 'rating' && <RatingTab />}
+          {tab === 'language' && <LanguageTab />}
+        </div>
+      </div>
     </div>
   );
 }
@@ -45,7 +87,7 @@ export default function Settings(): JSX.Element {
 function TabHeader({ icon, title, subtitle }: { icon: ReactNode; title: string; subtitle: string }): JSX.Element {
   return (
     <div className="mb-6 pb-5 border-b border-border-light dark:border-border-dark">
-      <h2 className="text-h1 font-bold flex items-center gap-2">
+      <h2 className="text-h2 font-bold flex items-center gap-2">
         <span className="text-primary">{icon}</span>
         {title}
       </h2>
@@ -74,10 +116,12 @@ function GeneralTab(): JSX.Element {
   const setGeneral = useSettingsStore((s) => s.setGeneral);
   const showToast = useUIStore((s) => s.showToast);
   const [siteName, setSiteName] = useState(general.siteName);
-  const [siteUrl, setSiteUrl] = useState(general.siteUrl);
   const [companyLogo, setCompanyLogo] = useState(general.companyLogo);
   const [siteNameError, setSiteNameError] = useState<string | null>(null);
-  const [urlError, setUrlError] = useState<string | null>(null);
+  const [industry, setIndustry] = useState('real_estate');
+  const [companySize, setCompanySize] = useState('11-50');
+  const [country, setCountry] = useState('OM');
+  const [phone, setPhone] = useState('+968 9999 0000');
 
   const onLogoChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0];
@@ -90,17 +134,14 @@ function GeneralTab(): JSX.Element {
   };
 
   const save = (): void => {
-    let ok = true;
-    if (!siteName.trim()) { setSiteNameError('الاسم مطلوب'); ok = false; }
-    if (!/^https?:\/\/.+/.test(siteUrl.trim())) { setUrlError('يجب أن يبدأ بـ http(s)://'); ok = false; }
-    if (!ok) return;
-    setGeneral({ siteName, siteUrl, companyLogo });
+    if (!siteName.trim()) { setSiteNameError('الاسم مطلوب'); return; }
+    setGeneral({ siteName, companyLogo });
     showToast('تم حفظ الإعدادات', 'success');
   };
 
   return (
     <div>
-      <TabHeader icon={<Building className="h-5 w-5" />} title="الإعدادات العامة" subtitle="إعدادات الموقع والمعلومات الأساسية" />
+      <TabHeader icon={<Building className="h-5 w-5" />} title="إعدادات الشركة" subtitle="بيانات الشركة الأساسية التي تظهر للعملاء" />
       <Row label="شعار الشركة" hint="يظهر في البانر والصفحات الأخرى (PNG/JPG, الحد الأقصى 1MB)">
         <div className="flex items-center gap-3">
           <div className="h-16 w-16 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -127,11 +168,50 @@ function GeneralTab(): JSX.Element {
           </div>
         </div>
       </Row>
-      <Row label="اسم الموقع" hint="يظهر في عنوان الصفحة والإيميلات" error={siteNameError}>
-        <input value={siteName} onChange={(e) => { setSiteName(e.target.value); setSiteNameError(null); }} className={cn('w-full h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border text-body focus:outline-none', siteNameError ? 'border-danger focus:border-danger' : 'border-transparent focus:border-primary')} />
+      <Row label="اسم الشركة" hint="يظهر في عنوان الصفحة والإيميلات والمحادثات" error={siteNameError}>
+        <input value={siteName} onChange={(e) => { setSiteName(e.target.value); setSiteNameError(null); }} className={cn('w-full h-10 px-3 rounded-input bg-white dark:bg-surface-dark border text-body focus:outline-none', siteNameError ? 'border-danger focus:border-danger' : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10')} />
       </Row>
-      <Row label="رابط الموقع" hint="العنوان الكامل للوحة التحكم" error={urlError}>
-        <input value={siteUrl} onChange={(e) => { setSiteUrl(e.target.value); setUrlError(null); }} className={cn('w-full h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border text-body focus:outline-none', urlError ? 'border-danger focus:border-danger' : 'border-transparent focus:border-primary')} />
+      <Row label="القطاع" hint="مجال عمل الشركة">
+        <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="w-full max-w-xs h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+          <option value="real_estate">العقارات</option>
+          <option value="retail">التجزئة والتجارة</option>
+          <option value="healthcare">الرعاية الصحية</option>
+          <option value="education">التعليم</option>
+          <option value="hospitality">الضيافة والسياحة</option>
+          <option value="automotive">السيارات</option>
+          <option value="finance">المالية والبنوك</option>
+          <option value="tech">التقنية</option>
+          <option value="services">الخدمات</option>
+          <option value="other">أخرى</option>
+        </select>
+      </Row>
+      <Row label="حجم الشركة" hint="عدد الموظفين التقريبي">
+        <select value={companySize} onChange={(e) => setCompanySize(e.target.value)} className="w-full max-w-xs h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+          <option value="1-10">1 - 10 موظفين</option>
+          <option value="11-50">11 - 50 موظف</option>
+          <option value="51-200">51 - 200 موظف</option>
+          <option value="201-500">201 - 500 موظف</option>
+          <option value="500+">أكثر من 500</option>
+        </select>
+      </Row>
+      <Row label="الدولة" hint="موقع المقر الرئيسي">
+        <select value={country} onChange={(e) => setCountry(e.target.value)} className="w-full max-w-xs h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+          <option value="OM">عُمان</option>
+          <option value="AE">الإمارات</option>
+          <option value="SA">السعودية</option>
+          <option value="BH">البحرين</option>
+          <option value="KW">الكويت</option>
+          <option value="QA">قطر</option>
+          <option value="JO">الأردن</option>
+          <option value="PS">فلسطين</option>
+          <option value="EG">مصر</option>
+          <option value="IQ">العراق</option>
+          <option value="LB">لبنان</option>
+          <option value="MA">المغرب</option>
+        </select>
+      </Row>
+      <Row label="رقم الهاتف" hint="رقم التواصل الرئيسي للشركة">
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full max-w-xs h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" dir="ltr" />
       </Row>
       <div className="flex justify-end pt-6">
         <button onClick={save} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">حفظ التغييرات</button>
@@ -146,21 +226,43 @@ function ProfileTab(): JSX.Element {
   const { confirm } = useConfirm();
   const logout = useAuthStore((s) => s.logout);
   const [name, setName] = useState(user?.name ?? '');
-  const [currentPwd, setCurrentPwd] = useState('');
-  const [newPwd, setNewPwd] = useState('');
-  const [confirmPwd, setConfirmPwd] = useState('');
-  const [errors, setErrors] = useState<{ cur?: string; nw?: string; cf?: string }>({});
 
-  const savePwd = (): void => {
-    const e: { cur?: string; nw?: string; cf?: string } = {};
-    if (!currentPwd) e.cur = 'مطلوبة';
-    if (!newPwd) e.nw = 'مطلوبة';
-    else if (newPwd.length < 8) e.nw = 'يجب 8 أحرف على الأقل';
-    if (newPwd !== confirmPwd) e.cf = 'غير متطابقة';
-    setErrors(e);
-    if (Object.keys(e).length > 0) return;
-    showToast('تم تحديث كلمة المرور', 'success');
-    setCurrentPwd(''); setNewPwd(''); setConfirmPwd('');
+  // Email edit + OTP flow
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  const sendOtp = (): void => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) { setEmailError('بريد إلكتروني غير صالح'); return; }
+    if (newEmail.trim() === user?.email) { setEmailError('هذا هو بريدك الحالي'); return; }
+    setEmailError(null);
+    setOtpSent(true);
+    showToast('تم إرسال رمز التحقق إلى البريد الجديد', 'success');
+  };
+
+  const verifyOtp = (): void => {
+    if (otp.length < 4) { setEmailError('أدخل رمز التحقق'); return; }
+    setEmailError(null);
+    setEditingEmail(false);
+    setOtpSent(false);
+    setNewEmail('');
+    setOtp('');
+    showToast('تم تحديث البريد الإلكتروني بنجاح', 'success');
+  };
+
+  const cancelEmailEdit = (): void => {
+    setEditingEmail(false);
+    setOtpSent(false);
+    setNewEmail('');
+    setOtp('');
+    setEmailError(null);
+  };
+
+  const saveProfile = (): void => {
+    if (!name.trim()) { showToast('اسم العرض مطلوب', 'error'); return; }
+    showToast('تم حفظ الملف الشخصي', 'success');
   };
 
   const handleDelete = async (): Promise<void> => {
@@ -180,7 +282,8 @@ function ProfileTab(): JSX.Element {
 
   return (
     <div>
-      <TabHeader icon={<User className="h-5 w-5" />} title="إعدادات الحساب" subtitle="معلوماتك الشخصية وكلمة المرور" />
+      <TabHeader icon={<User className="h-5 w-5" />} title="الملف الشخصي" subtitle="معلوماتك الشخصية وبيانات الحساب" />
+
       <Row label="الصورة الشخصية">
         <div className="flex items-center gap-4">
           <Avatar name={user.name} size="lg" />
@@ -190,39 +293,75 @@ function ProfileTab(): JSX.Element {
           </label>
         </div>
       </Row>
-      <Row label="اسم العرض">
-        <input value={name} onChange={(e) => setName(e.target.value)} className="w-full h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary" />
-      </Row>
-      <Row label="البريد الإلكتروني">
-        <input value={user.email} disabled className="w-full h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body text-muted-light dark:text-muted-dark" />
+      <Row label="اسم العرض" hint="الاسم الذي يظهر للعملاء والموظفين">
+        <input value={name} onChange={(e) => setName(e.target.value)} className="w-full h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
       </Row>
 
-      <h3 className="text-h3 font-bold mt-8 mb-2">تغيير كلمة المرور</h3>
-      <Row label="كلمة المرور الحالية" error={errors.cur}>
-        <input type="password" value={currentPwd} onChange={(e) => { setCurrentPwd(e.target.value); setErrors((p) => ({ ...p, cur: undefined })); }} className={cn('w-full h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border text-body focus:outline-none', errors.cur ? 'border-danger' : 'border-transparent focus:border-primary')} />
+      {/* Email with edit + OTP */}
+      <Row label="البريد الإلكتروني" hint="لتغيير البريد يتم إرسال رمز تحقق" error={emailError}>
+        {!editingEmail ? (
+          <div className="flex items-center gap-3">
+            <input value={user.email} disabled className="flex-1 h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body text-muted-light dark:text-muted-dark cursor-not-allowed" />
+            <button
+              onClick={() => setEditingEmail(true)}
+              className="h-10 px-4 rounded-full border border-primary/30 text-primary text-small font-medium hover:bg-primary/5 flex items-center gap-1.5 flex-shrink-0"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              تعديل
+            </button>
+          </div>
+        ) : !otpSent ? (
+          <div className="space-y-3">
+            <input
+              value={newEmail}
+              onChange={(e) => { setNewEmail(e.target.value); setEmailError(null); }}
+              placeholder="أدخل البريد الإلكتروني الجديد"
+              className={cn('w-full h-10 px-3 rounded-input bg-white dark:bg-surface-dark border text-body focus:outline-none', emailError ? 'border-danger' : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10')}
+            />
+            <div className="flex items-center gap-2">
+              <button onClick={sendOtp} className="h-9 px-4 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">
+                إرسال رمز التحقق
+              </button>
+              <button onClick={cancelEmailEdit} className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">
+                إلغاء
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-small text-muted-light dark:text-muted-dark">
+              تم إرسال رمز التحقق إلى <span className="font-medium text-foreground-light dark:text-foreground-dark">{newEmail}</span>
+            </p>
+            <input
+              value={otp}
+              onChange={(e) => { setOtp(e.target.value); setEmailError(null); }}
+              placeholder="أدخل رمز التحقق (OTP)"
+              maxLength={6}
+              className={cn('w-full max-w-[200px] h-10 px-3 rounded-input bg-white dark:bg-surface-dark border text-body text-center tracking-[0.3em] focus:outline-none', emailError ? 'border-danger' : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10')}
+            />
+            <div className="flex items-center gap-2">
+              <button onClick={verifyOtp} className="h-9 px-4 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">
+                تأكيد
+              </button>
+              <button onClick={() => { setOtpSent(false); setOtp(''); }} className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">
+                إعادة الإرسال
+              </button>
+              <button onClick={cancelEmailEdit} className="h-9 px-3 text-small text-muted-light dark:text-muted-dark hover:text-danger">
+                إلغاء
+              </button>
+            </div>
+          </div>
+        )}
       </Row>
-      <Row label="كلمة المرور الجديدة" error={errors.nw}>
-        <input type="password" value={newPwd} onChange={(e) => { setNewPwd(e.target.value); setErrors((p) => ({ ...p, nw: undefined })); }} className={cn('w-full h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border text-body focus:outline-none', errors.nw ? 'border-danger' : 'border-transparent focus:border-primary')} />
-      </Row>
-      <Row label="تأكيد كلمة المرور" error={errors.cf}>
-        <input type="password" value={confirmPwd} onChange={(e) => { setConfirmPwd(e.target.value); setErrors((p) => ({ ...p, cf: undefined })); }} className={cn('w-full h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border text-body focus:outline-none', errors.cf ? 'border-danger' : 'border-transparent focus:border-primary')} />
-      </Row>
+
       <div className="flex justify-end pt-4">
-        <button onClick={savePwd} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">حفظ كلمة المرور</button>
+        <button onClick={saveProfile} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">حفظ التغييرات</button>
       </div>
 
-      <div className="mt-10 p-5 rounded-card border border-danger/20 bg-danger/5 flex items-center gap-4 flex-wrap">
-        <div className="flex-1 min-w-[240px]">
-          <h3 className="text-body font-semibold flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-danger" />
-            حذف الحساب نهائياً
-          </h3>
-          <p className="text-small text-muted-light dark:text-muted-dark mt-1">
-            ستفقد كل المحادثات والقوالب والحملات ولا يمكن استرجاعها.
-          </p>
-        </div>
-        <button onClick={handleDelete} className="h-10 px-4 rounded-full bg-danger hover:bg-danger/90 text-white text-small font-medium flex-shrink-0" style={{ color: '#fff' }}>
-          احذف حسابي
+      {/* Danger zone */}
+      <div className="mt-8 pt-6 border-t border-border-light dark:border-border-dark">
+        <button onClick={handleDelete} className="text-danger hover:text-danger/80 text-small font-medium hover:underline transition-colors">
+          حذف الحساب نهائياً
         </button>
       </div>
     </div>
@@ -261,6 +400,9 @@ function NotificationsTab(): JSX.Element {
       <Row label="صوت الإشعار" hint="تشغيل صوت عند الرسائل">
         <Toggle checked={notifications.sound} onChange={(v) => setNotifications({ sound: v })} />
       </Row>
+      <div className="flex justify-end pt-6">
+        <button onClick={() => showToast('تم حفظ الإشعارات', 'success')} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">حفظ التغييرات</button>
+      </div>
     </div>
   );
 }
@@ -268,6 +410,9 @@ function NotificationsTab(): JSX.Element {
 function AppearanceTab(): JSX.Element {
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
+  const showToast = useUIStore((s) => s.showToast);
+  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [sidebarCompact, setSidebarCompact] = useState(false);
   return (
     <div>
       <TabHeader icon={<Palette className="h-5 w-5" />} title="المظهر" subtitle="خصّص شكل الواجهة" />
@@ -285,6 +430,21 @@ function AppearanceTab(): JSX.Element {
           </button>
         </div>
       </Row>
+      <Row label="حجم الخط" hint="تكبير أو تصغير النصوص في الواجهة">
+        <div className="flex gap-2 max-w-md">
+          {([['small', 'صغير', 'text-[12px]'], ['medium', 'متوسط', 'text-[14px]'], ['large', 'كبير', 'text-[16px]']] as const).map(([val, label, sz]) => (
+            <button key={val} onClick={() => setFontSize(val)} className={cn('flex-1 py-2.5 rounded-lg border-2 transition-all font-medium', sz, fontSize === val ? 'border-primary bg-primary/5 text-primary' : 'border-border-light dark:border-border-dark')}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </Row>
+      <Row label="قائمة جانبية مدمجة" hint="تصغير القائمة الجانبية لعرض الأيقونات فقط">
+        <Toggle checked={sidebarCompact} onChange={setSidebarCompact} />
+      </Row>
+      <div className="flex justify-end pt-6">
+        <button onClick={() => showToast('تم حفظ المظهر', 'success')} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">حفظ التغييرات</button>
+      </div>
     </div>
   );
 }
@@ -327,7 +487,7 @@ function RatingTab(): JSX.Element {
           onChange={(e) => setMessage(e.target.value)}
           rows={3}
           disabled={!enabled}
-          className={cn('w-full px-3 py-2 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent focus:border-primary focus:outline-none text-body resize-none', !enabled && 'opacity-50')}
+          className={cn('w-full px-3 py-2 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none text-body resize-none', !enabled && 'opacity-50')}
         />
       </Row>
 
@@ -340,7 +500,7 @@ function RatingTab(): JSX.Element {
             value={expireDays}
             disabled={!enabled}
             onChange={(e) => setExpireDays(Math.max(1, Math.min(90, Number(e.target.value) || 1)))}
-            className={cn('w-24 h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent focus:border-primary focus:outline-none text-body', !enabled && 'opacity-50')}
+            className={cn('w-24 h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none text-body', !enabled && 'opacity-50')}
           />
           <span className="text-muted-light dark:text-muted-dark text-small">يوم</span>
         </div>
@@ -370,23 +530,96 @@ function SecurityTab(): JSX.Element {
   const security = useSettingsStore((s) => s.security);
   const setSecurity = useSettingsStore((s) => s.setSecurity);
   const showToast = useUIStore((s) => s.showToast);
+
+  const [currentPwd, setCurrentPwd] = useState('');
+  const [newPwd, setNewPwd] = useState('');
+  const [confirmPwd, setConfirmPwd] = useState('');
+  const [pwdErrors, setPwdErrors] = useState<{ cur?: string; nw?: string; cf?: string }>({});
+
+  const savePwd = (): void => {
+    const e: { cur?: string; nw?: string; cf?: string } = {};
+    if (!currentPwd) e.cur = 'مطلوبة';
+    if (!newPwd) e.nw = 'مطلوبة';
+    else if (newPwd.length < 8) e.nw = 'يجب 8 أحرف على الأقل';
+    if (newPwd !== confirmPwd) e.cf = 'غير متطابقة';
+    setPwdErrors(e);
+    if (Object.keys(e).length > 0) return;
+    showToast('تم تحديث كلمة المرور', 'success');
+    setCurrentPwd(''); setNewPwd(''); setConfirmPwd('');
+  };
+
   return (
     <div>
-      <TabHeader icon={<Shield className="h-5 w-5" />} title="الأمان" subtitle="جلسات تسجيل الدخول والتحقق" />
+      <TabHeader icon={<Shield className="h-5 w-5" />} title="الأمان" subtitle="كلمة المرور، جلسات الدخول والتحقق" />
+
+      {/* Password change section */}
+      <div className="mb-6 pb-6 border-b border-border-light dark:border-border-dark">
+        <h3 className="text-h3 font-bold mb-4 flex items-center gap-2">
+          <KeyRound className="h-4 w-4 text-primary" />
+          تغيير كلمة المرور
+        </h3>
+        <Row label="كلمة المرور الحالية" error={pwdErrors.cur}>
+          <input type="password" value={currentPwd} onChange={(e) => { setCurrentPwd(e.target.value); setPwdErrors((p) => ({ ...p, cur: undefined })); }} className={cn('w-full h-10 px-3 rounded-input bg-white dark:bg-surface-dark border text-body focus:outline-none', pwdErrors.cur ? 'border-danger' : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10')} />
+        </Row>
+        <Row label="كلمة المرور الجديدة" error={pwdErrors.nw}>
+          <input type="password" value={newPwd} onChange={(e) => { setNewPwd(e.target.value); setPwdErrors((p) => ({ ...p, nw: undefined })); }} className={cn('w-full h-10 px-3 rounded-input bg-white dark:bg-surface-dark border text-body focus:outline-none', pwdErrors.nw ? 'border-danger' : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10')} />
+        </Row>
+        <Row label="تأكيد كلمة المرور" error={pwdErrors.cf}>
+          <input type="password" value={confirmPwd} onChange={(e) => { setConfirmPwd(e.target.value); setPwdErrors((p) => ({ ...p, cf: undefined })); }} className={cn('w-full h-10 px-3 rounded-input bg-white dark:bg-surface-dark border text-body focus:outline-none', pwdErrors.cf ? 'border-danger' : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10')} />
+        </Row>
+        <div className="flex justify-end pt-4">
+          <button onClick={savePwd} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">حفظ كلمة المرور</button>
+        </div>
+      </div>
+
       <Row label="المصادقة الثنائية" hint="طبقة حماية إضافية لحسابك">
         <Toggle checked={security.twoFactor} onChange={(v) => { setSecurity({ twoFactor: v }); showToast(v ? 'تم تفعيل 2FA' : 'تم تعطيل 2FA', 'success'); }} />
+      </Row>
+      <Row label="تسجيل الخروج التلقائي" hint="إنهاء الجلسة بعد فترة عدم نشاط">
+        <select value={security.sessionTimeoutMin} onChange={(e) => { setSecurity({ sessionTimeoutMin: Number(e.target.value) }); showToast('تم التحديث', 'success'); }} className="w-full max-w-xs h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+          <option value={15}>15 دقيقة</option>
+          <option value={30}>30 دقيقة</option>
+          <option value={60}>ساعة</option>
+          <option value={0}>لا يتم الخروج تلقائياً</option>
+        </select>
       </Row>
       <Row label="الجلسات النشطة" hint="الأجهزة التي تستخدم حسابك">
         <div className="space-y-2">
           <div className="p-3 rounded-card bg-bg-light dark:bg-bg-dark flex items-center justify-between">
             <div>
-              <p className="text-body font-medium">macOS · Safari</p>
+              <p className="text-body font-medium">Windows · Chrome</p>
               <p className="text-small text-muted-light dark:text-muted-dark">آخر نشاط: الآن (الجهاز الحالي)</p>
             </div>
             <span className="px-2 py-0.5 rounded-full bg-success/15 text-success text-small font-medium">حالياً</span>
           </div>
+          <div className="p-3 rounded-card bg-bg-light dark:bg-bg-dark flex items-center justify-between">
+            <div>
+              <p className="text-body font-medium">iPhone · Safari</p>
+              <p className="text-small text-muted-light dark:text-muted-dark">آخر نشاط: قبل 3 ساعات</p>
+            </div>
+            <button onClick={() => showToast('تم إنهاء الجلسة', 'success')} className="text-small text-danger hover:underline font-medium">إنهاء</button>
+          </div>
         </div>
       </Row>
+      <Row label="سجل الدخول" hint="آخر عمليات تسجيل الدخول">
+        <div className="space-y-1.5 text-small">
+          <div className="flex justify-between py-1.5 border-b border-border-light/40 dark:border-border-dark/40">
+            <span>تسجيل دخول ناجح — Windows · Chrome</span>
+            <span className="text-muted-light dark:text-muted-dark">اليوم 09:15 ص</span>
+          </div>
+          <div className="flex justify-between py-1.5 border-b border-border-light/40 dark:border-border-dark/40">
+            <span>تسجيل دخول ناجح — iPhone · Safari</span>
+            <span className="text-muted-light dark:text-muted-dark">أمس 06:42 م</span>
+          </div>
+          <div className="flex justify-between py-1.5">
+            <span className="text-danger">محاولة فاشلة — عنوان IP غير معروف</span>
+            <span className="text-muted-light dark:text-muted-dark">أمس 02:11 ص</span>
+          </div>
+        </div>
+      </Row>
+      <div className="flex justify-end pt-6">
+        <button onClick={() => showToast('تم حفظ الإعدادات', 'success')} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">حفظ التغييرات</button>
+      </div>
     </div>
   );
 }
@@ -398,75 +631,31 @@ function LanguageTab(): JSX.Element {
     <div>
       <TabHeader icon={<Languages className="h-5 w-5" />} title="اللغة والمنطقة" subtitle="تفضيلات اللغة والتوقيت" />
       <Row label="اللغة">
-        <select value={general.language} onChange={(e) => setGeneral({ language: e.target.value as 'ar' | 'en' })} className="w-full max-w-xs h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary">
+        <select value={general.language} onChange={(e) => setGeneral({ language: e.target.value as 'ar' | 'en' })} className="w-full max-w-xs h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
           <option value="ar">العربية</option>
           <option value="en">English</option>
         </select>
       </Row>
       <Row label="المنطقة الزمنية">
-        <select value={general.timezone} onChange={(e) => setGeneral({ timezone: e.target.value })} className="w-full max-w-xs h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary">
+        <select value={general.timezone} onChange={(e) => setGeneral({ timezone: e.target.value })} className="w-full max-w-xs h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
           <option value="Asia/Muscat">الخليج (UTC+4)</option>
           <option value="Africa/Cairo">القاهرة (UTC+2)</option>
           <option value="Asia/Riyadh">الرياض (UTC+3)</option>
         </select>
       </Row>
       <Row label="تنسيق التاريخ">
-        <select value={general.dateFormat} onChange={(e) => setGeneral({ dateFormat: e.target.value })} className="w-full max-w-xs h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary">
+        <select value={general.dateFormat} onChange={(e) => setGeneral({ dateFormat: e.target.value })} className="w-full max-w-xs h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
           <option value="DD/MM/YYYY">DD/MM/YYYY</option>
           <option value="YYYY-MM-DD">YYYY-MM-DD</option>
         </select>
       </Row>
+      <div className="flex justify-end pt-6">
+        <button onClick={() => setGeneral({ ...general })} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">حفظ التغييرات</button>
+      </div>
     </div>
   );
 }
 
-function DataTab(): JSX.Element {
-  const { confirm } = useConfirm();
-  const showToast = useUIStore((s) => s.showToast);
-  const reset = useSettingsStore((s) => s.reset);
-
-  const exportData = (): void => {
-    const data = {
-      exportedAt: new Date().toISOString(),
-      settings: useSettingsStore.getState(),
-      conversations: useDataStore.getState().conversations.length,
-      contacts: useDataStore.getState().contacts.length,
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `qhub-data-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('تم تصدير البيانات', 'success');
-  };
-
-  const resetSettings = async (): Promise<void> => {
-    const ok = await confirm({
-      title: 'إعادة ضبط الإعدادات؟',
-      message: 'سيتم إرجاع جميع التفضيلات (الإشعارات، الأمان، اللغة) للقيم الافتراضية.',
-      variant: 'warning',
-      confirmText: 'إعادة الضبط',
-    });
-    if (ok) {
-      reset();
-      showToast('تم إعادة الضبط', 'success');
-    }
-  };
-
-  return (
-    <div>
-      <TabHeader icon={<Database className="h-5 w-5" />} title="البيانات والخصوصية" subtitle="تصدير واستيراد وحذف بياناتك" />
-      <Row label="تصدير البيانات" hint="تنزيل نسخة JSON من إعداداتك وبياناتك">
-        <button onClick={exportData} className="h-10 px-4 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">تصدير JSON</button>
-      </Row>
-      <Row label="إعادة ضبط الإعدادات" hint="إرجاع كل التفضيلات للافتراضي">
-        <button onClick={resetSettings} className="h-10 px-4 rounded-full border border-warning/40 text-warning text-small font-medium hover:bg-warning/10">إعادة الضبط</button>
-      </Row>
-    </div>
-  );
-}
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }): JSX.Element {
   return (

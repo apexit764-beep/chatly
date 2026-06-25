@@ -2065,41 +2065,65 @@ function FilterPanel({
   onSelect: (id: string | null) => void;
   allLabel: string;
 }): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.id === selectedId);
+
   return (
     <div>
       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-light dark:text-muted-dark mb-2">
         {title}
       </p>
-      <div className="space-y-1">
+      <div className="relative">
         <button
-          onClick={() => onSelect(null)}
+          onClick={() => setOpen((v) => !v)}
           className={cn(
-            'w-full flex items-center gap-2.5 px-3 h-9 rounded-btn text-small text-start transition-colors',
-            selectedId === null
-              ? 'bg-primary/10 text-primary font-semibold'
-              : 'hover:bg-bg-light dark:hover:bg-bg-dark'
+            'w-full flex items-center gap-2.5 px-3 h-10 rounded-input border text-small text-start transition-colors',
+            selectedId
+              ? 'border-primary bg-primary/5 text-primary font-medium'
+              : 'border-border-light dark:border-border-dark bg-white dark:bg-surface-dark hover:border-primary/40'
           )}
         >
-          <span className="h-4 w-4 rounded-full bg-bg-light dark:bg-bg-dark flex-shrink-0" />
-          <span className="flex-1 truncate">{allLabel}</span>
-          {selectedId === null && <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
+          {selected ? (
+            <>
+              <span className="flex-shrink-0 flex items-center justify-center">{selected.indicator}</span>
+              <span className="flex-1 truncate">{selected.label}</span>
+            </>
+          ) : (
+            <span className="flex-1 truncate text-muted-light dark:text-muted-dark">{allLabel}</span>
+          )}
+          <ChevronDown className={cn('h-3.5 w-3.5 flex-shrink-0 opacity-60 transition-transform', open && 'rotate-180')} />
         </button>
-        {options.map((o) => (
-          <button
-            key={o.id}
-            onClick={() => onSelect(o.id)}
-            className={cn(
-              'w-full flex items-center gap-2.5 px-3 h-9 rounded-btn text-small text-start transition-colors',
-              selectedId === o.id
-                ? 'bg-primary/10 text-primary font-semibold'
-                : 'hover:bg-bg-light dark:hover:bg-bg-dark'
-            )}
-          >
-            <span className="flex-shrink-0 flex items-center justify-center">{o.indicator}</span>
-            <span className="flex-1 truncate">{o.label}</span>
-            {selectedId === o.id && <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
-          </button>
-        ))}
+        {open && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+            <div className="absolute start-0 end-0 mt-1 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1 z-20 max-h-[240px] overflow-y-auto">
+              <button
+                onClick={() => { onSelect(null); setOpen(false); }}
+                className={cn(
+                  'w-full flex items-center gap-2.5 px-3 h-9 text-small text-start transition-colors',
+                  selectedId === null ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-bg-light dark:hover:bg-bg-dark'
+                )}
+              >
+                <span className="flex-1 truncate">{allLabel}</span>
+                {selectedId === null && <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
+              </button>
+              {options.map((o) => (
+                <button
+                  key={o.id}
+                  onClick={() => { onSelect(o.id); setOpen(false); }}
+                  className={cn(
+                    'w-full flex items-center gap-2.5 px-3 h-9 text-small text-start transition-colors',
+                    selectedId === o.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-bg-light dark:hover:bg-bg-dark'
+                  )}
+                >
+                  <span className="flex-shrink-0 flex items-center justify-center">{o.indicator}</span>
+                  <span className="flex-1 truncate">{o.label}</span>
+                  {selectedId === o.id && <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

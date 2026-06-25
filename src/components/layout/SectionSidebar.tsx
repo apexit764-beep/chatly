@@ -15,7 +15,6 @@ import {
   Palette,
   Shield,
   Languages,
-  Database,
   CreditCard,
   BarChart3,
   PanelRightClose,
@@ -29,13 +28,12 @@ import { cn } from '@/utils/cn';
 
 const settingsItems: { key: string; label: string; icon: ReactNode }[] = [
   { key: 'general', label: 'عام', icon: <Building className="h-4 w-4" /> },
-  { key: 'profile', label: 'الحساب', icon: <User className="h-4 w-4" /> },
+  { key: 'profile', label: 'الملف الشخصي', icon: <User className="h-4 w-4" /> },
   { key: 'notifications', label: 'الإشعارات', icon: <Bell className="h-4 w-4" /> },
   { key: 'appearance', label: 'المظهر', icon: <Palette className="h-4 w-4" /> },
   { key: 'security', label: 'الأمان', icon: <Shield className="h-4 w-4" /> },
   { key: 'rating', label: 'تقييم العملاء', icon: <Star className="h-4 w-4" /> },
   { key: 'language', label: 'اللغة والمنطقة', icon: <Languages className="h-4 w-4" /> },
-  { key: 'data', label: 'البيانات', icon: <Database className="h-4 w-4" /> },
 ];
 
 export function SectionSidebar(): JSX.Element | null {
@@ -45,51 +43,12 @@ export function SectionSidebar(): JSX.Element | null {
   const tab = useInboxStore((s) => s.settingsTab);
   const setTab = useInboxStore((s) => s.setSettingsTab);
 
-  const hasSidebar = location.pathname.startsWith('/settings');
+  if (location.pathname.startsWith('/settings')) return null;
+  if (location.pathname.startsWith('/inbox')) return null;
 
+  const hasSidebar = ['/reports'].some((p) => location.pathname.startsWith(p));
   if (!hasSidebar) return null;
 
-  if (collapsed) {
-    return (
-      <aside className="w-[52px] flex-shrink-0 h-screen sticky top-0 bg-sidebar-light dark:bg-sidebar-dark border-l border-border-light dark:border-border-dark flex flex-col items-center py-3 z-20">
-        <button
-          onClick={toggleCollapsed}
-          title="توسعة القائمة"
-          aria-label="توسعة القائمة"
-          className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors mb-2"
-        >
-          <PanelRightOpen className="h-4 w-4" />
-        </button>
-        <nav className="flex flex-col gap-1 flex-1">
-          {settingsItems.map((it) => {
-            const active = tab === it.key;
-            return (
-              <button
-                key={it.key}
-                onClick={() => setTab(it.key)}
-                title={it.label}
-                aria-label={it.label}
-                className={cn(
-                  'relative group h-9 w-9 rounded-lg flex items-center justify-center transition-colors',
-                  active
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current'
-                )}
-              >
-                {it.icon}
-                <span className="absolute start-full ms-2 px-2 py-1 bg-[#111827] text-white text-[11px] rounded-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">
-                  {it.label}
-                </span>
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
-    );
-  }
-
-  if (location.pathname.startsWith('/inbox')) return <InboxSectionSidebar />;
-  if (location.pathname.startsWith('/settings')) return <SettingsSectionSidebar />;
   if (location.pathname.startsWith('/reports')) return <ReportsSectionSidebar />;
   return null;
 }
@@ -301,9 +260,11 @@ function SettingsSectionSidebar(): JSX.Element {
   const setTab = useInboxStore((s) => s.setSettingsTab);
 
   return (
-    <aside className="w-[240px] flex-shrink-0 h-screen sticky top-0 bg-sidebar-light dark:bg-sidebar-dark border-l border-border-light dark:border-border-dark flex flex-col z-20">
-      <SectionHeader>الإعدادات</SectionHeader>
-      <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+    <aside className="w-[240px] flex-shrink-0 h-screen sticky top-0 bg-white dark:bg-surface-dark border-l border-border-light dark:border-border-dark flex flex-col z-20">
+      <div className="h-[56px] px-4 flex items-center border-b border-border-light dark:border-border-dark flex-shrink-0">
+        <h2 className="text-h3 font-bold">الإعدادات</h2>
+      </div>
+      <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
         {settingsItems.map((it) => (
           <SectionItem
             key={it.key}
@@ -313,7 +274,7 @@ function SettingsSectionSidebar(): JSX.Element {
             onClick={() => setTab(it.key)}
           />
         ))}
-      </div>
+      </nav>
     </aside>
   );
 }

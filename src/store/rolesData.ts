@@ -15,6 +15,15 @@ export interface PermissionGroup {
 
 export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
+    key: 'overview',
+    label: 'نظرة عامة',
+    icon: 'LayoutDashboard',
+    permissions: [
+      { key: 'overview.view', label: 'عرض النظرة العامة', description: 'الوصول للوحة النظرة العامة والإحصائيات السريعة' },
+      { key: 'overview.export', label: 'تصدير بيانات النظرة العامة', description: 'تنزيل الإحصائيات والمخططات' },
+    ],
+  },
+  {
     key: 'conversations',
     label: 'المحادثات',
     icon: 'MessageSquare',
@@ -54,6 +63,16 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     ],
   },
   {
+    key: 'campaigns',
+    label: 'الحملات',
+    icon: 'Megaphone',
+    permissions: [
+      { key: 'campaigns.view', label: 'عرض الحملات', description: 'متابعة حملات WhatsApp والبريد الإلكتروني' },
+      { key: 'campaigns.create', label: 'إنشاء حملة', description: 'تكوين حملة WhatsApp أو Email جديدة' },
+      { key: 'campaigns.send', label: 'تشغيل/إرسال حملة', description: 'إرسال جماعي للعملاء — حساس' },
+    ],
+  },
+  {
     key: 'templates',
     label: 'القوالب والردود',
     icon: 'MessageSquareQuote',
@@ -62,16 +81,6 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: 'templates.create', label: 'إنشاء قالب', description: 'صنع قالب جديد' },
       { key: 'templates.edit', label: 'تعديل قالب', description: 'تحديث القوالب' },
       { key: 'templates.delete', label: 'حذف قالب', description: 'إزالة قالب' },
-    ],
-  },
-  {
-    key: 'campaigns',
-    label: 'الحملات',
-    icon: 'Megaphone',
-    permissions: [
-      { key: 'campaigns.view', label: 'عرض الحملات', description: 'متابعة حملات WhatsApp والبريد الإلكتروني' },
-      { key: 'campaigns.create', label: 'إنشاء حملة', description: 'تكوين حملة WhatsApp أو Email جديدة' },
-      { key: 'campaigns.send', label: 'تشغيل/إرسال حملة', description: 'إرسال جماعي للعملاء — حساس' },
     ],
   },
   {
@@ -95,6 +104,44 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: 'team.manage_roles', label: 'إدارة الأدوار والصلاحيات', description: 'تغيير الصلاحيات — صلاحية حرجة' },
       { key: 'departments.view', label: 'عرض الأقسام', description: 'رؤية هيكل الأقسام' },
       { key: 'departments.manage', label: 'إدارة الأقسام', description: 'إنشاء/تعديل/حذف' },
+    ],
+  },
+  {
+    key: 'ai',
+    label: 'الذكاء الاصطناعي وقاعدة المعرفة',
+    icon: 'Bot',
+    permissions: [
+      { key: 'ai.view', label: 'عرض إعدادات الذكاء الاصطناعي', description: 'الوصول لصفحة إعدادات المساعد الذكي' },
+      { key: 'ai.configure', label: 'تعديل إعدادات الذكاء الاصطناعي', description: 'تغيير سلوك البوت والردود التلقائية' },
+      { key: 'knowledge_base.view', label: 'عرض قاعدة المعرفة', description: 'الوصول لمقالات وأدلة الدعم' },
+      { key: 'knowledge_base.manage', label: 'إدارة قاعدة المعرفة', description: 'إنشاء/تعديل/حذف المقالات' },
+    ],
+  },
+  {
+    key: 'tags',
+    label: 'الوسوم',
+    icon: 'Tag',
+    permissions: [
+      { key: 'tags.view', label: 'عرض الوسوم', description: 'رؤية قائمة الوسوم واستخدامها' },
+      { key: 'tags.manage', label: 'إدارة الوسوم', description: 'إنشاء/تعديل/حذف الوسوم' },
+    ],
+  },
+  {
+    key: 'feedback',
+    label: 'التقييمات والملاحظات',
+    icon: 'Star',
+    permissions: [
+      { key: 'feedback.view', label: 'عرض التقييمات', description: 'الوصول لتقييمات وملاحظات العملاء' },
+      { key: 'feedback.manage', label: 'إدارة التقييمات', description: 'حذف أو أرشفة التقييمات' },
+    ],
+  },
+  {
+    key: 'notifications',
+    label: 'الإشعارات',
+    icon: 'Bell',
+    permissions: [
+      { key: 'notifications.view', label: 'عرض الإشعارات', description: 'استلام وعرض الإشعارات' },
+      { key: 'notifications.manage', label: 'إدارة إعدادات الإشعارات', description: 'تعديل تفضيلات التنبيهات' },
     ],
   },
   {
@@ -145,6 +192,11 @@ export const defaultRoles: Role[] = [
       'templates.view',
       'team.view',
       'departments.view',
+      'overview.view',
+      'knowledge_base.view',
+      'tags.view',
+      'feedback.view',
+      'notifications.view',
     ],
   },
 ];

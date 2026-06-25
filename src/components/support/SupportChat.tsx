@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Headphones, X, Send, Sparkles, BookOpen, UserCheck, Clock, RefreshCw } from 'lucide-react';
+import { X, Send, Sparkles, BookOpen, UserCheck, Clock, RefreshCw, Bot } from 'lucide-react';
 import { useSupportStore, BUSINESS_HOURS_TEXT } from '@/store/useSupportStore';
 import { Avatar } from '@components/ui';
 import { cn } from '@/utils/cn';
@@ -71,15 +71,31 @@ export function SupportChat(): JSX.Element {
       <button
         onClick={toggleOpen}
         aria-label={open ? 'إغلاق دردشة الدعم' : 'فتح دردشة الدعم'}
-        className={cn(
-          'fixed bottom-6 end-6 z-[90] h-14 w-14 rounded-full shadow-xl flex items-center justify-center transition-all',
-          'bg-gradient-to-br from-primary to-primary-dark text-white hover:scale-105 active:scale-95',
-          open && 'rotate-180'
-        )}
+        className="fixed bottom-6 end-6 z-[90] group"
       >
-        {open ? <X className="h-6 w-6" /> : <Headphones className="h-6 w-6" />}
+        {/* Pulse rings */}
+        {!open && (
+          <>
+            <span className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+            <span className="absolute inset-[-4px] rounded-full bg-primary/10 animate-pulse" />
+          </>
+        )}
+        <span
+          className={cn(
+            'relative h-14 w-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-300',
+            'bg-gradient-to-br from-primary to-primary-dark text-white',
+            'group-hover:scale-110 group-active:scale-95 group-hover:shadow-2xl group-hover:shadow-primary/30',
+            open && 'rotate-180'
+          )}
+        >
+          {open ? (
+            <X className="h-6 w-6" />
+          ) : (
+            <Bot className="h-6 w-6 transition-transform group-hover:scale-110 group-hover:-rotate-12" />
+          )}
+        </span>
         {!open && unread > 0 && (
-          <span className="absolute -top-1 -start-1 min-w-[20px] h-5 px-1.5 rounded-full bg-danger text-white text-[11px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-bg-dark">
+          <span className="absolute -top-1 -start-1 min-w-[20px] h-5 px-1.5 rounded-full bg-danger text-white text-[11px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-bg-dark z-10">
             {unread > 9 ? '9+' : unread}
           </span>
         )}

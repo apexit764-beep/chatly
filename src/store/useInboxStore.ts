@@ -20,7 +20,7 @@ export const useInboxStore = create<InboxState>((set) => ({
   selectedId: null,
   selectedChannelId: null,
   selectedDepartmentId: null,
-  settingsTab: 'general',
+  settingsTab: 'profile',
   setView: (v) => set({ view: v }),
   setSelectedId: (id) => set({ selectedId: id }),
   setSelectedChannelId: (id) => set({ selectedChannelId: id, selectedDepartmentId: null }),

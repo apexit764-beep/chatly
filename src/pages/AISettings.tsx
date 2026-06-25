@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Sparkles,
@@ -24,8 +24,10 @@ import {
   UserCog,
   X,
   Database,
+  Upload,
+  MessageSquareShare,
 } from 'lucide-react';
-import { Card, ChannelIcon, Select, useConfirm } from '@components/ui';
+import { Card, ChannelIcon, Select, useConfirm, Drawer } from '@components/ui';
 import { OpenAIIcon, ClaudeIcon, GeminiIcon } from '@components/ui/BrandIcons';
 import { useAIStore, type AISettings as AISettingsType, type AILanguage, type AITone, type AIDialect, type AIGulfCountry, type AIModel, type AIProvider, type DaySchedule } from '@/store/useAIStore';
 import { useDataStore } from '@/store/useDataStore';
@@ -139,6 +141,12 @@ export default function AISettings(): JSX.Element {
   const [form, setForm] = useState<AISettingsType>(saved);
   const [dirty, setDirty] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [docsDrawerOpen, setDocsDrawerOpen] = useState(false);
+  const [knowledgeDocs, setKnowledgeDocs] = useState<{ id: string; name: string; size: string; date: string }[]>([
+    { id: '1', name: 'دليل المنتجات والأسعار.pdf', size: '2.4 MB', date: '2025-06-20' },
+    { id: '2', name: 'سياسة الاسترجاع والاستبدال.pdf', size: '540 KB', date: '2025-06-18' },
+    { id: '3', name: 'الأسئلة الشائعة.txt', size: '120 KB', date: '2025-06-15' },
+  ]);
 
   useEffect(() => { setForm(saved); }, [saved]);
 
@@ -716,38 +724,7 @@ export default function AISettings(): JSX.Element {
       {/* ═══ Tab 3: المعرفة والقيود ═══ */}
       {tab === 'knowledge' && (
         <div className="space-y-5">
-          {/* Knowledge Base Integration */}
-          <SectionCard
-            icon={<Database className="h-5 w-5" />}
-            title="مصادر التغذية الإضافية"
-            description="اربط المساعد الذكي بقاعدة المعرفة (مركز المساعدة) الخاصة بك ليستخدم المقالات للإجابة على تساؤلات العملاء بشكل تلقائي."
-          >
-            <div className="divide-y divide-border-light dark:divide-border-dark">
-              <RuleRow
-                checked={form.useKnowledgeBase ?? true}
-                onChange={(v) => update('useKnowledgeBase', v)}
-                title="تفعيل الإجابة من مقالات مركز المساعدة"
-              />
-            </div>
-            {(form.useKnowledgeBase ?? true) && (
-              <div className="mt-4 p-3 rounded-lg bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                    <BookOpen className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <p className="text-small font-semibold">إدارة مركز المساعدة</p>
-                    <p className="text-[11px] text-muted-light dark:text-muted-dark">أضف أو عدّل المقالات التي سيتعلم منها المساعد.</p>
-                  </div>
-                </div>
-                <Link to="/knowledge-base" className="h-8 px-4 rounded-lg bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex items-center justify-center whitespace-nowrap">
-                  فتح المركز
-                </Link>
-              </div>
-            )}
-          </SectionCard>
-
-          {/* Prompt / Knowledge */}
+          {/* Prompt / Knowledge — أهم قسم أولاً */}
           <SectionCard
             icon={<BookOpen className="h-5 w-5" />}
             title="معرفة الشركة (Prompt)"
@@ -773,7 +750,35 @@ export default function AISettings(): JSX.Element {
             </div>
           </SectionCard>
 
-          {/* Forbidden topics */}
+          {/* Learning Sources — تعزيز */}
+          <SectionCard
+            icon={<Database className="h-5 w-5" />}
+            title="مصادر التعلم"
+            description="حدد المصادر التي يتعلم منها المساعد الذكي لتحسين جودة ردوده على العملاء."
+            headerExtra={
+              <button
+                onClick={() => setDocsDrawerOpen(true)}
+                className="h-8 px-3 rounded-lg bg-primary/10 text-primary text-[12px] font-semibold hover:bg-primary/20 transition-colors flex items-center gap-1.5 whitespace-nowrap flex-shrink-0"
+              >
+                الوثائق ({knowledgeDocs.length})
+              </button>
+            }
+          >
+            <div className="divide-y divide-border-light dark:divide-border-dark">
+              <RuleRow
+                checked={form.useKnowledgeBase ?? true}
+                onChange={(v) => update('useKnowledgeBase', v)}
+                title="التعلم من الوثائق المرفوعة"
+              />
+              <RuleRow
+                checked={form.learnFromAgents ?? true}
+                onChange={(v) => update('learnFromAgents', v)}
+                title="التعلم من ردود الموظفين"
+              />
+            </div>
+          </SectionCard>
+
+          {/* Forbidden topics — قيود */}
           <SectionCard
             icon={<Ban className="h-5 w-5" />}
             title="مواضيع ممنوعة"
@@ -911,66 +916,65 @@ export default function AISettings(): JSX.Element {
               {!form.alwaysOn && (
                 <>
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-small font-semibold">دوام الموظفين البشريين</p>
-                      <button
-                        onClick={copyFirstEnabledToAll}
-                        className="text-[11px] text-primary font-semibold hover:underline"
-                      >
-                        تطبيق الساعات على كل الأيام
-                      </button>
+                    <p className="text-small font-semibold mb-3">دوام الموظفين البشريين</p>
+
+                    {/* Day selector */}
+                    <div className="mb-4">
+                      <p className="text-[11px] text-muted-light dark:text-muted-dark mb-2">اختر أيام العمل</p>
+                      <div className="flex gap-2">
+                        {DAYS.map((d, i) => {
+                          const day = form.schedule[i];
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => updateSchedule(i, { enabled: !day.enabled })}
+                              className={cn(
+                                'h-10 flex-1 rounded-lg text-small font-semibold transition-all border-2',
+                                day.enabled
+                                  ? 'bg-primary text-white border-primary'
+                                  : 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark border-border-light dark:border-border-dark hover:border-primary/30'
+                              )}
+                            >
+                              {d}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="border border-border-light dark:border-border-dark rounded-xl divide-y divide-border-light dark:divide-border-dark overflow-hidden">
-                      {DAYS.map((d, i) => {
-                        const day = form.schedule[i];
-                        return (
-                          <div
-                            key={i}
-                            className={cn(
-                              'flex items-center gap-3 px-3 py-2.5 transition-colors',
-                              !day.enabled && 'bg-bg-light/50 dark:bg-bg-dark/30'
-                            )}
-                          >
-                            <div className="w-20 flex-shrink-0">
-                              <p className={cn(
-                                'text-small font-semibold',
-                                !day.enabled && 'text-muted-light dark:text-muted-dark'
-                              )}>
-                                {d}
-                              </p>
-                            </div>
-                            <Toggle
-                              checked={day.enabled}
-                              onChange={(v) => updateSchedule(i, { enabled: v })}
+
+                    {/* Shared time range */}
+                    {form.schedule.some((s) => s.enabled) && (
+                      <div className="p-4 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark">
+                        <p className="text-[11px] text-muted-light dark:text-muted-dark mb-2">ساعات العمل للأيام المختارة</p>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1">
+                            <label className="text-[11px] text-muted-light dark:text-muted-dark mb-1 block">من</label>
+                            <TimePicker
+                              value={form.schedule.find((s) => s.enabled)?.start ?? '09:00'}
+                              onChange={(v) => {
+                                const next = form.schedule.map((s) =>
+                                  s.enabled ? { ...s, start: v } : s
+                                );
+                                update('schedule', next);
+                              }}
                             />
-                            <div className={cn(
-                              'flex items-center gap-2 flex-1 transition-opacity',
-                              !day.enabled && 'opacity-40 pointer-events-none'
-                            )}>
-                              <input
-                                type="time"
-                                value={day.start}
-                                onChange={(e) => updateSchedule(i, { start: e.target.value })}
-                                className="h-9 px-2 rounded-lg bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-small font-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 flex-1 min-w-0"
-                              />
-                              <span className="text-muted-light dark:text-muted-dark text-[11px]">إلى</span>
-                              <input
-                                type="time"
-                                value={day.end}
-                                onChange={(e) => updateSchedule(i, { end: e.target.value })}
-                                className="h-9 px-2 rounded-lg bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-small font-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 flex-1 min-w-0"
-                              />
-                            </div>
-                            <span className={cn(
-                              'text-[11px] font-semibold w-12 text-end flex-shrink-0',
-                              day.enabled ? 'text-success' : 'text-muted-light dark:text-muted-dark'
-                            )}>
-                              {day.enabled ? 'مفتوح' : 'مغلق'}
-                            </span>
                           </div>
-                        );
-                      })}
-                    </div>
+                          <span className="text-muted-light dark:text-muted-dark mt-4">—</span>
+                          <div className="flex-1">
+                            <label className="text-[11px] text-muted-light dark:text-muted-dark mb-1 block">إلى</label>
+                            <TimePicker
+                              value={form.schedule.find((s) => s.enabled)?.end ?? '17:00'}
+                              onChange={(v) => {
+                                const next = form.schedule.map((s) =>
+                                  s.enabled ? { ...s, end: v } : s
+                                );
+                                update('schedule', next);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -1020,6 +1024,71 @@ export default function AISettings(): JSX.Element {
           </div>
         </div>
       )}
+      {/* Documents Drawer */}
+      <Drawer open={docsDrawerOpen} onClose={() => setDocsDrawerOpen(false)} title="إدارة الوثائق" side="start">
+        <div className="space-y-5">
+          {/* Upload area */}
+          <label className="flex flex-col items-center justify-center gap-3 p-6 rounded-xl border-2 border-dashed border-border-light dark:border-border-dark hover:border-primary/50 bg-bg-light dark:bg-bg-dark cursor-pointer transition-colors">
+            <span className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <Upload className="h-6 w-6" />
+            </span>
+            <div className="text-center">
+              <p className="text-small font-semibold">اسحب الملفات هنا أو اضغط للرفع</p>
+              <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1">PDF, TXT, DOCX — حد أقصى 10 MB</p>
+            </div>
+            <input
+              type="file"
+              className="hidden"
+              accept=".pdf,.txt,.docx"
+              multiple
+              onChange={(e) => {
+                const files = e.target.files;
+                if (!files?.length) return;
+                const newDocs = Array.from(files).map((f, i) => ({
+                  id: `doc_${Date.now()}_${i}`,
+                  name: f.name,
+                  size: f.size < 1024 * 1024 ? `${Math.round(f.size / 1024)} KB` : `${(f.size / (1024 * 1024)).toFixed(1)} MB`,
+                  date: new Date().toISOString().slice(0, 10),
+                }));
+                setKnowledgeDocs((prev) => [...newDocs, ...prev]);
+                showToast(`تم رفع ${files.length} ملف بنجاح`);
+                e.target.value = '';
+              }}
+            />
+          </label>
+
+          {/* File list */}
+          <div>
+            <p className="text-small font-semibold mb-3">الوثائق المرفوعة ({knowledgeDocs.length})</p>
+            {knowledgeDocs.length === 0 ? (
+              <div className="text-center py-8 text-muted-light dark:text-muted-dark">
+                <Database className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                <p className="text-small">لا توجد وثائق مرفوعة بعد</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {knowledgeDocs.map((doc) => (
+                  <div key={doc.id} className="flex items-center gap-3 p-3 rounded-lg border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark">
+                    <span className="h-9 w-9 rounded-lg bg-danger/10 text-danger flex items-center justify-center flex-shrink-0 text-[10px] font-bold">
+                      {doc.name.split('.').pop()?.toUpperCase()}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-small font-medium truncate">{doc.name}</p>
+                      <p className="text-[11px] text-muted-light dark:text-muted-dark">{doc.size} — {doc.date}</p>
+                    </div>
+                    <button
+                      onClick={() => setKnowledgeDocs((prev) => prev.filter((d) => d.id !== doc.id))}
+                      className="p-1.5 rounded-lg text-muted-light dark:text-muted-dark hover:text-danger hover:bg-danger/10 transition-colors flex-shrink-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </Drawer>
     </div>
   );
 }
@@ -1051,7 +1120,7 @@ function SectionCard({
           <p className="text-small text-muted-light dark:text-muted-dark leading-relaxed mt-0.5">{description}</p>
         </div>
       </div>
-      <div>{children}</div>
+      <div className="ps-12">{children}</div>
     </Card>
   );
 }
@@ -1184,6 +1253,160 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     >
       <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all', checked ? 'start-0.5' : 'end-0.5')} />
     </button>
+  );
+}
+
+const HOURS_12 = Array.from({ length: 12 }, (_, i) => (i === 0 ? 12 : i));
+const MINUTES = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+const PERIODS = ['ص', 'م'] as const;
+
+function to12(h24: number): { h12: number; period: 'ص' | 'م' } {
+  if (h24 === 0) return { h12: 12, period: 'ص' };
+  if (h24 < 12) return { h12: h24, period: 'ص' };
+  if (h24 === 12) return { h12: 12, period: 'م' };
+  return { h12: h24 - 12, period: 'م' };
+}
+
+function to24(h12: number, period: 'ص' | 'م'): string {
+  let h = h12;
+  if (period === 'ص' && h === 12) h = 0;
+  else if (period === 'م' && h !== 12) h += 12;
+  return h.toString().padStart(2, '0');
+}
+
+function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hoursRef = useRef<HTMLDivElement>(null);
+  const minutesRef = useRef<HTMLDivElement>(null);
+
+  const [hStr, mStr] = (value || '09:00').split(':');
+  const parsed = to12(parseInt(hStr, 10));
+
+  const [draftH, setDraftH] = useState(parsed.h12);
+  const [draftM, setDraftM] = useState(mStr);
+  const [draftP, setDraftP] = useState<'ص' | 'م'>(parsed.period);
+
+  useEffect(() => {
+    if (!open) return;
+    const [h, m] = (value || '09:00').split(':');
+    const p = to12(parseInt(h, 10));
+    setDraftH(p.h12);
+    setDraftM(m);
+    setDraftP(p.period);
+    setTimeout(() => {
+      hoursRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'center' });
+      minutesRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'center' });
+    }, 10);
+  }, [open, value]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [open]);
+
+  const display = `${parsed.h12}:${mStr} ${parsed.period}`;
+
+  const confirm = () => {
+    onChange(`${to24(draftH, draftP)}:${draftM}`);
+    setOpen(false);
+  };
+
+  const setNow = () => {
+    const now = new Date();
+    const p = to12(now.getHours());
+    setDraftH(p.h12);
+    setDraftM(now.getMinutes().toString().padStart(2, '0'));
+    setDraftP(p.period);
+    setTimeout(() => {
+      hoursRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'center' });
+      minutesRef.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: 'center' });
+    }, 10);
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={cn(
+          'h-10 w-full px-3 rounded-lg bg-white dark:bg-surface-dark border text-body font-mono text-start flex items-center justify-between transition-all',
+          open
+            ? 'border-primary ring-2 ring-primary/10'
+            : 'border-border-light dark:border-border-dark hover:border-primary/40'
+        )}
+      >
+        <span>{display}</span>
+        <Clock className="h-3.5 w-3.5 text-muted-light dark:text-muted-dark" />
+      </button>
+      {open && (
+        <div className="absolute z-50 top-full mt-1 start-0 rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-lg overflow-hidden w-[210px]">
+          <div className="flex divide-x divide-border-light dark:divide-border-dark">
+            {/* Hours 1-12 */}
+            <div ref={hoursRef} className="flex-1 h-48 overflow-y-auto py-1 scrollbar-thin">
+              {HOURS_12.map((h) => (
+                <button
+                  key={h}
+                  data-active={h === draftH}
+                  onClick={() => setDraftH(h)}
+                  className={cn(
+                    'w-full py-1.5 text-center text-small font-mono transition-colors',
+                    h === draftH
+                      ? 'bg-primary text-white font-semibold'
+                      : 'hover:bg-bg-light dark:hover:bg-bg-dark'
+                  )}
+                >
+                  {h.toString().padStart(2, '0')}
+                </button>
+              ))}
+            </div>
+            {/* Minutes */}
+            <div ref={minutesRef} className="flex-1 h-48 overflow-y-auto py-1 scrollbar-thin">
+              {MINUTES.map((m) => (
+                <button
+                  key={m}
+                  data-active={m === draftM}
+                  onClick={() => setDraftM(m)}
+                  className={cn(
+                    'w-full py-1.5 text-center text-small font-mono transition-colors',
+                    m === draftM
+                      ? 'bg-primary text-white font-semibold'
+                      : 'hover:bg-bg-light dark:hover:bg-bg-dark'
+                  )}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+            {/* AM/PM */}
+            <div className="w-12 h-48 flex flex-col py-1">
+              {PERIODS.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setDraftP(p)}
+                  className={cn(
+                    'flex-1 text-center text-small font-semibold transition-colors',
+                    p === draftP
+                      ? 'bg-primary text-white'
+                      : 'hover:bg-bg-light dark:hover:bg-bg-dark'
+                  )}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center justify-between border-t border-border-light dark:border-border-dark px-2 py-1.5">
+            <button onClick={setNow} className="text-[12px] text-primary font-semibold hover:underline">Now</button>
+            <button onClick={confirm} className="h-7 px-4 rounded-lg bg-primary text-white text-[12px] font-semibold hover:bg-primary-dark transition-colors">OK</button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

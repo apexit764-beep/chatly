@@ -315,7 +315,7 @@ function MethodStep({
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2">
+      <div className="grid grid-cols-3 gap-2.5">
         {options.map((o) => {
           const Icon = o.icon;
           const selected = state.method === o.key;
@@ -324,45 +324,41 @@ function MethodStep({
               key={o.key}
               onClick={() => setState({ ...state, method: o.key })}
               className={cn(
-                'w-full text-start p-3.5 rounded-card border-2 transition-all flex items-start gap-3',
+                'relative text-start p-3.5 rounded-card border-2 transition-all flex flex-col items-start gap-2',
                 selected
                   ? 'border-primary bg-primary/5'
                   : 'border-border-light dark:border-border-dark hover:border-primary/30'
               )}
             >
-              <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                <Icon className="h-5 w-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <p className="text-body font-bold">{o.title}</p>
-                  {o.badge && (
-                    <span className={cn('text-[10px] font-bold px-1.5 py-0.5 rounded-full', o.badge.cls)}>
-                      {o.badge.label}
-                    </span>
-                  )}
-                </div>
-                <p className="text-small text-muted-light dark:text-muted-dark mb-2">{o.subtitle}</p>
-                <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                  {o.pros.map((p) => (
-                    <span key={p} className="text-[11px] inline-flex items-center gap-1">
-                      <Check className="h-3 w-3 text-success" />
-                      {p}
-                    </span>
-                  ))}
-                  {o.cons.map((c) => (
-                    <span key={c} className="text-[11px] inline-flex items-center gap-1 text-muted-light dark:text-muted-dark">
-                      <X className="h-3 w-3 text-danger" />
-                      {c}
-                    </span>
-                  ))}
-                </div>
-              </div>
               {selected && (
-                <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0">
-                  <Check className="h-4 w-4" />
+                <div className="absolute top-2 start-2 h-5 w-5 rounded-full bg-primary text-white flex items-center justify-center">
+                  <Check className="h-3 w-3" />
                 </div>
               )}
+              {o.badge && (
+                <span className={cn('absolute top-2 end-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full', o.badge.cls)}>
+                  {o.badge.label}
+                </span>
+              )}
+              <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                <Icon className="h-6 w-6" />
+              </div>
+              <p className="text-small font-bold leading-tight">{o.title}</p>
+              <p className="text-[11px] text-muted-light dark:text-muted-dark">{o.subtitle}</p>
+              <div className="flex flex-col gap-0.5 mt-1">
+                {o.pros.map((p) => (
+                  <span key={p} className="text-[11px] inline-flex items-center gap-1 text-muted-light dark:text-muted-dark">
+                    <Check className="h-4 w-4 flex-shrink-0 text-success" />
+                    {p}
+                  </span>
+                ))}
+                {o.cons.map((c) => (
+                  <span key={c} className="text-[11px] inline-flex items-center gap-1 text-muted-light dark:text-muted-dark">
+                    <X className="h-4 w-4 flex-shrink-0 text-danger" />
+                    {c}
+                  </span>
+                ))}
+              </div>
             </button>
           );
         })}

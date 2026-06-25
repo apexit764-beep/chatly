@@ -12,6 +12,9 @@ export type PermissionKey =
   | 'conversations.close'
   | 'conversations.delete'
   | 'conversations.export'
+  // Overview
+  | 'overview.view'
+  | 'overview.export'
   // Contacts
   | 'contacts.view'
   | 'contacts.create'
@@ -44,6 +47,20 @@ export type PermissionKey =
   | 'team.manage_roles'
   | 'departments.view'
   | 'departments.manage'
+  // AI & Knowledge Base
+  | 'ai.view'
+  | 'ai.configure'
+  | 'knowledge_base.view'
+  | 'knowledge_base.manage'
+  // Tags
+  | 'tags.view'
+  | 'tags.manage'
+  // Feedback & Ratings
+  | 'feedback.view'
+  | 'feedback.manage'
+  // Notifications
+  | 'notifications.view'
+  | 'notifications.manage'
   // Billing & Settings
   | 'billing.view'
   | 'billing.manage'

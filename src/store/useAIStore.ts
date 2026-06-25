@@ -38,8 +38,10 @@ export interface AISettings {
   forbiddenTopics: string;
   /** Reply the AI sends when a forbidden topic is detected */
   forbiddenReply: string;
-  /** Use the Help Center / Knowledge Base as a data source for the AI */
+  /** Use uploaded documents as a data source for the AI */
   useKnowledgeBase: boolean;
+  /** Learn from agent replies to improve AI responses over time */
+  learnFromAgents: boolean;
   /** Transfer-to-staff rules */
   transferOnRequest: boolean;
   transferOnFailure: boolean;
@@ -111,6 +113,7 @@ const DEFAULT_SETTINGS: AISettings = {
   forbiddenTopics: DEFAULT_FORBIDDEN,
   forbiddenReply: 'عذراً، لا أستطيع المساعدة في هذا الموضوع. للحصول على إجابة دقيقة سيتواصل معك أحد موظفينا قريباً 🌷',
   useKnowledgeBase: true,
+  learnFromAgents: true,
   transferOnRequest: true,
   transferOnFailure: true,
   transferOnNegativeSentiment: true,
