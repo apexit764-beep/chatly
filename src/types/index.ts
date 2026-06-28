@@ -89,7 +89,9 @@ export interface TemplateCategoryItem {
 }
 export type ChannelType =
   // Communication
-  | 'whatsapp' | 'messenger' | 'instagram' | 'telegram' | 'x' | 'widget' | 'email'
+  | 'whatsapp' | 'messenger' | 'instagram' | 'telegram' | 'x' | 'widget'
+  // Email providers
+  | 'email' | 'gmail' | 'outlook' | 'yahoo' | 'smtp'
   // E-commerce
   | 'salla' | 'zid' | 'shopify' | 'woocommerce';
 export type ChannelCategory = 'communication' | 'email' | 'ecommerce';

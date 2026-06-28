@@ -1,4 +1,4 @@
-import { Globe, Mail } from 'lucide-react';
+import { Globe, Mail, Server } from 'lucide-react';
 import type { ChannelType } from '@/types';
 import { cn } from '@/utils/cn';
 import {
@@ -7,6 +7,9 @@ import {
   InstagramIcon,
   TelegramIcon,
   XIcon,
+  GmailIcon,
+  OutlookIcon,
+  YahooIcon,
   SallaIcon,
   ZidIcon,
   ShopifyIcon,
@@ -31,6 +34,10 @@ const map: Record<ChannelType, { icon: IconComp; color: string; bg: string; labe
   x: { icon: XIcon, color: 'text-[#111]', bg: 'bg-[#111]/10', label: 'X' },
   widget: { icon: Globe, color: 'text-primary', bg: 'bg-primary/10', label: 'Live Chat' },
   email: { icon: Mail, color: 'text-muted-light', bg: 'bg-bg-light', label: 'Email' },
+  gmail: { icon: GmailIcon, color: 'text-[#EA4335]', bg: 'bg-[#EA4335]/10', label: 'Gmail' },
+  outlook: { icon: OutlookIcon, color: 'text-[#0078D4]', bg: 'bg-[#0078D4]/10', label: 'Outlook' },
+  yahoo: { icon: YahooIcon, color: 'text-[#6001D2]', bg: 'bg-[#6001D2]/10', label: 'Yahoo' },
+  smtp: { icon: Server, color: 'text-muted-light', bg: 'bg-bg-light', label: 'SMTP' },
   salla: { icon: SallaIcon, color: 'text-[#0F766E]', bg: 'bg-[#BAF3DB]/30', label: 'سلة' },
   zid: { icon: ZidIcon, color: 'text-[#7B61FF]', bg: 'bg-[#7B61FF]/10', label: 'زد' },
   shopify: { icon: ShopifyIcon, color: 'text-[#96BF48]', bg: 'bg-[#96BF48]/10', label: 'Shopify' },

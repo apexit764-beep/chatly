@@ -306,6 +306,7 @@ export const en: Record<string, string> = {
   'القنوات التي يستخدمها عملاؤك للتواصل معك': 'Channels your customers use to communicate with you',
   'البريد الإلكتروني': 'Email',
   'إرسال الحملات التسويقية والإشعارات — يُدار بشكل منفصل عن المحادثات': 'Send marketing campaigns and notifications — managed separately from conversations',
+  'اربط بريدك الإلكتروني لإرسال الحملات التسويقية والإشعارات': 'Connect your email to send marketing campaigns and notifications',
   'منصات التجارة الإلكترونية': 'E-commerce Platforms',
   'اربط متجرك لمزامنة الطلبات والعملاء تلقائياً': 'Connect your store to automatically sync orders and customers',
   'متصل': 'Connected',

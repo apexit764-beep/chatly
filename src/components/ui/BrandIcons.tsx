@@ -124,6 +124,30 @@ export function WooCommerceIcon({ className, style }: IconProps): JSX.Element {
   );
 }
 
+export function GmailIcon({ className, style }: IconProps): JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" className={className} style={style} aria-hidden="true">
+      <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z" fill="#EA4335"/>
+    </svg>
+  );
+}
+
+export function OutlookIcon({ className, style }: IconProps): JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" className={className} style={style} aria-hidden="true">
+      <path d="M24 7.387v10.478c0 .23-.08.424-.238.576a.806.806 0 0 1-.588.236h-8.174v-8.47l2.25 1.735a.318.318 0 0 0 .388 0l6.112-4.47c.1-.07.2-.1.25-.084zm0-1.4c0-.206-.1-.4-.35-.588L17.488 9.84l-3.488-2.6v-.87h9.363c.23 0 .424.076.588.23.15.14.236.332.236.563v-.175zM14 6.37v12.255L0 16.086V5.168L14 6.37zM9.9 8.96a3.07 3.07 0 0 0-2.224-.847c-.907 0-1.63.3-2.173.9-.544.6-.816 1.394-.816 2.38 0 1 .263 1.8.788 2.4.526.6 1.225.9 2.1.9.92 0 1.66-.3 2.213-.888.552-.587.83-1.374.83-2.362 0-1.026-.24-1.838-.718-2.482zm-1.2 4.136c-.26.4-.64.6-1.112.6-.46 0-.83-.2-1.1-.6-.27-.4-.406-.95-.406-1.65 0-.72.14-1.28.413-1.68.274-.4.648-.6 1.124-.6.46 0 .83.2 1.094.6.264.4.395.96.395 1.69 0 .7-.136 1.25-.408 1.64z" fill="#0078D4"/>
+    </svg>
+  );
+}
+
+export function YahooIcon({ className, style }: IconProps): JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} style={style} aria-hidden="true">
+      <path d="M0 5.6h4.7L8 12.8l3.3-7.2h4.6L10.2 17v5.3H5.8V17L0 5.6zm18 0l-2.5 8.6h-.1L18 19.5h-4.7L18 5.6h4.7zM19.3 1.7a2.4 2.4 0 1 1 0 4.8 2.4 2.4 0 0 1 0-4.8z" fill="#6001D2"/>
+    </svg>
+  );
+}
+
 export function XIcon({ className, style }: IconProps): JSX.Element {
   return (
     <svg
