@@ -45,11 +45,8 @@ export function SectionSidebar(): JSX.Element | null {
 
   if (location.pathname.startsWith('/settings')) return null;
   if (location.pathname.startsWith('/inbox')) return null;
+  if (location.pathname.startsWith('/reports')) return null;
 
-  const hasSidebar = ['/reports'].some((p) => location.pathname.startsWith(p));
-  if (!hasSidebar) return null;
-
-  if (location.pathname.startsWith('/reports')) return <ReportsSectionSidebar />;
   return null;
 }
 
