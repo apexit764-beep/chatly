@@ -76,6 +76,18 @@ export function FilterDropdown<T extends string = string>({
     if (noFilterValue !== undefined) onChange(noFilterValue);
   };
 
+  const getDropdownStyle = (): React.CSSProperties => {
+    if (!triggerRef.current) return {};
+    const rect = triggerRef.current.getBoundingClientRect();
+    const style: React.CSSProperties = { position: 'fixed', top: rect.bottom + 4 };
+    if (align === 'start') {
+      style.left = rect.left;
+    } else {
+      style.right = window.innerWidth - rect.right;
+    }
+    return style;
+  };
+
   return (
     <div className={cn('relative', className)}>
       <button
@@ -118,13 +130,11 @@ export function FilterDropdown<T extends string = string>({
 
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => { setOpen(false); setQuery(''); }} />
+          <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setQuery(''); }} />
           <div
             role="listbox"
-            className={cn(
-              'absolute mt-1 w-56 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-md shadow-card-hover z-20 overflow-hidden',
-              align === 'start' ? 'start-0' : 'end-0'
-            )}
+            style={getDropdownStyle()}
+            className="w-56 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-md shadow-card-hover z-50 overflow-hidden"
           >
             {searchable && (
               <div className="p-1.5 border-b border-border-light dark:border-border-dark">

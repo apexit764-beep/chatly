@@ -12,6 +12,7 @@ interface AuthState {
   isAuthenticated: boolean;
   user: AuthUser | null;
   login: (email: string, password: string) => { ok: boolean; error?: string };
+  updateUser: (patch: Partial<AuthUser>) => void;
   logout: () => void;
 }
 
@@ -58,6 +59,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       return { ok: true };
     }
     return { ok: false, error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' };
+  },
+  updateUser: (patch) => {
+    set((s) => {
+      if (!s.user) return {};
+      const updated = { ...s.user, ...patch };
+      try { localStorage.setItem(storageKey(), JSON.stringify(updated)); } catch {/*ignore*/}
+      return { user: updated };
+    });
   },
   logout: () => {
     try { localStorage.removeItem(storageKey()); } catch {/*ignore*/}

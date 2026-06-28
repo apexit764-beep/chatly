@@ -16,8 +16,10 @@ import {
   PanelRightOpen,
   BookOpen,
   MessageSquareWarning,
+  Star,
   Tag,
 } from 'lucide-react';
+
 import { useTranslation } from '@/i18n/useTranslation';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -46,6 +48,7 @@ const mainNav: NavItem[] = [
   { to: '/tags', label: 'الوسوم', icon: Tag, group: 'manage' },
   { to: '/ai-settings', label: 'إعدادات الذكاء الاصطناعي', icon: Sparkles, group: 'manage' },
   { to: '/feedback', label: 'الشكاوى والاقتراحات', icon: MessageSquareWarning, group: 'system' },
+  { to: '/rating', label: 'تقييمات العملاء', icon: Star, group: 'system' },
   { to: '/billing', label: 'الباقات والاشتراك', icon: CreditCard, group: 'system' },
   { to: '/settings', label: 'الإعدادات', icon: Settings, group: 'system' },
 ];

@@ -192,7 +192,7 @@ export default function Inbox(): JSX.Element {
         ? 'سيتم وضع علامة "محلولة" على المحادثة وإرسال رابط تقييم للعميل تلقائياً.'
         : 'سيتم وضع علامة "محلولة" على المحادثة. يمكن إعادة فتحها لاحقاً',
       variant: 'info',
-      confirmText: 'إغلاق',
+      confirmText: 'تأكيد',
     });
     if (!ok) return;
     setStatus(selected.id, 'closed');
@@ -604,7 +604,14 @@ export default function Inbox(): JSX.Element {
                     </div>
                   </div>
                   <button
-                    onClick={() => { setStatus(selected.id, 'new'); showToast('تم إعادة فتح المحادثة', 'success'); }}
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: 'إعادة فتح المحادثة؟',
+                        message: 'سيتم إعادة فتح المحادثة وستتمكن من إرسال واستقبال رسائل جديدة.',
+                        confirmText: 'إعادة فتح',
+                      });
+                      if (ok) { setStatus(selected.id, 'new'); showToast('تم إعادة فتح المحادثة', 'success'); }
+                    }}
                     className="h-9 px-4 rounded-full border border-primary text-primary text-small font-medium hover:bg-primary hover:text-white transition-colors flex items-center gap-2"
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
@@ -787,6 +794,7 @@ function AgentSearchSelect({
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const selected = agents.find((a) => a.id === value);
   const filtered = agents.filter((a) => {
     if (!query.trim()) return true;
@@ -798,9 +806,17 @@ function AgentSearchSelect({
     busy: { label: 'مشغول', cls: 'text-warning' },
     offline: { label: 'غير متصل', cls: 'text-muted-light dark:text-muted-dark' },
   };
+
+  const getDropdownStyle = (): React.CSSProperties => {
+    if (!triggerRef.current) return {};
+    const rect = triggerRef.current.getBoundingClientRect();
+    return { position: 'fixed', top: rect.bottom + 4, left: rect.left, width: rect.width };
+  };
+
   return (
     <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
@@ -826,8 +842,8 @@ function AgentSearchSelect({
       </button>
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => { setOpen(false); setQuery(''); }} />
-          <div className="absolute start-0 end-0 mt-1 z-20 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1.5">
+          <div className="fixed inset-0 z-[60]" onClick={() => { setOpen(false); setQuery(''); }} />
+          <div style={getDropdownStyle()} className="z-[61] bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1.5">
             <div className="px-2 pb-1.5">
               <input
                 autoFocus

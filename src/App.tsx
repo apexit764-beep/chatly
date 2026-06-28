@@ -28,6 +28,7 @@ const AISettings = lazy(() => import('@pages/AISettings'));
 const KnowledgeBase = lazy(() => import('@pages/KnowledgeBase'));
 const Feedback = lazy(() => import('@pages/Feedback'));
 const Tags = lazy(() => import('@pages/Tags'));
+const CustomerRatings = lazy(() => import('@pages/CustomerRatings'));
 const RatingPublic = lazy(() => import('@pages/RatingPublic'));
 
 // Admin pages
@@ -115,6 +116,7 @@ export default function App(): JSX.Element {
           <Route path="/ai-settings" element={<AISettings />} />
           <Route path="/knowledge-base" element={<KnowledgeBase />} />
           <Route path="/feedback" element={<Feedback />} />
+          <Route path="/rating" element={<CustomerRatings />} />
           <Route path="/tags" element={<Tags />} />
           <Route path="*" element={<Navigate to="/overview" replace />} />
         </Route>

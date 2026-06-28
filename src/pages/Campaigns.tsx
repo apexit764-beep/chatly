@@ -395,7 +395,7 @@ export default function Campaigns(): JSX.Element {
         side="start"
       >
         <div className="space-y-4 pb-20">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-3">
             <Input
               label="اسم الحملة"
               value={form.name}
@@ -409,31 +409,21 @@ export default function Campaigns(): JSX.Element {
               <label className="text-small font-medium text-muted-light dark:text-muted-dark block">
                 {channelFilter === 'whatsapp' ? 'رقم الإرسال' : 'حساب الإرسال'}
               </label>
-              {eligibleSenders.length === 0 ? (
-                <div className="p-3 rounded-card border border-dashed border-border-light dark:border-border-dark text-center">
-                  <p className="text-small text-muted-light dark:text-muted-dark mb-1">
-                    لا يوجد {channelFilter === 'whatsapp' ? 'رقم واتساب' : 'حساب بريد'} مربوط بعد
-                  </p>
-                  <a
-                    href={channelFilter === 'whatsapp' ? '/channels/whatsapp' : '/channels/email'}
-                    className="text-small text-primary font-medium hover:underline"
-                  >
-                    ربط أول {channelFilter === 'whatsapp' ? 'رقم' : 'حساب'} ←
-                  </a>
-                </div>
-              ) : (
-                <select
-                  value={form.senderChannelId}
-                  onChange={(e) => setForm({ ...form, senderChannelId: e.target.value })}
-                  className="w-full h-10 ps-3 pe-9 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
-                >
-                  {eligibleSenders.map((c) => (
+              <select
+                value={form.senderChannelId}
+                onChange={(e) => setForm({ ...form, senderChannelId: e.target.value })}
+                className="w-full h-10 ps-3 pe-9 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
+              >
+                {eligibleSenders.length === 0 ? (
+                  <option value="">لا يوجد {channelFilter === 'whatsapp' ? 'رقم واتساب' : 'حساب بريد'} مربوط</option>
+                ) : (
+                  eligibleSenders.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name} — {c.identifier}
                     </option>
-                  ))}
-                </select>
-              )}
+                  ))
+                )}
+              </select>
             </div>
           </div>
 

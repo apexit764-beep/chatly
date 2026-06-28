@@ -23,6 +23,10 @@ export interface GeneralPrefs {
   timezone: string;
   dateFormat: string;
   companyLogo: string | null;
+  industry: string;
+  companySize: string;
+  country: string;
+  phone: string;
 }
 
 export interface RatingPrefs {
@@ -58,6 +62,10 @@ const defaultState: Pick<SettingsState, 'notifications' | 'security' | 'general'
     timezone: 'Asia/Muscat',
     dateFormat: 'DD/MM/YYYY',
     companyLogo: null,
+    industry: 'real_estate',
+    companySize: '11-50',
+    country: 'OM',
+    phone: '+968 9999 0000',
   },
   rating: {
     enabled: true,
@@ -72,7 +80,13 @@ function read(): Pick<SettingsState, 'notifications' | 'security' | 'general' | 
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return defaultState;
-    return { ...defaultState, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    return {
+      notifications: { ...defaultState.notifications, ...parsed.notifications },
+      security: { ...defaultState.security, ...parsed.security },
+      general: { ...defaultState.general, ...parsed.general },
+      rating: { ...defaultState.rating, ...parsed.rating },
+    };
   } catch {
     return defaultState;
   }

@@ -24,7 +24,7 @@ export function Toast(): JSX.Element {
       {toast && (
         <motion.div
           className={cn(
-            'fixed bottom-6 start-6 z-[100] bg-surface-light dark:bg-surface-dark border-2 shadow-xl rounded-card px-4 py-3 flex items-center gap-3 min-w-[280px] max-w-[90vw]',
+            'fixed bottom-6 end-6 z-[100] bg-surface-light dark:bg-surface-dark border-2 shadow-xl rounded-card px-4 py-3 flex items-center gap-3 min-w-[280px] max-w-[90vw]',
             borderMap[toast.type]
           )}
           initial={{ opacity: 0, y: 20 }}
