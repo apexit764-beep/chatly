@@ -352,6 +352,9 @@ function MethodStep({
                     {p}
                   </span>
                 ))}
+                {o.cons.length > 0 && (
+                  <span className="text-[10px] font-bold mt-1">عيوبها</span>
+                )}
                 {o.cons.map((c) => (
                   <span key={c} className="text-[11px] inline-flex items-center gap-1 text-muted-light dark:text-muted-dark">
                     <X className="h-4 w-4 flex-shrink-0 text-danger" />

@@ -395,7 +395,7 @@ function CategoriesDrawer({ open, onClose }: { open: boolean; onClose: () => voi
   };
 
   return (
-    <Drawer open={open} onClose={onClose} title="إدارة التصنيفات" side="end" width="w-[420px]">
+    <Drawer open={open} onClose={onClose} title="إدارة التصنيفات" side="start" width="w-[420px]">
       <div className="space-y-4 pb-4">
         <p className="text-small text-muted-light dark:text-muted-dark">
           أنشئ تصنيفات خاصة بفريقك لتنظيم الردود السريعة (مثل: شحن، استرداد، دعم تقني).

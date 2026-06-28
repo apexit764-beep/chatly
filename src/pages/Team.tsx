@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from '@/i18n/useTranslation';
 import {
   Edit2,
   Trash2,
@@ -51,6 +52,7 @@ export default function Team(): JSX.Element {
   const cancelInvitation = useDataStore((s) => s.cancelInvitation);
   const showToast = useUIStore((s) => s.showToast);
   const { confirm } = useConfirm();
+  const { t } = useTranslation();
 
   // Drawer state
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -198,9 +200,9 @@ export default function Team(): JSX.Element {
     setInviteOpen(true);
   };
   const submit = (): void => {
-    if (!form.name.trim()) { showToast('أدخل اسم الموظف', 'error'); return; }
-    if (!form.email.trim()) { showToast('أدخل البريد الإلكتروني', 'error'); return; }
-    if (!/^\S+@\S+\.\S+$/.test(form.email)) { showToast('بريد إلكتروني غير صحيح', 'error'); return; }
+    if (!form.name.trim()) { showToast(t('أدخل اسم الموظف'), 'error'); return; }
+    if (!form.email.trim()) { showToast(t('أدخل البريد الإلكتروني'), 'error'); return; }
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) { showToast(t('بريد إلكتروني غير صحيح'), 'error'); return; }
     const workingHours = { enabled: form.whEnabled, start: form.whStart, end: form.whEnd, days: form.whDays };
     if (editing) {
       updateAgent(editing.id, {
@@ -214,7 +216,7 @@ export default function Team(): JSX.Element {
         workingHours,
         hidePhoneNumbers: form.hidePhoneNumbers,
       });
-      showToast('تم تحديث الموظف', 'success');
+      showToast(t('تم تحديث الموظف'), 'success');
     } else {
       inviteAgent({
         name: form.name,
@@ -223,7 +225,7 @@ export default function Team(): JSX.Element {
         departments: form.departments,
         channels: form.channels,
       });
-      showToast(`تم إرسال دعوة إلى ${form.email}`, 'success');
+      showToast(t(`تم إرسال دعوة إلى ${form.email}`), 'success');
     }
     setInviteOpen(false);
   };
@@ -231,39 +233,39 @@ export default function Team(): JSX.Element {
   // Single-row actions
   const removeAgent = async (a: Agent): Promise<void> => {
     const ok = await confirm({
-      title: `حذف ${a.name}؟`,
-      message: 'سيتم إزالته من الأقسام والقنوات. لن يمكنه الوصول مرة أخرى.',
+      title: t(`حذف ${a.name}؟`),
+      message: t('سيتم إزالته من الأقسام والقنوات. لن يمكنه الوصول مرة أخرى.'),
       variant: 'danger',
-      confirmText: 'حذف',
+      confirmText: t('حذف'),
     });
     if (ok) {
       deleteAgent(a.id);
-      showToast('تم الحذف', 'success');
+      showToast(t('تم الحذف'), 'success');
     }
   };
   const toggleSuspend = (a: Agent): void => {
     const newStatus: InvitationStatus = a.invitationStatus === 'suspended' ? 'active' : 'suspended';
     updateAgent(a.id, { invitationStatus: newStatus });
-    showToast(newStatus === 'suspended' ? 'تم تعطيل الحساب' : 'تم إعادة التفعيل', 'success');
+    showToast(newStatus === 'suspended' ? t('تم تعطيل الحساب') : t('تم إعادة التفعيل'), 'success');
   };
 
   // Bulk actions
   const bulkDelete = async (): Promise<void> => {
     const ok = await confirm({
-      title: `حذف ${selected.size} موظف؟`,
-      message: 'لا يمكن التراجع',
+      title: t(`حذف ${selected.size} موظف؟`),
+      message: t('لا يمكن التراجع'),
       variant: 'danger',
-      confirmText: 'حذف الكل',
+      confirmText: t('حذف الكل'),
     });
     if (ok) {
       Array.from(selected).forEach((id) => deleteAgent(id));
-      showToast(`تم حذف ${selected.size} موظف`, 'success');
+      showToast(t(`تم حذف ${selected.size} موظف`), 'success');
       clearSelection();
     }
   };
   const bulkSuspend = (): void => {
     Array.from(selected).forEach((id) => updateAgent(id, { invitationStatus: 'suspended' }));
-    showToast(`تم تعطيل ${selected.size} موظف`, 'success');
+    showToast(t(`تم تعطيل ${selected.size} موظف`), 'success');
     clearSelection();
   };
 
@@ -276,9 +278,9 @@ export default function Team(): JSX.Element {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-h1 font-bold">فريق العمل</h1>
+          <h1 className="text-h1 font-bold">{t('فريق العمل')}</h1>
           <p className="text-body text-muted-light dark:text-muted-dark mt-1">
-            أدر فريقك، أدِر صلاحياتهم وادعُ موظفين جدد
+            {t('أدر فريقك، أدِر صلاحياتهم وادعُ موظفين جدد')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -286,13 +288,13 @@ export default function Team(): JSX.Element {
             to="/team/roles"
             className="h-10 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex items-center gap-2"
           >
-            <Shield className="h-4 w-4" /> الأدوار والصلاحيات
+            <Shield className="h-4 w-4" /> {t('الأدوار والصلاحيات')}
           </Link>
           <button
             onClick={openInvite}
             className="h-10 px-4 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2"
           >
-            <Send className="h-4 w-4" /> دعوة موظف
+            <Send className="h-4 w-4" /> {t('دعوة موظف')}
           </button>
         </div>
       </div>
@@ -303,15 +305,15 @@ export default function Team(): JSX.Element {
           <div className="h-16 w-16 mx-auto rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3">
             <Users className="h-8 w-8" />
           </div>
-          <h3 className="text-h3 font-bold">ابدأ ببناء فريقك</h3>
+          <h3 className="text-h3 font-bold">{t('ابدأ ببناء فريقك')}</h3>
           <p className="text-body text-muted-light dark:text-muted-dark mt-1 max-w-md mx-auto">
-            ادعُ أول موظف من فريقك للوصول إلى المنصة عبر بريده الإلكتروني
+            {t('ادعُ أول موظف من فريقك للوصول إلى المنصة عبر بريده الإلكتروني')}
           </p>
           <button
             onClick={openInvite}
             className="mt-5 h-11 px-6 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold flex items-center gap-2 mx-auto"
           >
-            <Send className="h-4 w-4" /> ادعُ أول موظف
+            <Send className="h-4 w-4" /> {t('ادعُ أول موظف')}
           </button>
         </Card>
       ) : (
@@ -323,7 +325,7 @@ export default function Team(): JSX.Element {
               <Search className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark" />
               <input
                 type="text"
-                placeholder="ابحث بالاسم أو البريد..."
+                placeholder={t('ابحث بالاسم أو البريد...')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full h-9 ps-3 pe-9 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all"
@@ -331,12 +333,12 @@ export default function Team(): JSX.Element {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <FilterDropdown
-                label="الدور"
+                label={t('الدور')}
                 value={filterRole}
                 noFilterValue="all"
                 onChange={setFilterRole}
                 options={[
-                  { value: 'all', label: 'كل الأدوار' },
+                  { value: 'all', label: t('كل الأدوار') },
                   ...roles.map((r) => ({
                     value: r.id,
                     label: r.name,
@@ -345,26 +347,26 @@ export default function Team(): JSX.Element {
                 ]}
               />
               <FilterDropdown
-                label="الحالة"
+                label={t('الحالة')}
                 value={filterStatus}
                 noFilterValue="all"
                 onChange={(v) => setFilterStatus(v as 'all' | InvitationStatus)}
                 options={[
-                  { value: 'all', label: 'كل الحالات' },
-                  { value: 'active', label: 'نشط', leading: <span className="h-2 w-2 rounded-full bg-success" /> },
-                  { value: 'pending', label: 'بانتظار الدعوة', leading: <span className="h-2 w-2 rounded-full bg-warning" /> },
-                  { value: 'suspended', label: 'معلّق', leading: <span className="h-2 w-2 rounded-full bg-danger" /> },
+                  { value: 'all', label: t('كل الحالات') },
+                  { value: 'active', label: t('نشط'), leading: <span className="h-2 w-2 rounded-full bg-success" /> },
+                  { value: 'pending', label: t('بانتظار الدعوة'), leading: <span className="h-2 w-2 rounded-full bg-warning" /> },
+                  { value: 'suspended', label: t('معلّق'), leading: <span className="h-2 w-2 rounded-full bg-danger" /> },
                 ]}
               />
               <FilterDropdown
-                label="القسم"
+                label={t('القسم')}
                 value={filterDept}
                 noFilterValue="all"
                 onChange={setFilterDept}
                 searchable
-                searchPlaceholder="ابحث عن قسم..."
+                searchPlaceholder={t('ابحث عن قسم...')}
                 options={[
-                  { value: 'all', label: 'كل الأقسام' },
+                  { value: 'all', label: t('كل الأقسام') },
                   ...departments.map((d) => ({
                     value: d.id,
                     label: d.name,
@@ -377,15 +379,15 @@ export default function Team(): JSX.Element {
                   onClick={clearFilters}
                   className="h-8 px-2.5 rounded-md text-[12px] font-medium text-danger hover:bg-danger/10 flex items-center gap-1"
                 >
-                  <X className="h-3 w-3" /> مسح الكل
+                  <X className="h-3 w-3" /> {t('مسح الكل')}
                 </button>
               )}
             </div>
             <div className="ms-auto flex items-center bg-bg-light dark:bg-bg-dark rounded-full p-0.5">
               <button
                 onClick={() => setViewPersisted('cards')}
-                title="عرض البطاقات"
-                aria-label="عرض البطاقات"
+                title={t('عرض البطاقات')}
+                aria-label={t('عرض البطاقات')}
                 aria-pressed={view === 'cards'}
                 className={cn(
                   'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
@@ -396,8 +398,8 @@ export default function Team(): JSX.Element {
               </button>
               <button
                 onClick={() => setViewPersisted('table')}
-                title="عرض الجدول"
-                aria-label="عرض الجدول"
+                title={t('عرض الجدول')}
+                aria-label={t('عرض الجدول')}
                 aria-pressed={view === 'table'}
                 className={cn(
                   'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
@@ -413,17 +415,17 @@ export default function Team(): JSX.Element {
           {selected.size > 0 && (
             <div className="px-4 py-2.5 bg-primary/5 border-t border-primary/20 flex items-center justify-between gap-2 flex-wrap">
               <p className="text-small font-medium">
-                <strong className="text-primary">{selected.size}</strong> موظف مُحدّد
+                <strong className="text-primary">{selected.size}</strong> {t('موظف مُحدّد')}
               </p>
               <div className="flex items-center gap-1.5">
                 <button onClick={bulkSuspend} className="h-8 px-3 rounded-full bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex items-center gap-1.5">
-                  <Pause className="h-3.5 w-3.5" /> تعطيل
+                  <Pause className="h-3.5 w-3.5" /> {t('تعطيل')}
                 </button>
                 <button onClick={bulkDelete} className="h-8 px-3 rounded-full bg-danger/10 text-danger text-small font-medium hover:bg-danger/20 flex items-center gap-1.5">
-                  <Trash2 className="h-3.5 w-3.5" /> حذف
+                  <Trash2 className="h-3.5 w-3.5" /> {t('حذف')}
                 </button>
                 <button onClick={clearSelection} className="text-small text-muted-light dark:text-muted-dark hover:text-current">
-                  إلغاء التحديد
+                  {t('إلغاء التحديد')}
                 </button>
               </div>
             </div>
@@ -436,16 +438,16 @@ export default function Team(): JSX.Element {
             <div className="h-12 w-12 mx-auto rounded-full bg-muted-light/10 text-muted-light flex items-center justify-center mb-2">
               <Search className="h-5 w-5" />
             </div>
-            <p className="text-body font-semibold">لا نتائج</p>
+            <p className="text-body font-semibold">{t('لا نتائج')}</p>
             <p className="text-small text-muted-light dark:text-muted-dark mt-1">
-              جرّب بحث آخر أو امسح الفلاتر
+              {t('جرّب بحث آخر أو امسح الفلاتر')}
             </p>
             {(activeFilters > 0 || search) && (
               <button
                 onClick={() => { clearFilters(); setSearch(''); }}
                 className="mt-3 h-8 px-3 rounded-full text-small text-primary hover:bg-primary/10"
               >
-                مسح كل البحث والفلاتر
+                {t('مسح كل البحث والفلاتر')}
               </button>
             )}
           </Card>
@@ -478,10 +480,10 @@ export default function Team(): JSX.Element {
                     >
                       {isPending ? (
                         <>
-                          <button onClick={() => { resendInvitation(a.id); showToast('تم إعادة إرسال الدعوة', 'success'); }} className="h-7 w-7 rounded-lg text-muted-light dark:text-muted-dark hover:bg-primary/10 hover:text-primary flex items-center justify-center" title="إعادة إرسال الدعوة">
+                          <button onClick={() => { resendInvitation(a.id); showToast(t('تم إعادة إرسال الدعوة'), 'success'); }} className="h-7 w-7 rounded-lg text-muted-light dark:text-muted-dark hover:bg-primary/10 hover:text-primary flex items-center justify-center" title={t('إعادة إرسال الدعوة')}>
                             <RefreshCw className="h-3.5 w-3.5" />
                           </button>
-                          <button onClick={() => { cancelInvitation(a.id); showToast('تم إلغاء الدعوة', 'success'); }} className="h-7 w-7 rounded-lg text-muted-light dark:text-muted-dark hover:bg-danger/10 hover:text-danger flex items-center justify-center" title="إلغاء الدعوة">
+                          <button onClick={() => { cancelInvitation(a.id); showToast(t('تم إلغاء الدعوة'), 'success'); }} className="h-7 w-7 rounded-lg text-muted-light dark:text-muted-dark hover:bg-danger/10 hover:text-danger flex items-center justify-center" title={t('إلغاء الدعوة')}>
                             <X className="h-3.5 w-3.5" />
                           </button>
                         </>
@@ -492,18 +494,18 @@ export default function Team(): JSX.Element {
                               onClick={() => {
                                 const s = a.status === 'busy' ? 'online' : 'busy';
                                 updateAgent(a.id, { status: s });
-                                showToast(s === 'busy' ? 'تم تعيين الحالة: مشغول' : 'تم تعيين الحالة: متاح', 'success');
+                                showToast(s === 'busy' ? t('تم تعيين الحالة: مشغول') : t('تم تعيين الحالة: متاح'), 'success');
                               }}
                               className={cn('h-7 w-7 rounded-lg flex items-center justify-center', a.status === 'busy' ? 'text-warning hover:bg-warning/10' : 'text-muted-light dark:text-muted-dark hover:bg-warning/10 hover:text-warning')}
-                              title={a.status === 'busy' ? 'متاح — إلغاء وضع مشغول' : 'مشغول — تفعيل وضع مشغول'}
+                              title={a.status === 'busy' ? t('متاح — إلغاء وضع مشغول') : t('مشغول — تفعيل وضع مشغول')}
                             >
                               <Pause className="h-3.5 w-3.5" />
                             </button>
                           )}
-                          <button onClick={() => openEdit(a)} className="h-7 w-7 rounded-lg text-muted-light dark:text-muted-dark hover:bg-primary/10 hover:text-primary flex items-center justify-center" title="تعديل">
+                          <button onClick={() => openEdit(a)} className="h-7 w-7 rounded-lg text-muted-light dark:text-muted-dark hover:bg-primary/10 hover:text-primary flex items-center justify-center" title={t('تعديل')}>
                             <Edit2 className="h-3.5 w-3.5" />
                           </button>
-                          <button onClick={() => removeAgent(a)} className="h-7 w-7 rounded-lg text-muted-light dark:text-muted-dark hover:bg-danger/10 hover:text-danger flex items-center justify-center" title="حذف">
+                          <button onClick={() => removeAgent(a)} className="h-7 w-7 rounded-lg text-muted-light dark:text-muted-dark hover:bg-danger/10 hover:text-danger flex items-center justify-center" title={t('حذف')}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </>
@@ -532,13 +534,13 @@ export default function Team(): JSX.Element {
                     {/* Meta: role + departments + conversations — all in one row */}
                     <div className="flex items-center flex-wrap gap-x-4 gap-y-1.5 mb-4 text-small">
                       {role && (
-                        <span className="inline-flex items-center gap-1.5" title="الدور">
+                        <span className="inline-flex items-center gap-1.5" title={t('الدور')}>
                           <Shield className="h-3.5 w-3.5 text-muted-light dark:text-muted-dark flex-shrink-0" />
                           <span className="font-semibold truncate">{role.name}</span>
                         </span>
                       )}
                       {agentDepts.length > 0 && (
-                        <span className="inline-flex items-center gap-1.5 min-w-0" title="الأقسام">
+                        <span className="inline-flex items-center gap-1.5 min-w-0" title={t('الأقسام')}>
                           <Users className="h-3.5 w-3.5 text-muted-light dark:text-muted-dark flex-shrink-0" />
                           <span className="font-semibold truncate">
                             {agentDepts.slice(0, 2).map((d) => d.name).join('، ')}
@@ -548,7 +550,7 @@ export default function Team(): JSX.Element {
                           </span>
                         </span>
                       )}
-                      <span className="inline-flex items-center gap-1.5" title="عدد المحادثات">
+                      <span className="inline-flex items-center gap-1.5" title={t('عدد المحادثات')}>
                         <MessageSquare className="h-3.5 w-3.5 text-muted-light dark:text-muted-dark flex-shrink-0" />
                         <span className="font-bold tabular-nums">{active}</span>
                       </span>
@@ -556,9 +558,9 @@ export default function Team(): JSX.Element {
 
                     {/* Stats: assigned channels */}
                     <div className="mb-4">
-                      <p className="text-small text-muted-light dark:text-muted-dark mb-1.5">الحسابات المسندة</p>
+                      <p className="text-small text-muted-light dark:text-muted-dark mb-1.5">{t('الحسابات المسندة')}</p>
                       {agentChannels.length === 0 ? (
-                        <p className="text-[11px] text-muted-light dark:text-muted-dark italic">لا توجد حسابات</p>
+                        <p className="text-[11px] text-muted-light dark:text-muted-dark italic">{t('لا توجد حسابات')}</p>
                       ) : (
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {uniqueChannelTypes.map((t) => {
@@ -587,19 +589,19 @@ export default function Team(): JSX.Element {
                       <label
                         className="inline-flex items-center cursor-pointer"
                         onClick={(e) => e.stopPropagation()}
-                        title="تحديد"
+                        title={t('تحديد')}
                       >
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => toggleSelect(a.id)}
                           className="h-4 w-4 cursor-pointer accent-primary"
-                          aria-label="تحديد"
+                          aria-label={t('تحديد')}
                         />
                       </label>
                       {isPending ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/15 text-warning text-[11px] font-medium">
-                          <Clock className="h-3 w-3" /> بانتظار القبول
+                          <Clock className="h-3 w-3" /> {t('بانتظار القبول')}
                         </span>
                       ) : (
                         <div className="flex items-center gap-2">
@@ -607,7 +609,7 @@ export default function Team(): JSX.Element {
                             'text-[11px] font-semibold',
                             !isSuspended ? 'text-primary' : 'text-muted-light dark:text-muted-dark',
                           )}>
-                            {!isSuspended ? 'فعّال' : 'معطّل'}
+                            {!isSuspended ? t('فعّال') : t('معطّل')}
                           </span>
                           <button
                             type="button"
@@ -618,7 +620,7 @@ export default function Team(): JSX.Element {
                             )}
                             role="switch"
                             aria-checked={!isSuspended}
-                            title={isSuspended ? 'معطّل — اضغط للتفعيل' : 'فعّال — اضغط للتعطيل'}
+                            title={isSuspended ? t('معطّل — اضغط للتفعيل') : t('فعّال — اضغط للتعطيل')}
                           >
                             <span
                               className={cn(
@@ -648,13 +650,13 @@ export default function Team(): JSX.Element {
                         className="h-4 w-4"
                       />
                     </th>
-                    <th className="text-start font-medium px-4 py-2.5">الموظف</th>
-                    <th className="text-center font-medium px-4 py-2.5 hidden md:table-cell">الدور</th>
-                    <th className="text-center font-medium px-4 py-2.5 hidden lg:table-cell">الأقسام</th>
-                    <th className="text-center font-medium px-4 py-2.5 hidden xl:table-cell">القنوات</th>
-                    <th className="text-center font-medium px-4 py-2.5 hidden sm:table-cell">المحادثات المفتوحة</th>
-                    <th className="text-center font-medium px-4 py-2.5">الحالة</th>
-                    <th className="text-center font-medium px-4 py-2.5 hidden lg:table-cell">آخر نشاط</th>
+                    <th className="text-start font-medium px-4 py-2.5">{t('الموظف')}</th>
+                    <th className="text-center font-medium px-4 py-2.5 hidden md:table-cell">{t('الدور')}</th>
+                    <th className="text-center font-medium px-4 py-2.5 hidden lg:table-cell">{t('الأقسام')}</th>
+                    <th className="text-center font-medium px-4 py-2.5 hidden xl:table-cell">{t('القنوات')}</th>
+                    <th className="text-center font-medium px-4 py-2.5 hidden sm:table-cell">{t('المحادثات المفتوحة')}</th>
+                    <th className="text-center font-medium px-4 py-2.5">{t('الحالة')}</th>
+                    <th className="text-center font-medium px-4 py-2.5 hidden lg:table-cell">{t('آخر نشاط')}</th>
                     <th className="text-start font-medium px-4 py-2.5 w-1"></th>
                   </tr>
                 </thead>
@@ -692,7 +694,7 @@ export default function Team(): JSX.Element {
                                 <p className="font-semibold truncate">{a.name}</p>
                                 {isPending && (
                                   <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-warning/15 text-warning">
-                                    دعوة
+                                    {t('دعوة')}
                                   </span>
                                 )}
                               </div>
@@ -771,7 +773,7 @@ export default function Team(): JSX.Element {
                         <td className="px-4 py-3 text-center">
                           {isPending ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/15 text-warning text-[11px] font-medium">
-                              <Clock className="h-3 w-3" /> بانتظار القبول
+                              <Clock className="h-3 w-3" /> {t('بانتظار القبول')}
                             </span>
                           ) : (
                             <button
@@ -783,7 +785,7 @@ export default function Team(): JSX.Element {
                               )}
                               role="switch"
                               aria-checked={!isSuspended}
-                              title={isSuspended ? 'معطّل — اضغط للتفعيل' : 'فعّال — اضغط للتعطيل'}
+                              title={isSuspended ? t('معطّل — اضغط للتفعيل') : t('فعّال — اضغط للتعطيل')}
                             >
                               <span
                                 className={cn(
@@ -796,7 +798,7 @@ export default function Team(): JSX.Element {
                         </td>
                         <td className="px-4 py-3 text-muted-light dark:text-muted-dark hidden lg:table-cell text-small text-center">
                           {isPending && a.invitedAt
-                            ? <span title={'دُعي ' + timeAgo(a.invitedAt)}>دُعي {timeAgo(a.invitedAt)}</span>
+                            ? <span title={t('دُعي') + ' ' + timeAgo(a.invitedAt)}>{t('دُعي')} {timeAgo(a.invitedAt)}</span>
                             : timeAgo(a.lastActive)}
                         </td>
                         <td className="px-4 py-3">
@@ -804,16 +806,16 @@ export default function Team(): JSX.Element {
                             {isPending ? (
                               <>
                                 <button
-                                  onClick={() => { resendInvitation(a.id); showToast('تم إعادة إرسال الدعوة', 'success'); }}
+                                  onClick={() => { resendInvitation(a.id); showToast(t('تم إعادة إرسال الدعوة'), 'success'); }}
                                   className="h-8 w-8 rounded-lg hover:bg-primary/10 text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center"
-                                  title="إعادة إرسال الدعوة"
+                                  title={t('إعادة إرسال الدعوة')}
                                 >
                                   <RefreshCw className="h-3.5 w-3.5" />
                                 </button>
                                 <button
-                                  onClick={() => { cancelInvitation(a.id); showToast('تم إلغاء الدعوة', 'success'); }}
+                                  onClick={() => { cancelInvitation(a.id); showToast(t('تم إلغاء الدعوة'), 'success'); }}
                                   className="h-8 w-8 rounded-lg hover:bg-danger/10 text-muted-light dark:text-muted-dark hover:text-danger flex items-center justify-center"
-                                  title="إلغاء الدعوة"
+                                  title={t('إلغاء الدعوة')}
                                 >
                                   <X className="h-3.5 w-3.5" />
                                 </button>
@@ -825,19 +827,19 @@ export default function Team(): JSX.Element {
                                     onClick={() => {
                                       const s = a.status === 'busy' ? 'online' : 'busy';
                                       updateAgent(a.id, { status: s });
-                                      showToast(s === 'busy' ? 'تم تعيين الحالة: مشغول' : 'تم تعيين الحالة: متاح', 'success');
+                                      showToast(s === 'busy' ? t('تم تعيين الحالة: مشغول') : t('تم تعيين الحالة: متاح'), 'success');
                                     }}
                                     className={cn('h-8 w-8 rounded-lg flex items-center justify-center', a.status === 'busy' ? 'text-warning hover:bg-warning/10' : 'text-muted-light dark:text-muted-dark hover:bg-warning/10 hover:text-warning')}
-                                    title={a.status === 'busy' ? 'متاح — إلغاء وضع مشغول' : 'مشغول — تفعيل وضع مشغول'}
-                                    aria-label="تبديل مشغول"
+                                    title={a.status === 'busy' ? t('متاح — إلغاء وضع مشغول') : t('مشغول — تفعيل وضع مشغول')}
+                                    aria-label={t('تبديل مشغول')}
                                   >
                                     <Pause className="h-3.5 w-3.5" />
                                   </button>
                                 )}
-                                <button onClick={() => openEdit(a)} className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title="تعديل" aria-label="تعديل">
+                                <button onClick={() => openEdit(a)} className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title={t('تعديل')} aria-label={t('تعديل')}>
                                   <Edit2 className="h-3.5 w-3.5" />
                                 </button>
-                                <button onClick={() => removeAgent(a)} className="h-8 w-8 rounded-lg hover:bg-danger/10 text-muted-light dark:text-muted-dark hover:text-danger flex items-center justify-center" title="حذف" aria-label="حذف">
+                                <button onClick={() => removeAgent(a)} className="h-8 w-8 rounded-lg hover:bg-danger/10 text-muted-light dark:text-muted-dark hover:text-danger flex items-center justify-center" title={t('حذف')} aria-label={t('حذف')}>
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
                               </>
@@ -857,9 +859,9 @@ export default function Team(): JSX.Element {
         {!noResults && filtered.length > pageSize && (
           <div className="flex items-center justify-between gap-2 px-4 py-3 text-small flex-wrap">
             <p className="text-muted-light dark:text-muted-dark">
-              عرض <strong className="text-current">{safePage * pageSize + 1}</strong> -{' '}
+              {t('عرض')} <strong className="text-current">{safePage * pageSize + 1}</strong> -{' '}
               <strong className="text-current">{Math.min(filtered.length, (safePage + 1) * pageSize)}</strong>{' '}
-              من <strong className="text-current">{filtered.length}</strong>
+              {t('من')} <strong className="text-current">{filtered.length}</strong>
             </p>
             <div className="flex items-center gap-1">
               <button
@@ -867,7 +869,7 @@ export default function Team(): JSX.Element {
                 disabled={safePage === 0}
                 className="h-8 px-3 rounded-md border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                السابق
+                {t('السابق')}
               </button>
               <span className="px-2 text-small text-muted-light dark:text-muted-dark tabular-nums">
                 {safePage + 1} / {pageCount}
@@ -877,7 +879,7 @@ export default function Team(): JSX.Element {
                 disabled={safePage >= pageCount - 1}
                 className="h-8 px-3 rounded-md border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                التالي
+                {t('التالي')}
               </button>
             </div>
           </div>
@@ -889,21 +891,21 @@ export default function Team(): JSX.Element {
       <Drawer
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
-        title={editing ? `تعديل: ${editing.name}` : 'دعوة موظف جديد'}
+        title={editing ? t(`تعديل: ${editing.name}`) : t('دعوة موظف جديد')}
         width="w-[480px]"
-        side="end"
+        side="start"
       >
         <div className="space-y-4 pb-20">
           {!editing && (
             <div className="p-3 rounded-card bg-info/5 border border-info/20 flex items-start gap-2">
               <Mail className="h-4 w-4 text-info flex-shrink-0 mt-0.5" />
               <p className="text-[11px] text-muted-light dark:text-muted-dark">
-                سيتم إرسال رابط دعوة للبريد الإلكتروني. الموظف يضغط الرابط ويُنشئ كلمة المرور بنفسه.
+                {t('سيتم إرسال رابط دعوة للبريد الإلكتروني. الموظف يضغط الرابط ويُنشئ كلمة المرور بنفسه.')}
               </p>
             </div>
           )}
           <Input
-            label="البريد الإلكتروني"
+            label={t('البريد الإلكتروني')}
             type="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -911,13 +913,13 @@ export default function Team(): JSX.Element {
             placeholder="employee@company.com"
           />
           <Input
-            label="الاسم"
+            label={t('الاسم')}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="اسم الموظف"
+            placeholder={t('اسم الموظف')}
           />
           <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">الدور</label>
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">{t('الدور')}</label>
             <select
               value={form.roleId}
               onChange={(e) => setForm({ ...form, roleId: e.target.value })}
@@ -928,11 +930,11 @@ export default function Team(): JSX.Element {
               ))}
             </select>
             <p className="text-[10px] text-muted-light dark:text-muted-dark">
-              يمكنك تغيير صلاحيات هذا الدور من <Link to="/team/roles" className="text-primary hover:underline">صفحة الأدوار</Link>
+              {t('يمكنك تغيير صلاحيات هذا الدور من')} <Link to="/team/roles" className="text-primary hover:underline">{t('صفحة الأدوار')}</Link>
             </p>
           </div>
           <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">الأقسام</label>
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">{t('الأقسام')}</label>
             <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
               {departments.map((d) => {
                 const checked = form.departments.includes(d.id);
@@ -960,8 +962,8 @@ export default function Team(): JSX.Element {
 
           <label className="flex items-center justify-between p-3 rounded-card bg-bg-light dark:bg-bg-dark cursor-pointer">
             <div>
-              <p className="text-small font-medium">إخفاء أرقام العملاء</p>
-              <p className="text-[10px] text-muted-light dark:text-muted-dark">عند التفعيل، لن يرى هذا الموظف أرقام هواتف العملاء</p>
+              <p className="text-small font-medium">{t('إخفاء أرقام العملاء')}</p>
+              <p className="text-[10px] text-muted-light dark:text-muted-dark">{t('عند التفعيل، لن يرى هذا الموظف أرقام هواتف العملاء')}</p>
             </div>
             <button
               type="button"
@@ -977,31 +979,31 @@ export default function Team(): JSX.Element {
           {/* Workload + timezone — only meaningful when editing an active agent */}
           {editing && (
             <div className="space-y-3 pt-3 border-t border-border-light dark:border-border-dark">
-              <p className="text-small font-bold">إعدادات العمل</p>
+              <p className="text-small font-bold">{t('إعدادات العمل')}</p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted-light dark:text-muted-dark block">الحد الأقصى للمحادثات المتزامنة</label>
+                  <label className="text-[11px] font-medium text-muted-light dark:text-muted-dark block">{t('الحد الأقصى للمحادثات المتزامنة')}</label>
                   <input
                     type="number"
                     min={0}
                     value={form.maxConcurrent}
                     onChange={(e) => setForm({ ...form, maxConcurrent: Number(e.target.value) || 0 })}
-                    placeholder="0 = بدون حد"
+                    placeholder={t('0 = بدون حد')}
                     className="w-full h-9 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary"
                   />
-                  <p className="text-[10px] text-muted-light dark:text-muted-dark">0 = بدون حد</p>
+                  <p className="text-[10px] text-muted-light dark:text-muted-dark">{t('0 = بدون حد')}</p>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted-light dark:text-muted-dark block">المنطقة الزمنية</label>
+                  <label className="text-[11px] font-medium text-muted-light dark:text-muted-dark block">{t('المنطقة الزمنية')}</label>
                   <select
                     value={form.timezone}
                     onChange={(e) => setForm({ ...form, timezone: e.target.value })}
                     className="w-full h-9 ps-3 pe-9 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary"
                   >
-                    <option value="Asia/Muscat">مسقط (GMT+4)</option>
-                    <option value="Asia/Dubai">دبي (GMT+4)</option>
-                    <option value="Asia/Riyadh">الرياض (GMT+3)</option>
-                    <option value="Africa/Cairo">القاهرة (GMT+2)</option>
+                    <option value="Asia/Muscat">{t('مسقط (GMT+4)')}</option>
+                    <option value="Asia/Dubai">{t('دبي (GMT+4)')}</option>
+                    <option value="Asia/Riyadh">{t('الرياض (GMT+3)')}</option>
+                    <option value="Africa/Cairo">{t('القاهرة (GMT+2)')}</option>
                   </select>
                 </div>
               </div>
@@ -1010,8 +1012,8 @@ export default function Team(): JSX.Element {
               <div className="space-y-2 rounded-card bg-bg-light dark:bg-bg-dark p-3">
                 <label className="flex items-center justify-between cursor-pointer">
                   <div>
-                    <p className="text-small font-medium">ساعات العمل</p>
-                    <p className="text-[10px] text-muted-light dark:text-muted-dark">يستخدم للتوجيه التلقائي + عرض حالة "متاح"</p>
+                    <p className="text-small font-medium">{t('ساعات العمل')}</p>
+                    <p className="text-[10px] text-muted-light dark:text-muted-dark">{t('يستخدم للتوجيه التلقائي + عرض حالة "متاح"')}</p>
                   </div>
                   <button
                     type="button"
@@ -1050,7 +1052,7 @@ export default function Team(): JSX.Element {
                             className={cn('h-7 px-2 rounded-full text-[11px] font-medium transition-colors', active ? 'bg-primary text-white' : 'bg-white dark:bg-surface-dark text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark')}
                             style={active ? { color: '#fff' } : undefined}
                           >
-                            {day}
+                            {t(day)}
                           </button>
                         );
                       })}
@@ -1063,17 +1065,17 @@ export default function Team(): JSX.Element {
         </div>
         <div className="absolute bottom-0 inset-x-0 px-5 py-3 bg-white dark:bg-surface-dark border-t border-border-light dark:border-border-dark flex items-center justify-end gap-2">
           <button onClick={() => setInviteOpen(false)} className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">
-            إلغاء
+            {t('إلغاء')}
           </button>
           <button onClick={submit} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2">
             {editing ? <Check className="h-4 w-4" /> : <Send className="h-4 w-4" />}
-            {editing ? 'حفظ التغييرات' : 'إرسال الدعوة'}
+            {editing ? t('حفظ التغييرات') : t('إرسال الدعوة')}
           </button>
         </div>
       </Drawer>
 
       {/* Quick view drawer */}
-      <Drawer open={!!drawer} onClose={() => setDrawer(null)} title={drawer?.name ?? ''} width="w-[420px]" side="end">
+      <Drawer open={!!drawer} onClose={() => setDrawer(null)} title={drawer?.name ?? ''} width="w-[420px]" side="start">
         {drawer && (
           <div className="space-y-4">
             <div className="text-center">
@@ -1082,9 +1084,9 @@ export default function Team(): JSX.Element {
               <p className="text-small text-muted-light dark:text-muted-dark">{drawer.email}</p>
             </div>
             <div className="space-y-2 text-small">
-              <Row label="الدور" value={roles.find((r) => r.id === drawer.roleId)?.name ?? '—'} />
+              <Row label={t('الدور')} value={roles.find((r) => r.id === drawer.roleId)?.name ?? '—'} />
               <div className="flex items-center justify-between gap-3 pb-2 border-b border-border-light dark:border-border-dark">
-                <span className="text-muted-light dark:text-muted-dark">الحالة</span>
+                <span className="text-muted-light dark:text-muted-dark">{t('الحالة')}</span>
                 {drawer.invitationStatus === 'active' ? (
                   <div className="flex items-center gap-2">
                     <span className={cn('h-2 w-2 rounded-full', agentStatusColor[drawer.status])} />
@@ -1095,7 +1097,7 @@ export default function Team(): JSX.Element {
                         const newStatus = drawer.status === 'busy' ? 'online' : 'busy';
                         updateAgent(drawer.id, { status: newStatus });
                         setDrawer({ ...drawer, status: newStatus });
-                        showToast(newStatus === 'busy' ? 'تم تعيين الحالة: مشغول' : 'تم تعيين الحالة: متاح', 'success');
+                        showToast(newStatus === 'busy' ? t('تم تعيين الحالة: مشغول') : t('تم تعيين الحالة: متاح'), 'success');
                       }}
                       className={cn(
                         'relative h-5 w-9 rounded-full transition-colors flex-shrink-0',
@@ -1103,20 +1105,20 @@ export default function Team(): JSX.Element {
                       )}
                       role="switch"
                       aria-checked={drawer.status === 'busy'}
-                      title={drawer.status === 'busy' ? 'مشغول — اضغط للتحويل إلى متاح' : 'متاح — اضغط للتحويل إلى مشغول'}
+                      title={drawer.status === 'busy' ? t('مشغول — اضغط للتحويل إلى متاح') : t('متاح — اضغط للتحويل إلى مشغول')}
                     >
                       <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all', drawer.status === 'busy' ? 'start-0.5' : 'end-0.5')} />
                     </button>
                   </div>
                 ) : (
                   <span className="font-medium">
-                    {drawer.invitationStatus === 'pending' ? 'بانتظار قبول الدعوة' : 'معلّق'}
+                    {drawer.invitationStatus === 'pending' ? t('بانتظار قبول الدعوة') : t('معلّق')}
                   </span>
                 )}
               </div>
-              <Row label="الأقسام" value={drawer.departments.map((id) => departments.find((d) => d.id === id)?.name).filter(Boolean).join('، ') || '—'} />
-              <Row label="القنوات" value={`${drawer.channels.length} قناة`} />
-              <Row label={drawer.invitationStatus === 'pending' ? 'تاريخ الدعوة' : 'آخر نشاط'} value={timeAgo(drawer.invitationStatus === 'pending' && drawer.invitedAt ? drawer.invitedAt : drawer.lastActive)} />
+              <Row label={t('الأقسام')} value={drawer.departments.map((id) => departments.find((d) => d.id === id)?.name).filter(Boolean).join('، ') || '—'} />
+              <Row label={t('القنوات')} value={`${drawer.channels.length} ${t('قناة')}`} />
+              <Row label={drawer.invitationStatus === 'pending' ? t('تاريخ الدعوة') : t('آخر نشاط')} value={timeAgo(drawer.invitationStatus === 'pending' && drawer.invitedAt ? drawer.invitedAt : drawer.lastActive)} />
             </div>
           </div>
         )}

@@ -25,6 +25,7 @@ import { useInboxStore } from '@/store/useInboxStore';
 import { useUIStore } from '@/store/useUIStore';
 import { ChannelIcon } from '@components/ui';
 import { cn } from '@/utils/cn';
+import { useTranslation } from '@/i18n/useTranslation';
 
 const settingsItems: { key: string; label: string; icon: ReactNode }[] = [
   { key: 'general', label: 'عام', icon: <Building className="h-4 w-4" /> },
@@ -52,12 +53,13 @@ export function SectionSidebar(): JSX.Element | null {
 
 function SectionHeader({ children }: { children: ReactNode }): JSX.Element {
   const toggleCollapsed = useUIStore((s) => s.toggleSectionSidebar);
+  const { t } = useTranslation();
   return (
     <div className="h-[56px] px-4 flex items-center justify-between border-b border-border-light dark:border-border-dark flex-shrink-0">
       <h2 className="text-h3 font-bold">{children}</h2>
       <button
         onClick={toggleCollapsed}
-        title="طيّ القائمة الفرعية"
+        title={t('طيّ القائمة الفرعية')}
         className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center text-muted-light dark:text-muted-dark"
       >
         <PanelRightClose className="h-4 w-4" />
@@ -127,6 +129,7 @@ function SectionGroupTitle({ children }: { children: ReactNode }): JSX.Element {
 }
 
 function InboxSectionSidebar(): JSX.Element {
+  const { t } = useTranslation();
   const conversations = useDataStore((s) => s.conversations);
   const channels = useDataStore((s) => s.channels);
   const departments = useDataStore((s) => s.departments);
@@ -165,38 +168,38 @@ function InboxSectionSidebar(): JSX.Element {
 
   return (
     <aside className="w-[240px] flex-shrink-0 h-screen sticky top-0 bg-sidebar-light dark:bg-sidebar-dark border-l border-border-light dark:border-border-dark flex flex-col z-20">
-      <SectionHeader>المحادثات</SectionHeader>
+      <SectionHeader>{t('المحادثات')}</SectionHeader>
       <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
         <SectionItem
           icon={<Inbox className="h-4 w-4" />}
-          label="صندوقي"
+          label={t('صندوقي')}
           count={counts.mine}
           active={view === 'mine' && showingAllConvs}
           onClick={() => { setView('mine'); setSelectedChannelId(null); setSelectedDepartmentId(null); }}
         />
         <SectionItem
           icon={<UserX className="h-4 w-4" />}
-          label="غير مسندة"
+          label={t('غير مسندة')}
           count={counts.unassigned}
           active={view === 'unassigned' && showingAllConvs}
           onClick={() => { setView('unassigned'); setSelectedChannelId(null); setSelectedDepartmentId(null); }}
         />
         <SectionItem
           icon={<CheckCircle2 className="h-4 w-4" />}
-          label="مغلقة"
+          label={t('مغلقة')}
           count={counts.closed}
           active={view === 'closed' && showingAllConvs}
           onClick={() => { setView('closed'); setSelectedChannelId(null); setSelectedDepartmentId(null); }}
         />
         <SectionItem
           icon={<Globe className="h-4 w-4" />}
-          label="الكل"
+          label={t('الكل')}
           count={counts.all}
           active={view === 'all' && showingAllConvs}
           onClick={() => { setView('all'); setSelectedChannelId(null); setSelectedDepartmentId(null); }}
         />
 
-        <SectionGroupTitle>عروض</SectionGroupTitle>
+        <SectionGroupTitle>{t('عروض')}</SectionGroupTitle>
         <SectionItem
           icon={<Star className="h-4 w-4 text-warning" />}
           label="VIP"
@@ -205,7 +208,7 @@ function InboxSectionSidebar(): JSX.Element {
         />
 
         {/* Channels */}
-        <SectionGroupTitle>القنوات</SectionGroupTitle>
+        <SectionGroupTitle>{t('القنوات')}</SectionGroupTitle>
         {visibleChannels.map((c) => (
           <SectionItem
             key={c.id}
@@ -221,7 +224,7 @@ function InboxSectionSidebar(): JSX.Element {
         ))}
 
         {/* Departments */}
-        <SectionGroupTitle>الأقسام</SectionGroupTitle>
+        <SectionGroupTitle>{t('الأقسام')}</SectionGroupTitle>
         {visibleDepartments.map((d) => (
           <SectionItem
             key={d.id}
@@ -245,7 +248,7 @@ function InboxSectionSidebar(): JSX.Element {
 
         <button className="w-full flex items-center gap-2 px-3 py-2 mt-2 rounded-lg text-small text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors">
           <Plus className="h-3.5 w-3.5" />
-          <span>إنشاء عرض</span>
+          <span>{t('إنشاء عرض')}</span>
         </button>
       </div>
     </aside>
@@ -253,20 +256,21 @@ function InboxSectionSidebar(): JSX.Element {
 }
 
 function SettingsSectionSidebar(): JSX.Element {
+  const { t } = useTranslation();
   const tab = useInboxStore((s) => s.settingsTab);
   const setTab = useInboxStore((s) => s.setSettingsTab);
 
   return (
     <aside className="w-[240px] flex-shrink-0 h-screen sticky top-0 bg-white dark:bg-surface-dark border-l border-border-light dark:border-border-dark flex flex-col z-20">
       <div className="h-[56px] px-4 flex items-center border-b border-border-light dark:border-border-dark flex-shrink-0">
-        <h2 className="text-h3 font-bold">الإعدادات</h2>
+        <h2 className="text-h3 font-bold">{t('الإعدادات')}</h2>
       </div>
       <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
         {settingsItems.map((it) => (
           <SectionItem
             key={it.key}
             icon={it.icon}
-            label={it.label}
+            label={t(it.label)}
             active={tab === it.key}
             onClick={() => setTab(it.key)}
           />
@@ -277,6 +281,7 @@ function SettingsSectionSidebar(): JSX.Element {
 }
 
 function ReportsSectionSidebar(): JSX.Element {
+  const { t } = useTranslation();
   const items = [
     { key: 'overview', label: 'نظرة عامة' },
     { key: 'conversations', label: 'تقارير المحادثات' },
@@ -287,10 +292,10 @@ function ReportsSectionSidebar(): JSX.Element {
   ];
   return (
     <aside className="w-[240px] flex-shrink-0 h-screen sticky top-0 bg-sidebar-light dark:bg-sidebar-dark border-l border-border-light dark:border-border-dark flex flex-col z-20">
-      <SectionHeader>التقارير</SectionHeader>
+      <SectionHeader>{t('التقارير')}</SectionHeader>
       <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
         {items.map((it, i) => (
-          <SectionItem key={it.key} icon={<BarChart3 className="h-4 w-4" />} label={it.label} active={i === 0} />
+          <SectionItem key={it.key} icon={<BarChart3 className="h-4 w-4" />} label={t(it.label)} active={i === 0} />
         ))}
       </div>
     </aside>

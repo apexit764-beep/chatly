@@ -18,6 +18,7 @@ import {
   MessageSquareWarning,
   Tag,
 } from 'lucide-react';
+import { useTranslation } from '@/i18n/useTranslation';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { SekaaLogo } from '@components/ui';
@@ -59,6 +60,7 @@ const SIDEBAR_GRADIENT =
   'bg-[linear-gradient(180deg,#1E3A8A_0%,#1E40AF_45%,#172554_100%)] dark:bg-[linear-gradient(180deg,#0F172A_0%,#0B1424_50%,#06080F_100%)]';
 
 export function IconSidebar(): JSX.Element {
+  const { t } = useTranslation();
   const conversations = useDataStore((s) => s.conversations);
   const collapsed = useUIStore((s) => s.iconSidebarCollapsed);
   const toggleCollapsed = useUIStore((s) => s.toggleIconSidebar);
@@ -73,7 +75,7 @@ export function IconSidebar(): JSX.Element {
         <NavLink
           key={item.to}
           to={item.to}
-          title={item.label}
+          title={t(item.label)}
           className={({ isActive }) =>
             cn(
               'relative h-10 w-10 rounded-lg flex items-center justify-center transition-colors group',
@@ -95,7 +97,7 @@ export function IconSidebar(): JSX.Element {
                 </span>
               )}
               <span className="absolute start-full ms-2 px-2 py-1 bg-[#111827] text-white text-small rounded-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">
-                {item.label}
+                {t(item.label)}
               </span>
             </>
           )}
@@ -119,7 +121,7 @@ export function IconSidebar(): JSX.Element {
         {({ isActive }) => (
           <>
             <Icon className="h-[19px] w-[19px] flex-shrink-0" />
-            <span className="flex-1 text-body truncate">{item.label}</span>
+            <span className="flex-1 text-body truncate">{t(item.label)}</span>
             {isActive && (
               <span className="absolute inset-y-2 end-0 w-1 rounded-s-md bg-sky-300" />
             )}
@@ -159,8 +161,8 @@ export function IconSidebar(): JSX.Element {
           </NavLink>
           <button
             onClick={toggleCollapsed}
-            title="توسعة السايدبار"
-            aria-label="توسعة السايدبار"
+            title={t('توسعة السايدبار')}
+            aria-label={t('توسعة السايدبار')}
             className="absolute inset-0 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <PanelRightOpen className="h-4 w-4" />
@@ -204,8 +206,8 @@ export function IconSidebar(): JSX.Element {
         </NavLink>
         <button
           onClick={toggleCollapsed}
-          title="طيّ السايدبار"
-          aria-label="طيّ السايدبار"
+          title={t('طيّ السايدبار')}
+          aria-label={t('طيّ السايدبار')}
           className="h-8 w-8 rounded-lg flex items-center justify-center text-white/70 hover:bg-white/10 hover:text-white transition-colors flex-shrink-0"
         >
           <PanelRightClose className="h-4 w-4" />
@@ -217,7 +219,7 @@ export function IconSidebar(): JSX.Element {
         {groupedNav.map(({ group, items }) => (
           <div key={group}>
             <p className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-white/40">
-              {GROUP_LABELS[group]}
+              {t(GROUP_LABELS[group])}
             </p>
             <div className="space-y-0.5">
               {items.map(renderItem)}

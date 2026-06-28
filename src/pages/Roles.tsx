@@ -267,7 +267,7 @@ export default function Roles(): JSX.Element {
             : 'دور جديد'
         }
         width="w-[640px]"
-        side="end"
+        side="start"
       >
         <div className="space-y-5 pb-20">
           {/* INFO SECTION — shown for create, edit-info, and permissions header context */}

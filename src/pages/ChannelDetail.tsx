@@ -30,6 +30,7 @@ import {
 } from '@components/ui';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useTranslation } from '@/i18n/useTranslation';
 import { cn } from '@/utils/cn';
 import type { Channel, ChannelType } from '@/types';
 import { CHANNEL_TYPES } from './channelTypes';
@@ -43,6 +44,7 @@ interface ChannelTab {
 }
 
 export default function ChannelDetail(): JSX.Element {
+  const { t } = useTranslation();
   const { type } = useParams<{ type: string }>();
   const navigate = useNavigate();
   const meta = CHANNEL_TYPES.find((c) => c.type === (type as ChannelType));
@@ -70,19 +72,19 @@ export default function ChannelDetail(): JSX.Element {
   // Per-channel tabs. Base channels keep a single "overview" tab; widget adds settings tabs.
   const tabs: ChannelTab[] = meta?.type === 'widget'
     ? [
-        { key: 'overview', label: 'نظرة عامة', icon: Info },
-        { key: 'appearance', label: 'المظهر', icon: Paintbrush },
-        { key: 'messages', label: 'الرسائل', icon: MessageCircle },
-        { key: 'behavior', label: 'السلوك', icon: SettingsIcon },
-        { key: 'install', label: 'التثبيت', icon: Code },
+        { key: 'overview', label: t('نظرة عامة'), icon: Info },
+        { key: 'appearance', label: t('المظهر'), icon: Paintbrush },
+        { key: 'messages', label: t('الرسائل'), icon: MessageCircle },
+        { key: 'behavior', label: t('السلوك'), icon: SettingsIcon },
+        { key: 'install', label: t('التثبيت'), icon: Code },
       ]
-    : [{ key: 'overview', label: 'نظرة عامة', icon: Info }];
+    : [{ key: 'overview', label: t('نظرة عامة'), icon: Info }];
 
   if (!meta) {
     return (
       <div className="p-6 text-center">
-        <p className="text-body text-muted-light dark:text-muted-dark">القناة غير موجودة</p>
-        <Link to="/channels" className="text-primary hover:underline mt-2 inline-block">العودة للقنوات</Link>
+        <p className="text-body text-muted-light dark:text-muted-dark">{t('القناة غير موجودة')}</p>
+        <Link to="/channels" className="text-primary hover:underline mt-2 inline-block">{t('العودة للقنوات')}</Link>
       </div>
     );
   }
@@ -122,7 +124,7 @@ export default function ChannelDetail(): JSX.Element {
 
   const submit = (): void => {
     if (!form.name.trim() || !form.identifier.trim()) {
-      showToast('الاسم والمعرّف مطلوبان', 'error');
+      showToast(t('الاسم والمعرّف مطلوبان'), 'error');
       return;
     }
     const fullIdentifier = meta?.identifierType === 'phone'
@@ -131,7 +133,7 @@ export default function ChannelDetail(): JSX.Element {
     // Require all declared credential fields before connecting
     const missing = (meta.credentials ?? []).filter((f) => !creds[f.key]?.trim());
     if (missing.length > 0) {
-      showToast(`أكمل: ${missing.map((m) => m.label).join('، ')}`, 'error');
+      showToast(`${t('أكمل')}: ${missing.map((m) => m.label).join('، ')}`, 'error');
       return;
     }
     const hasCreds = Object.keys(creds).length > 0;
@@ -142,7 +144,7 @@ export default function ChannelDetail(): JSX.Element {
         departmentId: form.departmentId || null,
         ...(hasCreds ? { credentials: creds } : {}),
       });
-      showToast('تم تحديث القناة', 'success');
+      showToast(t('تم تحديث القناة'), 'success');
     } else {
       addChannel({
         type: meta.type,
@@ -152,7 +154,7 @@ export default function ChannelDetail(): JSX.Element {
         departmentId: form.departmentId || null,
         ...(hasCreds ? { credentials: creds } : {}),
       });
-      showToast('تمت إضافة الحساب. أكمل الاتصال', 'success');
+      showToast(t('تمت إضافة الحساب. أكمل الاتصال'), 'success');
       if (meta.type === 'whatsapp') setQrOpen(true);
     }
     setAddOpen(false);
@@ -166,7 +168,7 @@ export default function ChannelDetail(): JSX.Element {
         className="inline-flex items-center gap-1.5 text-small text-muted-light dark:text-muted-dark hover:text-current transition-colors"
       >
         <ArrowRight className="h-3.5 w-3.5" />
-        العودة إلى القنوات
+        {t('العودة إلى القنوات')}
       </button>
 
       {/* Header card */}
@@ -191,7 +193,7 @@ export default function ChannelDetail(): JSX.Element {
             style={{ background: meta.brandColor }}
           >
             <Plus className="h-4 w-4" />
-            ربط حساب جديد
+            {t('ربط حساب جديد')}
           </button>
         </div>
       </div>
@@ -232,7 +234,7 @@ export default function ChannelDetail(): JSX.Element {
         <div className="lg:col-span-2 space-y-5">
           {/* About */}
           <section className="bg-white dark:bg-surface-dark rounded-card border border-border-light dark:border-border-dark p-5">
-            <h2 className="text-h3 font-bold mb-2">عن القناة</h2>
+            <h2 className="text-h3 font-bold mb-2">{t('عن القناة')}</h2>
             <p className="text-body text-muted-light dark:text-muted-dark leading-relaxed">
               {meta.description}
             </p>
@@ -242,7 +244,7 @@ export default function ChannelDetail(): JSX.Element {
           <section className="bg-white dark:bg-surface-dark rounded-card border border-border-light dark:border-border-dark p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-h3 font-bold">
-                الحسابات المربوطة
+                {t('الحسابات المربوطة')}
                 <span className="text-small font-normal text-muted-light dark:text-muted-dark mr-2">
                   ({connectedAccounts.length})
                 </span>
@@ -257,9 +259,9 @@ export default function ChannelDetail(): JSX.Element {
                 >
                   <Plus className="h-5 w-5" style={{ color: meta.brandColor }} />
                 </div>
-                <p className="text-body font-semibold">لا توجد حسابات مربوطة بعد</p>
+                <p className="text-body font-semibold">{t('لا توجد حسابات مربوطة بعد')}</p>
                 <p className="text-small text-muted-light dark:text-muted-dark mt-1">
-                  اضغط "ربط حساب جديد" للبدء
+                  {t('اضغط "ربط حساب جديد" للبدء')}
                 </p>
               </div>
             ) : (
@@ -298,9 +300,9 @@ export default function ChannelDetail(): JSX.Element {
                               channel.status === 'disconnected' && 'bg-danger/15 text-danger'
                             )}
                           >
-                            {channel.status === 'connected' && 'متصل'}
-                            {channel.status === 'pending' && 'في الانتظار'}
-                            {channel.status === 'disconnected' && 'غير متصل'}
+                            {channel.status === 'connected' && t('متصل')}
+                            {channel.status === 'pending' && t('في الانتظار')}
+                            {channel.status === 'disconnected' && t('غير متصل')}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 text-[11px] text-muted-light dark:text-muted-dark mt-0.5">
@@ -314,7 +316,7 @@ export default function ChannelDetail(): JSX.Element {
                             </>
                           )}
                           <span>·</span>
-                          <span>{convCount} محادثة</span>
+                          <span>{convCount} {t('محادثة')}</span>
                         </div>
                       </div>
                       <div className="flex items-center -space-x-2 rtl:space-x-reverse">
@@ -333,7 +335,7 @@ export default function ChannelDetail(): JSX.Element {
                             setOpenMenu(openMenu === channel.id ? null : channel.id)
                           }
                           className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center text-muted-light dark:text-muted-dark"
-                          aria-label="المزيد"
+                          aria-label={t('المزيد')}
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </button>
@@ -346,24 +348,24 @@ export default function ChannelDetail(): JSX.Element {
                             <div className="absolute end-0 mt-1 w-44 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1 z-20">
                               <MenuItem
                                 icon={<Edit2 className="h-4 w-4" />}
-                                label="تعديل"
+                                label={t('تعديل')}
                                 onClick={() => openEdit(channel)}
                               />
                               <MenuItem
                                 icon={<RefreshCw className="h-4 w-4" />}
-                                label="تجربة الاتصال"
+                                label={t('تجربة الاتصال')}
                                 onClick={() => {
-                                  showToast('جارٍ اختبار الاتصال...', 'info');
+                                  showToast(t('جارٍ اختبار الاتصال...'), 'info');
                                   setOpenMenu(null);
                                   setTimeout(() => {
                                     updateChannel(channel.id, { status: 'connected' });
-                                    showToast('الاتصال يعمل بنجاح ✓', 'success');
+                                    showToast(t('الاتصال يعمل بنجاح ✓'), 'success');
                                   }, 1200);
                                 }}
                               />
                               <MenuItem
                                 icon={<Power className="h-4 w-4" />}
-                                label={channel.status === 'connected' ? 'فصل' : 'اتصال'}
+                                label={channel.status === 'connected' ? t('فصل') : t('اتصال')}
                                 onClick={() => {
                                   updateChannel(channel.id, {
                                     status:
@@ -377,19 +379,19 @@ export default function ChannelDetail(): JSX.Element {
                               <div className="h-px bg-border-light dark:bg-border-dark my-1" />
                               <MenuItem
                                 icon={<Trash2 className="h-4 w-4" />}
-                                label="حذف"
+                                label={t('حذف')}
                                 danger
                                 onClick={() => {
                                   void (async () => {
                                     const ok = await confirm({
-                                      title: `حذف ${channel.name}؟`,
-                                      message: 'لا يمكن التراجع',
+                                      title: `${t('حذف')} ${channel.name}؟`,
+                                      message: t('لا يمكن التراجع'),
                                       variant: 'danger',
-                                      confirmText: 'حذف',
+                                      confirmText: t('حذف'),
                                     });
                                     if (ok) {
                                       deleteChannel(channel.id);
-                                      showToast('تم الحذف', 'success');
+                                      showToast(t('تم الحذف'), 'success');
                                     }
                                     setOpenMenu(null);
                                   })();
@@ -411,7 +413,7 @@ export default function ChannelDetail(): JSX.Element {
         {/* Right/side column — Connection steps */}
         <div className="space-y-5">
           <section className="bg-white dark:bg-surface-dark rounded-card border border-border-light dark:border-border-dark p-5 sticky top-4">
-            <h2 className="text-h3 font-bold mb-4">كيفية الربط</h2>
+            <h2 className="text-h3 font-bold mb-4">{t('كيفية الربط')}</h2>
             {meta.methods && meta.methods.length > 0 ? (
               <div className="space-y-2">
                 {meta.methods.map((m) => {
@@ -481,7 +483,7 @@ export default function ChannelDetail(): JSX.Element {
                 className="mt-4 inline-flex items-center gap-1.5 text-small text-primary hover:underline"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
-                وثائق الربط الكاملة
+                {t('وثائق الربط الكاملة')}
               </a>
             )}
           </section>
@@ -493,7 +495,7 @@ export default function ChannelDetail(): JSX.Element {
       <Modal
         open={addOpen}
         onClose={() => setAddOpen(false)}
-        title={editing ? `تعديل: ${editing.name}` : `ربط ${meta.name} جديد`}
+        title={editing ? `${t('تعديل')}: ${editing.name}` : `${t('ربط')} ${meta.name} ${t('جديد')}`}
         size="md"
         footer={
           <>
@@ -501,24 +503,24 @@ export default function ChannelDetail(): JSX.Element {
               onClick={() => setAddOpen(false)}
               className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark"
             >
-              إلغاء
+              {t('إلغاء')}
             </button>
             <button
               onClick={submit}
               className="h-10 px-5 rounded-full text-white text-small font-medium hover:opacity-90"
               style={{ background: meta.brandColor }}
             >
-              {editing ? 'حفظ' : 'ربط'}
+              {editing ? t('حفظ') : t('ربط')}
             </button>
           </>
         }
       >
         <div className="space-y-4">
           <Input
-            label="اسم القناة"
+            label={t('اسم القناة')}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder={`مثال: ${meta.name} - الفرع الرئيسي`}
+            placeholder={`${t('مثال')}: ${meta.name} - ${t('الفرع الرئيسي')}`}
           />
           {meta.identifierType === 'phone' ? (
             <PhoneField
@@ -543,7 +545,7 @@ export default function ChannelDetail(): JSX.Element {
             <div className="space-y-3 p-3 rounded-card bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark">
               <p className="text-small font-semibold flex items-center gap-1.5">
                 <KeyRound className="h-3.5 w-3.5 text-primary" />
-                بيانات الاتصال
+                {t('بيانات الاتصال')}
               </p>
               {meta.credentials.map((field) => (
                 <div key={field.key} className="space-y-1.5">
@@ -574,7 +576,7 @@ export default function ChannelDetail(): JSX.Element {
           {/* Webhook URL (read-only, copy into the platform) */}
           {meta.needsWebhook && (
             <div className="space-y-1.5">
-              <label className="text-small font-medium text-muted-light dark:text-muted-dark">رابط الـ Webhook</label>
+              <label className="text-small font-medium text-muted-light dark:text-muted-dark">{t('رابط الـ Webhook')}</label>
               <div className="flex items-center gap-2 p-2.5 rounded-input bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark">
                 <code className="flex-1 text-[11px] font-mono truncate" dir="ltr">
                   https://api.apexes.click/webhooks/{meta.type}/{editing?.id ?? 'new'}
@@ -583,25 +585,25 @@ export default function ChannelDetail(): JSX.Element {
                   type="button"
                   onClick={() => {
                     void navigator.clipboard.writeText(`https://api.apexes.click/webhooks/${meta.type}/${editing?.id ?? 'new'}`);
-                    showToast('تم نسخ الرابط', 'success');
+                    showToast(t('تم نسخ الرابط'), 'success');
                   }}
                   className="h-7 w-7 rounded-full hover:bg-white dark:hover:bg-surface-dark flex items-center justify-center text-muted-light dark:text-muted-dark flex-shrink-0"
-                  aria-label="نسخ"
+                  aria-label={t('نسخ')}
                 >
                   <Copy className="h-3.5 w-3.5" />
                 </button>
               </div>
-              <p className="text-[10px] text-muted-light dark:text-muted-dark">الصق هذا الرابط في إعدادات Webhook على المنصة لاستقبال الرسائل</p>
+              <p className="text-[10px] text-muted-light dark:text-muted-dark">{t('الصق هذا الرابط في إعدادات Webhook على المنصة لاستقبال الرسائل')}</p>
             </div>
           )}
 
           <div className="space-y-1.5">
             <Select
-              label="القسم المعيّن"
+              label={t('القسم المعيّن')}
               value={form.departmentId}
               onChange={(e) => setForm({ ...form, departmentId: e.target.value })}
             >
-              <option value="">بدون قسم</option>
+              <option value="">{t('بدون قسم')}</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
@@ -610,11 +612,11 @@ export default function ChannelDetail(): JSX.Element {
             </Select>
             {departments.length === 0 ? (
               <p className="text-[10px] text-muted-light dark:text-muted-dark">
-                لا توجد أقسام بعد — اربط القناة الآن وعيّن قسمها لاحقاً من صفحة الأقسام.
+                {t('لا توجد أقسام بعد — اربط القناة الآن وعيّن قسمها لاحقاً من صفحة الأقسام.')}
               </p>
             ) : (
               <p className="text-[10px] text-muted-light dark:text-muted-dark">
-                اختياري — يمكنك تغيير القسم في أي وقت.
+                {t('اختياري — يمكنك تغيير القسم في أي وقت.')}
               </p>
             )}
           </div>
@@ -633,23 +635,23 @@ export default function ChannelDetail(): JSX.Element {
       <Modal
         open={qrOpen}
         onClose={() => setQrOpen(false)}
-        title="اربط واتساب"
+        title={t('اربط واتساب')}
         size="md"
         footer={
           <button
             onClick={() => {
               setQrOpen(false);
-              showToast('سيتم الاتصال تلقائياً عند المسح', 'info');
+              showToast(t('سيتم الاتصال تلقائياً عند المسح'), 'info');
             }}
             className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark"
           >
-            إغلاق
+            {t('إغلاق')}
           </button>
         }
       >
         <div className="text-center">
           <p className="text-body text-muted-light dark:text-muted-dark mb-4">
-            افتح واتساب على هاتفك ← الأجهزة المرتبطة ← امسح هذا الرمز
+            {t('افتح واتساب على هاتفك ← الأجهزة المرتبطة ← امسح هذا الرمز')}
           </p>
           <div className="mx-auto h-56 w-56 bg-white rounded-card border-2 border-border-light p-3">
             <div
@@ -664,7 +666,7 @@ export default function ChannelDetail(): JSX.Element {
           </div>
           <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10 text-success text-small">
             <Check className="h-4 w-4" />
-            <span>الرمز فعّال لمدة 60 ثانية</span>
+            <span>{t('الرمز فعّال لمدة 60 ثانية')}</span>
           </div>
         </div>
       </Modal>

@@ -265,7 +265,7 @@ export default function Feedback(): JSX.Element {
         onClose={() => setDrawerOpen(false)}
         title="تذكرة جديدة"
         width="w-[480px]"
-        side="end"
+        side="start"
       >
         <div className="space-y-4 pb-20">
           {/* Type selector */}
@@ -389,7 +389,7 @@ export default function Feedback(): JSX.Element {
         onClose={() => setDetailTicket(null)}
         title="تفاصيل التذكرة"
         width="w-[520px]"
-        side="end"
+        side="start"
       >
         {detailTicket && <TicketDetail ticket={detailTicket} />}
       </Drawer>

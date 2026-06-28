@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { Search, ArrowLeft } from 'lucide-react';
 import { ChannelIcon } from '@components/ui';
 import { useDataStore } from '@/store/useDataStore';
+import { useTranslation } from '@/i18n/useTranslation';
 import type { ChannelType } from '@/types';
 import { CHANNEL_TYPES } from './channelTypes';
 
 export default function Channels(): JSX.Element {
+  const { t } = useTranslation();
   const channels = useDataStore((s) => s.channels);
   const [search, setSearch] = useState('');
 
@@ -25,16 +27,16 @@ export default function Channels(): JSX.Element {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h1 className="text-h1 font-bold">الحسابات والربط</h1>
+          <h1 className="text-h1 font-bold">{t('الحسابات والربط')}</h1>
           <p className="text-body text-muted-light dark:text-muted-dark mt-1">
-            اربط قنوات التواصل ومنصات التجارة الإلكترونية لإدارة كل شيء من مكان واحد
+            {t('اربط قنوات التواصل ومنصات التجارة الإلكترونية لإدارة كل شيء من مكان واحد')}
           </p>
         </div>
         <div className="relative md:w-72">
           <Search className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark" />
           <input
             type="text"
-            placeholder="ابحث عن قناة..."
+            placeholder={t('ابحث عن قناة...')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full h-10 ps-3 pe-9 rounded-full bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary"
@@ -53,8 +55,8 @@ export default function Channels(): JSX.Element {
         return (
           <section key={section.key}>
             <div className="mb-3">
-              <h2 className="text-h3 font-bold">{section.title}</h2>
-              <p className="text-small text-muted-light dark:text-muted-dark">{section.subtitle}</p>
+              <h2 className="text-h3 font-bold">{t(section.title)}</h2>
+              <p className="text-small text-muted-light dark:text-muted-dark">{t(section.subtitle)}</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {items.map((meta) => {
@@ -76,7 +78,7 @@ export default function Channels(): JSX.Element {
                       {total > 0 && (
                         <div className="flex items-center gap-1">
                           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success/15 text-success">
-                            {connected} متصل
+                            {connected} {t('متصل')}
                           </span>
                         </div>
                       )}
@@ -87,10 +89,10 @@ export default function Channels(): JSX.Element {
                     </p>
                     <div className="flex items-center justify-between pt-3 border-t border-border-light dark:border-border-dark">
                       <span className="text-small text-muted-light dark:text-muted-dark">
-                        {total === 0 ? 'لم يتم الربط بعد' : `${total} حساب${total > 2 ? 'ات' : ''}`}
+                        {total === 0 ? t('لم يتم الربط بعد') : `${total} ${t('حساب')}${total > 2 ? t('ات') : ''}`}
                       </span>
                       <span className="text-small font-semibold text-primary group-hover:gap-2 gap-1 flex items-center transition-all">
-                        إدارة
+                        {t('إدارة')}
                         <ArrowLeft className="h-3.5 w-3.5" />
                       </span>
                     </div>

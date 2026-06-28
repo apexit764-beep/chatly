@@ -16,6 +16,7 @@ import {
 } from '@/utils/labels';
 import { timeAgo } from '@/utils/format';
 import { cn } from '@/utils/cn';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export default function Overview(): JSX.Element {
   const conversations = useDataStore((s) => s.conversations);
@@ -25,8 +26,9 @@ export default function Overview(): JSX.Element {
   const aiSettings = useAIStore((s) => s.settings);
   const general = useSettingsStore((s) => s.general);
   const channels = useDataStore((s) => s.channels);
+  const { t } = useTranslation();
 
-  const firstName = user?.name?.split(' ')[0] ?? 'صديقي';
+  const firstName = user?.name?.split(' ')[0] ?? t('صديقي');
   const connectedChannels = channels.filter((c) => c.status === 'connected').length;
 
   // === Real metrics from store ===
@@ -88,8 +90,8 @@ export default function Overview(): JSX.Element {
                 <span className="h-1.5 w-1.5 rounded-full bg-success" />
                 {general.siteName}
               </span>
-              <p className="text-h1 font-bold leading-tight">أهلاً، {firstName} 👋</p>
-              <p className="text-small opacity-90 mt-1">{todayConvs} محادثة اليوم، {openConvs} مفتوحة</p>
+              <p className="text-h1 font-bold leading-tight">{t('أهلاً،')} {firstName} 👋</p>
+              <p className="text-small opacity-90 mt-1">{todayConvs} {t('محادثة اليوم،')} {openConvs} {t('مفتوحة')}</p>
             </div>
           </div>
 
@@ -100,7 +102,7 @@ export default function Overview(): JSX.Element {
                 <Smartphone className="h-4 w-4" />
               </div>
               <div className="leading-tight">
-                <p className="text-[10px] opacity-75 font-medium">حسابات متصلة</p>
+                <p className="text-[10px] opacity-75 font-medium">{t('حسابات متصلة')}</p>
                 <p className="text-body font-bold tabular-nums">{connectedChannels}</p>
               </div>
             </div>
@@ -109,7 +111,7 @@ export default function Overview(): JSX.Element {
                 <UsersRound className="h-4 w-4" />
               </div>
               <div className="leading-tight">
-                <p className="text-[10px] opacity-75 font-medium">موظفون متصلون</p>
+                <p className="text-[10px] opacity-75 font-medium">{t('موظفون متصلون')}</p>
                 <p className="text-body font-bold tabular-nums">{onlineAgents}<span className="opacity-60">/{agents.length}</span></p>
               </div>
             </div>
@@ -120,7 +122,7 @@ export default function Overview(): JSX.Element {
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
-          label="إجمالي العملاء"
+          label={t('إجمالي العملاء')}
           value={totalContacts}
           icon={<Users className="h-5 w-5" />}
           iconBg="bg-info/15"
@@ -128,7 +130,7 @@ export default function Overview(): JSX.Element {
           trend={{ value: 12, positive: true }}
         />
         <StatCard
-          label="إجمالي المحادثات"
+          label={t('إجمالي المحادثات')}
           value={todayConvs}
           icon={<MessageCircle className="h-5 w-5" />}
           iconBg="bg-primary/15"
@@ -136,7 +138,7 @@ export default function Overview(): JSX.Element {
           trend={{ value: 8, positive: true }}
         />
         <StatCard
-          label="إجمالي المحادثات المفتوحة"
+          label={t('إجمالي المحادثات المفتوحة')}
           value={openConvs}
           icon={<FolderOpen className="h-5 w-5" />}
           iconBg="bg-warning/15"
@@ -144,7 +146,7 @@ export default function Overview(): JSX.Element {
           trend={{ value: 5, positive: false }}
         />
         <StatCard
-          label="إجمالي المحادثات المغلقة"
+          label={t('إجمالي المحادثات المغلقة')}
           value={closedConvs}
           icon={<FolderClosed className="h-5 w-5" />}
           iconBg="bg-success/15"
@@ -162,20 +164,20 @@ export default function Overview(): JSX.Element {
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-h2 font-bold">المساعد الذكي</h2>
+                <h2 className="text-h2 font-bold">{t('المساعد الذكي')}</h2>
                 {aiSettings.enabled ? (
                   <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-success/15 text-success font-bold">
                     <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
-                    يعمل الآن
+                    {t('يعمل الآن')}
                   </span>
                 ) : (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted-light/15 text-muted-light dark:text-muted-dark font-bold">موقوف</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted-light/15 text-muted-light dark:text-muted-dark font-bold">{t('موقوف')}</span>
                 )}
               </div>
               <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
                 {aiSettings.enabled
-                  ? `يرد تلقائياً على عملاءك — ${aiHandlingPct}% من إجمالي الردود`
-                  : 'فعّله ليرد تلقائياً على عملاءك حتى خارج ساعات الدوام'}
+                  ? `${t('يرد تلقائياً على عملاءك —')} ${aiHandlingPct}% ${t('من إجمالي الردود')}`
+                  : t('فعّله ليرد تلقائياً على عملاءك حتى خارج ساعات الدوام')}
               </p>
             </div>
           </div>
@@ -183,32 +185,32 @@ export default function Overview(): JSX.Element {
             to="/ai-settings"
             className="h-9 px-4 rounded-full bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-small font-medium hover:border-violet-300 hover:text-violet-600 transition-colors flex items-center gap-1.5 flex-shrink-0"
           >
-            الإعدادات <ChevronLeft className="h-4 w-4" />
+            {t('الإعدادات')} <ChevronLeft className="h-4 w-4" />
           </Link>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
           <div className="rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-3">
             <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark mb-1">
-              <Bot className="h-3.5 w-3.5" /> إجمالي ردود المساعد
+              <Bot className="h-3.5 w-3.5" /> {t('إجمالي ردود المساعد')}
             </div>
             <p className="text-h3 font-extrabold tabular-nums">{aiReplies}</p>
           </div>
           <div className="rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-3">
             <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark mb-1">
-              <MessageCircle className="h-3.5 w-3.5" /> إجمالي المحادثات النشطة
+              <MessageCircle className="h-3.5 w-3.5" /> {t('إجمالي المحادثات النشطة')}
             </div>
             <p className="text-h3 font-extrabold tabular-nums">{aiActiveConvs}</p>
           </div>
           <div className="rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-3">
             <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark mb-1">
-              <ArrowLeftRight className="h-3.5 w-3.5" /> إجمالي المحوّلة لموظف
+              <ArrowLeftRight className="h-3.5 w-3.5" /> {t('إجمالي المحوّلة لموظف')}
             </div>
             <p className="text-h3 font-extrabold tabular-nums">{aiHandoffs}</p>
           </div>
           <div className="rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-3">
             <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark mb-1">
-              <Sparkles className="h-3.5 w-3.5" /> إجمالي حلّها AI
+              <Sparkles className="h-3.5 w-3.5" /> {t('إجمالي حلّها')} AI
             </div>
             <p className="text-h3 font-extrabold tabular-nums">{aiResolved}</p>
           </div>
@@ -220,34 +222,34 @@ export default function Overview(): JSX.Element {
         <Card className="lg:col-span-2 p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-h2 font-bold">محادثات آخر 7 أيام</h2>
-              <p className="text-small text-muted-light dark:text-muted-dark">حسب الموظف</p>
+              <h2 className="text-h2 font-bold">{t('محادثات آخر 7 أيام')}</h2>
+              <p className="text-small text-muted-light dark:text-muted-dark">{t('حسب الموظف')}</p>
             </div>
             <div className="flex items-center gap-1.5 text-small text-muted-light dark:text-muted-dark">
               <Activity className="h-4 w-4" />
-              <span>تحديث مباشر</span>
+              <span>{t('تحديث مباشر')}</span>
             </div>
           </div>
           <LineChart
-            labels={['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']}
+            labels={[t('الأحد'), t('الإثنين'), t('الثلاثاء'), t('الأربعاء'), t('الخميس'), t('الجمعة'), t('السبت')]}
             series={[
-              { name: 'سالم', color: '#6C63FF', data: [12, 18, 15, 22, 20, 16, 14] },
-              { name: 'فاطمة', color: '#10B981', data: [8, 14, 18, 17, 22, 14, 11] },
-              { name: 'محمد', color: '#F59E0B', data: [6, 10, 12, 14, 18, 12, 8] },
-              { name: 'خالد', color: '#3B82F6', data: [4, 8, 10, 9, 13, 10, 6] },
+              { name: t('سالم'), color: '#6C63FF', data: [12, 18, 15, 22, 20, 16, 14] },
+              { name: t('فاطمة'), color: '#10B981', data: [8, 14, 18, 17, 22, 14, 11] },
+              { name: t('محمد'), color: '#F59E0B', data: [6, 10, 12, 14, 18, 12, 8] },
+              { name: t('خالد'), color: '#3B82F6', data: [4, 8, 10, 9, 13, 10, 6] },
             ]}
           />
         </Card>
 
         <Card className="p-5">
-          <h2 className="text-h2 font-bold mb-1">توزيع الحالات</h2>
-          <p className="text-small text-muted-light dark:text-muted-dark mb-4">حالة المحادثات الحالية</p>
+          <h2 className="text-h2 font-bold mb-1">{t('توزيع الحالات')}</h2>
+          <p className="text-small text-muted-light dark:text-muted-dark mb-4">{t('حالة المحادثات الحالية')}</p>
           <DoughnutChart
             size={180}
             data={[
-              { label: 'جديد', value: statusBuckets.new, color: '#3B82F6' },
-              { label: 'قيد المعالجة', value: statusBuckets.pending, color: '#F59E0B' },
-              { label: 'مغلق', value: statusBuckets.closed, color: '#6B7280' },
+              { label: t('جديد'), value: statusBuckets.new, color: '#3B82F6' },
+              { label: t('قيد المعالجة'), value: statusBuckets.pending, color: '#F59E0B' },
+              { label: t('مغلق'), value: statusBuckets.closed, color: '#6B7280' },
             ]}
           />
         </Card>
@@ -257,9 +259,9 @@ export default function Overview(): JSX.Element {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-border-light dark:border-border-dark">
-            <h2 className="text-h2 font-bold">آخر المحادثات</h2>
+            <h2 className="text-h2 font-bold">{t('آخر المحادثات')}</h2>
             <Link to="/inbox" className="text-small text-primary font-medium hover:underline flex items-center gap-1">
-              عرض الكل <ArrowLeft className="h-4 w-4" />
+              {t('عرض الكل')} <ArrowLeft className="h-4 w-4" />
             </Link>
           </div>
           <div className="divide-y divide-border-light dark:divide-border-dark">
@@ -284,7 +286,7 @@ export default function Overview(): JSX.Element {
                       )}
                     </div>
                     <p className="text-small text-muted-light dark:text-muted-dark truncate">
-                      {conv.aiActive ? 'المساعد الذكي' : agent ? agent.name : 'غير مُسند'}
+                      {conv.aiActive ? t('المساعد الذكي') : agent ? agent.name : t('غير مُسند')}
                     </p>
                   </div>
                   <Badge className={cn('text-[10px]', conversationStatusColor[conv.status])}>
@@ -301,9 +303,9 @@ export default function Overview(): JSX.Element {
 
         <Card className="overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-border-light dark:border-border-dark">
-            <h2 className="text-h2 font-bold">أداء الموظفين</h2>
+            <h2 className="text-h2 font-bold">{t('أداء الموظفين')}</h2>
             <Link to="/team" className="text-small text-primary font-medium hover:underline flex items-center gap-1">
-              التفاصيل <ArrowLeft className="h-4 w-4" />
+              {t('التفاصيل')} <ArrowLeft className="h-4 w-4" />
             </Link>
           </div>
           <div className="divide-y divide-border-light dark:divide-border-dark">
@@ -317,11 +319,11 @@ export default function Overview(): JSX.Element {
                   <div className="flex-1 min-w-0">
                     <p className="text-body font-semibold truncate">{agent.name}</p>
                     <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark">
-                      <span>{assigned} مسندة</span>
+                      <span>{assigned} {t('مسندة')}</span>
                       <span>·</span>
-                      <span>{closed} مغلقة</span>
+                      <span>{closed} {t('مغلقة')}</span>
                       <span>·</span>
-                      <span>{newConv} جديدة</span>
+                      <span>{newConv} {t('جديدة')}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">

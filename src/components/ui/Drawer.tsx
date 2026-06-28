@@ -21,6 +21,10 @@ export function Drawer({
   side = 'start',
   width = 'w-[420px]',
 }: DrawerProps): JSX.Element {
+  const isRTL = document.documentElement.dir === 'rtl';
+  const slideRight = isRTL ? side === 'start' : side === 'end';
+  const offX = slideRight ? '100%' : '-100%';
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent): void => {
@@ -49,9 +53,9 @@ export function Drawer({
                 ? 'start-0 border-e'
                 : 'end-0 border-s'
             )}
-            initial={{ x: side === 'start' ? '100%' : '-100%' }}
+            initial={{ x: offX }}
             animate={{ x: 0 }}
-            exit={{ x: side === 'start' ? '100%' : '-100%' }}
+            exit={{ x: offX }}
             transition={{ type: 'tween', duration: 0.25 }}
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-border-light dark:border-border-dark flex-shrink-0">

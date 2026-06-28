@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Plus, Edit2, Trash2, Users, MessageSquare, Building2, X, Check } from 'lucide-react';
+import { useTranslation } from '@/i18n/useTranslation';
 import {
   Avatar,
   Card,
@@ -17,6 +18,7 @@ import type { Department } from '@/types';
 const palette = ['#2563EB', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#84CC16'];
 
 export default function Departments(): JSX.Element {
+  const { t } = useTranslation();
   const departments = useDataStore((s) => s.departments);
   const channels = useDataStore((s) => s.channels);
   const agents = useDataStore((s) => s.agents);
@@ -68,7 +70,7 @@ export default function Departments(): JSX.Element {
 
   const submit = (): void => {
     if (!form.name.trim()) {
-      showToast('اسم القسم مطلوب', 'error');
+      showToast(t('اسم القسم مطلوب'), 'error');
       return;
     }
     if (editing) {
@@ -93,7 +95,7 @@ export default function Departments(): JSX.Element {
         if (inNow && c.departmentId !== editing.id) updateChannel(c.id, { departmentId: editing.id });
         if (!inNow && c.departmentId === editing.id) updateChannel(c.id, { departmentId: null });
       });
-      showToast('تم تحديث القسم', 'success');
+      showToast(t('تم تحديث القسم'), 'success');
     } else {
       addDepartment({
         name: form.name,
@@ -103,7 +105,7 @@ export default function Departments(): JSX.Element {
         channels: form.channels,
         slaMinutes: form.slaMinutes,
       });
-      showToast('تمت إضافة القسم', 'success');
+      showToast(t('تمت إضافة القسم'), 'success');
     }
     setModalOpen(false);
   };
@@ -184,7 +186,7 @@ export default function Departments(): JSX.Element {
         onClose={() => setModalOpen(false)}
         title={editing ? 'تعديل القسم' : 'قسم جديد'}
         width="w-[520px]"
-        side="end"
+        side="start"
       >
         <div className="space-y-4 pb-20">
           <Input label="اسم القسم" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="مثال: المبيعات" />

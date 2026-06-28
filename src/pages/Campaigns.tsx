@@ -392,7 +392,7 @@ export default function Campaigns(): JSX.Element {
         onClose={() => setModalOpen(false)}
         title={editing ? `تعديل: ${editing.name}` : 'حملة جديدة'}
         width="w-[560px]"
-        side="end"
+        side="start"
       >
         <div className="space-y-4 pb-20">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -975,7 +975,7 @@ export function CampaignTemplatesSection({
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         title={editing ? `تعديل: ${editing.name}` : 'قالب جديد'}
-        side="end"
+        side="start"
         width="w-[480px]"
       >
         <div className="space-y-4 pb-20">

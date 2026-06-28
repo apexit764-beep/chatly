@@ -376,7 +376,7 @@ export default function AdminClients(): JSX.Element {
         </div>
       </Modal>
 
-      <Drawer open={!!drawer} onClose={() => setDrawer(null)} title="تفاصيل العميل" side="end" width="w-[460px]">
+      <Drawer open={!!drawer} onClose={() => setDrawer(null)} title="تفاصيل العميل" side="start" width="w-[460px]">
         {drawer && <ClientDrawerBody client={drawer} onEdit={() => { openEdit(drawer); setDrawer(null); }} onDelete={() => remove(drawer)} />}
       </Drawer>
     </div>
