@@ -1951,32 +1951,15 @@ function InboxFilterButton({
           </span>
         )}
       </button>
-      <Drawer open={filterOpen} onClose={() => setFilterOpen(false)} title="تصفية" side="start" width="w-[360px]">
-        <div className="space-y-6">
-          {filterActive && (
-            <button
-              onClick={() => { setSelectedChannelId(null); setSelectedDepartmentId(null); }}
-              className="w-full h-9 rounded-btn border border-danger/30 text-danger text-small font-medium hover:bg-danger/5 transition-colors"
-            >
-              مسح كل الفلاتر ({activeFilterCount})
-            </button>
-          )}
-          <FilterPanel
-            title="القناة"
-            options={channels.map((c) => ({ id: c.id, label: c.name, indicator: <ChannelIcon type={c.type} size={10} className="!h-4 !w-4" /> }))}
-            selectedId={selectedChannelId}
-            onSelect={setSelectedChannelId}
-            allLabel="كل القنوات"
-          />
-          <FilterPanel
-            title="القسم"
-            options={departments.map((d) => ({ id: d.id, label: d.name, indicator: <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} /> }))}
-            selectedId={selectedDepartmentId}
-            onSelect={setSelectedDepartmentId}
-            allLabel="كل الأقسام"
-          />
-        </div>
-      </Drawer>
+      <FilterDrawer
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        channels={channels}
+        departments={departments}
+        selectedChannelId={selectedChannelId}
+        selectedDepartmentId={selectedDepartmentId}
+        onApply={(ch, dep) => { setSelectedChannelId(ch); setSelectedDepartmentId(dep); setFilterOpen(false); }}
+      />
     </>
   );
 }
@@ -2065,6 +2048,75 @@ function InboxFilters({
         )}
       </div>
     </div>
+  );
+}
+
+function FilterDrawer({
+  open,
+  onClose,
+  channels,
+  departments,
+  selectedChannelId,
+  selectedDepartmentId,
+  onApply,
+}: {
+  open: boolean;
+  onClose: () => void;
+  channels: Channel[];
+  departments: Department[];
+  selectedChannelId: string | null;
+  selectedDepartmentId: string | null;
+  onApply: (channelId: string | null, departmentId: string | null) => void;
+}): JSX.Element {
+  const [tmpChannel, setTmpChannel] = useState<string | null>(selectedChannelId);
+  const [tmpDept, setTmpDept] = useState<string | null>(selectedDepartmentId);
+
+  useEffect(() => {
+    if (open) {
+      setTmpChannel(selectedChannelId);
+      setTmpDept(selectedDepartmentId);
+    }
+  }, [open, selectedChannelId, selectedDepartmentId]);
+
+  const hasChanges = tmpChannel !== selectedChannelId || tmpDept !== selectedDepartmentId;
+  const hasAnyFilter = !!tmpChannel || !!tmpDept;
+
+  return (
+    <Drawer open={open} onClose={onClose} title="تصفية" side="start" width="w-[360px]">
+      <div className="flex flex-col h-full">
+        <div className="flex-1 space-y-6 overflow-y-auto">
+          <FilterPanel
+            title="القناة"
+            options={channels.map((c) => ({ id: c.id, label: c.name, indicator: <ChannelIcon type={c.type} size={10} className="!h-4 !w-4" /> }))}
+            selectedId={tmpChannel}
+            onSelect={setTmpChannel}
+            allLabel="كل القنوات"
+          />
+          <FilterPanel
+            title="القسم"
+            options={departments.map((d) => ({ id: d.id, label: d.name, indicator: <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} /> }))}
+            selectedId={tmpDept}
+            onSelect={setTmpDept}
+            allLabel="كل الأقسام"
+          />
+        </div>
+        <div className="flex items-center gap-2 pt-4 mt-4 border-t border-border-light dark:border-border-dark">
+          <button
+            onClick={() => { setTmpChannel(null); setTmpDept(null); }}
+            disabled={!hasAnyFilter}
+            className="flex-1 h-10 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors disabled:opacity-40 disabled:pointer-events-none"
+          >
+            إعادة تعيين
+          </button>
+          <button
+            onClick={() => onApply(tmpChannel, tmpDept)}
+            className="flex-1 h-10 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium transition-colors"
+          >
+            تطبيق
+          </button>
+        </div>
+      </div>
+    </Drawer>
   );
 }
 
