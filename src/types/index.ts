@@ -193,6 +193,8 @@ export interface Message {
   delivered: boolean;
   /** Who sent outgoing message — only meaningful when direction === 'out' */
   sender?: MessageSender;
+  /** ISO timestamp of last edit — undefined when message was never edited */
+  editedAt?: string;
 }
 
 export interface Conversation {

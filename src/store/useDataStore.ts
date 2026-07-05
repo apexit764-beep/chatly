@@ -52,6 +52,7 @@ interface DataState {
 
   // Conversation actions
   sendMessage: (conversationId: string, content: string, type?: 'text' | 'note') => void;
+  editMessage: (conversationId: string, messageId: string, newContent: string) => void;
   assignConversation: (conversationId: string, agentId: string | null) => void;
   setConversationStatus: (conversationId: string, status: Conversation['status']) => void;
   markConversationRead: (conversationId: string) => void;
@@ -224,6 +225,25 @@ export const useDataStore = create<DataState>((set) => ({
         ),
       };
     }),
+
+  editMessage: (conversationId, messageId, newContent) =>
+    set((state) => ({
+      conversations: state.conversations.map((c) => {
+        if (c.id !== conversationId) return c;
+        const editedAt = new Date().toISOString();
+        const messages = c.messages.map((m) =>
+          m.id === messageId ? { ...m, content: newContent, editedAt } : m
+        );
+        const lastIdx = c.messages.length - 1;
+        const isLastNonNote =
+          c.messages[lastIdx]?.id === messageId && c.messages[lastIdx]?.type !== 'note';
+        return {
+          ...c,
+          messages,
+          lastMessage: isLastNonNote ? newContent : c.lastMessage,
+        };
+      }),
+    })),
 
   assignConversation: (conversationId, agentId) =>
     set((state) => ({

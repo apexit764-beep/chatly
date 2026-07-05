@@ -583,7 +583,7 @@ export default function Inbox(): JSX.Element {
                         </span>
                       </div>
                     )}
-                    <MessageBubble msg={m} contactName={selectedContact.name} agentName={agentForMsg} />
+                    <MessageBubble msg={m} contactName={selectedContact.name} agentName={agentForMsg} conversationId={selected.id} />
                   </div>
                 );
               })}
@@ -2233,14 +2233,18 @@ function ToolBtn({ icon, label, onClick }: { icon: React.ReactNode; label: strin
   );
 }
 
+const EDIT_WINDOW_MINUTES = 30;
+
 function MessageBubble({
   msg,
   contactName,
   agentName,
+  conversationId,
 }: {
   msg: Conversation['messages'][number];
   contactName: string;
   agentName: string;
+  conversationId: string;
 }): JSX.Element {
   const isOut = msg.direction === 'out';
   const isNote = msg.type === 'note';
@@ -2248,11 +2252,52 @@ function MessageBubble({
   const name = isOut ? (isAI ? 'المساعد الذكي' : agentName) : contactName;
   const dateLabel = timeAgo(msg.timestamp);
 
+  const editMessage = useDataStore((s) => s.editMessage);
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(msg.content);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Only outgoing text/note messages sent by the human agent within window are editable
+  const isTextLike = msg.type === 'text' || msg.type === 'note';
+  const ageMinutes = (Date.now() - new Date(msg.timestamp).getTime()) / 60000;
+  const canEdit = isOut && !isAI && isTextLike && ageMinutes < EDIT_WINDOW_MINUTES;
+  const isEdited = Boolean(msg.editedAt);
+
+  useEffect(() => {
+    if (isEditing) {
+      setDraft(msg.content);
+      requestAnimationFrame(() => {
+        const el = textareaRef.current;
+        if (el) {
+          el.focus();
+          el.setSelectionRange(el.value.length, el.value.length);
+          el.style.height = 'auto';
+          el.style.height = `${el.scrollHeight}px`;
+        }
+      });
+    }
+  }, [isEditing, msg.content]);
+
+  const commitEdit = (): void => {
+    const trimmed = draft.trim();
+    if (!trimmed || trimmed === msg.content) {
+      setIsEditing(false);
+      return;
+    }
+    editMessage(conversationId, msg.id, trimmed);
+    setIsEditing(false);
+  };
+
+  const cancelEdit = (): void => {
+    setDraft(msg.content);
+    setIsEditing(false);
+  };
+
   // Subtle footer color tones — same muted gray across all bubble variants
   const headerMutedClass = 'text-muted-light dark:text-muted-dark';
 
   return (
-    <div className={cn('flex gap-3 mb-5', isOut && 'flex-row-reverse')}>
+    <div className={cn('group flex gap-3 mb-5', isOut && 'flex-row-reverse')}>
       <div className="flex-shrink-0 pt-1">
         {isAI ? (
           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white ring-2 ring-white dark:ring-surface-dark shadow-sm">
@@ -2263,40 +2308,95 @@ function MessageBubble({
         )}
       </div>
       <div className={cn('flex-1 min-w-0 flex flex-col', isOut ? 'items-end' : 'items-start')}>
-        <div
-          className={cn(
-            'max-w-[85%] px-3 py-1.5 text-body',
-            isNote
-              ? 'bg-warning/15 text-current border border-warning/30 rounded-2xl rounded-tl-sm'
-              : isAI
-                ? 'bg-violet-100 dark:bg-violet-950/40 border border-violet-200/60 dark:border-violet-800/40 rounded-2xl rounded-tl-sm'
-                : isOut
-                  ? 'bg-primary/15 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 rounded-2xl rounded-tl-sm'
-                  : 'bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-2xl rounded-tr-sm'
-          )}
-        >
-          {msg.type === 'image' ? (
-            <div className="flex items-center gap-2"><ImageIcon className="h-4 w-4" /><span>{msg.content}</span></div>
-          ) : msg.type === 'document' ? (
-            <div className="flex items-center gap-2"><FileText className="h-4 w-4" /><span>{msg.content}</span></div>
-          ) : (
-            <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
-          )}
-          {/* Footer: small name + date below the message */}
-          <div className={cn('flex items-center gap-1.5 text-[10px] mt-1', headerMutedClass)}>
-            {isOut ? (
-              <>
-                <span className="tabular-nums">{dateLabel}</span>
-                {isAI && <Sparkles className="h-2.5 w-2.5" />}
-                <span>· {name}</span>
-              </>
-            ) : (
-              <>
-                <span>{name}</span>
-                <span className="tabular-nums">· {dateLabel}</span>
-              </>
+        <div className={cn('flex items-center gap-1.5', isOut && 'flex-row-reverse')}>
+          <div
+            className={cn(
+              'max-w-[85%] px-3 py-1.5 text-body',
+              isNote
+                ? 'bg-warning/15 text-current border border-warning/30 rounded-2xl rounded-tl-sm'
+                : isAI
+                  ? 'bg-violet-100 dark:bg-violet-950/40 border border-violet-200/60 dark:border-violet-800/40 rounded-2xl rounded-tl-sm'
+                  : isOut
+                    ? 'bg-primary/15 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 rounded-2xl rounded-tl-sm'
+                    : 'bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-2xl rounded-tr-sm'
             )}
+          >
+            {isEditing ? (
+              <div className="flex flex-col gap-2 min-w-[240px]">
+                <textarea
+                  ref={textareaRef}
+                  value={draft}
+                  onChange={(e) => {
+                    setDraft(e.target.value);
+                    const el = e.currentTarget;
+                    el.style.height = 'auto';
+                    el.style.height = `${el.scrollHeight}px`;
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      commitEdit();
+                    } else if (e.key === 'Escape') {
+                      e.preventDefault();
+                      cancelEdit();
+                    }
+                  }}
+                  rows={1}
+                  className="w-full bg-transparent border-0 outline-none resize-none text-body leading-relaxed p-0"
+                />
+                <div className="flex items-center justify-end gap-2 pt-1 border-t border-current/10">
+                  <button
+                    type="button"
+                    onClick={cancelEdit}
+                    className="text-[11px] px-2 py-1 rounded-full hover:bg-current/10 transition-colors"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="button"
+                    onClick={commitEdit}
+                    disabled={!draft.trim()}
+                    className="text-[11px] px-2.5 py-1 rounded-full bg-primary text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-dark transition-colors"
+                  >
+                    حفظ
+                  </button>
+                </div>
+              </div>
+            ) : msg.type === 'image' ? (
+              <div className="flex items-center gap-2"><ImageIcon className="h-4 w-4" /><span>{msg.content}</span></div>
+            ) : msg.type === 'document' ? (
+              <div className="flex items-center gap-2"><FileText className="h-4 w-4" /><span>{msg.content}</span></div>
+            ) : (
+              <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+            )}
+            {/* Footer: small name + date below the message */}
+            <div className={cn('flex items-center gap-1.5 text-[10px] mt-1', headerMutedClass)}>
+              {isOut ? (
+                <>
+                  <span className="tabular-nums">{dateLabel}</span>
+                  {isEdited && !isEditing && <span title="عُدّلت الرسالة">· معدّلة</span>}
+                  {isAI && <Sparkles className="h-2.5 w-2.5" />}
+                  <span>· {name}</span>
+                </>
+              ) : (
+                <>
+                  <span>{name}</span>
+                  <span className="tabular-nums">· {dateLabel}</span>
+                  {isEdited && <span title="عُدّلت الرسالة">· معدّلة</span>}
+                </>
+              )}
+            </div>
           </div>
+          {canEdit && !isEditing && (
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              title="تعديل الرسالة"
+              className="opacity-0 group-hover:opacity-100 focus:opacity-100 h-7 w-7 rounded-full flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-all"
+            >
+              <Edit2 className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </div>
