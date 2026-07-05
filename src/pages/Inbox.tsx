@@ -99,6 +99,9 @@ export default function Inbox(): JSX.Element {
   const [search, setSearch] = useState('');
   const [draft, setDraft] = useState('');
   const [inputMode, setInputMode] = useState<'message' | 'note'>('message');
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const editMessage = useDataStore((s) => s.editMessage);
+  const composeTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
@@ -171,8 +174,47 @@ export default function Inbox(): JSX.Element {
     return () => window.removeEventListener('keydown', onKey);
   }, [inboxFocus, toggleInboxFocus]);
 
+  const editingMsg = editingMessageId && selected
+    ? selected.messages.find((m) => m.id === editingMessageId) ?? null
+    : null;
+
+  const startEdit = (msg: Conversation['messages'][number]): void => {
+    setEditingMessageId(msg.id);
+    setDraft(msg.content);
+    setInputMode(msg.type === 'note' ? 'note' : 'message');
+    requestAnimationFrame(() => {
+      const el = composeTextareaRef.current;
+      if (el) {
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+      }
+    });
+  };
+
+  const cancelEdit = (): void => {
+    setEditingMessageId(null);
+    setDraft('');
+  };
+
+  // Cancel edit when switching conversations
+  useEffect(() => {
+    setEditingMessageId(null);
+    setDraft('');
+  }, [selectedId]);
+
   const handleSend = (): void => {
     if (!draft.trim() || !selected) return;
+    if (editingMessageId) {
+      const trimmed = draft.trim();
+      const original = selected.messages.find((m) => m.id === editingMessageId);
+      if (original && trimmed !== original.content) {
+        editMessage(selected.id, editingMessageId, trimmed);
+        showToast('تم تعديل الرسالة', 'success');
+      }
+      setEditingMessageId(null);
+      setDraft('');
+      return;
+    }
     if (inputMode === 'note') {
       sendMessage(selected.id, draft.trim(), 'note');
       showToast('تم حفظ الملاحظة', 'success');
@@ -583,7 +625,7 @@ export default function Inbox(): JSX.Element {
                         </span>
                       </div>
                     )}
-                    <MessageBubble msg={m} contactName={selectedContact.name} agentName={agentForMsg} conversationId={selected.id} />
+                    <MessageBubble msg={m} contactName={selectedContact.name} agentName={agentForMsg} onEdit={startEdit} isEditing={editingMessageId === m.id} />
                   </div>
                 );
               })}
@@ -629,28 +671,47 @@ export default function Inbox(): JSX.Element {
               {/* Tabs */}
               <div className="flex items-center px-4 border-b border-border-light dark:border-border-dark">
                 <button
-                  onClick={() => setInputMode('message')}
+                  onClick={() => !editingMessageId && setInputMode('message')}
+                  disabled={editingMsg?.type === 'note'}
                   className={cn(
                     'px-4 py-2.5 text-body font-semibold border-b-2 -mb-px transition-colors',
                     inputMode === 'message'
                       ? 'border-primary text-current'
-                      : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+                      : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current',
+                    editingMsg?.type === 'note' && 'opacity-40 cursor-not-allowed hover:text-muted-light dark:hover:text-muted-dark'
                   )}
                 >
                   رسالة
                 </button>
                 <button
-                  onClick={() => setInputMode('note')}
+                  onClick={() => !editingMessageId && setInputMode('note')}
+                  disabled={editingMsg?.type === 'text'}
                   className={cn(
                     'px-4 py-2.5 text-body font-semibold border-b-2 -mb-px transition-colors',
                     inputMode === 'note'
                       ? 'border-warning text-current'
-                      : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+                      : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current',
+                    editingMsg?.type === 'text' && 'opacity-40 cursor-not-allowed hover:text-muted-light dark:hover:text-muted-dark'
                   )}
                 >
                   ملاحظة
                 </button>
               </div>
+
+              {editingMessageId && (
+                <div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-primary/5 dark:bg-primary/10 border border-primary/20 flex items-center gap-2">
+                  <Edit2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                  <span className="text-small font-medium">تعديل الرسالة</span>
+                  <button
+                    type="button"
+                    onClick={cancelEdit}
+                    title="إلغاء التعديل"
+                    className="ms-auto p-1 rounded-full text-muted-light dark:text-muted-dark hover:bg-current/10 hover:text-current transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
 
               {showTemplates && (() => {
                 const q = templateSearch.trim().toLowerCase();
@@ -699,12 +760,16 @@ export default function Inbox(): JSX.Element {
               {/* Textarea */}
               <div className="px-4 pt-3">
                 <textarea
+                  ref={composeTextareaRef}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
                       handleSend();
+                    } else if (e.key === 'Escape' && editingMessageId) {
+                      e.preventDefault();
+                      cancelEdit();
                     }
                   }}
                   placeholder={inputMode === 'note' ? 'اكتب ملاحظة داخلية...' : 'اكتب ردك هنا...'}
@@ -744,18 +809,28 @@ export default function Inbox(): JSX.Element {
                     />
                   )}
                 </div>
-                <button
-                  onClick={handleSend}
-                  disabled={!draft.trim()}
-                  className={cn(
-                    'h-10 px-5 rounded-full text-small font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-white',
-                    inputMode === 'note' ? 'bg-warning hover:opacity-90' : 'bg-primary hover:bg-primary-dark'
+                <div className="flex items-center gap-2">
+                  {editingMessageId && (
+                    <button
+                      onClick={cancelEdit}
+                      className="h-10 px-4 rounded-full text-small font-medium border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
+                    >
+                      إلغاء
+                    </button>
                   )}
-                  style={{ color: '#fff' }}
-                >
-                  {inputMode === 'note' ? 'حفظ' : 'إرسال'}
-                  <ArrowRight className="h-4 w-4 rotate-180" />
-                </button>
+                  <button
+                    onClick={handleSend}
+                    disabled={!draft.trim()}
+                    className={cn(
+                      'h-10 px-5 rounded-full text-small font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-white',
+                      inputMode === 'note' ? 'bg-warning hover:opacity-90' : 'bg-primary hover:bg-primary-dark'
+                    )}
+                    style={{ color: '#fff' }}
+                  >
+                    {editingMessageId ? 'حفظ' : inputMode === 'note' ? 'حفظ' : 'إرسال'}
+                    {!editingMessageId && <ArrowRight className="h-4 w-4 rotate-180" />}
+                  </button>
+                </div>
               </div>
             </div>
             )}
@@ -2239,12 +2314,14 @@ function MessageBubble({
   msg,
   contactName,
   agentName,
-  conversationId,
+  onEdit,
+  isEditing,
 }: {
   msg: Conversation['messages'][number];
   contactName: string;
   agentName: string;
-  conversationId: string;
+  onEdit: (msg: Conversation['messages'][number]) => void;
+  isEditing: boolean;
 }): JSX.Element {
   const isOut = msg.direction === 'out';
   const isNote = msg.type === 'note';
@@ -2252,48 +2329,12 @@ function MessageBubble({
   const name = isOut ? (isAI ? 'المساعد الذكي' : agentName) : contactName;
   const dateLabel = timeAgo(msg.timestamp);
 
-  const editMessage = useDataStore((s) => s.editMessage);
-  const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState(msg.content);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
   // Only outgoing text/note messages sent by the human agent within window are editable
   const isTextLike = msg.type === 'text' || msg.type === 'note';
   const ageMinutes = (Date.now() - new Date(msg.timestamp).getTime()) / 60000;
   const canEdit = isOut && !isAI && isTextLike && ageMinutes < EDIT_WINDOW_MINUTES;
   const isEdited = Boolean(msg.editedAt);
 
-  useEffect(() => {
-    if (isEditing) {
-      setDraft(msg.content);
-      requestAnimationFrame(() => {
-        const el = textareaRef.current;
-        if (el) {
-          el.focus();
-          el.setSelectionRange(el.value.length, el.value.length);
-          el.style.height = 'auto';
-          el.style.height = `${el.scrollHeight}px`;
-        }
-      });
-    }
-  }, [isEditing, msg.content]);
-
-  const commitEdit = (): void => {
-    const trimmed = draft.trim();
-    if (!trimmed || trimmed === msg.content) {
-      setIsEditing(false);
-      return;
-    }
-    editMessage(conversationId, msg.id, trimmed);
-    setIsEditing(false);
-  };
-
-  const cancelEdit = (): void => {
-    setDraft(msg.content);
-    setIsEditing(false);
-  };
-
-  // Subtle footer color tones — same muted gray across all bubble variants
   const headerMutedClass = 'text-muted-light dark:text-muted-dark';
 
   return (
@@ -2311,70 +2352,29 @@ function MessageBubble({
         <div className={cn('flex items-center gap-1.5', isOut && 'flex-row-reverse')}>
           <div
             className={cn(
-              'max-w-[85%] px-3 py-1.5 text-body',
+              'max-w-[85%] px-3 py-1.5 text-body transition-all',
               isNote
                 ? 'bg-warning/15 text-current border border-warning/30 rounded-2xl rounded-tl-sm'
                 : isAI
                   ? 'bg-violet-100 dark:bg-violet-950/40 border border-violet-200/60 dark:border-violet-800/40 rounded-2xl rounded-tl-sm'
                   : isOut
                     ? 'bg-primary/15 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 rounded-2xl rounded-tl-sm'
-                    : 'bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-2xl rounded-tr-sm'
+                    : 'bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark rounded-2xl rounded-tr-sm',
+              isEditing && 'ring-2 ring-primary/60 ring-offset-2 ring-offset-white dark:ring-offset-surface-dark'
             )}
           >
-            {isEditing ? (
-              <div className="flex flex-col gap-2 min-w-[240px]">
-                <textarea
-                  ref={textareaRef}
-                  value={draft}
-                  onChange={(e) => {
-                    setDraft(e.target.value);
-                    const el = e.currentTarget;
-                    el.style.height = 'auto';
-                    el.style.height = `${el.scrollHeight}px`;
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      commitEdit();
-                    } else if (e.key === 'Escape') {
-                      e.preventDefault();
-                      cancelEdit();
-                    }
-                  }}
-                  rows={1}
-                  className="w-full bg-transparent border-0 outline-none resize-none text-body leading-relaxed p-0"
-                />
-                <div className="flex items-center justify-end gap-2 pt-1 border-t border-current/10">
-                  <button
-                    type="button"
-                    onClick={cancelEdit}
-                    className="text-[11px] px-2 py-1 rounded-full hover:bg-current/10 transition-colors"
-                  >
-                    إلغاء
-                  </button>
-                  <button
-                    type="button"
-                    onClick={commitEdit}
-                    disabled={!draft.trim()}
-                    className="text-[11px] px-2.5 py-1 rounded-full bg-primary text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-dark transition-colors"
-                  >
-                    حفظ
-                  </button>
-                </div>
-              </div>
-            ) : msg.type === 'image' ? (
+            {msg.type === 'image' ? (
               <div className="flex items-center gap-2"><ImageIcon className="h-4 w-4" /><span>{msg.content}</span></div>
             ) : msg.type === 'document' ? (
               <div className="flex items-center gap-2"><FileText className="h-4 w-4" /><span>{msg.content}</span></div>
             ) : (
               <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
             )}
-            {/* Footer: small name + date below the message */}
             <div className={cn('flex items-center gap-1.5 text-[10px] mt-1', headerMutedClass)}>
               {isOut ? (
                 <>
                   <span className="tabular-nums">{dateLabel}</span>
-                  {isEdited && !isEditing && <span title="عُدّلت الرسالة">· معدّلة</span>}
+                  {isEdited && <span title="عُدّلت الرسالة">· معدّلة</span>}
                   {isAI && <Sparkles className="h-2.5 w-2.5" />}
                   <span>· {name}</span>
                 </>
@@ -2390,7 +2390,7 @@ function MessageBubble({
           {canEdit && !isEditing && (
             <button
               type="button"
-              onClick={() => setIsEditing(true)}
+              onClick={() => onEdit(msg)}
               title="تعديل الرسالة"
               className="opacity-0 group-hover:opacity-100 focus:opacity-100 h-7 w-7 rounded-full flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-all"
             >
