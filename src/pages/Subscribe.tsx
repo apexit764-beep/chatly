@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Check,
@@ -15,8 +15,9 @@ import {
   AlertTriangle,
   ChevronDown,
   Plus,
+  MessageCircle,
 } from 'lucide-react';
-import { Card, Input, useConfirm } from '@components/ui';
+import { Card, Input, Modal, Textarea, useConfirm } from '@components/ui';
 import { useAdminStore } from '@/store/useAdminStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
@@ -46,6 +47,8 @@ export default function Subscribe(): JSX.Element {
   const [cycle, setCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [step, setStep] = useState<Step>('select');
+  const [contactOpen, setContactOpen] = useState(false);
+  const [contactPlan, setContactPlan] = useState<Plan | null>(null);
 
   const activePlans = plans.filter((p) => p.active);
   const currentPlanId = client?.planId ?? null;
@@ -110,7 +113,12 @@ export default function Subscribe(): JSX.Element {
             {activePlans.map((plan) => {
               const price = plan.pricesPerCountry[country] ?? { monthly: 0, yearly: 0 };
               const isCurrent = plan.id === currentPlanId;
+              const isEnterprise = plan.tier === 'enterprise';
               const display = cycle === 'monthly' ? price.monthly : Math.round(price.yearly / 12);
+              const handleContactSales = (): void => {
+                setContactPlan(plan);
+                setContactOpen(true);
+              };
               return (
                 <Card key={plan.id} className={cn(
                   'p-6 relative transition-all flex flex-col',
@@ -125,14 +133,23 @@ export default function Subscribe(): JSX.Element {
                   <p className="text-small text-muted-light dark:text-muted-dark mt-1 mb-4 min-h-[2.5em]">{plan.tagline}</p>
 
                   <div className="mb-4 pb-4 border-b border-border-light dark:border-border-dark">
-                    <div className="flex items-baseline gap-1">
-                      <p className="text-display font-extrabold">{formatMoney(display, selectedCountry.currency)}</p>
-                      <span className="text-small text-muted-light dark:text-muted-dark">/شهر</span>
-                    </div>
-                    {cycle === 'yearly' && (
-                      <p className="text-small text-success font-medium mt-0.5">
-                        {formatMoney(price.yearly, selectedCountry.currency)} سنوياً
-                      </p>
+                    {isEnterprise ? (
+                      <div>
+                        <p className="text-display font-extrabold">حسب الطلب</p>
+                        <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">تسعير مخصّص لاحتياجاتك</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-baseline gap-1">
+                          <p className="text-display font-extrabold">{formatMoney(display, selectedCountry.currency)}</p>
+                          <span className="text-small text-muted-light dark:text-muted-dark">/شهر</span>
+                        </div>
+                        {cycle === 'yearly' && (
+                          <p className="text-small text-success font-medium mt-0.5">
+                            {formatMoney(price.yearly, selectedCountry.currency)} سنوياً
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
 
@@ -145,20 +162,30 @@ export default function Subscribe(): JSX.Element {
                     ))}
                   </ul>
 
-                  <button
-                    onClick={() => handleSubscribe(plan)}
-                    disabled={isCurrent}
-                    className={cn(
-                      'w-full h-11 rounded-full text-body font-semibold transition-colors',
-                      isCurrent
-                        ? 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark cursor-default'
-                        : plan.popular
-                          ? 'bg-primary hover:bg-primary-dark text-white'
-                          : 'bg-white dark:bg-surface-dark border-2 border-primary text-primary hover:bg-primary hover:text-white'
-                    )}
-                  >
-                    {isCurrent ? 'باقتك الحالية ✓' : 'اشترك الآن'}
-                  </button>
+                  {isEnterprise ? (
+                    <button
+                      onClick={handleContactSales}
+                      className="w-full h-11 rounded-full text-body font-semibold transition-colors bg-white dark:bg-surface-dark border-2 border-primary text-primary hover:bg-primary hover:text-white flex items-center justify-center gap-2"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      تواصل معنا
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleSubscribe(plan)}
+                      disabled={isCurrent}
+                      className={cn(
+                        'w-full h-11 rounded-full text-body font-semibold transition-colors',
+                        isCurrent
+                          ? 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark cursor-default'
+                          : plan.popular
+                            ? 'bg-primary hover:bg-primary-dark text-white'
+                            : 'bg-white dark:bg-surface-dark border-2 border-primary text-primary hover:bg-primary hover:text-white'
+                      )}
+                    >
+                      {isCurrent ? 'باقتك الحالية ✓' : 'اشترك الآن'}
+                    </button>
+                  )}
 
                   {/* Limits */}
                   <div className="grid grid-cols-2 gap-2 mt-4 text-small">
@@ -261,7 +288,183 @@ export default function Subscribe(): JSX.Element {
           </button>
         </Card>
       )}
+
+      <ContactSalesModal
+        open={contactOpen}
+        onClose={() => setContactOpen(false)}
+        plan={contactPlan}
+        defaultName={client?.contactName ?? ''}
+        defaultEmail={client?.email ?? ''}
+        defaultCompany={client?.companyName ?? ''}
+        defaultPhone={client?.phone ?? ''}
+        onSubmitted={() => {
+          setContactOpen(false);
+          showToast('تم إرسال طلبك بنجاح — سيتواصل معك فريق المبيعات خلال 24 ساعة', 'success');
+        }}
+      />
     </div>
+  );
+}
+
+interface ContactSalesModalProps {
+  open: boolean;
+  onClose: () => void;
+  plan: Plan | null;
+  defaultName: string;
+  defaultEmail: string;
+  defaultCompany: string;
+  defaultPhone: string;
+  onSubmitted: () => void;
+}
+
+function ContactSalesModal({
+  open,
+  onClose,
+  plan,
+  defaultName,
+  defaultEmail,
+  defaultCompany,
+  defaultPhone,
+  onSubmitted,
+}: ContactSalesModalProps): JSX.Element {
+  const [name, setName] = useState('');
+  const [company, setCompany] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [teamSize, setTeamSize] = useState('');
+  const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setName(defaultName);
+      setCompany(defaultCompany);
+      setEmail(defaultEmail);
+      setPhone(defaultPhone);
+      setTeamSize('');
+      setMessage('');
+    }
+  }, [open, defaultName, defaultCompany, defaultEmail, defaultPhone]);
+
+  const isValid = name.trim().length > 1 && email.trim().length > 3 && company.trim().length > 1;
+
+  const handleSubmit = (e: FormEvent): void => {
+    e.preventDefault();
+    if (!isValid) return;
+    setSubmitting(true);
+    // Simulate async send (in a real app this would hit an API)
+    setTimeout(() => {
+      setSubmitting(false);
+      onSubmitted();
+    }, 900);
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      size="lg"
+      title={plan ? `تواصل معنا — باقة ${plan.nameAr}` : 'تواصل معنا'}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="p-3 rounded-card bg-primary/5 border border-primary/20 text-small">
+          <p className="font-semibold mb-1">فريق المبيعات جاهز لخدمتك</p>
+          <p className="text-muted-light dark:text-muted-dark">
+            املأ النموذج وسنتواصل معك خلال 24 ساعة عمل بعرض سعر مخصّص يناسب حجم مؤسستك.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="text-small font-medium mb-1 block">الاسم الكامل *</label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="أحمد الحارثي"
+              required
+            />
+          </div>
+          <div>
+            <label className="text-small font-medium mb-1 block">اسم الشركة *</label>
+            <Input
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              placeholder="شركة الأنوار"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="text-small font-medium mb-1 block">البريد الإلكتروني *</label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@company.com"
+              required
+              dir="ltr"
+            />
+          </div>
+          <div>
+            <label className="text-small font-medium mb-1 block">رقم الجوال</label>
+            <Input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+968 9XXX XXXX"
+              dir="ltr"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-small font-medium mb-1 block">حجم الفريق المتوقّع</label>
+          <select
+            value={teamSize}
+            onChange={(e) => setTeamSize(e.target.value)}
+            className="w-full h-10 px-3 rounded-full bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary"
+          >
+            <option value="">اختر…</option>
+            <option value="1-10">1-10 موظفين</option>
+            <option value="11-50">11-50 موظف</option>
+            <option value="51-200">51-200 موظف</option>
+            <option value="201-500">201-500 موظف</option>
+            <option value="500+">أكثر من 500 موظف</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="text-small font-medium mb-1 block">احتياجاتك أو استفسارك</label>
+          <Textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="أخبرنا باحتياجاتك الخاصة، الميزات المطلوبة، أو أي متطلبات أمنية…"
+            rows={4}
+          />
+        </div>
+
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-border-light dark:border-border-dark">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-10 px-5 rounded-full text-small font-medium border border-border-light dark:border-border-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
+          >
+            إلغاء
+          </button>
+          <button
+            type="submit"
+            disabled={!isValid || submitting}
+            className="h-10 px-6 rounded-full text-small font-semibold bg-primary hover:bg-primary-dark text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            style={{ color: '#fff' }}
+          >
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {submitting ? 'جارٍ الإرسال…' : 'إرسال الطلب'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

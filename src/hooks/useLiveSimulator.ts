@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useDataStore } from '@/store/useDataStore';
 import { useAIStore } from '@/store/useAIStore';
 import { useUIStore } from '@/store/useUIStore';
+import { playNotificationSound } from '@/utils/notificationSound';
 
 /**
  * Simulated incoming-message pool. Picked randomly to feel like a real
@@ -99,6 +100,7 @@ export function useLiveSimulator(): void {
         const content = pick(INCOMING_MESSAGES);
 
         state.simulateIncomingMessage(conv.id, content);
+        playNotificationSound();
 
         // Notification — 50% message, 25% conversation, 25% AI rendered when applicable
         const variantPool = conv.aiActive && aiSettings.enabled
