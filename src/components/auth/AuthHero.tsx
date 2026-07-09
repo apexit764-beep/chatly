@@ -17,7 +17,7 @@ export function AuthHero(): JSX.Element {
     <div className="flex-1 relative text-white p-12 flex flex-col items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 35%, #1D4ED8 65%, #1E3A8A 100%)' }}>
       {/* Big background logo */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-        <QhubFullLogo className="w-[80%] max-w-[600px] opacity-[0.07] text-white" />
+        <QhubFullLogo className="w-[80%] max-w-[600px] opacity-[0.07] text-white" mono />
       </div>
 
       {/* Noise texture overlay */}
@@ -61,7 +61,7 @@ export function AuthHero(): JSX.Element {
       >
         {/* Logo + brand */}
         <div className="flex items-center justify-center mb-8">
-          <QhubFullLogo className="h-12 text-white" />
+          <QhubFullLogo className="h-12 text-white" mono />
         </div>
 
         {/* Main heading */}
