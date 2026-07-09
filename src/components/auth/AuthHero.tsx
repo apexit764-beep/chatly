@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { MessageSquare, Users, BarChart3, Bot } from 'lucide-react';
-import { SekaaLogo } from '@components/ui';
+import { SekaaLogo, QhubFullLogo } from '@components/ui';
 
 const FEATURES = [
   { icon: MessageSquare, label: 'صندوق وارد واحد', desc: 'واتساب، بريد، إنستغرام ومسنجر بنفس اللوحة' },
@@ -17,7 +17,7 @@ export function AuthHero(): JSX.Element {
     <div className="flex-1 relative text-white p-12 flex flex-col items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 35%, #1D4ED8 65%, #1E3A8A 100%)' }}>
       {/* Big background logo */}
       <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-        <SekaaLogo className="w-[80%] max-w-[600px] opacity-[0.07]" />
+        <QhubFullLogo className="w-[80%] max-w-[600px] opacity-[0.07] text-white" />
       </div>
 
       {/* Noise texture overlay */}
@@ -60,14 +60,8 @@ export function AuthHero(): JSX.Element {
         className="relative w-full max-w-lg"
       >
         {/* Logo + brand */}
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="h-14 w-14 rounded-2xl bg-white flex items-center justify-center shadow-lg shadow-black/20">
-            <SekaaLogo className="h-9 w-9" />
-          </div>
-          <div className="text-start">
-            <p className="text-2xl font-extrabold leading-tight">Qhub</p>
-            <p className="text-[11px] opacity-70 leading-tight">Multi-channel CRM</p>
-          </div>
+        <div className="flex items-center justify-center mb-8">
+          <QhubFullLogo className="h-12 text-white" />
         </div>
 
         {/* Main heading */}

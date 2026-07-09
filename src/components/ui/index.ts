@@ -18,6 +18,6 @@ export type { Column } from './DataTable';
 export { ConfirmProvider, useConfirm } from './ConfirmDialog';
 export { EmojiPicker } from './EmojiPicker';
 export { CommandPalette } from './CommandPalette';
-export { SekaaLogo } from './SekaaLogo';
+export { SekaaLogo, QhubFullLogo } from './SekaaLogo';
 export { FilterDropdown } from './FilterDropdown';
 export type { FilterOption } from './FilterDropdown';
