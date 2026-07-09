@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { MessageSquare, Users, BarChart3, Bot } from 'lucide-react';
-import { SekaaLogo, QhubFullLogo } from '@components/ui';
+import { QhubFullLogo } from '@components/ui';
 
 const FEATURES = [
   { icon: MessageSquare, label: 'صندوق وارد واحد', desc: 'واتساب، بريد، إنستغرام ومسنجر بنفس اللوحة' },
@@ -15,12 +15,7 @@ export function AuthHero(): JSX.Element {
 
   return (
     <div className="flex-1 relative text-white p-12 flex flex-col items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 35%, #1D4ED8 65%, #1E3A8A 100%)' }}>
-      {/* Big background logo */}
-      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-        <QhubFullLogo className="w-[80%] max-w-[600px] opacity-[0.07] text-white" mono />
-      </div>
-
-      {/* Noise texture overlay */}
+{/* Noise texture overlay */}
       <div
         className="absolute inset-0 pointer-events-none mix-blend-overlay opacity-[0.25]"
         style={{ backgroundImage: `url("${noiseUrl}")`, backgroundSize: '200px 200px' }}
