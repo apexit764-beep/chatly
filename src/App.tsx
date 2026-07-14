@@ -86,6 +86,7 @@ export default function App(): JSX.Element {
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/feedback/:token" element={<RatingPublic />} />
+        <Route path="/rate" element={<RatingPublic />} />
         <Route
           element={
             <ProtectedRoute>

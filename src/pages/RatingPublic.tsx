@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Star, Building, CheckCircle2, Smile, Meh, Frown, AlertCircle } from 'lucide-react';
 import { useRatingStore, type Satisfaction } from '@/store/useRatingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -37,7 +37,9 @@ function StarRating({ value, onChange, size = 'lg' }: { value: number; onChange:
 }
 
 export default function RatingPublic(): JSX.Element {
-  const { token = '' } = useParams<{ token: string }>();
+  const { token: paramToken = '' } = useParams<{ token: string }>();
+  const [searchParams] = useSearchParams();
+  const token = paramToken || searchParams.get('t') || '';
   const general = useSettingsStore((s) => s.general);
   const ratingPrefs = useSettingsStore((s) => s.rating);
   const theme = useThemeStore((s) => s.theme);

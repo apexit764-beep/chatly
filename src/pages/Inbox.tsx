@@ -252,7 +252,7 @@ export default function Inbox(): JSX.Element {
         channelType: channel?.type ?? 'whatsapp',
         channelName: channel?.name ?? '',
       });
-      const url = `${window.location.origin}/feedback/${token}`;
+      const url = `${window.location.origin}/rate/?t=${token}`;
       sendMessage(selected.id, `${ratingPrefs.message}\n${url}`);
     }
     showToast('تم إغلاق المحادثة', 'success');
