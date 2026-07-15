@@ -24,7 +24,7 @@ export function Heatmap({ rows, cols, values }: HeatmapProps): JSX.Element {
 
   return (
     <div className="w-full overflow-x-auto">
-      <div className="min-w-[520px]">
+      <div className="min-w-[640px] max-w-4xl">
         <div className="grid" style={{ gridTemplateColumns: `48px repeat(${cols.length}, minmax(0,1fr))`, gap: 3 }}>
           <div />
           {cols.map((c, ci) => (
@@ -42,21 +42,29 @@ export function Heatmap({ rows, cols, values }: HeatmapProps): JSX.Element {
               row={row}
               ri={ri}
               bins={values[ri].map((v) => bucket(v, max))}
-              rawValues={values[ri]}
-              cols={cols}
               hovered={hovered}
               onHover={setHovered}
             />
           ))}
         </div>
-        <div className="flex items-center gap-2 mt-3 text-[11px] text-muted-light dark:text-muted-dark">
-          <span>أقل</span>
-          <div className="flex items-center gap-1">
-            {[0, 1, 2, 3, 4, 5].map((b) => (
-              <span key={b} className={cn('h-3 w-5 rounded-sm', `heat-${b}`)} />
-            ))}
+        <div className="flex items-center justify-between mt-3">
+          <div className="flex items-center gap-2 text-[11px] text-muted-light dark:text-muted-dark">
+            <span>أقل</span>
+            <div className="flex items-center gap-1">
+              {[0, 1, 2, 3, 4, 5].map((b) => (
+                <span key={b} className={cn('h-3 w-5 rounded-sm', `heat-${b}`)} />
+              ))}
+            </div>
+            <span>أكثر</span>
           </div>
-          <span>أكثر</span>
+          <div className={cn('text-small font-medium transition-opacity duration-150', hovered ? 'opacity-100' : 'opacity-0')}>
+            {hovered && (
+              <>
+                <span className="text-muted-light dark:text-muted-dark">{rows[hovered.r]} · {cols[hovered.c]}</span>
+                <span className="text-primary ms-1.5 font-bold">{values[hovered.r][hovered.c]} رسالة</span>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -67,16 +75,12 @@ function FragmentRow({
   row,
   ri,
   bins,
-  rawValues,
-  cols,
   hovered,
   onHover,
 }: {
   row: string;
   ri: number;
   bins: number[];
-  rawValues: number[];
-  cols: string[];
   hovered: { r: number; c: number } | null;
   onHover: (v: { r: number; c: number } | null) => void;
 }): JSX.Element {
@@ -94,23 +98,17 @@ function FragmentRow({
         return (
           <div
             key={`${row}-${ci}`}
-            className="relative"
             onMouseEnter={() => onHover({ r: ri, c: ci })}
             onMouseLeave={() => onHover(null)}
           >
             <div
               className={cn(
-                'h-7 rounded-md transition-all duration-150 cursor-pointer',
+                'h-6 rounded transition-all duration-150 cursor-pointer',
                 `heat-${b}`,
                 isActive && 'ring-1 ring-primary/40'
               )}
               style={{ opacity: dimmed ? 0.5 : 1 }}
             />
-            {isActive && (
-              <div className="absolute -top-9 left-1/2 -translate-x-1/2 z-10 bg-[#1e1e2e]/92 text-white text-[11px] font-medium px-2.5 py-1 rounded-md whitespace-nowrap pointer-events-none shadow-lg">
-                {row} · {cols[ci]} — {rawValues[ci]}
-              </div>
-            )}
           </div>
         );
       })}

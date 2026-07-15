@@ -466,11 +466,16 @@ export const useDataStore = create<DataState>((set) => ({
     })),
   updateRole: (id, patch) =>
     set((state) => ({
-      roles: state.roles.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+      roles: state.roles.map((r) => {
+        if (r.id !== id) return r;
+        if (r.isSystem) return { ...r, ...patch, permissions: r.permissions, isSystem: true };
+        return { ...r, ...patch };
+      }),
     })),
   deleteRole: (id) =>
     set((state) => ({
       roles: state.roles.filter((r) => r.id !== id || r.isSystem),
+      agents: state.agents.map((a) => a.roleId === id ? { ...a, roleId: 'role_support', role: 'agent' as const } : a),
     })),
 
   toggleIntegration: (id) =>

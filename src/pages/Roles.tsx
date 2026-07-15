@@ -54,12 +54,8 @@ export default function Roles(): JSX.Element {
     });
   };
 
-  // Member count per role (mapping agent.role to system role names)
-  const memberCount = (role: Role): number => {
-    if (role.id === 'role_manager') return agents.filter((a) => a.role === 'manager').length;
-    if (role.id === 'role_agent') return agents.filter((a) => a.role === 'agent').length;
-    return 0;
-  };
+  const memberCount = (role: Role): number =>
+    agents.filter((a) => a.roleId === role.id).length;
 
   const openCreate = (): void => {
     setEditing(null);
@@ -95,6 +91,11 @@ export default function Roles(): JSX.Element {
   const submit = (): void => {
     if (!form.name.trim()) {
       showToast('أدخل اسم الدور', 'error');
+      return;
+    }
+    const duplicate = roles.find((r) => r.name.trim() === form.name.trim() && r.id !== editing?.id);
+    if (duplicate) {
+      showToast('يوجد دور بنفس الاسم بالفعل', 'error');
       return;
     }
     if (editing) {
