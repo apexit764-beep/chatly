@@ -291,16 +291,15 @@ export default function Reports(): JSX.Element {
   const breaches: number[] = firstReplyHours.map((h) => (h > 2 ? 1 : 0));
 
   // Heatmap — peak hours derived from all message timestamps
-  const slots = ['8ص', '10ص', '12م', '2م', '4م', '6م', '8م', '10م'];
+  const slots = ['12ص', '2ص', '4ص', '6ص', '8ص', '10ص', '12م', '2م', '4م', '6م', '8م', '10م'];
   const peakValues: number[][] = (() => {
-    const grid: number[][] = Array.from({ length: 7 }, () => Array(8).fill(0));
+    const grid: number[][] = Array.from({ length: 7 }, () => Array(12).fill(0));
     conversations.forEach((c) => {
       c.messages.forEach((m) => {
         const d = new Date(m.timestamp);
         const dow = d.getDay();
         const h = d.getHours();
-        if (h < 8 || h >= 24) return;
-        const slot = Math.min(7, Math.floor((h - 8) / 2));
+        const slot = Math.floor(h / 2);
         grid[dow][slot] += 1;
       });
     });

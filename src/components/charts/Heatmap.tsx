@@ -25,7 +25,7 @@ export function Heatmap({ rows, cols, values }: HeatmapProps): JSX.Element {
   return (
     <div className="w-full overflow-x-auto">
       <div className="min-w-[520px]">
-        <div className="grid" style={{ gridTemplateColumns: `60px repeat(${cols.length}, minmax(0,1fr))`, gap: 4 }}>
+        <div className="grid" style={{ gridTemplateColumns: `48px repeat(${cols.length}, minmax(0,1fr))`, gap: 3 }}>
           <div />
           {cols.map((c, ci) => (
             <div
@@ -100,9 +100,9 @@ function FragmentRow({
           >
             <div
               className={cn(
-                'aspect-square rounded-md transition-all cursor-pointer',
+                'h-7 rounded-md transition-all cursor-pointer',
                 `heat-${b}`,
-                isActive && 'ring-2 ring-primary/50 scale-110'
+                isActive && 'ring-2 ring-primary/50 scale-105'
               )}
               style={{ opacity: dimmed ? 0.35 : 1 }}
             />
