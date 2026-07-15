@@ -141,6 +141,8 @@ function InboxSectionSidebar(): JSX.Element {
   const setSelectedChannelId = useInboxStore((s) => s.setSelectedChannelId);
   const selectedDepartmentId = useInboxStore((s) => s.selectedDepartmentId);
   const setSelectedDepartmentId = useInboxStore((s) => s.setSelectedDepartmentId);
+  const selectedStatus = useInboxStore((s) => s.selectedStatus);
+  const setSelectedStatus = useInboxStore((s) => s.setSelectedStatus);
 
   const currentAgent = agents.find((a) => a.id === currentUserId);
   // For agents — only show channels they're assigned to. For manager — all.
@@ -188,8 +190,8 @@ function InboxSectionSidebar(): JSX.Element {
           icon={<CheckCircle2 className="h-4 w-4" />}
           label={t('مغلقة')}
           count={counts.closed}
-          active={view === 'closed' && showingAllConvs}
-          onClick={() => { setView('closed'); setSelectedChannelId(null); setSelectedDepartmentId(null); }}
+          active={selectedStatus === 'closed' && showingAllConvs}
+          onClick={() => { setView('all'); setSelectedStatus('closed'); setSelectedChannelId(null); setSelectedDepartmentId(null); }}
         />
         <SectionItem
           icon={<Globe className="h-4 w-4" />}

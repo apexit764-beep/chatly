@@ -95,6 +95,7 @@ export default function Inbox(): JSX.Element {
   const setSelectedId = useInboxStore((s) => s.setSelectedId);
   const selectedChannelId = useInboxStore((s) => s.selectedChannelId);
   const selectedDepartmentId = useInboxStore((s) => s.selectedDepartmentId);
+  const selectedStatus = useInboxStore((s) => s.selectedStatus);
 
   const [search, setSearch] = useState('');
   const [draft, setDraft] = useState('');
@@ -123,9 +124,6 @@ export default function Inbox(): JSX.Element {
       .filter((c) => {
         if (view === 'mine') return c.assignedTo === currentUserId && c.status !== 'closed';
         if (view === 'unassigned') return c.assignedTo === null;
-        if (view === 'new') return c.status === 'new';
-        if (view === 'pending') return c.status === 'pending';
-        if (view === 'closed') return c.status === 'closed';
         if (view === 'vip') {
           const contact = contacts.find((x) => x.id === c.contactId);
           return contact?.type === 'vip';
@@ -139,12 +137,16 @@ export default function Inbox(): JSX.Element {
         return true;
       })
       .filter((c) => {
+        if (!selectedStatus) return true;
+        return c.status === selectedStatus;
+      })
+      .filter((c) => {
         if (!search) return true;
         const contact = contacts.find((x) => x.id === c.contactId);
         return contact?.name.includes(search) || contact?.phone.includes(search) || c.lastMessage.includes(search);
       })
       .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
-  }, [conversations, contacts, view, search, currentUserId, selectedChannelId, selectedDepartmentId]);
+  }, [conversations, contacts, view, search, currentUserId, selectedChannelId, selectedDepartmentId, selectedStatus]);
 
   useEffect(() => {
     if (!selectedId || !filtered.find((c) => c.id === selectedId)) {
@@ -390,11 +392,15 @@ export default function Inbox(): JSX.Element {
             counts={{
               mine: conversations.filter((c) => c.assignedTo === currentUserId && c.status !== 'closed').length,
               unassigned: conversations.filter((c) => c.assignedTo === null).length,
+              all: conversations.length,
+              starred: conversations.filter((c) => bookmarkedConvIds.has(c.id)).length,
+            }}
+            selectedStatus={selectedStatus}
+            setSelectedStatus={(s) => useInboxStore.getState().setSelectedStatus(s)}
+            statusCounts={{
               new: conversations.filter((c) => c.status === 'new').length,
               pending: conversations.filter((c) => c.status === 'pending').length,
               closed: conversations.filter((c) => c.status === 'closed').length,
-              all: conversations.length,
-              starred: conversations.filter((c) => bookmarkedConvIds.has(c.id)).length,
             }}
           />
         </div>
@@ -2047,56 +2053,114 @@ function InboxFilters({
   view,
   setView,
   counts,
+  selectedStatus,
+  setSelectedStatus,
+  statusCounts,
 }: {
   view: InboxView;
   setView: (v: InboxView) => void;
-  counts: { mine: number; unassigned: number; new: number; pending: number; closed: number; all: number; starred: number };
+  counts: { mine: number; unassigned: number; all: number; starred: number };
+  selectedStatus: ConversationStatus | null;
+  setSelectedStatus: (s: ConversationStatus | null) => void;
+  statusCounts: { new: number; pending: number; closed: number };
 }): JSX.Element {
   const [viewOpen, setViewOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [sortKey, setSortKey] = useState<'recent' | 'oldest' | 'unread'>('recent');
 
-  type ViewItem = { key: InboxView; label: string; count: number; icon: JSX.Element; group: 'folder' | 'status' };
-  const items: ViewItem[] = [
-    { key: 'all', label: 'الكل', count: counts.all, icon: <Globe className="h-4 w-4 text-slate-500" strokeWidth={2} />, group: 'folder' },
-    { key: 'mine', label: 'صندوقي', count: counts.mine, icon: <InboxIcon className="h-4 w-4 text-primary" strokeWidth={2} />, group: 'folder' },
-    { key: 'unassigned', label: 'غير مسندة', count: counts.unassigned, icon: <UserX className="h-4 w-4 text-warning" strokeWidth={2} />, group: 'folder' },
-    { key: 'starred', label: 'مميزة', count: counts.starred, icon: <Star className="h-4 w-4 text-warning" strokeWidth={2} />, group: 'folder' },
-    { key: 'new', label: 'جديدة', count: counts.new, icon: <Sparkles className="h-4 w-4 text-primary" strokeWidth={2} />, group: 'status' },
-    { key: 'pending', label: 'قيد المعالجة', count: counts.pending, icon: <ClockIcon className="h-4 w-4 text-warning" strokeWidth={2} />, group: 'status' },
-    { key: 'closed', label: 'مغلقة', count: counts.closed, icon: <CheckCircle2 className="h-4 w-4 text-success" strokeWidth={2} />, group: 'status' },
+  type ViewItem = { key: InboxView; label: string; count: number; icon: JSX.Element };
+  const viewItems: ViewItem[] = [
+    { key: 'all', label: 'الكل', count: counts.all, icon: <Globe className="h-4 w-4 text-slate-500" strokeWidth={2} /> },
+    { key: 'mine', label: 'صندوقي', count: counts.mine, icon: <InboxIcon className="h-4 w-4 text-primary" strokeWidth={2} /> },
+    { key: 'unassigned', label: 'غير مسندة', count: counts.unassigned, icon: <UserX className="h-4 w-4 text-warning" strokeWidth={2} /> },
+    { key: 'starred', label: 'مميزة', count: counts.starred, icon: <Star className="h-4 w-4 text-warning" strokeWidth={2} /> },
   ];
-  const current = items.find((i) => i.key === view) ?? items[0];
+  const currentView = viewItems.find((i) => i.key === view) ?? viewItems[0];
+
+  type StatusItem = { key: ConversationStatus | null; label: string; count: number; icon: JSX.Element };
+  const statusItems: StatusItem[] = [
+    { key: null, label: 'كل الحالات', count: counts.all, icon: <Globe className="h-4 w-4 text-slate-500" strokeWidth={2} /> },
+    { key: 'new', label: 'جديدة', count: statusCounts.new, icon: <Sparkles className="h-4 w-4 text-primary" strokeWidth={2} /> },
+    { key: 'pending', label: 'قيد المعالجة', count: statusCounts.pending, icon: <ClockIcon className="h-4 w-4 text-warning" strokeWidth={2} /> },
+    { key: 'closed', label: 'مغلقة', count: statusCounts.closed, icon: <CheckCircle2 className="h-4 w-4 text-success" strokeWidth={2} /> },
+  ];
+  const currentStatus = statusItems.find((i) => i.key === selectedStatus) ?? statusItems[0];
+
   const sortLabel = { recent: 'الأحدث أولاً', oldest: 'الأقدم أولاً', unread: 'غير المقروءة أولاً' }[sortKey];
 
   return (
     <div className="flex items-center justify-between gap-2">
-      {/* View pill (right/start in RTL) */}
-      <div className="relative">
-        <button
-          onClick={() => setViewOpen((v) => !v)}
-          className="h-7 ps-2.5 pe-2 rounded-full bg-bg-light dark:bg-bg-dark text-[12px] font-semibold flex items-center gap-1.5 hover:bg-border-light dark:hover:bg-border-dark transition-colors"
-          aria-haspopup="menu"
-          aria-expanded={viewOpen}
-        >
-          <span className="text-muted-light dark:text-muted-dark tabular-nums">{current.count}</span>
-          <span>{current.label}</span>
-          <ChevronDown className="h-3 w-3 opacity-60" />
-        </button>
-        {viewOpen && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={() => setViewOpen(false)} />
-            <div className="absolute start-0 mt-1 w-52 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1.5 z-20">
-              {items.filter((i) => i.group === 'folder').map((i) => (
-                <ViewOption key={i.key} item={i} active={view === i.key} onClick={() => { setView(i.key); setViewOpen(false); }} />
-              ))}
-              <div className="h-px bg-border-light dark:bg-border-dark my-1" />
-              {items.filter((i) => i.group === 'status').map((i) => (
-                <ViewOption key={i.key} item={i} active={view === i.key} onClick={() => { setView(i.key); setViewOpen(false); }} />
-              ))}
-            </div>
-          </>
-        )}
+      <div className="flex items-center gap-1.5">
+        {/* View pill */}
+        <div className="relative">
+          <button
+            onClick={() => setViewOpen((v) => !v)}
+            className="h-7 ps-2.5 pe-2 rounded-full bg-bg-light dark:bg-bg-dark text-[12px] font-semibold flex items-center gap-1.5 hover:bg-border-light dark:hover:bg-border-dark transition-colors"
+            aria-haspopup="menu"
+            aria-expanded={viewOpen}
+          >
+            <span className="text-muted-light dark:text-muted-dark tabular-nums">{currentView.count}</span>
+            <span>{currentView.label}</span>
+            <ChevronDown className="h-3 w-3 opacity-60" />
+          </button>
+          {viewOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setViewOpen(false)} />
+              <div className="absolute start-0 mt-1 w-48 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1.5 z-20">
+                {viewItems.map((i) => (
+                  <ViewOption key={i.key} item={i} active={view === i.key} onClick={() => { setView(i.key); setViewOpen(false); }} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Status pill */}
+        <div className="relative">
+          <button
+            onClick={() => setStatusOpen((v) => !v)}
+            className={cn(
+              'h-7 ps-2.5 pe-2 rounded-full text-[12px] font-semibold flex items-center gap-1.5 transition-colors',
+              selectedStatus
+                ? 'bg-primary/10 text-primary hover:bg-primary/20'
+                : 'bg-bg-light dark:bg-bg-dark hover:bg-border-light dark:hover:bg-border-dark'
+            )}
+            aria-haspopup="menu"
+            aria-expanded={statusOpen}
+          >
+            <span className="flex-shrink-0">{currentStatus.icon}</span>
+            <span>{currentStatus.label}</span>
+            <ChevronDown className="h-3 w-3 opacity-60" />
+          </button>
+          {statusOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setStatusOpen(false)} />
+              <div className="absolute start-0 mt-1 w-48 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1.5 z-20">
+                {statusItems.map((i) => (
+                  <button
+                    key={i.key ?? 'all'}
+                    onClick={() => { setSelectedStatus(i.key); setStatusOpen(false); }}
+                    className={cn(
+                      'w-full flex items-center gap-2 px-3 py-2 text-small text-start hover:bg-bg-light dark:hover:bg-bg-dark transition-colors',
+                      selectedStatus === i.key && 'font-semibold'
+                    )}
+                  >
+                    <span className="flex-shrink-0">{i.icon}</span>
+                    <span className="truncate">{i.label}</span>
+                    {i.count > 0 && (
+                      <span className="text-[11px] font-medium text-muted-light dark:text-muted-dark tabular-nums">
+                        {i.count}
+                      </span>
+                    )}
+                    <span className="flex-1" />
+                    {selectedStatus === i.key && <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Sort pill */}
