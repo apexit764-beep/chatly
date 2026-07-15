@@ -100,11 +100,11 @@ function FragmentRow({
           >
             <div
               className={cn(
-                'h-7 rounded-md transition-all cursor-pointer',
+                'h-7 rounded-md transition-all duration-150 cursor-pointer',
                 `heat-${b}`,
-                isActive && 'ring-2 ring-primary/50 scale-105'
+                isActive && 'ring-1 ring-primary/40'
               )}
-              style={{ opacity: dimmed ? 0.35 : 1 }}
+              style={{ opacity: dimmed ? 0.5 : 1 }}
             />
             {isActive && (
               <div className="absolute -top-9 left-1/2 -translate-x-1/2 z-10 bg-[#1e1e2e]/92 text-white text-[11px] font-medium px-2.5 py-1 rounded-md whitespace-nowrap pointer-events-none shadow-lg">
