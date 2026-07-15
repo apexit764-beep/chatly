@@ -123,6 +123,8 @@ export default function Inbox(): JSX.Element {
       .filter((c) => {
         if (view === 'mine') return c.assignedTo === currentUserId && c.status !== 'closed';
         if (view === 'unassigned') return c.assignedTo === null;
+        if (view === 'new') return c.status === 'new';
+        if (view === 'pending') return c.status === 'pending';
         if (view === 'closed') return c.status === 'closed';
         if (view === 'vip') {
           const contact = contacts.find((x) => x.id === c.contactId);
@@ -388,6 +390,8 @@ export default function Inbox(): JSX.Element {
             counts={{
               mine: conversations.filter((c) => c.assignedTo === currentUserId && c.status !== 'closed').length,
               unassigned: conversations.filter((c) => c.assignedTo === null).length,
+              new: conversations.filter((c) => c.status === 'new').length,
+              pending: conversations.filter((c) => c.status === 'pending').length,
               closed: conversations.filter((c) => c.status === 'closed').length,
               all: conversations.length,
               starred: conversations.filter((c) => bookmarkedConvIds.has(c.id)).length,
@@ -2046,7 +2050,7 @@ function InboxFilters({
 }: {
   view: InboxView;
   setView: (v: InboxView) => void;
-  counts: { mine: number; unassigned: number; closed: number; all: number; starred: number };
+  counts: { mine: number; unassigned: number; new: number; pending: number; closed: number; all: number; starred: number };
 }): JSX.Element {
   const [viewOpen, setViewOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
@@ -2058,6 +2062,8 @@ function InboxFilters({
     { key: 'mine', label: 'صندوقي', count: counts.mine, icon: <InboxIcon className="h-4 w-4 text-primary" strokeWidth={2} />, group: 'folder' },
     { key: 'unassigned', label: 'غير مسندة', count: counts.unassigned, icon: <UserX className="h-4 w-4 text-warning" strokeWidth={2} />, group: 'folder' },
     { key: 'starred', label: 'مميزة', count: counts.starred, icon: <Star className="h-4 w-4 text-warning" strokeWidth={2} />, group: 'folder' },
+    { key: 'new', label: 'جديدة', count: counts.new, icon: <Sparkles className="h-4 w-4 text-primary" strokeWidth={2} />, group: 'status' },
+    { key: 'pending', label: 'قيد المعالجة', count: counts.pending, icon: <ClockIcon className="h-4 w-4 text-warning" strokeWidth={2} />, group: 'status' },
     { key: 'closed', label: 'مغلقة', count: counts.closed, icon: <CheckCircle2 className="h-4 w-4 text-success" strokeWidth={2} />, group: 'status' },
   ];
   const current = items.find((i) => i.key === view) ?? items[0];

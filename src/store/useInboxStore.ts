@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type InboxView = 'mine' | 'unassigned' | 'closed' | 'all' | 'vip' | 'today' | 'starred';
+export type InboxView = 'mine' | 'unassigned' | 'new' | 'pending' | 'closed' | 'all' | 'vip' | 'today' | 'starred';
 
 interface InboxState {
   view: InboxView;
