@@ -195,6 +195,12 @@ export interface Message {
   sender?: MessageSender;
   /** ISO timestamp of last edit — undefined when message was never edited */
   editedAt?: string;
+  /** AI transcription of a voice message */
+  transcription?: string;
+  /** true while transcription is in progress */
+  transcribing?: boolean;
+  /** Voice message recorded as an internal note */
+  isInternalNote?: boolean;
 }
 
 export interface Conversation {

@@ -17,6 +17,7 @@ import type {
   WidgetConfig,
 } from '@/types';
 import { defaultRoles } from './rolesData';
+import { useAIStore } from './useAIStore';
 import {
   agents as initialAgents,
   campaigns as initialCampaigns,
@@ -129,7 +130,10 @@ interface DataState {
 
   // Live simulator helpers
   simulateIncomingMessage: (conversationId: string, content: string) => void;
+  simulateIncomingVoice: (conversationId: string, audioUrl: string, duration: string) => void;
   simulateAIReply: (conversationId: string, content: string) => void;
+  updateMessageTranscription: (conversationId: string, messageId: string, transcription: string) => void;
+  setMessageTranscribing: (conversationId: string, messageId: string, transcribing: boolean) => void;
 
   // Contact categories
   contactCategories: { id: string; name: string; color: string }[];
@@ -147,7 +151,7 @@ interface DataState {
   bookmarkedConvIds: Set<string>;
 
   // Attachments
-  sendAttachment: (conversationId: string, type: 'image' | 'document', name: string, dataUrl?: string) => void;
+  sendAttachment: (conversationId: string, type: 'image' | 'document' | 'voice', name: string, dataUrl?: string, isNote?: boolean) => void;
 }
 
 const newId = (): string => Math.random().toString(36).slice(2, 10);
@@ -523,19 +527,62 @@ export const useDataStore = create<DataState>((set) => ({
         read: false,
         delivered: true,
       };
+      const aiSettings = useAIStore.getState().settings;
       return {
-        conversations: state.conversations.map((c) =>
-          c.id === conversationId
-            ? {
-                ...c,
-                messages: [...c.messages, message],
-                lastMessage: content,
-                lastMessageAt: message.timestamp,
-                unreadCount: c.unreadCount + 1,
-                status: c.status === 'closed' ? 'new' : c.status,
-              }
-            : c
-        ),
+        conversations: state.conversations.map((c) => {
+          if (c.id !== conversationId) return c;
+          const wasClosed = c.status === 'closed';
+          const aiEnabledOnChannel =
+            aiSettings.enabled && aiSettings.enabledChannels.includes(c.channelId);
+          return {
+            ...c,
+            messages: [...c.messages, message],
+            lastMessage: content,
+            lastMessageAt: message.timestamp,
+            unreadCount: c.unreadCount + 1,
+            status: wasClosed ? 'new' as const : c.status,
+            ...(wasClosed && aiEnabledOnChannel
+              ? { aiActive: true, aiHandedOff: false, assignedTo: null }
+              : {}),
+          };
+        }),
+      };
+    }),
+
+  simulateIncomingVoice: (conversationId, audioUrl, duration) =>
+    set((state) => {
+      const msgId = newId();
+      const message: Message = {
+        id: msgId,
+        conversationId,
+        direction: 'in',
+        type: 'voice',
+        content: duration,
+        mediaUrl: audioUrl,
+        timestamp: new Date().toISOString(),
+        read: false,
+        delivered: true,
+        transcribing: true,
+      };
+      const aiSettings = useAIStore.getState().settings;
+      return {
+        conversations: state.conversations.map((c) => {
+          if (c.id !== conversationId) return c;
+          const wasClosed = c.status === 'closed';
+          const aiEnabledOnChannel =
+            aiSettings.enabled && aiSettings.enabledChannels.includes(c.channelId);
+          return {
+            ...c,
+            messages: [...c.messages, message],
+            lastMessage: '🎤 رسالة صوتية',
+            lastMessageAt: message.timestamp,
+            unreadCount: c.unreadCount + 1,
+            status: wasClosed ? 'new' as const : c.status,
+            ...(wasClosed && aiEnabledOnChannel
+              ? { aiActive: true, aiHandedOff: false, assignedTo: null }
+              : {}),
+          };
+        }),
       };
     }),
 
@@ -565,6 +612,36 @@ export const useDataStore = create<DataState>((set) => ({
         ),
       };
     }),
+
+  updateMessageTranscription: (conversationId, messageId, transcription) =>
+    set((state) => ({
+      conversations: state.conversations.map((c) =>
+        c.id === conversationId
+          ? {
+              ...c,
+              messages: c.messages.map((m) =>
+                m.id === messageId
+                  ? { ...m, transcription, transcribing: false }
+                  : m
+              ),
+            }
+          : c
+      ),
+    })),
+
+  setMessageTranscribing: (conversationId, messageId, transcribing) =>
+    set((state) => ({
+      conversations: state.conversations.map((c) =>
+        c.id === conversationId
+          ? {
+              ...c,
+              messages: c.messages.map((m) =>
+                m.id === messageId ? { ...m, transcribing } : m
+              ),
+            }
+          : c
+      ),
+    })),
 
   // Contact categories
   addContactCategory: (cat) =>
@@ -621,7 +698,7 @@ export const useDataStore = create<DataState>((set) => ({
     }),
 
   // Attachments
-  sendAttachment: (conversationId, type, name) =>
+  sendAttachment: (conversationId, type, name, dataUrl, isNote) =>
     set((state) => {
       const message: Message = {
         id: newId(),
@@ -629,17 +706,24 @@ export const useDataStore = create<DataState>((set) => ({
         direction: 'out',
         type,
         content: name,
+        mediaUrl: dataUrl,
         timestamp: new Date().toISOString(),
         read: true,
         delivered: true,
+        ...(isNote ? { isInternalNote: true } : {}),
       };
+      const label =
+        isNote && type === 'voice' ? '🎤 ملاحظة صوتية'
+        : type === 'voice' ? '🎤 رسالة صوتية'
+        : type === 'image' ? `📷 صورة: ${name}`
+        : `📎 ملف: ${name}`;
       return {
         conversations: state.conversations.map((c) =>
           c.id === conversationId
             ? {
                 ...c,
                 messages: [...c.messages, message],
-                lastMessage: type === 'image' ? `📷 صورة: ${name}` : `📎 ملف: ${name}`,
+                lastMessage: label,
                 lastMessageAt: message.timestamp,
               }
             : c

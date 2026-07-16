@@ -42,6 +42,10 @@ import {
   RotateCcw,
   Lock,
   Star,
+  Mic,
+  Square,
+  Play,
+  Pause,
 } from 'lucide-react';
 import {
   Avatar,
@@ -60,7 +64,9 @@ import { useUIStore } from '@/store/useUIStore';
 import { useInboxStore } from '@/store/useInboxStore';
 import { useRatingStore } from '@/store/useRatingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useAIStore } from '@/store/useAIStore';
 import { contactTypeLabel } from '@/utils/labels';
+import { transcribeAudio, getAIResponse } from '@/utils/ai';
 import { formatPhone, formatTime, timeAgo } from '@/utils/format';
 import { downloadCsv } from '@/utils/csv';
 import { cn } from '@/utils/cn';
@@ -113,6 +119,11 @@ export default function Inbox(): JSX.Element {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const filtered = useMemo(() => {
     return conversations
@@ -167,6 +178,51 @@ export default function Inbox(): JSX.Element {
   useEffect(() => {
     if (selectedId) markRead(selectedId);
   }, [selectedId, markRead]);
+
+  const aiSettings = useAIStore((s) => s.settings);
+  const updateTranscription = useDataStore((s) => s.updateMessageTranscription);
+  const setTranscribing = useDataStore((s) => s.setMessageTranscribing);
+  const simulateAIReply = useDataStore((s) => s.simulateAIReply);
+  const processedVoiceRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    conversations.forEach((conv) => {
+      const aiOnChannel = aiSettings.enabled && aiSettings.enabledChannels.includes(conv.channelId);
+      conv.messages.forEach((msg) => {
+        if (
+          msg.type === 'voice' &&
+          msg.direction === 'in' &&
+          msg.transcribing &&
+          msg.mediaUrl &&
+          !processedVoiceRef.current.has(msg.id)
+        ) {
+          processedVoiceRef.current.add(msg.id);
+          (async () => {
+            try {
+              const res = await fetch(msg.mediaUrl!);
+              const blob = await res.blob();
+              const transcription = await transcribeAudio(blob, aiSettings);
+              updateTranscription(conv.id, msg.id, transcription);
+
+              if (aiOnChannel && (conv.aiActive || aiSettings.enabled)) {
+                const history = conv.messages
+                  .filter((m) => m.type === 'text' || m.transcription)
+                  .slice(-10)
+                  .map((m) => ({
+                    role: (m.direction === 'in' ? 'user' : 'assistant') as 'user' | 'assistant',
+                    content: m.transcription || m.content,
+                  }));
+                const reply = await getAIResponse(transcription, aiSettings, history);
+                simulateAIReply(conv.id, reply);
+              }
+            } catch {
+              setTranscribing(conv.id, msg.id, false);
+            }
+          })();
+        }
+      });
+    });
+  }, [conversations, aiSettings, updateTranscription, setTranscribing, simulateAIReply]);
 
   // ESC exits focus mode
   useEffect(() => {
@@ -294,6 +350,66 @@ export default function Inbox(): JSX.Element {
     sendAttachment(selected.id, kind, file.name);
     showToast(`تم إرفاق: ${file.name}`, 'success');
     e.target.value = '';
+  };
+
+  const startRecording = async (): Promise<void> => {
+    if (!selected) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      recordingChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordingChunksRef.current.push(e.data);
+      };
+
+      const isNoteMode = inputMode === 'note';
+      mediaRecorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(recordingChunksRef.current, { type: 'audio/webm' });
+        const url = URL.createObjectURL(blob);
+        const duration = recordingTime;
+        const mins = Math.floor(duration / 60);
+        const secs = duration % 60;
+        const label = `${mins}:${secs.toString().padStart(2, '0')}`;
+        sendAttachment(selected!.id, 'voice', label, url, isNoteMode);
+        showToast(isNoteMode ? 'تم حفظ الملاحظة الصوتية' : 'تم إرسال الرسالة الصوتية', 'success');
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimerRef.current = setInterval(() => setRecordingTime((t) => t + 1), 1000);
+    } catch {
+      showToast('لم يتم السماح بالوصول إلى الميكروفون', 'error');
+    }
+  };
+
+  const stopRecording = (): void => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+  };
+
+  const cancelRecording = (): void => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.ondataavailable = null;
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
+    }
+    setIsRecording(false);
+    setRecordingTime(0);
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
   };
 
   return (
@@ -767,6 +883,35 @@ export default function Inbox(): JSX.Element {
                 );
               })()}
 
+              {isRecording ? (
+                <div className="px-4 py-6 flex flex-col items-center gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="h-3 w-3 rounded-full bg-danger animate-pulse" />
+                    <span className="text-danger font-semibold text-lg tabular-nums">
+                      {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                    </span>
+                    <span className="text-muted-light dark:text-muted-dark text-small">جاري التسجيل...</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={cancelRecording}
+                      className="h-10 px-5 rounded-full text-small font-medium border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex items-center gap-2"
+                    >
+                      <X className="h-4 w-4" />
+                      إلغاء
+                    </button>
+                    <button
+                      onClick={stopRecording}
+                      className="h-10 px-5 rounded-full text-small font-medium bg-danger hover:bg-danger/90 text-white transition-colors flex items-center gap-2"
+                      style={{ color: '#fff' }}
+                    >
+                      <Square className="h-3.5 w-3.5 fill-current" />
+                      إرسال التسجيل
+                    </button>
+                  </div>
+                </div>
+              ) : (
+              <>
               {/* Textarea */}
               <div className="px-4 pt-3">
                 <textarea
@@ -811,6 +956,11 @@ export default function Inbox(): JSX.Element {
                     label="مرفق"
                     onClick={() => fileInputRef.current?.click()}
                   />
+                  <ToolBtn
+                    icon={<Mic className="h-[18px] w-[18px]" />}
+                    label="تسجيل صوتي"
+                    onClick={startRecording}
+                  />
                   {showEmoji && (
                     <EmojiPicker
                       onPick={(emoji) => { setDraft((d) => d + emoji); }}
@@ -842,6 +992,8 @@ export default function Inbox(): JSX.Element {
                   </button>
                 </div>
               </div>
+              </>
+              )}
             </div>
             )}
           </>
@@ -2397,7 +2549,7 @@ function MessageBubble({
   isEditing: boolean;
 }): JSX.Element {
   const isOut = msg.direction === 'out';
-  const isNote = msg.type === 'note';
+  const isNote = msg.type === 'note' || msg.isInternalNote === true;
   const isAI = isOut && msg.sender === 'ai';
   const name = isOut ? (isAI ? 'المساعد الذكي' : agentName) : contactName;
   const dateLabel = timeAgo(msg.timestamp);
@@ -2436,7 +2588,9 @@ function MessageBubble({
               isEditing && 'ring-2 ring-primary/60 ring-offset-2 ring-offset-white dark:ring-offset-surface-dark'
             )}
           >
-            {msg.type === 'image' ? (
+            {msg.type === 'voice' ? (
+              <VoicePlayer src={msg.mediaUrl} duration={msg.content} transcription={msg.transcription} transcribing={msg.transcribing} />
+            ) : msg.type === 'image' ? (
               <div className="flex items-center gap-2"><ImageIcon className="h-4 w-4" /><span>{msg.content}</span></div>
             ) : msg.type === 'document' ? (
               <div className="flex items-center gap-2"><FileText className="h-4 w-4" /><span>{msg.content}</span></div>
@@ -2472,6 +2626,70 @@ function MessageBubble({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function VoicePlayer({ src, duration, transcription, transcribing }: { src?: string; duration: string; transcription?: string; transcribing?: boolean }): JSX.Element {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onTime = () => {
+      if (audio.duration && isFinite(audio.duration)) setProgress((audio.currentTime / audio.duration) * 100);
+    };
+    const onEnd = () => { setPlaying(false); setProgress(0); };
+    audio.addEventListener('timeupdate', onTime);
+    audio.addEventListener('ended', onEnd);
+    return () => { audio.removeEventListener('timeupdate', onTime); audio.removeEventListener('ended', onEnd); };
+  }, []);
+
+  const toggle = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playing) { audio.pause(); setPlaying(false); }
+    else { audio.play(); setPlaying(true); }
+  };
+
+  return (
+    <div className="flex flex-col gap-2 min-w-[200px]">
+      <div className="flex items-center gap-3">
+        {src && <audio ref={audioRef} src={src} preload="metadata" />}
+        <button
+          type="button"
+          onClick={toggle}
+          className="h-8 w-8 rounded-full bg-primary/15 dark:bg-primary/25 flex items-center justify-center text-primary hover:bg-primary/25 dark:hover:bg-primary/35 transition-colors flex-shrink-0"
+        >
+          {playing ? <Pause className="h-3.5 w-3.5 fill-current" /> : <Play className="h-3.5 w-3.5 fill-current ms-0.5" />}
+        </button>
+        <div className="flex-1 flex flex-col gap-1">
+          <div className="h-1.5 rounded-full bg-border-light dark:bg-border-dark overflow-hidden">
+            <div className="h-full bg-primary rounded-full transition-all duration-200" style={{ width: `${progress}%` }} />
+          </div>
+          <span className="text-[11px] text-muted-light dark:text-muted-dark tabular-nums flex items-center gap-1">
+            <Mic className="h-3 w-3" />
+            {duration}
+          </span>
+        </div>
+      </div>
+      {transcribing && (
+        <div className="flex items-center gap-1.5 text-[11px] text-violet-600 dark:text-violet-400">
+          <Sparkles className="h-3 w-3 animate-pulse" />
+          <span>جاري تحويل الصوت إلى نص...</span>
+        </div>
+      )}
+      {transcription && !transcribing && (
+        <div className="bg-violet-50 dark:bg-violet-950/30 border border-violet-200/50 dark:border-violet-800/30 rounded-lg px-2.5 py-1.5 text-[12px] leading-relaxed">
+          <div className="flex items-center gap-1 text-violet-600 dark:text-violet-400 text-[10px] font-medium mb-0.5">
+            <Sparkles className="h-2.5 w-2.5" />
+            نص مُحوّل بالذكاء الاصطناعي
+          </div>
+          <p className="text-current">{transcription}</p>
+        </div>
+      )}
     </div>
   );
 }

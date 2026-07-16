@@ -275,6 +275,7 @@ export const conversations: Conversation[] = [
       { id: 'm3', conversationId: 'conv1', direction: 'in', type: 'text', content: 'أبحث عن شقة للإيجار في مسقط بميزانية 350 ر.ع', timestamp: nowMinus(22), read: true, delivered: true },
       { id: 'm4', conversationId: 'conv1', direction: 'out', type: 'text', content: 'لدينا عدة خيارات متاحة في الخوض والسيب. هل تفضل غرفة واحدة أم غرفتين؟', timestamp: nowMinus(20), read: true, delivered: true, sender: 'ai' },
       { id: 'm5', conversationId: 'conv1', direction: 'in', type: 'text', content: 'غرفتين من فضلك', timestamp: nowMinus(19), read: true, delivered: true },
+      { id: 'm5v', conversationId: 'conv1', direction: 'in', type: 'voice', content: '0:12', timestamp: nowMinus(17), read: true, delivered: true },
       { id: 'm6', conversationId: 'conv1', direction: 'in', type: 'text', content: 'هل الشقة في الخوض ما زالت متاحة؟', timestamp: nowMinus(15), read: false, delivered: true },
     ],
   },
@@ -285,7 +286,8 @@ export const conversations: Conversation[] = [
     lastMessageAt: nowMinus(8), unreadCount: 1, notes: [], activityLog: [],
     messages: [
       { id: 'm10', conversationId: 'conv2', direction: 'in', type: 'text', content: 'مرحباً سالم', timestamp: nowMinus(10), read: true, delivered: true },
-      { id: 'm11', conversationId: 'conv2', direction: 'in', type: 'text', content: 'أريد عرض الفيلا مع معاينة هذا الأسبوع', timestamp: nowMinus(8), read: false, delivered: true },
+      { id: 'm11', conversationId: 'conv2', direction: 'in', type: 'voice', content: '0:23', timestamp: nowMinus(9), read: false, delivered: true },
+      { id: 'm12', conversationId: 'conv2', direction: 'in', type: 'text', content: 'أريد عرض الفيلا مع معاينة هذا الأسبوع', timestamp: nowMinus(8), read: false, delivered: true },
     ],
   },
   {
@@ -343,6 +345,7 @@ export const conversations: Conversation[] = [
     unreadCount: 2, notes: [], activityLog: [],
     messages: [
       { id: 'm70', conversationId: 'conv8', direction: 'in', type: 'text', content: 'مساء الخير', timestamp: nowMinus(38), read: false, delivered: true },
+      { id: 'm70v', conversationId: 'conv8', direction: 'in', type: 'voice', content: '0:18', timestamp: nowMinus(36), read: false, delivered: true },
       { id: 'm71', conversationId: 'conv8', direction: 'in', type: 'text', content: 'أبحث عن تويوتا لاند كروزر', timestamp: nowMinus(35), read: false, delivered: true },
     ],
   },
