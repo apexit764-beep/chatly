@@ -2634,8 +2634,14 @@ const WAVE_BARS = [3,5,8,4,7,10,6,9,4,7,5,8,11,6,3,7,9,5,8,4,6,10,7,5,3,8,6,9,4,
 
 function VoicePlayer({ src, duration, transcription, transcribing }: { src?: string; duration: string; transcription?: string; transcribing?: boolean }): JSX.Element {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const simRef = useRef<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  const parseDuration = (d: string) => {
+    const parts = d.split(':').map(Number);
+    return parts.length === 2 ? parts[0] * 60 + parts[1] : parts[0] || 10;
+  };
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -2649,11 +2655,34 @@ function VoicePlayer({ src, duration, transcription, transcribing }: { src?: str
     return () => { audio.removeEventListener('timeupdate', onTime); audio.removeEventListener('ended', onEnd); };
   }, []);
 
+  useEffect(() => () => { if (simRef.current) cancelAnimationFrame(simRef.current); }, []);
+
   const toggle = () => {
-    const audio = audioRef.current;
-    if (!audio || !src) return;
-    if (playing) { audio.pause(); setPlaying(false); }
-    else { audio.play().catch(() => setPlaying(false)); setPlaying(true); }
+    if (src) {
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (playing) { audio.pause(); setPlaying(false); }
+      else { audio.play().catch(() => setPlaying(false)); setPlaying(true); }
+    } else {
+      if (playing) {
+        if (simRef.current) cancelAnimationFrame(simRef.current);
+        simRef.current = null;
+        setPlaying(false);
+      } else {
+        setPlaying(true);
+        setProgress(0);
+        const totalMs = parseDuration(duration) * 1000;
+        const start = performance.now();
+        const tick = (now: number) => {
+          const elapsed = now - start;
+          const pct = Math.min((elapsed / totalMs) * 100, 100);
+          setProgress(pct);
+          if (pct < 100) simRef.current = requestAnimationFrame(tick);
+          else { setPlaying(false); setProgress(0); simRef.current = null; }
+        };
+        simRef.current = requestAnimationFrame(tick);
+      }
+    }
   };
 
   const barCount = WAVE_BARS.length;
@@ -2666,12 +2695,9 @@ function VoicePlayer({ src, duration, transcription, transcribing }: { src?: str
         <button
           type="button"
           onClick={toggle}
-          disabled={!src}
           className={cn(
             'h-9 w-9 rounded-full flex items-center justify-center transition-colors flex-shrink-0',
-            src
-              ? 'bg-primary text-white hover:bg-primary-dark shadow-sm'
-              : 'bg-muted-light/20 dark:bg-muted-dark/20 text-muted-light dark:text-muted-dark cursor-not-allowed',
+            'bg-primary text-white hover:bg-primary-dark shadow-sm',
           )}
         >
           {playing ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current ms-0.5" />}
