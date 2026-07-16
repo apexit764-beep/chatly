@@ -196,13 +196,13 @@ export default function Billing(): JSX.Element {
           {/* Toolbar — search + status filter pills */}
           <div className="mt-3 flex items-center gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[200px] max-w-md">
-              <Search className="h-3.5 w-3.5 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark pointer-events-none" />
+              <Search className="h-4 w-4 absolute end-3.5 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark pointer-events-none" />
               <input
                 type="text"
                 value={invSearch}
                 onChange={(e) => setInvSearch(e.target.value)}
                 placeholder="ابحث برقم الفاتورة أو البيان..."
-                className="w-full h-9 ps-3 pe-9 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                className="w-full h-11 ps-4 pe-10 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
               />
             </div>
             <div className="flex items-center gap-1.5 overflow-x-auto">
@@ -392,7 +392,7 @@ function FilterPill({
     <button
       onClick={onClick}
       className={cn(
-        'h-7 px-3 rounded-full text-[11px] font-medium whitespace-nowrap transition-colors',
+        'h-9 px-4 rounded-full text-small font-medium whitespace-nowrap transition-colors',
         active
           ? 'bg-primary text-white'
           : 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark hover:bg-primary/10 hover:text-primary'

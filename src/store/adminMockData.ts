@@ -420,11 +420,12 @@ export const invoices: Invoice[] = clients
   .filter((c) => c.planId)
   .flatMap((c) => {
     const list: Invoice[] = [];
-    const monthsHistory = Math.min(4, Math.floor((Date.now() - Date.parse(c.joinedAt)) / (30 * 86400000)));
+    const monthsHistory = Math.min(8, Math.floor((Date.now() - Date.parse(c.joinedAt)) / (30 * 86400000)));
     for (let m = monthsHistory; m > 0; m -= 1) {
       const hash = c.id.charCodeAt(7) + m;
       const status: Invoice['status'] =
         c.status === 'past_due' && m === 1 ? 'failed'
+        : hash % 7 === 0 ? 'failed'
         : hash % 5 === 0 ? 'pending'
         : 'paid';
       list.push(makeInvoice(c, m, status));
