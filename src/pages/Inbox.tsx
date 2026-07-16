@@ -2630,6 +2630,8 @@ function MessageBubble({
   );
 }
 
+const WAVE_BARS = [3,5,8,4,7,10,6,9,4,7,5,8,11,6,3,7,9,5,8,4,6,10,7,5,3,8,6,9,4,7];
+
 function VoicePlayer({ src, duration, transcription, transcribing }: { src?: string; duration: string; transcription?: string; transcribing?: boolean }): JSX.Element {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -2649,25 +2651,43 @@ function VoicePlayer({ src, duration, transcription, transcribing }: { src?: str
 
   const toggle = () => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !src) return;
     if (playing) { audio.pause(); setPlaying(false); }
-    else { audio.play(); setPlaying(true); }
+    else { audio.play().catch(() => setPlaying(false)); setPlaying(true); }
   };
 
+  const barCount = WAVE_BARS.length;
+  const playedBars = Math.round((progress / 100) * barCount);
+
   return (
-    <div className="flex flex-col gap-2 min-w-[200px]">
+    <div className="flex flex-col gap-2 min-w-[220px]">
       <div className="flex items-center gap-3">
         {src && <audio ref={audioRef} src={src} preload="metadata" />}
         <button
           type="button"
           onClick={toggle}
-          className="h-8 w-8 rounded-full bg-primary/15 dark:bg-primary/25 flex items-center justify-center text-primary hover:bg-primary/25 dark:hover:bg-primary/35 transition-colors flex-shrink-0"
+          disabled={!src}
+          className={cn(
+            'h-9 w-9 rounded-full flex items-center justify-center transition-colors flex-shrink-0',
+            src
+              ? 'bg-primary text-white hover:bg-primary-dark shadow-sm'
+              : 'bg-muted-light/20 dark:bg-muted-dark/20 text-muted-light dark:text-muted-dark cursor-not-allowed',
+          )}
         >
-          {playing ? <Pause className="h-3.5 w-3.5 fill-current" /> : <Play className="h-3.5 w-3.5 fill-current ms-0.5" />}
+          {playing ? <Pause className="h-4 w-4 fill-current" /> : <Play className="h-4 w-4 fill-current ms-0.5" />}
         </button>
-        <div className="flex-1 flex flex-col gap-1">
-          <div className="h-1.5 rounded-full bg-border-light dark:bg-border-dark overflow-hidden">
-            <div className="h-full bg-primary rounded-full transition-all duration-200" style={{ width: `${progress}%` }} />
+        <div className="flex-1 flex flex-col gap-1.5">
+          <div className="flex items-end gap-[2px] h-[18px]">
+            {WAVE_BARS.map((h, i) => (
+              <div
+                key={i}
+                className={cn(
+                  'w-[3px] rounded-full transition-colors duration-150',
+                  i < playedBars ? 'bg-primary' : 'bg-muted-light/30 dark:bg-muted-dark/30',
+                )}
+                style={{ height: `${h * 1.6}px` }}
+              />
+            ))}
           </div>
           <span className="text-[11px] text-muted-light dark:text-muted-dark tabular-nums flex items-center gap-1">
             <Mic className="h-3 w-3" />
