@@ -64,6 +64,7 @@ export default function ChannelDetail(): JSX.Element {
   const [form, setForm] = useState({ name: '', identifier: '', countryCode: '+968', departmentId: '' });
   const [creds, setCreds] = useState<Record<string, string>>({});
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const [qrOpen, setQrOpen] = useState(false);
   const [whatsappWizardOpen, setWhatsappWizardOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('overview');
@@ -331,9 +332,13 @@ export default function ChannelDetail(): JSX.Element {
                       </div>
                       <div className="relative">
                         <button
-                          onClick={() =>
-                            setOpenMenu(openMenu === channel.id ? null : channel.id)
-                          }
+                          onClick={(e) => {
+                            if (openMenu === channel.id) { setOpenMenu(null); return; }
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const isRtl = document.documentElement.dir === 'rtl';
+                            setMenuPos({ top: rect.bottom + 4, left: isRtl ? rect.left : rect.right - 176 });
+                            setOpenMenu(channel.id);
+                          }}
                           className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center text-muted-light dark:text-muted-dark"
                           aria-label={t('المزيد')}
                         >
@@ -345,7 +350,7 @@ export default function ChannelDetail(): JSX.Element {
                               className="fixed inset-0 z-10"
                               onClick={() => setOpenMenu(null)}
                             />
-                            <div className="absolute end-0 mt-1 w-44 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1 z-20">
+                            <div className="fixed w-44 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1 z-20" style={{ top: menuPos.top, left: menuPos.left }}>
                               <MenuItem
                                 icon={<Edit2 className="h-4 w-4" />}
                                 label={t('تعديل')}

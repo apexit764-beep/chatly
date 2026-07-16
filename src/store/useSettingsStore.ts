@@ -14,6 +14,12 @@ export interface SecurityPrefs {
   sessionTimeoutMin: number;
 }
 
+export interface FooterLink {
+  id: string;
+  label: string;
+  url: string;
+}
+
 export interface GeneralPrefs {
   siteName: string;
   siteUrl: string;
@@ -27,6 +33,7 @@ export interface GeneralPrefs {
   companySize: string;
   country: string;
   phone: string;
+  footerLinks: FooterLink[];
 }
 
 export interface RatingPrefs {
@@ -66,6 +73,7 @@ const defaultState: Pick<SettingsState, 'notifications' | 'security' | 'general'
     companySize: '11-50',
     country: 'OM',
     phone: '+968 9999 0000',
+    footerLinks: [],
   },
   rating: {
     enabled: true,
