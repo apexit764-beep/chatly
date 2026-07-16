@@ -376,7 +376,7 @@ function ContactSalesModal({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="text-small font-medium mb-1 block">الاسم الكامل *</label>
+            <label className="text-small font-medium mb-1 block">الاسم الكامل <span className="text-danger ms-0.5">*</span></label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -385,7 +385,7 @@ function ContactSalesModal({
             />
           </div>
           <div>
-            <label className="text-small font-medium mb-1 block">اسم الشركة *</label>
+            <label className="text-small font-medium mb-1 block">اسم الشركة <span className="text-danger ms-0.5">*</span></label>
             <Input
               value={company}
               onChange={(e) => setCompany(e.target.value)}
@@ -397,7 +397,7 @@ function ContactSalesModal({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
-            <label className="text-small font-medium mb-1 block">البريد الإلكتروني *</label>
+            <label className="text-small font-medium mb-1 block">البريد الإلكتروني <span className="text-danger ms-0.5">*</span></label>
             <Input
               type="email"
               value={email}
@@ -408,7 +408,7 @@ function ContactSalesModal({
             />
           </div>
           <div>
-            <label className="text-small font-medium mb-1 block">رقم الجوال</label>
+            <label className="text-small font-medium mb-1 block">رقم الجوال <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
             <Input
               type="tel"
               value={phone}
@@ -420,7 +420,7 @@ function ContactSalesModal({
         </div>
 
         <div>
-          <label className="text-small font-medium mb-1 block">حجم الفريق المتوقّع</label>
+          <label className="text-small font-medium mb-1 block">حجم الفريق المتوقّع <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
           <select
             value={teamSize}
             onChange={(e) => setTeamSize(e.target.value)}
@@ -436,7 +436,7 @@ function ContactSalesModal({
         </div>
 
         <div>
-          <label className="text-small font-medium mb-1 block">احتياجاتك أو استفسارك</label>
+          <label className="text-small font-medium mb-1 block">احتياجاتك أو استفسارك <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
           <Textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -596,7 +596,7 @@ function CheckoutFlow({ plan, country, cycle, onBack, onProcessing, onSuccess, o
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark">رقم البطاقة</label>
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark">رقم البطاقة <span className="text-danger ms-0.5">*</span></label>
             <div className="relative">
               <input
                 type="text"

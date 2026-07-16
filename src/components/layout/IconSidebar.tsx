@@ -47,6 +47,7 @@ const mainNav: NavItem[] = [
   { to: '/saved-replies', label: 'الردود السريعة', icon: MessageSquareQuote, group: 'manage' },
   { to: '/tags', label: 'الوسوم', icon: Tag, group: 'manage' },
   { to: '/ai-settings', label: 'إعدادات الذكاء الاصطناعي', icon: Sparkles, group: 'manage' },
+  { to: '/knowledge-base', label: 'قاعدة المعرفة', icon: BookOpen, group: 'manage' },
   { to: '/feedback', label: 'الشكاوى والاقتراحات', icon: MessageSquareWarning, group: 'system' },
   { to: '/rating', label: 'تقييمات العملاء', icon: Star, group: 'system' },
   { to: '/billing', label: 'الباقات والاشتراك', icon: CreditCard, group: 'system' },

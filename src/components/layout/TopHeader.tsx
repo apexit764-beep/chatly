@@ -15,7 +15,6 @@ import {
   MessageSquare,
   Megaphone,
   UserPlus,
-  BookOpen,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useDataStore } from '@/store/useDataStore';
@@ -137,14 +136,6 @@ export function TopHeader(): JSX.Element {
             />
           )}
         </div>
-        <NavLink
-          to="/knowledge-base"
-          title={t('قاعدة المعرفة')}
-          aria-label={t('قاعدة المعرفة')}
-          className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
-        >
-          <BookOpen className="h-[18px] w-[18px]" />
-        </NavLink>
         <button
           onClick={toggleTheme}
           title={theme === 'dark' ? t('الوضع الفاتح') : t('الوضع الداكن')}

@@ -24,7 +24,7 @@ export function Heatmap({ rows, cols, values }: HeatmapProps): JSX.Element {
 
   return (
     <div className="w-full overflow-x-auto">
-      <div className="min-w-[640px] max-w-4xl">
+      <div className="min-w-[640px]">
         <div className="grid" style={{ gridTemplateColumns: `48px repeat(${cols.length}, minmax(0,1fr))`, gap: 3 }}>
           <div />
           {cols.map((c, ci) => (

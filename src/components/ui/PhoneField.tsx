@@ -36,7 +36,7 @@ export interface PhoneFieldProps {
   phone: string;
   onCountryCodeChange: (code: string) => void;
   onPhoneChange: (phone: string) => void;
-  label?: string;
+  label?: React.ReactNode;
   error?: string;
   placeholder?: string;
   countries?: CountryOption[];

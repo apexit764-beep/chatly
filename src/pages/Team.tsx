@@ -905,7 +905,7 @@ export default function Team(): JSX.Element {
             </div>
           )}
           <Input
-            label={t('البريد الإلكتروني')}
+            label={<>{t('البريد الإلكتروني')}<span className="text-danger ms-0.5">*</span></>}
             type="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -913,13 +913,13 @@ export default function Team(): JSX.Element {
             placeholder="employee@company.com"
           />
           <Input
-            label={t('الاسم')}
+            label={<>{t('الاسم')}<span className="text-danger ms-0.5">*</span></>}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder={t('اسم الموظف')}
           />
           <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">{t('الدور')}</label>
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">{t('الدور')}<span className="text-danger ms-0.5">*</span></label>
             <select
               value={form.roleId}
               onChange={(e) => setForm({ ...form, roleId: e.target.value })}
@@ -934,7 +934,7 @@ export default function Team(): JSX.Element {
             </p>
           </div>
           <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">{t('الأقسام')}</label>
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">{t('الأقسام')}<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
             <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
               {departments.map((d) => {
                 const checked = form.departments.includes(d.id);
@@ -982,7 +982,7 @@ export default function Team(): JSX.Element {
               <p className="text-small font-bold">{t('إعدادات العمل')}</p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted-light dark:text-muted-dark block">{t('الحد الأقصى للمحادثات المتزامنة')}</label>
+                  <label className="text-[11px] font-medium text-muted-light dark:text-muted-dark block">{t('الحد الأقصى للمحادثات المتزامنة')}<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
                   <input
                     type="number"
                     min={0}
@@ -994,7 +994,7 @@ export default function Team(): JSX.Element {
                   <p className="text-[10px] text-muted-light dark:text-muted-dark">{t('0 = بدون حد')}</p>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted-light dark:text-muted-dark block">{t('المنطقة الزمنية')}</label>
+                  <label className="text-[11px] font-medium text-muted-light dark:text-muted-dark block">{t('المنطقة الزمنية')}<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
                   <select
                     value={form.timezone}
                     onChange={(e) => setForm({ ...form, timezone: e.target.value })}

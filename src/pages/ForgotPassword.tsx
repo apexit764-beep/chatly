@@ -113,7 +113,7 @@ export default function ForgotPassword(): JSX.Element {
               <form onSubmit={submitEmail} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-small font-semibold text-[#374151] dark:text-[#D1D5DB]">
-                    البريد الإلكتروني
+                    البريد الإلكتروني<span className="text-danger ms-0.5">*</span>
                   </label>
                   <div className="relative">
                     <Mail className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark" />

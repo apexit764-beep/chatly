@@ -270,7 +270,7 @@ export default function Feedback(): JSX.Element {
         <div className="space-y-4 pb-20">
           {/* Type selector */}
           <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">نوع التذكرة</label>
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">نوع التذكرة<span className="text-danger ms-0.5">*</span></label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -313,7 +313,7 @@ export default function Feedback(): JSX.Element {
 
           {/* Priority */}
           <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">الأولوية</label>
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">الأولوية <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
             <div className="flex gap-2">
               {(['high', 'medium', 'low'] as FeedbackPriority[]).map((p) => {
                 const info = PRIORITY_MAP[p];
@@ -344,7 +344,7 @@ export default function Feedback(): JSX.Element {
           </div>
 
           <Input
-            label="الموضوع"
+            label={<>الموضوع<span className="text-danger ms-0.5">*</span></>}
             value={form.subject}
             onChange={(e) => setForm({ ...form, subject: e.target.value })}
             placeholder="مثال: مشكلة في ربط قناة واتساب"

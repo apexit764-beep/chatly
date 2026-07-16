@@ -160,9 +160,9 @@ function MessagesPanel(): JSX.Element {
   const updateConfig = useDataStore((s) => s.updateWidgetConfig);
   return (
     <div className="space-y-5">
-      <Input label="اسم الفريق" value={config.teamName} onChange={(e) => updateConfig({ teamName: e.target.value })} placeholder="فريق Qhub" icon={<ImageIcon className="h-4 w-4" />} />
-      <Textarea label="رسالة الترحيب" value={config.welcomeMessage} onChange={(e) => updateConfig({ welcomeMessage: e.target.value })} rows={3} placeholder="مرحباً 👋 كيف يمكننا مساعدتك اليوم؟" />
-      <Input label="وقت الاستجابة المتوقع" value={config.responseTime} onChange={(e) => updateConfig({ responseTime: e.target.value })} placeholder="نرد عادةً خلال دقائق" />
+      <Input label={<>اسم الفريق<span className="text-danger ms-0.5">*</span></>} value={config.teamName} onChange={(e) => updateConfig({ teamName: e.target.value })} placeholder="فريق Qhub" icon={<ImageIcon className="h-4 w-4" />} />
+      <Textarea label={<>رسالة الترحيب<span className="text-danger ms-0.5">*</span></>} value={config.welcomeMessage} onChange={(e) => updateConfig({ welcomeMessage: e.target.value })} rows={3} placeholder="مرحباً 👋 كيف يمكننا مساعدتك اليوم؟" />
+      <Input label={<>وقت الاستجابة المتوقع<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} value={config.responseTime} onChange={(e) => updateConfig({ responseTime: e.target.value })} placeholder="نرد عادةً خلال دقائق" />
     </div>
   );
 }

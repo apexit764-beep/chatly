@@ -60,6 +60,7 @@ export default function Billing(): JSX.Element {
 
   const client = clients.find((c) => c.id === CURRENT_CLIENT_ID);
   const sub = subscriptions.find((s) => s.clientId === CURRENT_CLIENT_ID && s.status === 'active');
+  const anySub = sub ?? subscriptions.find((s) => s.clientId === CURRENT_CLIENT_ID);
   const plan = allPlans.find((p) => p.id === client?.planId);
   const country = countries.find((c) => c.code === client?.country) ?? countries[0];
   const activePlans = allPlans.filter((p) => p.active);
@@ -115,7 +116,7 @@ export default function Billing(): JSX.Element {
     navigate('/subscribe');
   };
 
-  if (!client || !plan || !sub) {
+  if (!client || !plan) {
     return (
       <div className="p-4 lg:p-6 page-fade max-w-3xl mx-auto">
         <Card className="p-10 text-center">
@@ -138,6 +139,7 @@ export default function Billing(): JSX.Element {
   return (
     <div className="p-4 lg:p-6 page-fade space-y-6">
       {/* Current plan */}
+      {sub ? (
       <Card className="p-5 bg-gradient-to-l from-primary to-primary-dark text-white border-0">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
@@ -167,6 +169,21 @@ export default function Billing(): JSX.Element {
           </div>
         </div>
       </Card>
+      ) : (
+      <Card className="p-5 text-center">
+        <div className="h-12 w-12 rounded-full bg-warning/10 text-warning flex items-center justify-center mx-auto mb-3">
+          <Calendar className="h-6 w-6" />
+        </div>
+        <h3 className="text-h2 font-bold mb-1">الاشتراك ملغى</h3>
+        <p className="text-body text-muted-light dark:text-muted-dark mb-4">
+          {anySub ? `ينتهي في ${formatDate(anySub.currentPeriodEnd)}` : 'يمكنك إعادة الاشتراك في أي وقت'}
+        </p>
+        <Link to="/subscribe" className="inline-flex items-center gap-2 h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold">
+          إعادة الاشتراك
+          <ArrowUpRight className="h-4 w-4" />
+        </Link>
+      </Card>
+      )}
 
       {/* Invoices */}
       <Card className="overflow-hidden">
@@ -192,7 +209,7 @@ export default function Billing(): JSX.Element {
               <FilterPill active={statusFilter === 'all'} onClick={() => setStatusFilter('all')}>
                 الكل ({clientInvoices.length})
               </FilterPill>
-              {(['paid', 'pending', 'failed', 'refunded'] as InvoiceStatus[]).map((s) => {
+              {(['paid', 'pending', 'failed'] as InvoiceStatus[]).map((s) => {
                 const n = clientInvoices.filter((i) => i.status === s).length;
                 if (n === 0) return null;
                 return (

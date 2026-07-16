@@ -425,7 +425,6 @@ export const invoices: Invoice[] = clients
       const hash = c.id.charCodeAt(7) + m;
       const status: Invoice['status'] =
         c.status === 'past_due' && m === 1 ? 'failed'
-        : hash % 7 === 0 ? 'refunded'
         : hash % 5 === 0 ? 'pending'
         : 'paid';
       list.push(makeInvoice(c, m, status));

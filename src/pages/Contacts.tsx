@@ -335,9 +335,9 @@ export default function Contacts(): JSX.Element {
         }
       >
         <div className="space-y-3">
-          <Input label={t('الاسم الكامل')} value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors({ ...errors, name: undefined }); }} placeholder={t('مثال: أحمد الشعيلي')} error={errors.name ?? undefined} />
+          <Input label={<>{t('الاسم الكامل')}<span className="text-danger ms-0.5">*</span></>} value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors({ ...errors, name: undefined }); }} placeholder={t('مثال: أحمد الشعيلي')} error={errors.name ?? undefined} />
           <PhoneField
-            label={t('رقم الواتساب')}
+            label={<>{t('رقم الواتساب')}<span className="text-danger ms-0.5">*</span></>}
             countryCode={form.countryCode}
             phone={form.phone}
             onCountryCodeChange={(c) => setForm({ ...form, countryCode: c })}
@@ -345,13 +345,13 @@ export default function Contacts(): JSX.Element {
             placeholder="9999 1111"
             error={errors.phone ?? undefined}
           />
-          <Select label={t('النوع')} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as ContactType })}>
+          <Select label={<>{t('النوع')}<span className="text-danger ms-0.5">*</span></>} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as ContactType })}>
             <option value="customer">{t('عميل')}</option>
             <option value="lead">{t('محتمل')}</option>
             <option value="company">{t('شركة')}</option>
             <option value="vip">VIP</option>
           </Select>
-          <Textarea label={t('ملاحظات')} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={t('معلومات إضافية...')} />
+          <Textarea label={<>{t('ملاحظات')}<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={t('معلومات إضافية...')} />
         </div>
       </Modal>
 
@@ -492,14 +492,19 @@ function ContactCategoriesDrawer({ open, onClose }: { open: boolean; onClose: ()
             <Plus className="h-3.5 w-3.5 text-primary" />
             {t('تصنيف جديد')}
           </p>
-          <input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder={t('مثال: عميل مميز')}
-            className="w-full h-9 px-3 rounded-input bg-white dark:bg-surface-dark border border-transparent text-body focus:outline-none focus:border-primary"
-            onKeyDown={(e) => { if (e.key === 'Enter') addNew(); }}
-          />
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div>
+            <label className="block text-small font-medium mb-1">{t('اسم الفئة')}<span className="text-danger ms-0.5">*</span></label>
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder={t('مثال: عميل مميز')}
+              className="w-full h-9 px-3 rounded-input bg-white dark:bg-surface-dark border border-transparent text-body focus:outline-none focus:border-primary"
+              onKeyDown={(e) => { if (e.key === 'Enter') addNew(); }}
+            />
+          </div>
+          <div>
+            <label className="block text-small font-medium mb-1">{t('اللون')}<span className="text-danger ms-0.5">*</span></label>
+            <div className="flex items-center gap-1.5 flex-wrap">
             {CAT_PALETTE.map((c) => (
               <button
                 key={c}
@@ -508,6 +513,7 @@ function ContactCategoriesDrawer({ open, onClose }: { open: boolean; onClose: ()
                 style={{ background: c }}
               />
             ))}
+            </div>
           </div>
           <button onClick={addNew} className="w-full h-9 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center justify-center gap-1.5" style={{ color: '#fff' }}>
             <Plus className="h-3.5 w-3.5" />

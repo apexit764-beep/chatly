@@ -439,7 +439,7 @@ export default function AISettings(): JSX.Element {
 
               {/* API Key */}
               <div>
-                <label className="text-small font-semibold block mb-1.5">مفتاح API</label>
+                <label className="text-small font-semibold block mb-1.5">مفتاح API<span className="text-danger ms-0.5">*</span></label>
                 <div className="relative">
                   <input
                     type={showApiKey ? 'text' : 'password'}
@@ -471,7 +471,7 @@ export default function AISettings(): JSX.Element {
               {/* Model + Max response length */}
               <div className="space-y-4">
                 <div>
-                  <label className="text-small font-semibold block mb-1.5">النموذج</label>
+                  <label className="text-small font-semibold block mb-1.5">النموذج<span className="text-danger ms-0.5">*</span></label>
                   <Select
                     value={form.model}
                     onChange={(e) => update('model', e.target.value as AIModel)}
@@ -487,7 +487,7 @@ export default function AISettings(): JSX.Element {
                 </div>
 
                 <div>
-                  <label className="text-small font-semibold block mb-1.5">حد طول الرد</label>
+                  <label className="text-small font-semibold block mb-1.5">حد طول الرد <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
                   <div className="relative">
                     <input
                       type="number"
@@ -786,7 +786,7 @@ export default function AISettings(): JSX.Element {
           >
             <div className="space-y-4">
               <div>
-                <label className="text-small font-semibold block mb-1.5">قائمة المواضيع</label>
+                <label className="text-small font-semibold block mb-1.5">قائمة المواضيع <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
                 <textarea
                   value={form.forbiddenTopics}
                   onChange={(e) => update('forbiddenTopics', e.target.value)}
@@ -795,7 +795,7 @@ export default function AISettings(): JSX.Element {
                 />
               </div>
               <div>
-                <label className="text-small font-semibold block mb-1.5">رسالة الرد على المواضيع الممنوعة</label>
+                <label className="text-small font-semibold block mb-1.5">رسالة الرد على المواضيع الممنوعة <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
                 <textarea
                   value={form.forbiddenReply}
                   onChange={(e) => update('forbiddenReply', e.target.value)}
@@ -860,7 +860,7 @@ export default function AISettings(): JSX.Element {
               {/* Keywords */}
               <div>
                 <label className="text-small font-semibold block mb-1.5">
-                  كلمات مفتاحية تُفعّل التحويل
+                  كلمات مفتاحية تُفعّل التحويل <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span>
                 </label>
                 <TagInput
                   value={form.transferKeywords}

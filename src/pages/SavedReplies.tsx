@@ -269,18 +269,18 @@ export default function SavedReplies(): JSX.Element {
       >
         <div className="space-y-4">
           <Input
-            label="اسم الرد"
+            label={<>اسم الرد<span className="text-danger ms-0.5">*</span></>}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="مثال: ترحيب أولي"
           />
-          <Select label="التصنيف" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+          <Select label={<>التصنيف<span className="text-danger ms-0.5">*</span></>} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </Select>
           <Textarea
-            label="نص الرد"
+            label={<>نص الرد<span className="text-danger ms-0.5">*</span></>}
             value={form.body}
             onChange={(e) => setForm({ ...form, body: e.target.value })}
             rows={5}
@@ -407,14 +407,24 @@ function CategoriesDrawer({ open, onClose }: { open: boolean; onClose: () => voi
             <Plus className="h-3.5 w-3.5 text-primary" />
             تصنيف جديد
           </p>
-          <input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="مثال: شحن وتوصيل"
-            className="w-full h-9 px-3 rounded-input bg-white dark:bg-surface-dark border border-transparent text-body focus:outline-none focus:border-primary"
-            onKeyDown={(e) => { if (e.key === 'Enter') addNew(); }}
-          />
-          <ColorPalette value={newColor} onChange={setNewColor} />
+          <div className="space-y-1">
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">
+              اسم التصنيف<span className="text-danger ms-0.5">*</span>
+            </label>
+            <input
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="مثال: شحن وتوصيل"
+              className="w-full h-9 px-3 rounded-input bg-white dark:bg-surface-dark border border-transparent text-body focus:outline-none focus:border-primary"
+              onKeyDown={(e) => { if (e.key === 'Enter') addNew(); }}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">
+              اللون<span className="text-danger ms-0.5">*</span>
+            </label>
+            <ColorPalette value={newColor} onChange={setNewColor} />
+          </div>
           <button
             onClick={addNew}
             className="w-full h-9 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center justify-center gap-1.5"

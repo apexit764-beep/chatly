@@ -354,22 +354,22 @@ export default function AdminClients(): JSX.Element {
         }
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input label="اسم الشركة" value={form.companyName} onChange={(e) => { setForm({ ...form, companyName: e.target.value }); setErrors({ ...errors, companyName: undefined }); }} placeholder="مثال: Qhub" error={errors.companyName ?? undefined} />
-          <Input label="جهة الاتصال" value={form.contactName} onChange={(e) => { setForm({ ...form, contactName: e.target.value }); setErrors({ ...errors, contactName: undefined }); }} placeholder="الاسم الكامل" error={errors.contactName ?? undefined} />
-          <Input label="البريد الإلكتروني" type="email" value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setErrors({ ...errors, email: undefined }); }} icon={<Mail className="h-4 w-4" />} error={errors.email ?? undefined} />
-          <Input label="رقم الجوال" value={form.phone} onChange={(e) => { setForm({ ...form, phone: e.target.value }); setErrors({ ...errors, phone: undefined }); }} icon={<Phone className="h-4 w-4" />} error={errors.phone ?? undefined} />
-          <Select label="الدولة" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })}>
+          <Input label={<>اسم الشركة<span className="text-danger ms-0.5">*</span></>} value={form.companyName} onChange={(e) => { setForm({ ...form, companyName: e.target.value }); setErrors({ ...errors, companyName: undefined }); }} placeholder="مثال: Qhub" error={errors.companyName ?? undefined} />
+          <Input label={<>جهة الاتصال<span className="text-danger ms-0.5">*</span></>} value={form.contactName} onChange={(e) => { setForm({ ...form, contactName: e.target.value }); setErrors({ ...errors, contactName: undefined }); }} placeholder="الاسم الكامل" error={errors.contactName ?? undefined} />
+          <Input label={<>البريد الإلكتروني<span className="text-danger ms-0.5">*</span></>} type="email" value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setErrors({ ...errors, email: undefined }); }} icon={<Mail className="h-4 w-4" />} error={errors.email ?? undefined} />
+          <Input label={<>رقم الجوال<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} value={form.phone} onChange={(e) => { setForm({ ...form, phone: e.target.value }); setErrors({ ...errors, phone: undefined }); }} icon={<Phone className="h-4 w-4" />} error={errors.phone ?? undefined} />
+          <Select label={<>الدولة<span className="text-danger ms-0.5">*</span></>} value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })}>
             {countries.map((c) => (<option key={c.code} value={c.code}>{c.flag} {c.nameAr} ({c.currency})</option>))}
           </Select>
-          <Input label="القطاع" value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} placeholder="مثلاً: عقارات، تجزئة..." />
-          <Select label="الحالة" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ClientStatus })}>
+          <Input label={<>القطاع<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} placeholder="مثلاً: عقارات، تجزئة..." />
+          <Select label={<>الحالة<span className="text-danger ms-0.5">*</span></>} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ClientStatus })}>
             <option value="trial">فترة تجريبية</option>
             <option value="active">نشط</option>
             <option value="past_due">متأخر</option>
             <option value="suspended">موقوف</option>
             <option value="cancelled">ملغي</option>
           </Select>
-          <Select label="الباقة" value={form.planId} onChange={(e) => setForm({ ...form, planId: e.target.value })}>
+          <Select label={<>الباقة<span className="text-danger ms-0.5">*</span></>} value={form.planId} onChange={(e) => setForm({ ...form, planId: e.target.value })}>
             <option value="">بدون باقة</option>
             {plans.map((p) => (<option key={p.id} value={p.id}>{p.nameAr} — {formatMoney(p.pricesPerCountry[form.country]?.monthly ?? 0, countries.find((c) => c.code === form.country)?.currency ?? 'USD')}/شهر</option>))}
           </Select>

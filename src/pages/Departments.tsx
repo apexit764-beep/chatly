@@ -189,11 +189,11 @@ export default function Departments(): JSX.Element {
         side="start"
       >
         <div className="space-y-4 pb-20">
-          <Input label="اسم القسم" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="مثال: المبيعات" />
-          <Textarea label="الوصف" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="ما الذي يفعله هذا القسم؟" rows={2} />
+          <Input label={<>اسم القسم<span className="text-danger ms-0.5">*</span></>} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="مثال: المبيعات" />
+          <Textarea label={<>الوصف <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="ما الذي يفعله هذا القسم؟" rows={2} />
 
           <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">لون القسم</label>
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">لون القسم<span className="text-danger ms-0.5">*</span></label>
             <div className="flex gap-2">
               {palette.map((c) => (
                 <button
@@ -211,24 +211,26 @@ export default function Departments(): JSX.Element {
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">الموظفون</label>
-            <ChipMultiSelect
-              placeholder="ابحث وأضف موظف..."
-              options={agents.map((a) => ({
-                id: a.id,
-                label: a.name,
-                searchKey: a.name + ' ' + a.email,
-                leading: <Avatar name={a.name} size="xs" status={a.status} />,
-              }))}
-              selectedIds={form.agents}
-              onChange={(ids) => setForm({ ...form, agents: ids })}
-              emptyText="لا موظفين متاحين"
-            />
-          </div>
+          {editing && (
+            <div className="space-y-1.5">
+              <label className="text-small font-medium text-muted-light dark:text-muted-dark block">الموظفون <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
+              <ChipMultiSelect
+                placeholder="ابحث وأضف موظف..."
+                options={agents.map((a) => ({
+                  id: a.id,
+                  label: a.name,
+                  searchKey: a.name + ' ' + a.email,
+                  leading: <Avatar name={a.name} size="xs" status={a.status} />,
+                }))}
+                selectedIds={form.agents}
+                onChange={(ids) => setForm({ ...form, agents: ids })}
+                emptyText="لا موظفين متاحين"
+              />
+            </div>
+          )}
 
           <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">القنوات</label>
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">القنوات <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
             <ChipMultiSelect
               placeholder="ابحث وأضف قناة..."
               options={channels.map((c) => ({
@@ -247,7 +249,7 @@ export default function Departments(): JSX.Element {
           {/* SLA target */}
           <div className="space-y-1.5">
             <label className="text-small font-medium text-muted-light dark:text-muted-dark block">
-              هدف وقت الاستجابة (SLA)
+              هدف وقت الاستجابة (SLA) <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span>
             </label>
             <div className="flex items-center gap-2">
               <input

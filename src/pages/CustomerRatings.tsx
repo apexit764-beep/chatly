@@ -12,9 +12,11 @@ import {
   Filter,
   Clock,
   Hash,
+  Eye,
+  X,
 } from 'lucide-react';
-import { Card, StatCard, Avatar } from '@components/ui';
-import { useRatingStore } from '@/store/useRatingStore';
+import { Card, StatCard, Avatar, Modal } from '@components/ui';
+import { useRatingStore, type Rating } from '@/store/useRatingStore';
 import { formatDate } from '@/utils/format';
 import { cn } from '@/utils/cn';
 
@@ -30,6 +32,7 @@ export default function CustomerRatings(): JSX.Element {
 
   const [search, setSearch] = useState('');
   const [filterSat, setFilterSat] = useState<'all' | 'excellent' | 'good' | 'bad'>('all');
+  const [viewRating, setViewRating] = useState<Rating | null>(null);
 
   const avgConv = submitted.length > 0
     ? submitted.reduce((s, r) => s + (r.ratingConversation ?? 0), 0) / submitted.length
@@ -176,7 +179,7 @@ export default function CustomerRatings(): JSX.Element {
               <span className="text-body font-bold text-danger tabular-nums">{expired.length}</span>
             </div>
             <div className="flex items-center justify-between p-3 rounded-card bg-bg-light dark:bg-bg-dark">
-              <span className="text-small text-muted-light dark:text-muted-dark">تقييم النجوم</span>
+              <span className="text-small text-muted-light dark:text-muted-dark">التقييم العام</span>
               <div className="flex items-center gap-0.5">
                 {[1, 2, 3, 4, 5].map((n) => (
                   <Star
@@ -232,6 +235,7 @@ export default function CustomerRatings(): JSX.Element {
                 <th className="text-start font-medium px-4 py-3">الرضا</th>
                 <th className="text-start font-medium px-4 py-3 hidden lg:table-cell">التعليق</th>
                 <th className="text-start font-medium px-4 py-3 hidden md:table-cell">التاريخ</th>
+                <th className="text-start font-medium px-4 py-3 w-16"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
@@ -304,6 +308,15 @@ export default function CustomerRatings(): JSX.Element {
                     <td className="px-4 py-3 hidden md:table-cell text-small text-muted-light dark:text-muted-dark">
                       {formatDate(r.submittedAt!)}
                     </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => setViewRating(r)}
+                        className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-primary/10 hover:text-primary transition-colors"
+                        title="عرض التفاصيل"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -328,6 +341,115 @@ export default function CustomerRatings(): JSX.Element {
           </table>
         </div>
       </div>
+
+      {/* Rating detail modal */}
+      {viewRating && (
+        <Modal open onClose={() => setViewRating(null)} title="تفاصيل التقييم" size="md">
+          <div className="space-y-5 p-1">
+            {/* Customer & Agent */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <span className="text-[11px] font-medium text-muted-light dark:text-muted-dark">العميل</span>
+                <div className="flex items-center gap-2">
+                  <Avatar name={viewRating.contactName} size="sm" />
+                  <span className="text-small font-semibold">{viewRating.contactName}</span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] font-medium text-muted-light dark:text-muted-dark">الموظف</span>
+                <div className="flex items-center gap-2">
+                  <Avatar name={viewRating.agentName} size="sm" />
+                  <span className="text-small font-semibold">{viewRating.agentName}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Channel & Date */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <span className="text-[11px] font-medium text-muted-light dark:text-muted-dark">القناة</span>
+                <p className="text-small">{viewRating.channelName}</p>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] font-medium text-muted-light dark:text-muted-dark">تاريخ التقييم</span>
+                <p className="text-small">{viewRating.submittedAt ? formatDate(viewRating.submittedAt) : '—'}</p>
+              </div>
+            </div>
+
+            {/* Ratings */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-medium text-muted-light dark:text-muted-dark">تقييم المحادثة</span>
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star
+                      key={n}
+                      className={cn(
+                        'h-4 w-4',
+                        n <= (viewRating.ratingConversation ?? 0)
+                          ? 'fill-warning text-warning'
+                          : 'text-border-light dark:text-border-dark',
+                      )}
+                    />
+                  ))}
+                  <span className="text-small font-bold ms-1.5">{viewRating.ratingConversation ?? '—'}/5</span>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-medium text-muted-light dark:text-muted-dark">تقييم الموظف</span>
+                {viewRating.ratingAgent != null ? (
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Star
+                        key={n}
+                        className={cn(
+                          'h-4 w-4',
+                          n <= (viewRating.ratingAgent ?? 0)
+                            ? 'fill-primary text-primary'
+                            : 'text-border-light dark:text-border-dark',
+                        )}
+                      />
+                    ))}
+                    <span className="text-small font-bold ms-1.5">{viewRating.ratingAgent}/5</span>
+                  </div>
+                ) : (
+                  <p className="text-small text-muted-light dark:text-muted-dark">لم يتم التقييم</p>
+                )}
+              </div>
+            </div>
+
+            {/* Satisfaction */}
+            {viewRating.satisfaction && (() => {
+              const info = SATISFACTION_MAP[viewRating.satisfaction];
+              const SatIcon = info.icon;
+              return (
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-medium text-muted-light dark:text-muted-dark">مستوى الرضا</span>
+                  <span
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-small font-medium"
+                    style={{ background: `${info.color}15`, color: info.color }}
+                  >
+                    <SatIcon className="h-4 w-4" />
+                    {info.label}
+                  </span>
+                </div>
+              );
+            })()}
+
+            {/* Comment */}
+            <div className="space-y-1.5">
+              <span className="text-[11px] font-medium text-muted-light dark:text-muted-dark">تعليق العميل</span>
+              {viewRating.comment ? (
+                <p className="text-small bg-bg-light dark:bg-bg-dark rounded-card p-3 leading-relaxed">
+                  "{viewRating.comment}"
+                </p>
+              ) : (
+                <p className="text-small text-muted-light dark:text-muted-dark">لا يوجد تعليق</p>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

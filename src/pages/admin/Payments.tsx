@@ -154,8 +154,8 @@ export default function AdminPayments(): JSX.Element {
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input label="iframe ID" value={paymob.iframeId} onChange={(e) => updatePaymob({ iframeId: e.target.value })} />
-          <Input label="Integration Card ID (Default)" value={paymob.integrationCardId} onChange={(e) => updatePaymob({ integrationCardId: e.target.value })} />
+          <Input label={<>iframe ID<span className="text-danger ms-0.5">*</span></>} value={paymob.iframeId} onChange={(e) => updatePaymob({ iframeId: e.target.value })} />
+          <Input label={<>Integration Card ID (Default)<span className="text-danger ms-0.5">*</span></>} value={paymob.integrationCardId} onChange={(e) => updatePaymob({ integrationCardId: e.target.value })} />
         </div>
 
         <CredField

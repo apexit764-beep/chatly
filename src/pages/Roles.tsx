@@ -277,14 +277,14 @@ export default function Roles(): JSX.Element {
           {/* Basics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
-              label="اسم الدور"
+              label={<>اسم الدور<span className="text-danger ms-0.5">*</span></>}
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="مثال: مدير المبيعات"
               disabled={editing?.isSystem}
             />
             <div className="space-y-1.5">
-              <label className="text-small font-medium text-muted-light dark:text-muted-dark block">لون الدور</label>
+              <label className="text-small font-medium text-muted-light dark:text-muted-dark block">لون الدور<span className="text-danger ms-0.5">*</span></label>
               <div className="flex flex-wrap gap-2">
                 {palette.map((c) => (
                   <button
@@ -303,7 +303,7 @@ export default function Roles(): JSX.Element {
             </div>
           </div>
           <Textarea
-            label="الوصف"
+            label={<>الوصف<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             placeholder="ما الذي يفعله هذا الدور؟"

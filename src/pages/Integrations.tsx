@@ -362,7 +362,7 @@ function ConnectModal({
             <li className="flex items-start gap-2"><Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" /> الوصول لمعلومات الملف الشخصي الأساسية</li>
           </ul>
           {meta.type === 'webhook' ? (
-            <Input label="URL الـ webhook" placeholder="https://your-server.com/webhook" />
+            <Input label={<>URL الـ webhook<span className="text-danger ms-0.5">*</span></>} placeholder="https://your-server.com/webhook" />
           ) : (
             <p className="text-small text-muted-light dark:text-muted-dark p-3 rounded-card bg-bg-light dark:bg-bg-dark">
               سيتم تحويلك إلى صفحة {meta.name} لتسجيل الدخول ومنح الصلاحيات.

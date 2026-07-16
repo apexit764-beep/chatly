@@ -2,7 +2,7 @@ import { forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from 'react';
 import { cn } from '@/utils/cn';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
+  label?: React.ReactNode;
   error?: string;
   icon?: React.ReactNode;
 }
@@ -39,7 +39,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 Input.displayName = 'Input';
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
-  label?: string;
+  label?: React.ReactNode;
   error?: string;
 }
 

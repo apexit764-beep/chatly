@@ -164,6 +164,7 @@ export default function Tags(): JSX.Element {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setAddOpen(false); setNewTag(''); }}>
           <div className="bg-white dark:bg-surface-dark rounded-xl shadow-xl w-80 p-5" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-h3 font-bold mb-4 text-center">إضافة وسم جديد</h3>
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark block mb-1.5">اسم الوسم<span className="text-danger ms-0.5">*</span></label>
             <input
               autoFocus
               value={newTag}
@@ -198,6 +199,7 @@ export default function Tags(): JSX.Element {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setEditingTag(null)}>
           <div className="bg-white dark:bg-surface-dark rounded-xl shadow-xl w-80 p-5" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-h3 font-bold mb-4 text-center">تعديل الوسم</h3>
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark block mb-1.5">اسم الوسم<span className="text-danger ms-0.5">*</span></label>
             <input
               autoFocus
               value={editName}

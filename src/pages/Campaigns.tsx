@@ -397,7 +397,7 @@ export default function Campaigns(): JSX.Element {
         <div className="space-y-4 pb-20">
           <div className="space-y-3">
             <Input
-              label="اسم الحملة"
+              label={<>اسم الحملة<span className="text-danger ms-0.5">*</span></>}
               value={form.name}
               onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors({ ...errors, name: undefined }); }}
               error={errors.name ?? undefined}
@@ -407,7 +407,7 @@ export default function Campaigns(): JSX.Element {
             {/* Sender channel / account */}
             <div className="space-y-1.5">
               <label className="text-small font-medium text-muted-light dark:text-muted-dark block">
-                {channelFilter === 'whatsapp' ? 'رقم الإرسال' : 'حساب الإرسال'}
+                {channelFilter === 'whatsapp' ? 'رقم الإرسال' : 'حساب الإرسال'}<span className="text-danger ms-0.5">*</span>
               </label>
               <select
                 value={form.senderChannelId}

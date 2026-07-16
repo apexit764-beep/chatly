@@ -361,23 +361,23 @@ export default function AdminPlans(): JSX.Element {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Input label="الاسم بالعربية" value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })} placeholder="مثال: الاحترافي" />
-            <Input label="Name (EN)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Pro" />
-            <Select label="الفئة (Tier)" value={form.tier} onChange={(e) => setForm({ ...form, tier: e.target.value as PlanTier })}>
+            <Input label={<>الاسم بالعربية<span className="text-danger ms-0.5">*</span></>} value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })} placeholder="مثال: الاحترافي" />
+            <Input label={<>Name (EN)<span className="text-danger ms-0.5">*</span></>} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Pro" />
+            <Select label={<>الفئة (Tier)<span className="text-danger ms-0.5">*</span></>} value={form.tier} onChange={(e) => setForm({ ...form, tier: e.target.value as PlanTier })}>
               <option value="starter">Starter</option>
               <option value="pro">Pro</option>
               <option value="business">Business</option>
               <option value="enterprise">Enterprise</option>
             </Select>
           </div>
-          <Input label="وصف قصير (Tagline)" value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="للشركات النامية" />
-          <Textarea label="الميزات (كل ميزة في سطر)" value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} rows={6} placeholder={'حتى 10 موظفين\n3 أرقام واتساب\n...'} />
+          <Input label={<>وصف قصير (Tagline)<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="للشركات النامية" />
+          <Textarea label={<>الميزات (كل ميزة في سطر)<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} rows={6} placeholder={'حتى 10 موظفين\n3 أرقام واتساب\n...'} />
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Input label="حد الموظفين (-1 = ∞)" type="number" value={form.limitAgents} onChange={(e) => setForm({ ...form, limitAgents: Number(e.target.value) })} />
-            <Input label="حد القنوات (-1 = ∞)" type="number" value={form.limitChannels} onChange={(e) => setForm({ ...form, limitChannels: Number(e.target.value) })} />
-            <Input label="محادثات/شهر (-1 = ∞)" type="number" value={form.limitConversations} onChange={(e) => setForm({ ...form, limitConversations: Number(e.target.value) })} />
-            <Input label="جهات اتصال (-1 = ∞)" type="number" value={form.limitContacts} onChange={(e) => setForm({ ...form, limitContacts: Number(e.target.value) })} />
+            <Input label={<>حد الموظفين (-1 = ∞)<span className="text-danger ms-0.5">*</span></>} type="number" value={form.limitAgents} onChange={(e) => setForm({ ...form, limitAgents: Number(e.target.value) })} />
+            <Input label={<>حد القنوات (-1 = ∞)<span className="text-danger ms-0.5">*</span></>} type="number" value={form.limitChannels} onChange={(e) => setForm({ ...form, limitChannels: Number(e.target.value) })} />
+            <Input label={<>محادثات/شهر (-1 = ∞)<span className="text-danger ms-0.5">*</span></>} type="number" value={form.limitConversations} onChange={(e) => setForm({ ...form, limitConversations: Number(e.target.value) })} />
+            <Input label={<>جهات اتصال (-1 = ∞)<span className="text-danger ms-0.5">*</span></>} type="number" value={form.limitContacts} onChange={(e) => setForm({ ...form, limitContacts: Number(e.target.value) })} />
           </div>
 
           <div>

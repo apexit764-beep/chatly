@@ -7,6 +7,11 @@ import {
   Shield,
   Languages,
   Upload,
+  CreditCard,
+  Wallet,
+  RotateCcw,
+  Trash2,
+  Plus,
   AlertTriangle,
   Star,
   Pencil,
@@ -40,6 +45,7 @@ const SETTINGS_TABS: { key: string; label: string; icon: ReactNode }[] = [
   { key: 'security', label: 'الأمان', icon: <Shield className="h-4 w-4" /> },
   { key: 'rating', label: 'تقييم العملاء', icon: <Star className="h-4 w-4" /> },
   { key: 'language', label: 'اللغة والمنطقة', icon: <Languages className="h-4 w-4" /> },
+  { key: 'finance', label: 'المالية', icon: <Wallet className="h-4 w-4" /> },
 ];
 
 export default function Settings(): JSX.Element {
@@ -85,6 +91,7 @@ export default function Settings(): JSX.Element {
           {tab === 'security' && <SecurityTab />}
           {tab === 'rating' && <RatingTab />}
           {tab === 'language' && <LanguageTab />}
+          {tab === 'finance' && <FinanceTab />}
         </div>
       </div>
     </div>
@@ -103,7 +110,7 @@ function TabHeader({ icon, title, subtitle }: { icon: ReactNode; title: string; 
   );
 }
 
-function Row({ label, hint, children, error }: { label: string; hint?: string; children: ReactNode; error?: string | null }): JSX.Element {
+function Row({ label, hint, children, error }: { label: ReactNode; hint?: string; children: ReactNode; error?: string | null }): JSX.Element {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-3 lg:gap-6 py-4 border-b border-border-light/60 dark:border-border-dark/60 last:border-b-0">
       <div>
@@ -151,7 +158,7 @@ function GeneralTab(): JSX.Element {
   return (
     <div>
       <TabHeader icon={<Building className="h-5 w-5" />} title="إعدادات الشركة" subtitle="بيانات الشركة الأساسية التي تظهر للعملاء" />
-      <Row label="شعار الشركة" hint="يظهر في البانر والصفحات الأخرى (PNG/JPG, الحد الأقصى 1MB)">
+      <Row label={<>شعار الشركة <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} hint="يظهر في البانر والصفحات الأخرى (PNG/JPG, الحد الأقصى 1MB)">
         <div className="flex items-center gap-3">
           <div className="h-16 w-16 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark flex items-center justify-center overflow-hidden flex-shrink-0">
             {companyLogo ? (
@@ -177,10 +184,10 @@ function GeneralTab(): JSX.Element {
           </div>
         </div>
       </Row>
-      <Row label="اسم الشركة" hint="يظهر في عنوان الصفحة والإيميلات والمحادثات" error={siteNameError}>
+      <Row label={<>اسم الشركة <span className="text-danger ms-0.5">*</span></>} hint="يظهر في عنوان الصفحة والإيميلات والمحادثات" error={siteNameError}>
         <input value={siteName} onChange={(e) => { setSiteName(e.target.value); setSiteNameError(null); }} className={cn('w-full h-10 px-3 rounded-input bg-white dark:bg-surface-dark border text-body focus:outline-none', siteNameError ? 'border-danger focus:border-danger' : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10')} />
       </Row>
-      <Row label="القطاع" hint="مجال عمل الشركة">
+      <Row label={<>القطاع <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} hint="مجال عمل الشركة">
         <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="w-full max-w-xs h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
           <option value="real_estate">العقارات</option>
           <option value="retail">التجزئة والتجارة</option>
@@ -194,7 +201,7 @@ function GeneralTab(): JSX.Element {
           <option value="other">أخرى</option>
         </select>
       </Row>
-      <Row label="حجم الشركة" hint="عدد الموظفين التقريبي">
+      <Row label={<>حجم الشركة <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} hint="عدد الموظفين التقريبي">
         <select value={companySize} onChange={(e) => setCompanySize(e.target.value)} className="w-full max-w-xs h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
           <option value="1-10">1 - 10 موظفين</option>
           <option value="11-50">11 - 50 موظف</option>
@@ -203,7 +210,7 @@ function GeneralTab(): JSX.Element {
           <option value="500+">أكثر من 500</option>
         </select>
       </Row>
-      <Row label="الدولة" hint="موقع المقر الرئيسي">
+      <Row label={<>الدولة <span className="text-danger ms-0.5">*</span></>} hint="موقع المقر الرئيسي">
         <select value={country} onChange={(e) => setCountry(e.target.value)} className="w-full max-w-xs h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
           <option value="OM">عُمان</option>
           <option value="AE">الإمارات</option>
@@ -219,7 +226,7 @@ function GeneralTab(): JSX.Element {
           <option value="MA">المغرب</option>
         </select>
       </Row>
-      <Row label="رقم الهاتف" hint="رقم التواصل الرئيسي للشركة">
+      <Row label={<>رقم الهاتف <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} hint="رقم التواصل الرئيسي للشركة">
         <div className="w-full max-w-xs">
           <PhoneField
             countryCode={phoneCountryCode}
@@ -363,7 +370,7 @@ function ProfileTab(): JSX.Element {
           </label>
         </div>
       </Row>
-      <Row label="اسم العرض" hint="الاسم الذي يظهر للعملاء والموظفين">
+      <Row label={<>اسم العرض <span className="text-danger ms-0.5">*</span></>} hint="الاسم الذي يظهر للعملاء والموظفين">
         <input value={name} onChange={(e) => setName(e.target.value)} className="w-full h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
       </Row>
 
@@ -1258,5 +1265,222 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     <button onClick={() => onChange(!checked)} className={cn('relative h-6 w-11 rounded-full transition-colors flex-shrink-0', checked ? 'bg-primary' : 'bg-border-light dark:bg-border-dark')} role="switch" aria-checked={checked}>
       <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all', checked ? 'start-0.5' : 'end-0.5')} />
     </button>
+  );
+}
+
+interface SavedCard {
+  id: string;
+  brand: string;
+  last4: string;
+  expiry: string;
+  isDefault: boolean;
+}
+
+const MOCK_CARDS: SavedCard[] = [
+  { id: 'card-1', brand: 'Visa', last4: '4242', expiry: '12/27', isDefault: true },
+  { id: 'card-2', brand: 'Mastercard', last4: '8831', expiry: '09/26', isDefault: false },
+];
+
+function FinanceTab(): JSX.Element {
+  const [cards, setCards] = useState(MOCK_CARDS);
+  const [autoRenew, setAutoRenew] = useState(true);
+  const [addOpen, setAddOpen] = useState(false);
+  const { confirm } = useConfirm();
+  const showToast = useUIStore((s) => s.showToast);
+
+  const setDefault = (id: string): void => {
+    setCards((prev) => prev.map((c) => ({ ...c, isDefault: c.id === id })));
+    showToast('تم تعيين البطاقة الافتراضية', 'success');
+  };
+
+  const removeCard = async (card: SavedCard): Promise<void> => {
+    if (card.isDefault) {
+      showToast('لا يمكن حذف البطاقة الافتراضية', 'error');
+      return;
+    }
+    const ok = await confirm({
+      title: `حذف البطاقة ${card.brand} •••• ${card.last4}؟`,
+      message: 'سيتم إزالة هذه البطاقة نهائياً من طرق الدفع المحفوظة',
+      variant: 'danger',
+      confirmText: 'حذف',
+    });
+    if (ok) {
+      setCards((prev) => prev.filter((c) => c.id !== card.id));
+      showToast('تم حذف البطاقة', 'success');
+    }
+  };
+
+  return (
+    <>
+      <TabHeader
+        icon={<Wallet className="h-5 w-5" />}
+        title="المالية"
+        subtitle="إدارة طرق الدفع والتجديد التلقائي للاشتراك"
+      />
+
+      {/* Saved Cards */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-body font-bold">طرق الدفع المحفوظة</h3>
+          <button
+            onClick={() => setAddOpen(true)}
+            className="h-9 px-4 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium transition-colors flex items-center gap-1.5"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            إضافة بطاقة
+          </button>
+        </div>
+
+        {cards.length === 0 ? (
+          <div className="text-center py-10 text-muted-light dark:text-muted-dark">
+            <CreditCard className="h-10 w-10 mx-auto mb-2 opacity-40" />
+            <p className="text-body font-medium">لا توجد بطاقات محفوظة</p>
+            <p className="text-small mt-1">أضف بطاقة لتفعيل الدفع التلقائي</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {cards.map((card) => (
+              <div
+                key={card.id}
+                className={cn(
+                  'flex items-center gap-4 p-4 rounded-card border transition-colors',
+                  card.isDefault
+                    ? 'border-primary/30 bg-primary/5'
+                    : 'border-border-light dark:border-border-dark hover:bg-bg-light dark:hover:bg-bg-dark',
+                )}
+              >
+                <div className="h-10 w-14 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900 dark:from-slate-600 dark:to-slate-800 flex items-center justify-center text-white text-[10px] font-bold tracking-wider flex-shrink-0">
+                  {card.brand === 'Visa' ? 'VISA' : 'MC'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-body font-semibold">{card.brand} •••• {card.last4}</span>
+                    {card.isDefault && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">افتراضية</span>
+                    )}
+                  </div>
+                  <p className="text-small text-muted-light dark:text-muted-dark">تنتهي {card.expiry}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {!card.isDefault && (
+                    <button
+                      onClick={() => setDefault(card.id)}
+                      className="h-8 px-3 rounded-lg text-small font-medium text-primary hover:bg-primary/10 transition-colors"
+                    >
+                      تعيين افتراضية
+                    </button>
+                  )}
+                  <button
+                    onClick={() => removeCard(card)}
+                    className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-danger/10 hover:text-danger transition-colors"
+                    title="حذف البطاقة"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Auto-renewal */}
+      <div className="border-t border-border-light dark:border-border-dark pt-6">
+        <h3 className="text-body font-bold mb-4">التجديد التلقائي</h3>
+        <div className="flex items-start justify-between gap-4 p-4 rounded-card bg-bg-light dark:bg-bg-dark">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <RotateCcw className="h-4 w-4 text-primary" />
+              <span className="text-body font-semibold">تجديد الاشتراك تلقائياً</span>
+            </div>
+            <p className="text-small text-muted-light dark:text-muted-dark">
+              عند التفعيل، سيتم تجديد اشتراكك تلقائياً عند انتهاء الفترة الحالية باستخدام البطاقة الافتراضية
+            </p>
+          </div>
+          <Toggle checked={autoRenew} onChange={(v) => {
+            setAutoRenew(v);
+            showToast(v ? 'تم تفعيل التجديد التلقائي' : 'تم إيقاف التجديد التلقائي', 'success');
+          }} />
+        </div>
+        {autoRenew && cards.some((c) => c.isDefault) && (
+          <p className="text-small text-success mt-3 flex items-center gap-1.5">
+            <Check className="h-3.5 w-3.5" />
+            سيتم الخصم من بطاقة {cards.find((c) => c.isDefault)!.brand} •••• {cards.find((c) => c.isDefault)!.last4}
+          </p>
+        )}
+      </div>
+
+      {/* Add card modal */}
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="إضافة بطاقة جديدة" size="md">
+        <div className="space-y-4 p-1">
+          <div className="space-y-1.5">
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">رقم البطاقة</label>
+            <input
+              type="text"
+              placeholder="0000 0000 0000 0000"
+              maxLength={19}
+              className="w-full h-10 px-3 rounded-input bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all tracking-widest"
+              dir="ltr"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-small font-medium text-muted-light dark:text-muted-dark block">تاريخ الانتهاء</label>
+              <input
+                type="text"
+                placeholder="MM/YY"
+                maxLength={5}
+                className="w-full h-10 px-3 rounded-input bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all tracking-widest"
+                dir="ltr"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-small font-medium text-muted-light dark:text-muted-dark block">CVV</label>
+              <input
+                type="text"
+                placeholder="•••"
+                maxLength={4}
+                className="w-full h-10 px-3 rounded-input bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all tracking-widest"
+                dir="ltr"
+              />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">اسم حامل البطاقة</label>
+            <input
+              type="text"
+              placeholder="كما هو مكتوب على البطاقة"
+              className="w-full h-10 px-3 rounded-input bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+              dir="ltr"
+            />
+          </div>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button
+              onClick={() => setAddOpen(false)}
+              className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark"
+            >
+              إلغاء
+            </button>
+            <button
+              onClick={() => {
+                const newCard: SavedCard = {
+                  id: `card-${Date.now()}`,
+                  brand: 'Visa',
+                  last4: String(Math.floor(1000 + Math.random() * 9000)),
+                  expiry: '01/29',
+                  isDefault: cards.length === 0,
+                };
+                setCards((prev) => [...prev, newCard]);
+                setAddOpen(false);
+                showToast('تمت إضافة البطاقة بنجاح', 'success');
+              }}
+              className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium"
+            >
+              حفظ البطاقة
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </>
   );
 }

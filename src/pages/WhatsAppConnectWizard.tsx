@@ -416,7 +416,7 @@ function ConnectStep({
       </div>
 
       {/* Phone Number ID */}
-      <FieldGroup label="Phone Number ID" hint="معرّف الرقم في Meta — في إعدادات API Setup ← WhatsApp">
+      <FieldGroup label={<>Phone Number ID<span className="text-danger ms-0.5">*</span></>} hint="معرّف الرقم في Meta — في إعدادات API Setup ← WhatsApp">
         <Input
           value={state.phoneNumberId}
           onChange={(e) => setState({ ...state, phoneNumberId: e.target.value })}
@@ -425,7 +425,7 @@ function ConnectStep({
       </FieldGroup>
 
       {/* WABA ID */}
-      <FieldGroup label="WhatsApp Business Account ID" hint="معرّف حساب الأعمال الذي يضمّ الأرقام (WABA ID)">
+      <FieldGroup label={<>WhatsApp Business Account ID<span className="text-danger ms-0.5">*</span></>} hint="معرّف حساب الأعمال الذي يضمّ الأرقام (WABA ID)">
         <Input
           value={state.wabaId}
           onChange={(e) => setState({ ...state, wabaId: e.target.value })}
@@ -434,7 +434,7 @@ function ConnectStep({
       </FieldGroup>
 
       {/* Access Token */}
-      <FieldGroup label="Access Token" hint="رمز المصادقة الدائم من System User في Business Settings في Meta">
+      <FieldGroup label={<>Access Token<span className="text-danger ms-0.5">*</span></>} hint="رمز المصادقة الدائم من System User في Business Settings في Meta">
         <div className="relative">
           <span className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark pointer-events-none">
             <KeyRound className="h-4 w-4" />
@@ -500,7 +500,7 @@ function ConnectStep({
   );
 }
 
-function FieldGroup({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }): JSX.Element {
+function FieldGroup({ label, hint, children }: { label: React.ReactNode; hint?: string; children: React.ReactNode }): JSX.Element {
   return (
     <div className="space-y-1.5">
       <label className="text-small font-medium block">{label}</label>
@@ -568,7 +568,7 @@ function CustomizeStep({
     <div className="space-y-3">
       <section className="space-y-3">
         <div className="space-y-1.5">
-          <label className="text-small font-medium text-muted-light dark:text-muted-dark">القسم المسؤول</label>
+          <label className="text-small font-medium text-muted-light dark:text-muted-dark">القسم المسؤول<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
           <select
             value={state.departmentId}
             onChange={(e) => setState({ ...state, departmentId: e.target.value, agentIds: [] })}
@@ -580,7 +580,7 @@ function CustomizeStep({
         </div>
         <div>
           <label className="text-small font-medium text-muted-light dark:text-muted-dark mb-1.5 block">
-            الوكلاء ({state.agentIds.length} مختار)
+            الوكلاء ({state.agentIds.length} مختار)<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span>
           </label>
           <div className="rounded-card border border-border-light dark:border-border-dark max-h-44 overflow-y-auto">
             {eligibleAgents.length === 0 ? (

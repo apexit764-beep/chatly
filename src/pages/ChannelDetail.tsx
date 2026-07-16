@@ -522,14 +522,14 @@ export default function ChannelDetail(): JSX.Element {
       >
         <div className="space-y-4">
           <Input
-            label={t('اسم القناة')}
+            label={<>{t('اسم القناة')}<span className="text-danger ms-0.5">*</span></>}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder={`${t('مثال')}: ${meta.name} - ${t('الفرع الرئيسي')}`}
           />
           {meta.identifierType === 'phone' ? (
             <PhoneField
-              label={meta.identifierLabel}
+              label={<>{meta.identifierLabel}<span className="text-danger ms-0.5">*</span></>}
               countryCode={form.countryCode}
               phone={form.identifier}
               onCountryCodeChange={(c) => setForm({ ...form, countryCode: c })}

@@ -1420,12 +1420,14 @@ function Field({
   label,
   hint,
   required,
+  optional,
   action,
   children,
 }: {
   label: string;
   hint?: string;
   required?: boolean;
+  optional?: boolean;
   action?: React.ReactNode;
   children: React.ReactNode;
 }): JSX.Element {
@@ -1434,7 +1436,8 @@ function Field({
       <div className="flex items-center justify-between gap-2">
         <label className="text-small font-medium">
           {label}
-          {required && <span className="text-danger ms-1">*</span>}
+          {required && <span className="text-danger ms-0.5">*</span>}
+          {optional && <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span>}
         </label>
         {action}
       </div>
