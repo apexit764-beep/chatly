@@ -420,13 +420,22 @@ export const invoices: Invoice[] = clients
   .filter((c) => c.planId)
   .flatMap((c) => {
     const list: Invoice[] = [];
-    // 1 current pending or paid + 2-4 past paid
     const monthsHistory = Math.min(4, Math.floor((Date.now() - Date.parse(c.joinedAt)) / (30 * 86400000)));
     for (let m = monthsHistory; m > 0; m -= 1) {
-      list.push(makeInvoice(c, m, c.status === 'past_due' && m === 1 ? 'failed' : 'paid'));
+      const hash = c.id.charCodeAt(7) + m;
+      const status: Invoice['status'] =
+        c.status === 'past_due' && m === 1 ? 'failed'
+        : hash % 7 === 0 ? 'refunded'
+        : hash % 5 === 0 ? 'pending'
+        : 'paid';
+      list.push(makeInvoice(c, m, status));
     }
     if (c.status !== 'cancelled') {
-      list.push(makeInvoice(c, 0, c.status === 'past_due' ? 'failed' : c.status === 'suspended' ? 'failed' : 'paid'));
+      const currentStatus: Invoice['status'] =
+        c.status === 'past_due' ? 'failed'
+        : c.status === 'suspended' ? 'failed'
+        : 'pending';
+      list.push(makeInvoice(c, 0, currentStatus));
     }
     return list;
   });

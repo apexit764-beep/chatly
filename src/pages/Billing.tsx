@@ -9,8 +9,6 @@ import {
   Check,
   Star,
   Calendar,
-  FileText,
-  CheckCircle2,
   Receipt,
   Users,
   Users2,
@@ -77,12 +75,6 @@ export default function Billing(): JSX.Element {
       return text.includes(q);
     });
 
-  const paidCount = clientInvoices.filter((i) => i.status === 'paid').length;
-  const pendingCount = clientInvoices.filter((i) => i.status === 'pending').length;
-  const totalPaid = clientInvoices
-    .filter((i) => i.status === 'paid')
-    .reduce((acc, i) => acc + i.total, 0);
-
   const handleDownload = (inv: Invoice): void => {
     const html = `
       <h1>فاتورة #${inv.number}</h1>
@@ -125,7 +117,7 @@ export default function Billing(): JSX.Element {
 
   if (!client || !plan || !sub) {
     return (
-      <div className="p-4 lg:p-8 page-fade max-w-3xl mx-auto">
+      <div className="p-4 lg:p-6 page-fade max-w-3xl mx-auto">
         <Card className="p-10 text-center">
           <div className="h-16 w-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-4">
             <Sparkles className="h-8 w-8" />
@@ -144,7 +136,7 @@ export default function Billing(): JSX.Element {
   }
 
   return (
-    <div className="p-4 lg:p-8 page-fade max-w-6xl mx-auto space-y-6">
+    <div className="p-4 lg:p-6 page-fade space-y-6">
       {/* Current plan */}
       <Card className="p-5 bg-gradient-to-l from-primary to-primary-dark text-white border-0">
         <div className="flex items-start justify-between flex-wrap gap-4">
@@ -179,33 +171,10 @@ export default function Billing(): JSX.Element {
       {/* Invoices */}
       <Card className="overflow-hidden">
         <div className="px-5 py-4 border-b border-border-light dark:border-border-dark">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <h3 className="text-h2 font-bold flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-primary" />
-              الفواتير
-            </h3>
-
-            {/* Summary chips */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <SummaryChip
-                icon={<CheckCircle2 className="h-3.5 w-3.5" />}
-                label={`${paidCount} مدفوعة`}
-                tone="success"
-              />
-              {pendingCount > 0 && (
-                <SummaryChip
-                  icon={<FileText className="h-3.5 w-3.5" />}
-                  label={`${pendingCount} معلّقة`}
-                  tone="warning"
-                />
-              )}
-              <SummaryChip
-                icon={<Sparkles className="h-3.5 w-3.5" />}
-                label={`إجمالي ${formatMoney(totalPaid, client.currency)}`}
-                tone="primary"
-              />
-            </div>
-          </div>
+          <h3 className="text-h2 font-bold flex items-center gap-2">
+            <Receipt className="h-5 w-5 text-primary" />
+            الفواتير
+          </h3>
 
           {/* Toolbar — search + status filter pills */}
           <div className="mt-3 flex items-center gap-3 flex-wrap">
@@ -390,28 +359,6 @@ function LimitItem({ icon, value }: { icon: React.ReactNode; value: string }): J
       <span className="text-primary flex-shrink-0 mt-0.5">{icon}</span>
       <span className="font-semibold">{value}</span>
     </li>
-  );
-}
-
-function SummaryChip({
-  icon,
-  label,
-  tone,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  tone: 'success' | 'warning' | 'primary';
-}): JSX.Element {
-  const tones: Record<typeof tone, string> = {
-    success: 'bg-success/10 text-success',
-    warning: 'bg-warning/10 text-warning',
-    primary: 'bg-primary/10 text-primary',
-  };
-  return (
-    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold', tones[tone])}>
-      {icon}
-      {label}
-    </span>
   );
 }
 
