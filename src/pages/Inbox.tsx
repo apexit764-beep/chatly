@@ -501,6 +501,7 @@ export default function Inbox(): JSX.Element {
               channels={channels}
               departments={departments}
             />
+            <InboxSortButton />
           </div>
           <InboxFilters
             view={view}
@@ -2176,10 +2177,10 @@ function InboxFilterButton({
       <button
         onClick={() => setFilterOpen(true)}
         className={cn(
-          'h-9 w-9 rounded-full flex items-center justify-center transition-colors relative flex-shrink-0',
+          'h-9 w-9 rounded-full flex items-center justify-center transition-colors relative flex-shrink-0 border',
           filterActive
-            ? 'bg-primary/10 text-primary'
-            : 'text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark'
+            ? 'bg-primary/10 text-primary border-primary/30'
+            : 'text-muted-light dark:text-muted-dark border-border-light dark:border-border-dark hover:bg-bg-light dark:hover:bg-bg-dark'
         )}
         aria-expanded={filterOpen}
         title="فلترة"
@@ -2204,6 +2205,41 @@ function InboxFilterButton({
   );
 }
 
+function InboxSortButton(): JSX.Element {
+  const [sortOpen, setSortOpen] = useState(false);
+  const [sortKey, setSortKey] = useState<'recent' | 'oldest' | 'unread'>('recent');
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setSortOpen((v) => !v)}
+        className="h-9 w-9 rounded-full flex items-center justify-center border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex-shrink-0"
+        aria-haspopup="menu"
+        aria-expanded={sortOpen}
+        title={{ recent: 'الأحدث أولاً', oldest: 'الأقدم أولاً', unread: 'غير المقروءة أولاً' }[sortKey]}
+      >
+        <ArrowDownUp className="h-4 w-4" strokeWidth={1.75} />
+      </button>
+      {sortOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setSortOpen(false)} />
+          <div className="absolute end-0 mt-1 w-44 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1 z-20">
+            {(['recent', 'oldest', 'unread'] as const).map((k) => (
+              <button
+                key={k}
+                onClick={() => { setSortKey(k); setSortOpen(false); }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-small hover:bg-bg-light dark:hover:bg-bg-dark text-start"
+              >
+                <span className="flex-1">{ { recent: 'الأحدث أولاً', oldest: 'الأقدم أولاً', unread: 'غير المقروءة أولاً' }[k] }</span>
+                {sortKey === k && <Check className="h-3.5 w-3.5 text-primary" />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function InboxFilters({
   view,
   setView,
@@ -2220,9 +2256,6 @@ function InboxFilters({
   statusCounts: { new: number; pending: number; closed: number };
 }): JSX.Element {
   const [viewOpen, setViewOpen] = useState(false);
-  const [statusOpen, setStatusOpen] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
-  const [sortKey, setSortKey] = useState<'recent' | 'oldest' | 'unread'>('recent');
 
   type ViewItem = { key: InboxView; label: string; count: number; icon: JSX.Element };
   const viewItems: ViewItem[] = [
@@ -2240,112 +2273,54 @@ function InboxFilters({
     { key: 'pending', label: 'قيد المعالجة', count: statusCounts.pending, icon: <ClockIcon className="h-4 w-4 text-warning" strokeWidth={2} /> },
     { key: 'closed', label: 'مغلقة', count: statusCounts.closed, icon: <CheckCircle2 className="h-4 w-4 text-success" strokeWidth={2} /> },
   ];
-  const currentStatus = statusItems.find((i) => i.key === selectedStatus) ?? statusItems[0];
-
-  const sortLabel = { recent: 'الأحدث أولاً', oldest: 'الأقدم أولاً', unread: 'غير المقروءة أولاً' }[sortKey];
-
   return (
-    <div className="flex items-center justify-between gap-2">
-      <div className="flex items-center gap-1.5">
-        {/* View pill */}
-        <div className="relative">
-          <button
-            onClick={() => setViewOpen((v) => !v)}
-            className="h-7 ps-2.5 pe-2 rounded-full bg-bg-light dark:bg-bg-dark text-[12px] font-semibold flex items-center gap-1.5 hover:bg-border-light dark:hover:bg-border-dark transition-colors"
-            aria-haspopup="menu"
-            aria-expanded={viewOpen}
-          >
-            <span className="text-muted-light dark:text-muted-dark tabular-nums">{currentView.count}</span>
-            <span>{currentView.label}</span>
-            <ChevronDown className="h-3 w-3 opacity-60" />
-          </button>
-          {viewOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setViewOpen(false)} />
-              <div className="absolute start-0 mt-1 w-48 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1.5 z-20">
-                {viewItems.map((i) => (
-                  <ViewOption key={i.key} item={i} active={view === i.key} onClick={() => { setView(i.key); setViewOpen(false); }} />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Status pill */}
-        <div className="relative">
-          <button
-            onClick={() => setStatusOpen((v) => !v)}
-            className={cn(
-              'h-7 ps-2.5 pe-2 rounded-full text-[12px] font-semibold flex items-center gap-1.5 transition-colors',
-              selectedStatus
-                ? 'bg-primary/10 text-primary hover:bg-primary/20'
-                : 'bg-bg-light dark:bg-bg-dark hover:bg-border-light dark:hover:bg-border-dark'
-            )}
-            aria-haspopup="menu"
-            aria-expanded={statusOpen}
-          >
-            <span className="flex-shrink-0">{currentStatus.icon}</span>
-            <span>{currentStatus.label}</span>
-            <ChevronDown className="h-3 w-3 opacity-60" />
-          </button>
-          {statusOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setStatusOpen(false)} />
-              <div className="absolute start-0 mt-1 w-48 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1.5 z-20">
-                {statusItems.map((i) => (
-                  <button
-                    key={i.key ?? 'all'}
-                    onClick={() => { setSelectedStatus(i.key); setStatusOpen(false); }}
-                    className={cn(
-                      'w-full flex items-center gap-2 px-3 py-2 text-small text-start hover:bg-bg-light dark:hover:bg-bg-dark transition-colors',
-                      selectedStatus === i.key && 'font-semibold'
-                    )}
-                  >
-                    <span className="flex-shrink-0">{i.icon}</span>
-                    <span className="truncate">{i.label}</span>
-                    {i.count > 0 && (
-                      <span className="text-[11px] font-medium text-muted-light dark:text-muted-dark tabular-nums">
-                        {i.count}
-                      </span>
-                    )}
-                    <span className="flex-1" />
-                    {selectedStatus === i.key && <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Sort pill */}
-      <div className="relative">
+    <div className="flex items-center gap-1.5">
+      {/* View dropdown */}
+      <div className="relative flex-shrink-0">
         <button
-          onClick={() => setSortOpen((v) => !v)}
-          className="h-7 ps-2.5 pe-1.5 rounded-full border border-border-light dark:border-border-dark text-[12px] font-medium flex items-center gap-1.5 text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
+          onClick={() => setViewOpen((v) => !v)}
+          className="h-7 ps-2.5 pe-2 rounded-full bg-bg-light dark:bg-bg-dark text-[12px] font-semibold flex items-center gap-1.5 hover:bg-border-light dark:hover:bg-border-dark transition-colors"
           aria-haspopup="menu"
-          aria-expanded={sortOpen}
+          aria-expanded={viewOpen}
         >
-          <span>{sortLabel}</span>
-          <ArrowDownUp className="h-3 w-3" strokeWidth={1.75} />
+          <span className="text-muted-light dark:text-muted-dark tabular-nums">{currentView.count}</span>
+          <span>{currentView.label}</span>
+          <ChevronDown className="h-3 w-3 opacity-60" />
         </button>
-        {sortOpen && (
+        {viewOpen && (
           <>
-            <div className="fixed inset-0 z-10" onClick={() => setSortOpen(false)} />
-            <div className="absolute end-0 mt-1 w-44 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1 z-20">
-              {(['recent', 'oldest', 'unread'] as const).map((k) => (
-                <button
-                  key={k}
-                  onClick={() => { setSortKey(k); setSortOpen(false); }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-small hover:bg-bg-light dark:hover:bg-bg-dark text-start"
-                >
-                  <span className="flex-1">{ { recent: 'الأحدث أولاً', oldest: 'الأقدم أولاً', unread: 'غير المقروءة أولاً' }[k] }</span>
-                  {sortKey === k && <Check className="h-3.5 w-3.5 text-primary" />}
-                </button>
+            <div className="fixed inset-0 z-10" onClick={() => setViewOpen(false)} />
+            <div className="absolute start-0 mt-1 w-48 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1.5 z-20">
+              {viewItems.map((i) => (
+                <ViewOption key={i.key} item={i} active={view === i.key} onClick={() => { setView(i.key); setViewOpen(false); }} />
               ))}
             </div>
           </>
         )}
+      </div>
+
+      {/* Separator */}
+      <div className="h-4 w-px bg-border-light dark:bg-border-dark flex-shrink-0" />
+
+      {/* Status chips */}
+      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+        {statusItems.map((i) => {
+          const isActive = selectedStatus === i.key;
+          return (
+            <button
+              key={i.key ?? 'all'}
+              onClick={() => setSelectedStatus(isActive && i.key !== null ? null : i.key)}
+              className={cn(
+                'h-[26px] px-2.5 rounded-full text-[11px] font-medium transition-colors whitespace-nowrap flex-shrink-0',
+                isActive
+                  ? 'bg-primary text-white'
+                  : 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark hover:bg-border-light dark:hover:bg-border-dark'
+              )}
+            >
+              {i.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
