@@ -458,41 +458,40 @@ export default function Inbox(): JSX.Element {
               : 'flex'
         )}
       >
-        <div className="h-[56px] px-4 flex items-center justify-between border-b border-border-light dark:border-border-dark flex-shrink-0">
-          <h2 className="text-h3 font-bold">المحادثات</h2>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setNewConvOpen(true)}
-              className="h-8 px-3 rounded-full bg-primary hover:bg-primary-dark text-white text-[12px] font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
-              title="بدء محادثة جديدة"
-              aria-label="محادثة جديدة"
-              style={{ color: '#fff' }}
-            >
-              <SquarePen className="h-3.5 w-3.5" />
-              محادثة جديدة
-            </button>
-            <button
-              onClick={toggleConversationList}
-              className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center text-muted-light dark:text-muted-dark"
-              title="طيّ القائمة"
-              aria-label="طيّ القائمة"
-            >
-              <PanelLeftClose className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-        <div className="p-3 border-b border-border-light dark:border-border-dark space-y-2">
-          <div className="flex items-center gap-1.5">
-            <div className="relative flex-1">
-              <Search className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark" />
-              <input
-                type="text"
-                placeholder="ابحث عن محادثة..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-9 ps-3 pe-9 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary"
-              />
+        <div className="px-4 pt-4 pb-3 flex-shrink-0">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[18px] font-bold tracking-tight">المحادثات</h2>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setNewConvOpen(true)}
+                className="h-8 w-8 rounded-lg bg-primary hover:bg-primary-dark text-white flex items-center justify-center shadow-sm transition-colors"
+                title="بدء محادثة جديدة"
+                aria-label="محادثة جديدة"
+                style={{ color: '#fff' }}
+              >
+                <SquarePen className="h-4 w-4" />
+              </button>
+              <button
+                onClick={toggleConversationList}
+                className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center text-muted-light dark:text-muted-dark transition-colors"
+                title="طيّ القائمة"
+                aria-label="طيّ القائمة"
+              >
+                <PanelLeftClose className="h-4 w-4" />
+              </button>
             </div>
+          </div>
+          <div className="relative mb-2.5">
+            <Search className="h-3.5 w-3.5 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light/60 dark:text-muted-dark/60" />
+            <input
+              type="text"
+              placeholder="ابحث عن محادثة..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-8 ps-3 pe-8 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-[12px] focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 placeholder:text-muted-light/50 dark:placeholder:text-muted-dark/50 transition-all"
+            />
+          </div>
+          <div className="flex items-center gap-1.5">
             <InboxFilterButton
               selectedChannelId={selectedChannelId}
               setSelectedChannelId={(id) => useInboxStore.getState().setSelectedChannelId(id)}
@@ -502,6 +501,8 @@ export default function Inbox(): JSX.Element {
               departments={departments}
             />
           </div>
+        </div>
+        <div className="px-3 pb-2.5 border-b border-border-light/60 dark:border-border-dark/60">
           <InboxFilters
             view={view}
             setView={(v) => useInboxStore.getState().setView(v)}
@@ -520,19 +521,20 @@ export default function Inbox(): JSX.Element {
             }}
           />
         </div>
-        <div className="flex-1 overflow-y-auto divide-y divide-border-light dark:divide-border-dark">
+        <div className="flex-1 overflow-y-auto">
           {filtered.length === 0 && (
             <div className="text-center py-12 text-muted-light dark:text-muted-dark">
               <p className="text-body">لا توجد محادثات</p>
             </div>
           )}
-          {filtered.map((conv) => {
+          {filtered.map((conv, idx) => {
             const contact = contacts.find((c) => c.id === conv.contactId);
             if (!contact) return null;
             const agent = conv.assignedTo ? agents.find((a) => a.id === conv.assignedTo) : null;
             const convChannel = channels.find((c) => c.id === conv.channelId);
             const isSelected = selectedId === conv.id;
             const isConvBookmarked = bookmarkedConvIds.has(conv.id);
+            const isOnline = contact.active !== false && idx % 3 !== 2;
             return (
               <button
                 key={conv.id}
@@ -541,22 +543,28 @@ export default function Inbox(): JSX.Element {
                   setShowChatMobile(true);
                 }}
                 className={cn(
-                  'w-full text-start flex gap-3 p-3 transition-colors hover:bg-bg-light dark:hover:bg-bg-dark',
-                  isSelected && 'bg-primary/5'
+                  'w-full text-start flex gap-3 px-4 py-3 transition-all',
+                  isSelected
+                    ? 'bg-primary/[0.06] border-s-[3px] border-s-primary'
+                    : 'border-s-[3px] border-s-transparent hover:bg-bg-light/70 dark:hover:bg-bg-dark/70',
                 )}
               >
                 <div className="relative flex-shrink-0">
                   <Avatar name={contact.name} size="md" />
+                  <span className={cn(
+                    'absolute bottom-0 end-0 h-[10px] w-[10px] rounded-full border-2 border-white dark:border-surface-dark',
+                    isOnline ? 'bg-success' : 'bg-slate-300 dark:bg-slate-600'
+                  )} />
                   {convChannel && (
-                    <span className="absolute -bottom-1 -end-1 ring-2 ring-white dark:ring-surface-dark rounded-lg">
-                      <ChannelIcon type={convChannel.type} size={10} className="!h-5 !w-5" />
+                    <span className="absolute -bottom-1.5 -start-1.5 ring-2 ring-white dark:ring-surface-dark rounded-lg">
+                      <ChannelIcon type={convChannel.type} size={10} className="!h-4 !w-4" />
                     </span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-0.5">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <p className="text-body font-semibold truncate">{contact.name}</p>
+                      <p className={cn('text-[13px] truncate', conv.unreadCount > 0 ? 'font-bold' : 'font-semibold')}>{contact.name}</p>
                       {isConvBookmarked && <Star className="h-3 w-3 text-warning fill-warning flex-shrink-0" />}
                       {conv.aiActive && (
                         <span
@@ -578,24 +586,20 @@ export default function Inbox(): JSX.Element {
                       )}
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <span className="text-[10px] text-muted-light dark:text-muted-dark">
+                      <span className="text-[10px] text-muted-light/70 dark:text-muted-dark/70">
                         {timeAgo(conv.lastMessageAt)}
                       </span>
-                      {conv.status === 'new' ? (
-                        <span className="h-2 w-2 rounded-full bg-primary" title="جديدة" />
-                      ) : conv.status === 'pending' ? (
-                        <span className="h-2 w-2 rounded-full bg-warning" title="قيد المعالجة" />
-                      ) : (
-                        <span className="h-2 w-2 rounded-full bg-success" title="محلولة" />
-                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <p className="text-small text-muted-light dark:text-muted-dark truncate flex-1">{conv.lastMessage}</p>
+                    <p className={cn('text-[12px] truncate flex-1', conv.unreadCount > 0 ? 'text-foreground-light dark:text-foreground-dark font-medium' : 'text-muted-light dark:text-muted-dark')}>{conv.lastMessage}</p>
                     {conv.unreadCount > 0 && (
-                      <span className="bg-danger text-white text-[10px] font-bold rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center flex-shrink-0">
+                      <span className="bg-primary text-white text-[10px] font-bold rounded-full h-[18px] min-w-[18px] px-1 flex items-center justify-center flex-shrink-0">
                         {conv.unreadCount}
                       </span>
+                    )}
+                    {conv.unreadCount === 0 && conv.status === 'new' && (
+                      <span className="h-2 w-2 rounded-full bg-primary flex-shrink-0" title="جديدة" />
                     )}
                   </div>
                 </div>
@@ -2245,19 +2249,19 @@ function InboxFilters({
   const sortLabel = { recent: 'الأحدث أولاً', oldest: 'الأقدم أولاً', unread: 'غير المقروءة أولاً' }[sortKey];
 
   return (
-    <div className="flex items-center justify-between gap-2">
-      <div className="flex items-center gap-1.5">
+    <div className="flex items-center justify-between gap-1.5">
+      <div className="flex items-center gap-1">
         {/* View pill */}
         <div className="relative">
           <button
             onClick={() => setViewOpen((v) => !v)}
-            className="h-7 ps-2.5 pe-2 rounded-full bg-bg-light dark:bg-bg-dark text-[12px] font-semibold flex items-center gap-1.5 hover:bg-border-light dark:hover:bg-border-dark transition-colors"
+            className="h-[26px] ps-2 pe-1.5 rounded-md bg-bg-light dark:bg-bg-dark text-[11px] font-semibold flex items-center gap-1 hover:bg-border-light dark:hover:bg-border-dark transition-colors"
             aria-haspopup="menu"
             aria-expanded={viewOpen}
           >
-            <span className="text-muted-light dark:text-muted-dark tabular-nums">{currentView.count}</span>
+            <span className="text-muted-light dark:text-muted-dark tabular-nums text-[10px]">{currentView.count}</span>
             <span>{currentView.label}</span>
-            <ChevronDown className="h-3 w-3 opacity-60" />
+            <ChevronDown className="h-2.5 w-2.5 opacity-50" />
           </button>
           {viewOpen && (
             <>
@@ -2276,7 +2280,7 @@ function InboxFilters({
           <button
             onClick={() => setStatusOpen((v) => !v)}
             className={cn(
-              'h-7 ps-2.5 pe-2 rounded-full text-[12px] font-semibold flex items-center gap-1.5 transition-colors',
+              'h-[26px] ps-2 pe-1.5 rounded-md text-[11px] font-semibold flex items-center gap-1 transition-colors',
               selectedStatus
                 ? 'bg-primary/10 text-primary hover:bg-primary/20'
                 : 'bg-bg-light dark:bg-bg-dark hover:bg-border-light dark:hover:bg-border-dark'
@@ -2284,9 +2288,9 @@ function InboxFilters({
             aria-haspopup="menu"
             aria-expanded={statusOpen}
           >
-            <span className="flex-shrink-0">{currentStatus.icon}</span>
+            <span className="flex-shrink-0 [&>svg]:h-3 [&>svg]:w-3">{currentStatus.icon}</span>
             <span>{currentStatus.label}</span>
-            <ChevronDown className="h-3 w-3 opacity-60" />
+            <ChevronDown className="h-2.5 w-2.5 opacity-50" />
           </button>
           {statusOpen && (
             <>
@@ -2322,12 +2326,12 @@ function InboxFilters({
       <div className="relative">
         <button
           onClick={() => setSortOpen((v) => !v)}
-          className="h-7 ps-2.5 pe-1.5 rounded-full border border-border-light dark:border-border-dark text-[12px] font-medium flex items-center gap-1.5 text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
+          className="h-[26px] ps-2 pe-1.5 rounded-md border border-border-light/70 dark:border-border-dark/70 text-[11px] font-medium flex items-center gap-1 text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
           aria-haspopup="menu"
           aria-expanded={sortOpen}
         >
+          <ArrowDownUp className="h-2.5 w-2.5" strokeWidth={1.75} />
           <span>{sortLabel}</span>
-          <ArrowDownUp className="h-3 w-3" strokeWidth={1.75} />
         </button>
         {sortOpen && (
           <>
