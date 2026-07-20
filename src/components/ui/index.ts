@@ -21,3 +21,4 @@ export { CommandPalette } from './CommandPalette';
 export { SekaaLogo, QhubFullLogo } from './SekaaLogo';
 export { FilterDropdown } from './FilterDropdown';
 export type { FilterOption } from './FilterDropdown';
+export { DateRangePicker } from './DateRangePicker';

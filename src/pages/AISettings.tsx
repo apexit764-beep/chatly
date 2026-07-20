@@ -9,7 +9,6 @@ import {
   Ban,
   Clock,
   Save,
-  RotateCcw,
   Check,
   Zap,
   Smile,
@@ -131,7 +130,7 @@ const PROVIDERS: ProviderInfo[] = [
 export default function AISettings(): JSX.Element {
   const saved = useAIStore((s) => s.settings);
   const setSettings = useAIStore((s) => s.setSettings);
-  const reset = useAIStore((s) => s.reset);
+
   const channels = useDataStore((s) => s.channels);
   const agents = useDataStore((s) => s.agents);
   const departments = useDataStore((s) => s.departments);
@@ -250,20 +249,6 @@ export default function AISettings(): JSX.Element {
     showToast('تم حفظ إعدادات المساعد', 'success');
   };
 
-  const handleReset = async (): Promise<void> => {
-    const ok = await confirm({
-      title: 'إعادة ضبط الإعدادات؟',
-      message: 'سيتم إرجاع كل القيم للإفتراضي. لا يمكن التراجع.',
-      variant: 'warning',
-      confirmText: 'إعادة الضبط',
-    });
-    if (ok) {
-      reset();
-      setDirty(false);
-      showToast('تم إعادة الضبط', 'success');
-    }
-  };
-
   const arSelected = form.languages.includes('ar');
 
   const [tab, setTab] = useState<'connection' | 'personality' | 'knowledge' | 'transfer'>('connection');
@@ -285,15 +270,6 @@ export default function AISettings(): JSX.Element {
           <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
             تحكّم كامل في طريقة رد المساعد الذكي على عملائك
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleReset}
-            className="h-9 px-3 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex items-center gap-1.5"
-          >
-            <RotateCcw className="h-4 w-4" />
-            إعادة ضبط
-          </button>
         </div>
       </div>
 

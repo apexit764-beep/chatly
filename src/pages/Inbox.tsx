@@ -81,6 +81,7 @@ export default function Inbox(): JSX.Element {
   const sendMessage = useDataStore((s) => s.sendMessage);
   const sendAttachment = useDataStore((s) => s.sendAttachment);
   const setStatus = useDataStore((s) => s.setConversationStatus);
+  const reopenConversation = useDataStore((s) => s.reopenConversation);
   const assign = useDataStore((s) => s.assignConversation);
   const markRead = useDataStore((s) => s.markConversationRead);
   const templates = useDataStore((s) => s.templates);
@@ -515,8 +516,8 @@ export default function Inbox(): JSX.Element {
             selectedStatus={selectedStatus}
             setSelectedStatus={(s) => useInboxStore.getState().setSelectedStatus(s)}
             statusCounts={{
-              new: conversations.filter((c) => c.status === 'new').length,
-              pending: conversations.filter((c) => c.status === 'pending').length,
+              open: conversations.filter((c) => c.status === 'open').length,
+              in_progress: conversations.filter((c) => c.status === 'in_progress').length,
               closed: conversations.filter((c) => c.status === 'closed').length,
             }}
           />
@@ -582,17 +583,22 @@ export default function Inbox(): JSX.Element {
                       <span className="text-[10px] text-muted-light dark:text-muted-dark">
                         {timeAgo(conv.lastMessageAt)}
                       </span>
-                      {conv.status === 'new' ? (
-                        <span className="h-2 w-2 rounded-full bg-primary" title="جديدة" />
-                      ) : conv.status === 'pending' ? (
+                      {conv.status === 'open' ? (
+                        <span className="h-2 w-2 rounded-full bg-primary" title="مفتوحة" />
+                      ) : conv.status === 'in_progress' ? (
                         <span className="h-2 w-2 rounded-full bg-warning" title="قيد المعالجة" />
                       ) : (
-                        <span className="h-2 w-2 rounded-full bg-success" title="محلولة" />
+                        <span className="h-2 w-2 rounded-full bg-success" title="مغلقة" />
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <p className="text-small text-muted-light dark:text-muted-dark truncate flex-1">{conv.lastMessage}</p>
+                    {conv.sessionCount > 1 && (
+                      <span className="text-[10px] font-medium text-muted-light dark:text-muted-dark flex items-center gap-0.5 flex-shrink-0" title={`${conv.sessionCount} جلسات`}>
+                        <RotateCcw className="h-3 w-3" />{conv.sessionCount}
+                      </span>
+                    )}
                     {conv.unreadCount > 0 && (
                       <span className="bg-danger text-white text-[10px] font-bold rounded-full h-5 min-w-5 px-1.5 flex items-center justify-center flex-shrink-0">
                         {conv.unreadCount}
@@ -688,7 +694,11 @@ export default function Inbox(): JSX.Element {
                     closeConversation();
                     return;
                   }
-                  setStatus(selected.id, s);
+                  if (s === 'open' && selected.status === 'closed') {
+                    reopenConversation(selected.id);
+                  } else {
+                    setStatus(selected.id, s);
+                  }
                   showToast('تم تحديث الحالة', 'success');
                 }}
               />
@@ -779,7 +789,7 @@ export default function Inbox(): JSX.Element {
                         message: 'سيتم إعادة فتح المحادثة وستتمكن من إرسال واستقبال رسائل جديدة.',
                         confirmText: 'إعادة فتح',
                       });
-                      if (ok) { setStatus(selected.id, 'new'); showToast('تم إعادة فتح المحادثة', 'success'); }
+                      if (ok) { reopenConversation(selected.id); showToast('تم إعادة فتح المحادثة', 'success'); }
                     }}
                     className="h-9 px-4 rounded-full border border-primary text-primary text-small font-medium hover:bg-primary hover:text-white transition-colors flex items-center gap-2"
                   >
@@ -1915,6 +1925,9 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
           value={convChannel?.name ?? 'غير محدد'}
           icon={convChannel ? <ChannelIcon type={convChannel.type} size={10} className="!h-3.5 !w-3.5" /> : undefined}
         />
+        {conversation.sessionCount > 1 && (
+          <Attr label="الجلسات" value={`${conversation.sessionCount} جلسات`} />
+        )}
       </Collapsible>
 
       <Collapsible open={openRecent} onToggle={() => setOpenRecent((v) => !v)} title={`محادثات أخرى (${totalContactConvs - 1})`}>
@@ -2094,15 +2107,15 @@ function StatusDropdown({
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const options: { value: ConversationStatus; label: string; dotColor: string }[] = [
-    { value: 'new', label: 'مفتوحة', dotColor: 'bg-primary' },
-    { value: 'pending', label: 'قيد المعالجة', dotColor: 'bg-warning' },
+    { value: 'open', label: 'مفتوحة', dotColor: 'bg-primary' },
+    { value: 'in_progress', label: 'قيد المعالجة', dotColor: 'bg-warning' },
     { value: 'closed', label: 'مغلقة', dotColor: 'bg-success' },
   ];
   const current = options.find((o) => o.value === status) ?? options[0];
   const triggerClass =
     status === 'closed'
       ? 'bg-success/15 text-success'
-      : status === 'pending'
+      : status === 'in_progress'
       ? 'bg-warning/15 text-warning'
       : 'bg-primary/15 text-primary';
 
@@ -2253,7 +2266,7 @@ function InboxFilters({
   counts: { mine: number; unassigned: number; all: number; starred: number };
   selectedStatus: ConversationStatus | null;
   setSelectedStatus: (s: ConversationStatus | null) => void;
-  statusCounts: { new: number; pending: number; closed: number };
+  statusCounts: { open: number; in_progress: number; closed: number };
 }): JSX.Element {
   const [viewOpen, setViewOpen] = useState(false);
 
@@ -2269,8 +2282,8 @@ function InboxFilters({
   type StatusItem = { key: ConversationStatus | null; label: string; count: number; icon: JSX.Element };
   const statusItems: StatusItem[] = [
     { key: null, label: 'كل الحالات', count: counts.all, icon: <Globe className="h-4 w-4 text-slate-500" strokeWidth={2} /> },
-    { key: 'new', label: 'جديدة', count: statusCounts.new, icon: <Sparkles className="h-4 w-4 text-primary" strokeWidth={2} /> },
-    { key: 'pending', label: 'قيد المعالجة', count: statusCounts.pending, icon: <ClockIcon className="h-4 w-4 text-warning" strokeWidth={2} /> },
+    { key: 'open', label: 'مفتوحة', count: statusCounts.open, icon: <Sparkles className="h-4 w-4 text-primary" strokeWidth={2} /> },
+    { key: 'in_progress', label: 'قيد المعالجة', count: statusCounts.in_progress, icon: <ClockIcon className="h-4 w-4 text-warning" strokeWidth={2} /> },
     { key: 'closed', label: 'مغلقة', count: statusCounts.closed, icon: <CheckCircle2 className="h-4 w-4 text-success" strokeWidth={2} /> },
   ];
   return (

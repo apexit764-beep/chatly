@@ -260,7 +260,7 @@ export const contacts: Contact[] = [
 // ============================================================
 export const conversations: Conversation[] = [
   {
-    id: 'conv1', contactId: 'c1', assignedTo: 'a2', status: 'pending',
+    id: 'conv1', contactId: 'c1', assignedTo: 'a2', status: 'in_progress', sessionCount: 3,
     channelId: 'ch2', departmentId: 'd1', aiHandedOff: true,
     lastMessage: 'هل الشقة في الخوض ما زالت متاحة؟',
     lastMessageAt: nowMinus(15), unreadCount: 2,
@@ -280,7 +280,7 @@ export const conversations: Conversation[] = [
     ],
   },
   {
-    id: 'conv2', contactId: 'c5', assignedTo: 'a1', status: 'new',
+    id: 'conv2', contactId: 'c5', assignedTo: 'a1', status: 'open', sessionCount: 1,
     channelId: 'ch1', departmentId: 'd4',
     lastMessage: 'أريد عرض الفيلا مع معاينة هذا الأسبوع',
     lastMessageAt: nowMinus(8), unreadCount: 1, notes: [], activityLog: [],
@@ -291,7 +291,7 @@ export const conversations: Conversation[] = [
     ],
   },
   {
-    id: 'conv3', contactId: 'c3', assignedTo: 'a3', status: 'pending',
+    id: 'conv3', contactId: 'c3', assignedTo: 'a3', status: 'in_progress', sessionCount: 1,
     channelId: 'ch3', departmentId: 'd2', aiHandedOff: true,
     lastMessage: 'سنرسل العقد المعدل قريباً', lastMessageAt: nowMinus(120),
     unreadCount: 0, notes: ['مراجعة العقد من القانوني'], activityLog: [],
@@ -301,7 +301,7 @@ export const conversations: Conversation[] = [
     ],
   },
   {
-    id: 'conv4', contactId: 'c4', assignedTo: null, status: 'new',
+    id: 'conv4', contactId: 'c4', assignedTo: null, status: 'open', sessionCount: 1,
     channelId: 'ch7', departmentId: 'd2',
     lastMessage: 'هل لديكم سيارات للإيجار اليومي في صلالة؟',
     lastMessageAt: nowMinus(45), unreadCount: 3, notes: [], activityLog: [],
@@ -312,7 +312,7 @@ export const conversations: Conversation[] = [
     ],
   },
   {
-    id: 'conv5', contactId: 'c2', assignedTo: 'a2', status: 'closed',
+    id: 'conv5', contactId: 'c2', assignedTo: 'a2', status: 'closed', sessionCount: 2,
     channelId: 'ch2', departmentId: 'd1',
     lastMessage: 'شكراً لتعاونكم، تم استلام العقد', lastMessageAt: nowMinus(60 * 24),
     unreadCount: 0, notes: ['تم توقيع العقد بنجاح'],
@@ -323,7 +323,7 @@ export const conversations: Conversation[] = [
     ],
   },
   {
-    id: 'conv6', contactId: 'c6', assignedTo: 'a5', status: 'pending',
+    id: 'conv6', contactId: 'c6', assignedTo: 'a5', status: 'open', sessionCount: 1,
     channelId: 'ch2', departmentId: 'd1',
     lastMessage: 'متى يمكنني المعاينة في نزوى؟', lastMessageAt: nowMinus(60),
     unreadCount: 1, notes: [], activityLog: [],
@@ -332,14 +332,14 @@ export const conversations: Conversation[] = [
     ],
   },
   {
-    id: 'conv7', contactId: 'c7', assignedTo: 'a3', status: 'closed',
+    id: 'conv7', contactId: 'c7', assignedTo: 'a3', status: 'closed', sessionCount: 1,
     channelId: 'ch7', departmentId: 'd2',
     lastMessage: 'شكراً جزيلاً', lastMessageAt: nowMinus(60 * 5),
     unreadCount: 0, notes: [], activityLog: [],
     messages: [{ id: 'm60', conversationId: 'conv7', direction: 'in', type: 'text', content: 'شكراً جزيلاً', timestamp: nowMinus(60 * 5), read: true, delivered: true }],
   },
   {
-    id: 'conv8', contactId: 'c8', assignedTo: null, status: 'new',
+    id: 'conv8', contactId: 'c8', assignedTo: null, status: 'open', sessionCount: 1,
     channelId: 'ch6', departmentId: 'd2',
     lastMessage: 'أبحث عن تويوتا لاند كروزر', lastMessageAt: nowMinus(35),
     unreadCount: 2, notes: [], activityLog: [],
@@ -350,7 +350,7 @@ export const conversations: Conversation[] = [
     ],
   },
   {
-    id: 'conv9', contactId: 'c9', assignedTo: 'a2', status: 'pending',
+    id: 'conv9', contactId: 'c9', assignedTo: 'a2', status: 'open', sessionCount: 2,
     channelId: 'ch1', departmentId: 'd1',
     lastMessage: 'نعم، هذا السعر مناسب', lastMessageAt: nowMinus(90),
     unreadCount: 0, notes: [], activityLog: [],
@@ -360,7 +360,7 @@ export const conversations: Conversation[] = [
     ],
   },
   {
-    id: 'conv10', contactId: 'c12', assignedTo: 'a1', status: 'new',
+    id: 'conv10', contactId: 'c12', assignedTo: 'a1', status: 'open', sessionCount: 1,
     channelId: 'ch1', departmentId: 'd4',
     lastMessage: 'هل يمكن تجديد العقد بنفس الشروط؟', lastMessageAt: nowMinus(25),
     unreadCount: 1, notes: ['عميلة VIP - رد سريع'], activityLog: [],
@@ -369,7 +369,7 @@ export const conversations: Conversation[] = [
     ],
   },
   {
-    id: 'conv11', contactId: 'c10', assignedTo: 'a4', status: 'pending',
+    id: 'conv11', contactId: 'c10', assignedTo: 'a4', status: 'in_progress', sessionCount: 1,
     channelId: 'ch4', departmentId: 'd3', aiHandedOff: true,
     lastMessage: 'سيتم التحقق من الطلب وإبلاغك خلال 24 ساعة', lastMessageAt: nowMinus(135),
     unreadCount: 0, notes: [], activityLog: [],
@@ -379,7 +379,7 @@ export const conversations: Conversation[] = [
     ],
   },
   {
-    id: 'conv12', contactId: 'c5', assignedTo: 'a3', status: 'new',
+    id: 'conv12', contactId: 'c5', assignedTo: 'a3', status: 'open', sessionCount: 1,
     channelId: 'ch6', departmentId: 'd2',
     lastMessage: 'شفت المنشور الجديد عن فيلا الموج', lastMessageAt: nowMinus(50),
     unreadCount: 1, notes: [], activityLog: [],
@@ -389,7 +389,7 @@ export const conversations: Conversation[] = [
   },
   // ===== AI-handled conversations =====
   {
-    id: 'conv13', contactId: 'c6', assignedTo: null, status: 'new',
+    id: 'conv13', contactId: 'c6', assignedTo: null, status: 'in_progress', sessionCount: 1,
     channelId: 'ch1', departmentId: 'd2', aiActive: true,
     lastMessage: 'شكراً جزيلاً، سأنتظر التواصل', lastMessageAt: nowMinus(5),
     unreadCount: 0, notes: [], activityLog: [
@@ -406,7 +406,7 @@ export const conversations: Conversation[] = [
     ],
   },
   {
-    id: 'conv14', contactId: 'c8', assignedTo: null, status: 'closed',
+    id: 'conv14', contactId: 'c8', assignedTo: null, status: 'closed', sessionCount: 1,
     channelId: 'ch7', departmentId: 'd2', aiActive: true,
     lastMessage: 'تمام، شكراً لك!', lastMessageAt: nowMinus(60 * 3),
     unreadCount: 0, notes: [],
@@ -420,7 +420,7 @@ export const conversations: Conversation[] = [
     ],
   },
   {
-    id: 'conv15', contactId: 'c2', assignedTo: null, status: 'new',
+    id: 'conv15', contactId: 'c2', assignedTo: null, status: 'open', sessionCount: 1,
     channelId: 'ch6', departmentId: 'd2', aiActive: true,
     lastMessage: 'كيف يمكنني ربط حساب الواتساب؟', lastMessageAt: nowMinus(20),
     unreadCount: 1, notes: [], activityLog: [],

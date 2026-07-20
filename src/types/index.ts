@@ -1,4 +1,4 @@
-export type ConversationStatus = 'new' | 'pending' | 'closed';
+export type ConversationStatus = 'open' | 'in_progress' | 'closed';
 export type ContactType = 'customer' | 'lead' | 'company' | 'vip';
 export type AgentRole = 'manager' | 'agent';
 
@@ -80,8 +80,6 @@ export type AgentStatus = 'online' | 'busy' | 'offline';
 export type MessageDirection = 'in' | 'out';
 export type MessageType = 'text' | 'image' | 'document' | 'voice' | 'note';
 export type CampaignStatus = 'draft' | 'scheduled' | 'completed' | 'failed';
-export type TemplateCategory = 'welcome' | 'followup' | 'payment' | 'closing' | 'custom';
-
 export interface TemplateCategoryItem {
   id: string;
   name: string;
@@ -216,6 +214,7 @@ export interface Conversation {
   messages: Message[];
   notes: string[];
   activityLog: ActivityEvent[];
+  sessionCount: number;
   /** True when the AI assistant currently owns this conversation */
   aiActive?: boolean;
   /** True when conversation was handed off from AI to a human agent */
@@ -436,7 +435,7 @@ export interface Subscription {
   };
 }
 
-export type InvoiceStatus = 'draft' | 'pending' | 'paid' | 'failed' | 'refunded';
+export type InvoiceStatus = 'paid' | 'failed';
 
 export interface Invoice {
   id: string;
@@ -455,7 +454,7 @@ export interface Invoice {
   createdAt: string;
 }
 
-export type TransactionStatus = 'succeeded' | 'failed' | 'pending' | 'refunded';
+export type TransactionStatus = 'succeeded' | 'failed';
 
 export interface Transaction {
   id: string;
