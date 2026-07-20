@@ -187,7 +187,7 @@ export default function Billing(): JSX.Element {
       )}
 
       {/* Invoices */}
-      <Card className="overflow-hidden">
+      <Card>
         <div className="px-5 py-4 border-b border-border-light dark:border-border-dark">
           <h3 className="text-h2 font-bold flex items-center gap-2">
             <Receipt className="h-5 w-5 text-primary" />
