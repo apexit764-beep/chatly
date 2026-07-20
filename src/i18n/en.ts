@@ -246,7 +246,6 @@ export const en: Record<string, string> = {
   'الأحدث أولاً': 'Most Recent First',
   'الأقدم أولاً': 'Oldest First',
   'غير المقروءة أولاً': 'Unread First',
-  'مفتوحة': 'Open',
   'الخروج من وضع التركيز (Esc)': 'Exit Focus Mode (Esc)',
   'وضع ملء الشاشة': 'Full Screen Mode',
   'خروج (Esc)': 'Exit (Esc)',

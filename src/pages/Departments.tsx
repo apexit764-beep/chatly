@@ -26,7 +26,6 @@ export default function Departments(): JSX.Element {
   const addDepartment = useDataStore((s) => s.addDepartment);
   const updateDepartment = useDataStore((s) => s.updateDepartment);
   const deleteDepartment = useDataStore((s) => s.deleteDepartment);
-  const updateAgent = useDataStore((s) => s.updateAgent);
   const updateChannel = useDataStore((s) => s.updateChannel);
   const showToast = useUIStore((s) => s.showToast);
   const { confirm } = useConfirm();
@@ -78,16 +77,9 @@ export default function Departments(): JSX.Element {
         name: form.name,
         description: form.description,
         color: form.color,
-        agents: form.agents,
+        agents: editing.agents,
         channels: form.channels,
         slaMinutes: form.slaMinutes,
-      });
-      // sync agents
-      agents.forEach((a) => {
-        const inNow = form.agents.includes(a.id);
-        const inBefore = a.departments.includes(editing.id);
-        if (inNow && !inBefore) updateAgent(a.id, { departments: [...a.departments, editing.id] });
-        if (!inNow && inBefore) updateAgent(a.id, { departments: a.departments.filter((d) => d !== editing.id) });
       });
       // sync channels
       channels.forEach((c) => {
@@ -213,19 +205,23 @@ export default function Departments(): JSX.Element {
 
           {editing && (
             <div className="space-y-1.5">
-              <label className="text-small font-medium text-muted-light dark:text-muted-dark block">الموظفون <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
-              <ChipMultiSelect
-                placeholder="ابحث وأضف موظف..."
-                options={agents.map((a) => ({
-                  id: a.id,
-                  label: a.name,
-                  searchKey: a.name + ' ' + a.email,
-                  leading: <Avatar name={a.name} size="xs" status={a.status} />,
-                }))}
-                selectedIds={form.agents}
-                onChange={(ids) => setForm({ ...form, agents: ids })}
-                emptyText="لا موظفين متاحين"
-              />
+              <label className="text-small font-medium text-muted-light dark:text-muted-dark block">الموظفون</label>
+              {form.agents.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {form.agents.map((id) => {
+                    const a = agents.find((ag) => ag.id === id);
+                    if (!a) return null;
+                    return (
+                      <span key={id} className="inline-flex items-center gap-1.5 h-8 ps-1.5 pe-3 rounded-full bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small">
+                        <Avatar name={a.name} size="xs" status={a.status} />
+                        {a.name}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-small text-muted-light dark:text-muted-dark">لا يوجد موظفين</p>
+              )}
             </div>
           )}
 

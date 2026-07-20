@@ -22,7 +22,7 @@ export const contactTypeColor: Record<ContactType, string> = {
 };
 
 export const conversationStatusLabel: Record<ConversationStatus, string> = {
-  open: 'مفتوحة',
+  open: 'جديدة',
   in_progress: 'قيد المعالجة',
   closed: 'مغلقة',
 };

@@ -584,7 +584,7 @@ export default function Inbox(): JSX.Element {
                         {timeAgo(conv.lastMessageAt)}
                       </span>
                       {conv.status === 'open' ? (
-                        <span className="h-2 w-2 rounded-full bg-primary" title="مفتوحة" />
+                        <span className="h-2 w-2 rounded-full bg-primary" title="جديدة" />
                       ) : conv.status === 'in_progress' ? (
                         <span className="h-2 w-2 rounded-full bg-warning" title="قيد المعالجة" />
                       ) : (
@@ -2107,7 +2107,7 @@ function StatusDropdown({
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const options: { value: ConversationStatus; label: string; dotColor: string }[] = [
-    { value: 'open', label: 'مفتوحة', dotColor: 'bg-primary' },
+    { value: 'open', label: 'جديدة', dotColor: 'bg-primary' },
     { value: 'in_progress', label: 'قيد المعالجة', dotColor: 'bg-warning' },
     { value: 'closed', label: 'مغلقة', dotColor: 'bg-success' },
   ];
@@ -2282,7 +2282,7 @@ function InboxFilters({
   type StatusItem = { key: ConversationStatus | null; label: string; count: number; icon: JSX.Element };
   const statusItems: StatusItem[] = [
     { key: null, label: 'كل الحالات', count: counts.all, icon: <Globe className="h-4 w-4 text-slate-500" strokeWidth={2} /> },
-    { key: 'open', label: 'مفتوحة', count: statusCounts.open, icon: <Sparkles className="h-4 w-4 text-primary" strokeWidth={2} /> },
+    { key: 'open', label: 'جديدة', count: statusCounts.open, icon: <Sparkles className="h-4 w-4 text-primary" strokeWidth={2} /> },
     { key: 'in_progress', label: 'قيد المعالجة', count: statusCounts.in_progress, icon: <ClockIcon className="h-4 w-4 text-warning" strokeWidth={2} /> },
     { key: 'closed', label: 'مغلقة', count: statusCounts.closed, icon: <CheckCircle2 className="h-4 w-4 text-success" strokeWidth={2} /> },
   ];

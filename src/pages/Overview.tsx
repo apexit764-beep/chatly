@@ -63,8 +63,8 @@ export default function Overview(): JSX.Element {
   const aiResolved = conversations.filter((c) => c.aiActive && c.status === 'closed').length;
 
   const statusBuckets = {
-    new: conversations.filter((c) => c.status === 'new').length,
-    pending: conversations.filter((c) => c.status === 'pending').length,
+    open: conversations.filter((c) => c.status === 'open').length,
+    in_progress: conversations.filter((c) => c.status === 'in_progress').length,
     closed: conversations.filter((c) => c.status === 'closed').length,
   };
 
@@ -247,9 +247,9 @@ export default function Overview(): JSX.Element {
           <DoughnutChart
             size={180}
             data={[
-              { label: t('جديد'), value: statusBuckets.new, color: '#3B82F6' },
-              { label: t('قيد المعالجة'), value: statusBuckets.pending, color: '#F59E0B' },
-              { label: t('مغلق'), value: statusBuckets.closed, color: '#6B7280' },
+              { label: t('جديدة'), value: statusBuckets.open, color: '#3B82F6' },
+              { label: t('قيد المعالجة'), value: statusBuckets.in_progress, color: '#F59E0B' },
+              { label: t('مغلقة'), value: statusBuckets.closed, color: '#6B7280' },
             ]}
           />
         </Card>
@@ -312,7 +312,7 @@ export default function Overview(): JSX.Element {
             {agents.map((agent) => {
               const assigned = conversations.filter((c) => c.assignedTo === agent.id).length;
               const closed = conversations.filter((c) => c.assignedTo === agent.id && c.status === 'closed').length;
-              const newConv = conversations.filter((c) => c.assignedTo === agent.id && c.status === 'new').length;
+              const newConv = conversations.filter((c) => c.assignedTo === agent.id && c.status === 'open').length;
               return (
                 <div key={agent.id} className="flex items-center gap-3 px-5 py-3">
                   <Avatar name={agent.name} size="sm" status={agent.status} />

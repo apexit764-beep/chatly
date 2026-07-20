@@ -16,6 +16,7 @@ import {
   Radio,
 } from 'lucide-react';
 import { Card, Modal, useConfirm } from '@components/ui';
+import { DateRangePicker } from '@components/ui/DateRangePicker';
 import { useAdminStore } from '@/store/useAdminStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
@@ -27,19 +28,13 @@ import type { Invoice, InvoiceStatus, Plan } from '@/types';
 const CURRENT_CLIENT_ID = 'client_1';
 
 const invStatusLabel: Record<InvoiceStatus, string> = {
-  draft: 'مسودة',
-  pending: 'معلّقة',
   paid: 'مدفوعة',
   failed: 'فشلت',
-  refunded: 'مرتجعة',
 };
 
 const invStatusColor: Record<InvoiceStatus, string> = {
-  draft: 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark',
-  pending: 'bg-warning/15 text-warning',
   paid: 'bg-success/15 text-success',
   failed: 'bg-danger/15 text-danger',
-  refunded: 'bg-info/15 text-info',
 };
 
 export default function Billing(): JSX.Element {
@@ -57,6 +52,8 @@ export default function Billing(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'all'>('all');
   const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
   const [invSearch, setInvSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 29); d.setHours(0,0,0,0); return d; });
+  const [dateTo, setDateTo] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
 
   const client = clients.find((c) => c.id === CURRENT_CLIENT_ID);
   const sub = subscriptions.find((s) => s.clientId === CURRENT_CLIENT_ID && s.status === 'active');
@@ -69,6 +66,10 @@ export default function Billing(): JSX.Element {
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   const filteredInvoices = clientInvoices
     .filter((i) => statusFilter === 'all' || i.status === statusFilter)
+    .filter((i) => {
+      const t = Date.parse(i.createdAt);
+      return t >= dateFrom.getTime() && t <= dateTo.getTime() + 86400000;
+    })
     .filter((i) => {
       const q = invSearch.trim().toLowerCase();
       if (!q) return true;
@@ -193,7 +194,7 @@ export default function Billing(): JSX.Element {
             الفواتير
           </h3>
 
-          {/* Toolbar — search + status filter pills */}
+          {/* Toolbar — search + date range + status filter pills */}
           <div className="mt-3 flex items-center gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[200px] max-w-md">
               <Search className="h-4 w-4 absolute end-3.5 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark pointer-events-none" />
@@ -205,11 +206,16 @@ export default function Billing(): JSX.Element {
                 className="w-full h-11 ps-4 pe-10 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
               />
             </div>
+            <DateRangePicker
+              from={dateFrom}
+              to={dateTo}
+              onChangeRange={(f, t) => { setDateFrom(f); setDateTo(t); }}
+            />
             <div className="flex items-center gap-1.5 overflow-x-auto">
               <FilterPill active={statusFilter === 'all'} onClick={() => setStatusFilter('all')}>
                 الكل ({clientInvoices.length})
               </FilterPill>
-              {(['paid', 'pending', 'failed'] as InvoiceStatus[]).map((s) => {
+              {(['paid', 'failed'] as InvoiceStatus[]).map((s) => {
                 const n = clientInvoices.filter((i) => i.status === s).length;
                 if (n === 0) return null;
                 return (
