@@ -1,10 +1,35 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
-var r = function (p) { return fileURLToPath(new URL(p, import.meta.url)); };
+import { randomUUID } from 'node:crypto';
+const r = (p) => fileURLToPath(new URL(p, import.meta.url));
+function versionCheckPlugin() {
+    const buildId = randomUUID();
+    return {
+        name: 'version-check',
+        apply: 'build',
+        generateBundle() {
+            this.emitFile({
+                type: 'asset',
+                fileName: 'version.json',
+                source: JSON.stringify({ v: buildId }),
+            });
+        },
+        transformIndexHtml() {
+            return [
+                {
+                    tag: 'script',
+                    attrs: { 'data-build-id': buildId },
+                    children: `(function(){var b=document.currentScript.getAttribute("data-build-id");function c(){fetch("/version.json?_="+Date.now(),{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){if(d.v&&d.v!==b)location.reload()}).catch(function(){})}document.addEventListener("visibilitychange",function(){if(!document.hidden)c()});setInterval(c,300000)})();`,
+                    injectTo: 'head',
+                },
+            ];
+        },
+    };
+}
 export default defineConfig({
     base: '/',
-    plugins: [react()],
+    plugins: [react(), versionCheckPlugin()],
     resolve: {
         alias: {
             '@': r('./src'),
