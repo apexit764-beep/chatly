@@ -28,6 +28,8 @@ const invStatusLabel: Record<InvoiceStatus, string> = {
   paid: 'مدفوعة',
   failed: 'فشلت',
   refunded: 'مرتجعة',
+  overdue: 'متأخرة',
+  cancelled: 'ملغاة',
 };
 
 const invStatusColor: Record<InvoiceStatus, string> = {
@@ -36,6 +38,8 @@ const invStatusColor: Record<InvoiceStatus, string> = {
   paid: 'bg-success/15 text-success',
   failed: 'bg-danger/15 text-danger',
   refunded: 'bg-info/15 text-info',
+  overdue: 'bg-danger/15 text-danger',
+  cancelled: 'bg-gray-500/15 text-gray-500',
 };
 
 const txnStatusLabel: Record<TransactionStatus, string> = {

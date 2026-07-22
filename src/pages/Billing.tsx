@@ -30,11 +30,21 @@ const CURRENT_CLIENT_ID = 'client_1';
 const invStatusLabel: Record<InvoiceStatus, string> = {
   paid: 'مدفوعة',
   failed: 'فشلت',
+  pending: 'معلّقة',
+  refunded: 'مستردة',
+  overdue: 'متأخرة',
+  cancelled: 'ملغاة',
+  draft: 'مسودة',
 };
 
 const invStatusColor: Record<InvoiceStatus, string> = {
   paid: 'bg-success/15 text-success',
   failed: 'bg-danger/15 text-danger',
+  pending: 'bg-warning/15 text-warning',
+  refunded: 'bg-info/15 text-info',
+  overdue: 'bg-danger/15 text-danger',
+  cancelled: 'bg-gray-500/15 text-gray-500',
+  draft: 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark',
 };
 
 export default function Billing(): JSX.Element {
@@ -52,8 +62,9 @@ export default function Billing(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'all'>('all');
   const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
   const [invSearch, setInvSearch] = useState('');
-  const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 29); d.setHours(0,0,0,0); return d; });
-  const [dateTo, setDateTo] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
+  const [dateFrom, setDateFrom] = useState<Date | null>(null);
+  const [dateTo, setDateTo] = useState<Date | null>(null);
+  const [allPeriods, setAllPeriods] = useState(true);
 
   const client = clients.find((c) => c.id === CURRENT_CLIENT_ID);
   const sub = subscriptions.find((s) => s.clientId === CURRENT_CLIENT_ID && s.status === 'active');
@@ -67,6 +78,7 @@ export default function Billing(): JSX.Element {
   const filteredInvoices = clientInvoices
     .filter((i) => statusFilter === 'all' || i.status === statusFilter)
     .filter((i) => {
+      if (allPeriods || !dateFrom || !dateTo) return true;
       const t = Date.parse(i.createdAt);
       return t >= dateFrom.getTime() && t <= dateTo.getTime() + 86400000;
     })
@@ -206,16 +218,44 @@ export default function Billing(): JSX.Element {
                 className="w-full h-11 ps-4 pe-10 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
               />
             </div>
-            <DateRangePicker
-              from={dateFrom}
-              to={dateTo}
-              onChangeRange={(f, t) => { setDateFrom(f); setDateTo(t); }}
-            />
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => { setAllPeriods(true); setDateFrom(null); setDateTo(null); }}
+                className={cn(
+                  'h-10 px-4 rounded-xl border text-small font-medium transition-all',
+                  allPeriods
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border-light dark:border-border-dark bg-white dark:bg-surface-dark hover:border-primary/40'
+                )}
+              >
+                جميع الفترات
+              </button>
+              {!allPeriods && dateFrom && dateTo && (
+                <DateRangePicker
+                  from={dateFrom}
+                  to={dateTo}
+                  onChangeRange={(f, t) => { setDateFrom(f); setDateTo(t); setAllPeriods(false); }}
+                />
+              )}
+              {allPeriods && (
+                <button
+                  onClick={() => {
+                    const d = new Date(); d.setDate(d.getDate() - 29); d.setHours(0,0,0,0);
+                    const t = new Date(); t.setHours(0,0,0,0);
+                    setDateFrom(d); setDateTo(t); setAllPeriods(false);
+                  }}
+                  className="h-10 px-4 rounded-xl border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-small font-medium hover:border-primary/40 transition-all flex items-center gap-2"
+                >
+                  <Calendar className="h-4 w-4 text-muted-light dark:text-muted-dark" />
+                  تحديد فترة
+                </button>
+              )}
+            </div>
             <div className="flex items-center gap-1.5 overflow-x-auto">
               <FilterPill active={statusFilter === 'all'} onClick={() => setStatusFilter('all')}>
                 الكل ({clientInvoices.length})
               </FilterPill>
-              {(['paid', 'failed'] as InvoiceStatus[]).map((s) => {
+              {(['paid', 'failed', 'pending', 'refunded', 'overdue', 'cancelled', 'draft'] as InvoiceStatus[]).map((s) => {
                 const n = clientInvoices.filter((i) => i.status === s).length;
                 if (n === 0) return null;
                 return (

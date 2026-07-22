@@ -22,13 +22,15 @@ export const contactTypeColor: Record<ContactType, string> = {
 };
 
 export const conversationStatusLabel: Record<ConversationStatus, string> = {
-  open: 'جديدة',
+  open: 'مفتوحة',
+  new: 'جديدة',
   in_progress: 'قيد المعالجة',
   closed: 'مغلقة',
 };
 
 export const conversationStatusColor: Record<ConversationStatus, string> = {
   open: 'bg-info/15 text-info border-info/30',
+  new: 'bg-success/15 text-success border-success/30',
   in_progress: 'bg-warning/15 text-warning border-warning/30',
   closed: 'bg-muted-light/15 text-muted-light dark:text-muted-dark border-border-light dark:border-border-dark',
 };

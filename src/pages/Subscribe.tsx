@@ -62,6 +62,10 @@ export default function Subscribe(): JSX.Element {
     <div className="p-4 lg:p-8 page-fade max-w-7xl mx-auto">
       {step === 'select' && (
         <>
+          <button onClick={() => navigate(-1)} className="text-small text-muted-light dark:text-muted-dark hover:text-current flex items-center gap-1 mb-4">
+            <ArrowLeft className="h-4 w-4" /> عودة
+          </button>
+
           {/* Hero */}
           <div className="text-center mb-8">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-small font-semibold mb-3">
@@ -538,6 +542,7 @@ function CheckoutFlow({ plan, country, cycle, onBack, onProcessing, onSuccess, o
 
   const [card, setCard] = useState({ number: testMode ? '5123 4567 8901 2346' : '', name: '', exp: testMode ? '12/29' : '', cvv: testMode ? '123' : '' });
   const [save, setSave] = useState(true);
+  const [autoRenew, setAutoRenew] = useState(true);
   const [selectedCardId, setSelectedCardId] = useState<string>('card_1');
   const { confirm } = useConfirm();
 
@@ -617,6 +622,10 @@ function CheckoutFlow({ plan, country, cycle, onBack, onProcessing, onSuccess, o
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={save} onChange={(e) => setSave(e.target.checked)} className="h-4 w-4 accent-primary" />
             <span className="text-small">حفظ البطاقة للاستخدام المستقبلي (Tokenization آمنة)</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={autoRenew} onChange={(e) => setAutoRenew(e.target.checked)} className="h-4 w-4 accent-primary" />
+            <span className="text-small">التجديد التلقائي عند انتهاء الاشتراك</span>
           </label>
 
           <button onClick={handlePay} className="w-full h-12 rounded-full bg-primary hover:bg-primary-dark text-white text-body font-semibold flex items-center justify-center gap-2 transition-colors mt-2">

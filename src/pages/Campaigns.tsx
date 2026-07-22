@@ -34,6 +34,7 @@ import {
   useConfirm,
   type Column,
 } from '@components/ui';
+import { DateRangePicker } from '@components/ui/DateRangePicker';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import {
@@ -58,6 +59,8 @@ export default function Campaigns(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   const [channelFilter, setChannelFilter] = useState<CampaignChannelType>('whatsapp');
+  const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 29); d.setHours(0,0,0,0); return d; });
+  const [dateTo, setDateTo] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Campaign | null>(null);
   const [preview, setPreview] = useState<{ message: string; attachmentName?: string } | null>(null);
@@ -104,7 +107,12 @@ export default function Campaigns(): JSX.Element {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
 
-  const filteredCampaigns = campaigns.filter((c) => (c.channelType ?? 'whatsapp') === channelFilter);
+  const filteredCampaigns = campaigns
+    .filter((c) => (c.channelType ?? 'whatsapp') === channelFilter)
+    .filter((c) => {
+      const t = Date.parse(c.scheduledAt ?? c.createdAt);
+      return t >= dateFrom.getTime() && t <= dateTo.getTime() + 86400000;
+    });
 
   const stats = {
     total: filteredCampaigns.length,
@@ -376,6 +384,11 @@ export default function Campaigns(): JSX.Element {
         pageSize={10}
         toolbar={
           <>
+            <DateRangePicker
+              from={dateFrom}
+              to={dateTo}
+              onChangeRange={(f, t) => { setDateFrom(f); setDateTo(t); }}
+            />
             <button onClick={handleExport} className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex items-center gap-2">
               <Download className="h-4 w-4" /> CSV
             </button>

@@ -1,4 +1,4 @@
-export type ConversationStatus = 'open' | 'in_progress' | 'closed';
+export type ConversationStatus = 'open' | 'in_progress' | 'closed' | 'new';
 export type ContactType = 'customer' | 'lead' | 'company' | 'vip';
 export type AgentRole = 'manager' | 'agent';
 
@@ -435,7 +435,7 @@ export interface Subscription {
   };
 }
 
-export type InvoiceStatus = 'paid' | 'failed';
+export type InvoiceStatus = 'paid' | 'failed' | 'pending' | 'refunded' | 'overdue' | 'cancelled' | 'draft';
 
 export interface Invoice {
   id: string;
@@ -454,7 +454,7 @@ export interface Invoice {
   createdAt: string;
 }
 
-export type TransactionStatus = 'succeeded' | 'failed';
+export type TransactionStatus = 'succeeded' | 'failed' | 'pending' | 'refunded';
 
 export interface Transaction {
   id: string;
