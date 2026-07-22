@@ -218,39 +218,19 @@ export default function Billing(): JSX.Element {
                 className="w-full h-11 ps-4 pe-10 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
               />
             </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => { setAllPeriods(true); setDateFrom(null); setDateTo(null); }}
-                className={cn(
-                  'h-10 px-4 rounded-xl border text-small font-medium transition-all',
-                  allPeriods
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border-light dark:border-border-dark bg-white dark:bg-surface-dark hover:border-primary/40'
-                )}
-              >
-                جميع الفترات
-              </button>
-              {!allPeriods && dateFrom && dateTo && (
-                <DateRangePicker
-                  from={dateFrom}
-                  to={dateTo}
-                  onChangeRange={(f, t) => { setDateFrom(f); setDateTo(t); setAllPeriods(false); }}
-                />
-              )}
-              {allPeriods && (
-                <button
-                  onClick={() => {
-                    const d = new Date(); d.setDate(d.getDate() - 29); d.setHours(0,0,0,0);
-                    const t = new Date(); t.setHours(0,0,0,0);
-                    setDateFrom(d); setDateTo(t); setAllPeriods(false);
-                  }}
-                  className="h-10 px-4 rounded-xl border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-small font-medium hover:border-primary/40 transition-all flex items-center gap-2"
-                >
-                  <Calendar className="h-4 w-4 text-muted-light dark:text-muted-dark" />
-                  تحديد فترة
-                </button>
-              )}
-            </div>
+            <DateRangePicker
+              from={dateFrom ?? (() => { const d = new Date(); d.setDate(d.getDate() - 29); d.setHours(0,0,0,0); return d; })()}
+              to={dateTo ?? (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })()}
+              showAllPeriods
+              activePreset={allPeriods ? 'allPeriods' : undefined}
+              onChangeRange={(f, t, preset) => {
+                if (preset === 'allPeriods') {
+                  setAllPeriods(true); setDateFrom(null); setDateTo(null);
+                } else {
+                  setAllPeriods(false); setDateFrom(f); setDateTo(t);
+                }
+              }}
+            />
             <div className="flex items-center gap-1.5 overflow-x-auto">
               <FilterPill active={statusFilter === 'all'} onClick={() => setStatusFilter('all')}>
                 الكل ({clientInvoices.length})

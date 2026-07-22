@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
-type PresetKey = 'today' | 'yesterday' | 'last7' | 'last14' | 'last30' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth';
+type PresetKey = 'allPeriods' | 'today' | 'yesterday' | 'last7' | 'last14' | 'last30' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'thisYear' | 'lastYear';
 
 function startOfDay(d: Date): Date { const n = new Date(d); n.setHours(0, 0, 0, 0); return n; }
 function addDays(d: Date, n: number): Date { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
@@ -16,7 +16,8 @@ function formatDate(d: Date): string {
   return d.toLocaleDateString('ar-OM-u-nu-latn', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-const PRESETS: { key: PresetKey; label: string; range: () => [Date, Date] }[] = [
+const PRESETS: { key: PresetKey; label: string; range: () => [Date, Date] | null }[] = [
+  { key: 'allPeriods', label: 'جميع الفترات', range: () => null },
   { key: 'today', label: 'اليوم', range: () => { const t = startOfDay(new Date()); return [t, t]; } },
   { key: 'yesterday', label: 'أمس', range: () => { const y = addDays(new Date(), -1); return [startOfDay(y), startOfDay(y)]; } },
   { key: 'last7', label: 'آخر 7 أيام', range: () => [startOfDay(addDays(new Date(), -6)), startOfDay(new Date())] },
@@ -26,6 +27,8 @@ const PRESETS: { key: PresetKey; label: string; range: () => [Date, Date] }[] = 
   { key: 'lastWeek', label: 'الأسبوع الماضي', range: () => { const s = addDays(startOfWeek(new Date()), -7); return [s, addDays(s, 6)]; } },
   { key: 'thisMonth', label: 'هذا الشهر', range: () => [startOfMonth(new Date()), startOfDay(new Date())] },
   { key: 'lastMonth', label: 'الشهر الماضي', range: () => { const d = new Date(); const s = new Date(d.getFullYear(), d.getMonth() - 1, 1); return [s, endOfMonth(s)]; } },
+  { key: 'thisYear', label: 'السنة الحالية', range: () => [new Date(new Date().getFullYear(), 0, 1), startOfDay(new Date())] },
+  { key: 'lastYear', label: 'السنة الماضية', range: () => { const y = new Date().getFullYear() - 1; return [new Date(y, 0, 1), new Date(y, 11, 31)]; } },
 ];
 
 const MONTH_NAMES = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -91,16 +94,22 @@ function CalendarMonth({ year, month, from, to, hoverDate, onSelect, onHover }: 
   );
 }
 
-export function DateRangePicker({ from, to, onChangeRange }: {
+export function DateRangePicker({ from, to, onChangeRange, showAllPeriods, activePreset: externalPreset }: {
   from: Date; to: Date;
   onChangeRange: (from: Date, to: Date, preset?: PresetKey) => void;
+  showAllPeriods?: boolean;
+  activePreset?: PresetKey;
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
-  const [activePreset, setActivePreset] = useState<PresetKey>('last7');
+  const [activePreset, setActivePreset] = useState<PresetKey>(externalPreset ?? 'last7');
+
+  useEffect(() => {
+    if (externalPreset !== undefined) setActivePreset(externalPreset);
+  }, [externalPreset]);
 
   const [draftFrom, setDraftFrom] = useState<Date | null>(from);
   const [draftTo, setDraftTo] = useState<Date | null>(to);
@@ -189,16 +198,23 @@ export function DateRangePicker({ from, to, onChangeRange }: {
   };
 
   const handlePreset = (p: typeof PRESETS[number]) => {
-    const [f, t] = p.range();
-    setDraftFrom(f);
-    setDraftTo(t);
-    setSelectingEnd(false);
-    setActivePreset(p.key);
-    onChangeRange(f, t, p.key);
+    const r = p.range();
+    if (r) {
+      const [f, t] = r;
+      setDraftFrom(f);
+      setDraftTo(t);
+      setSelectingEnd(false);
+      setActivePreset(p.key);
+      onChangeRange(f, t, p.key);
+    } else {
+      setActivePreset(p.key);
+      onChangeRange(from, to, p.key);
+    }
     setOpen(false);
   };
 
-  const label = `${formatDate(from)} — ${formatDate(to)}`;
+  const visiblePresets = showAllPeriods ? PRESETS : PRESETS.filter((p) => p.key !== 'allPeriods');
+  const label = activePreset === 'allPeriods' ? 'جميع الفترات' : `${formatDate(from)} — ${formatDate(to)}`;
 
   return (
     <div ref={containerRef} className="relative">
@@ -257,7 +273,7 @@ export function DateRangePicker({ from, to, onChangeRange }: {
             </div>
             <div className="w-40 border-s border-border-light dark:border-border-dark p-2 flex flex-col gap-0.5">
               <p className="text-[11px] font-bold text-muted-light dark:text-muted-dark px-2 py-1.5">اختيارات سريعة</p>
-              {PRESETS.map((p) => (
+              {visiblePresets.map((p) => (
                 <button
                   key={p.key}
                   onClick={() => handlePreset(p)}
