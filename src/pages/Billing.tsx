@@ -57,6 +57,7 @@ export default function Billing(): JSX.Element {
   const showToast = useUIStore((s) => s.showToast);
   const navigate = useNavigate();
   const { confirm } = useConfirm();
+  const [showSubDetails, setShowSubDetails] = useState(false);
 
   const [cycle, setCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'all'>('all');
@@ -176,8 +177,8 @@ export default function Billing(): JSX.Element {
             <Link to="/subscribe" className="h-10 px-5 rounded-full bg-white text-primary text-small font-semibold flex items-center gap-2 hover:bg-white/90 transition-colors">
               <ArrowUpRight className="h-4 w-4" /> ترقية
             </Link>
-            <button onClick={handleCancel} className="h-10 px-5 rounded-full bg-white/15 backdrop-blur text-white text-small font-semibold hover:bg-white/25 transition-colors">
-              إلغاء الاشتراك
+            <button onClick={() => setShowSubDetails(true)} className="h-10 px-5 rounded-full bg-white/15 backdrop-blur text-white text-small font-semibold hover:bg-white/25 transition-colors flex items-center gap-2">
+              <Eye className="h-4 w-4" /> تفاصيل الاشتراك
             </button>
           </div>
         </div>
@@ -196,6 +197,103 @@ export default function Billing(): JSX.Element {
           <ArrowUpRight className="h-4 w-4" />
         </Link>
       </Card>
+      )}
+
+      {/* Subscription details modal */}
+      {sub && (
+        <Modal open={showSubDetails} onClose={() => setShowSubDetails(false)} title="تفاصيل الاشتراك" size="md">
+          <div className="space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-h2 font-bold">{plan.nameAr}</h3>
+                <p className="text-small text-muted-light dark:text-muted-dark">{plan.tagline}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-bg-light dark:bg-bg-dark p-3">
+                <p className="text-[11px] text-muted-light dark:text-muted-dark mb-1">المبلغ</p>
+                <p className="text-body font-bold">{formatMoney(sub.amount, sub.currency)} / {sub.billingCycle === 'monthly' ? 'شهر' : 'سنة'}</p>
+              </div>
+              <div className="rounded-xl bg-bg-light dark:bg-bg-dark p-3">
+                <p className="text-[11px] text-muted-light dark:text-muted-dark mb-1">الحالة</p>
+                <p className="text-body font-bold text-success">نشط</p>
+              </div>
+              <div className="rounded-xl bg-bg-light dark:bg-bg-dark p-3">
+                <p className="text-[11px] text-muted-light dark:text-muted-dark mb-1">بداية الفترة</p>
+                <p className="text-body font-bold">{formatDate(sub.currentPeriodStart)}</p>
+              </div>
+              <div className="rounded-xl bg-bg-light dark:bg-bg-dark p-3">
+                <p className="text-[11px] text-muted-light dark:text-muted-dark mb-1">نهاية الفترة</p>
+                <p className="text-body font-bold">{formatDate(sub.currentPeriodEnd)}</p>
+              </div>
+            </div>
+
+            {sub.paymentMethod && (
+              <div className="rounded-xl bg-bg-light dark:bg-bg-dark p-3 flex items-center gap-3">
+                <div className="h-8 w-12 rounded bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark flex items-center justify-center text-[10px] font-bold uppercase">
+                  {sub.paymentMethod.brand}
+                </div>
+                <div>
+                  <p className="text-small font-semibold">•••• {sub.paymentMethod.last4}</p>
+                  <p className="text-[11px] text-muted-light dark:text-muted-dark">تنتهي {sub.paymentMethod.expMonth}/{sub.paymentMethod.expYear}</p>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <p className="text-small font-bold mb-2">حدود الباقة</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 text-small">
+                  <Users className="h-4 w-4 text-primary" />
+                  <span>الوكلاء: <strong>{plan.limits.agents === -1 ? 'غير محدود' : plan.limits.agents}</strong></span>
+                </div>
+                <div className="flex items-center gap-2 text-small">
+                  <Radio className="h-4 w-4 text-primary" />
+                  <span>القنوات: <strong>{plan.limits.channels === -1 ? 'غير محدود' : plan.limits.channels}</strong></span>
+                </div>
+                <div className="flex items-center gap-2 text-small">
+                  <MessageSquare className="h-4 w-4 text-primary" />
+                  <span>المحادثات: <strong>{plan.limits.conversations === -1 ? 'غير محدود' : plan.limits.conversations}</strong></span>
+                </div>
+                <div className="flex items-center gap-2 text-small">
+                  <Users2 className="h-4 w-4 text-primary" />
+                  <span>جهات الاتصال: <strong>{plan.limits.contacts === -1 ? 'غير محدود' : plan.limits.contacts}</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-small font-bold mb-2">ميزات الباقة</p>
+              <div className="space-y-1.5">
+                {plan.features.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2 text-small">
+                    <Check className="h-3.5 w-3.5 text-success flex-shrink-0" />
+                    <span>{f}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-border-light dark:border-border-dark flex items-center justify-between">
+              <button
+                onClick={() => { setShowSubDetails(false); handleCancel(); }}
+                className="text-small text-danger hover:text-danger/80 font-medium transition-colors"
+              >
+                إلغاء الاشتراك
+              </button>
+              <button
+                onClick={() => setShowSubDetails(false)}
+                className="h-10 px-5 rounded-xl bg-primary text-white text-small font-semibold hover:bg-primary-dark transition-colors"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Invoices */}
