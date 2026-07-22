@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
@@ -96,6 +97,9 @@ export function DateRangePicker({ from, to, onChangeRange }: {
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
   const [activePreset, setActivePreset] = useState<PresetKey>('last7');
 
   const [draftFrom, setDraftFrom] = useState<Date | null>(from);
@@ -123,10 +127,45 @@ export function DateRangePicker({ from, to, onChangeRange }: {
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      const inTrigger = containerRef.current?.contains(target);
+      const inPopup = popupRef.current?.contains(target);
+      if (!inTrigger && !inPopup) setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  // Position the popup in a portal (fixed) so it is never clipped by an
+  // ancestor with overflow-hidden and never overflows the viewport edge (RTL).
+  useLayoutEffect(() => {
+    if (!open) { setCoords(null); return; }
+    const position = () => {
+      const btn = buttonRef.current;
+      if (!btn) return;
+      const b = btn.getBoundingClientRect();
+      const pw = popupRef.current?.offsetWidth ?? 680;
+      const ph = popupRef.current?.offsetHeight ?? 360;
+      const margin = 8;
+      // RTL: align the popup's right edge with the button's right edge.
+      let left = b.right - pw;
+      if (left + pw > window.innerWidth - margin) left = window.innerWidth - margin - pw;
+      if (left < margin) left = margin;
+      // Open downward; flip up if it would overflow the bottom.
+      let top = b.bottom + 8;
+      if (top + ph > window.innerHeight - margin) {
+        const up = b.top - ph - 8;
+        top = up >= margin ? up : Math.max(margin, window.innerHeight - ph - margin);
+      }
+      setCoords({ top, left });
+    };
+    position();
+    window.addEventListener('resize', position);
+    window.addEventListener('scroll', position, true);
+    return () => {
+      window.removeEventListener('resize', position);
+      window.removeEventListener('scroll', position, true);
+    };
   }, [open]);
 
   const prevMonth = () => setLeftMonth((p) => p.month === 0 ? { year: p.year - 1, month: 11 } : { year: p.year, month: p.month - 1 });
@@ -164,6 +203,7 @@ export function DateRangePicker({ from, to, onChangeRange }: {
   return (
     <div ref={containerRef} className="relative">
       <button
+        ref={buttonRef}
         onClick={() => setOpen(!open)}
         className={cn(
           'h-10 px-4 rounded-xl border text-small font-medium flex items-center gap-2 transition-all',
@@ -177,8 +217,19 @@ export function DateRangePicker({ from, to, onChangeRange }: {
         <ChevronDown className={cn('h-3.5 w-3.5 text-muted-light dark:text-muted-dark transition-transform', open && 'rotate-180')} />
       </button>
 
-      {open && (
-        <div className="absolute z-50 top-full mt-2 start-0 rounded-2xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-xl overflow-hidden">
+      {open && createPortal(
+        <div
+          ref={popupRef}
+          dir="rtl"
+          style={{
+            position: 'fixed',
+            top: coords ? coords.top : 0,
+            left: coords ? coords.left : 0,
+            visibility: coords ? 'visible' : 'hidden',
+            maxWidth: 'calc(100vw - 16px)',
+          }}
+          className="z-[200] rounded-2xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark shadow-xl overflow-hidden"
+        >
           <div className="flex">
             <div className="p-4">
               <div className="flex items-center justify-between mb-3">
@@ -195,11 +246,13 @@ export function DateRangePicker({ from, to, onChangeRange }: {
                   from={draftFrom} to={draftTo} hoverDate={selectingEnd ? hoverDate : null}
                   onSelect={handleSelect} onHover={setHoverDate}
                 />
-                <CalendarMonth
-                  year={rightMonth.year} month={rightMonth.month}
-                  from={draftFrom} to={draftTo} hoverDate={selectingEnd ? hoverDate : null}
-                  onSelect={handleSelect} onHover={setHoverDate}
-                />
+                <div className="hidden md:block">
+                  <CalendarMonth
+                    year={rightMonth.year} month={rightMonth.month}
+                    from={draftFrom} to={draftTo} hoverDate={selectingEnd ? hoverDate : null}
+                    onSelect={handleSelect} onHover={setHoverDate}
+                  />
+                </div>
               </div>
             </div>
             <div className="w-40 border-s border-border-light dark:border-border-dark p-2 flex flex-col gap-0.5">
@@ -221,7 +274,8 @@ export function DateRangePicker({ from, to, onChangeRange }: {
               ))}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
