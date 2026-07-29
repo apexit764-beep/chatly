@@ -48,7 +48,6 @@ interface AdminState {
 
   // Invoice / payment actions
   recordPayment: (clientId: string, planId: string, amount: number, currency: string, last4: string) => { invoice: Invoice; transaction: Transaction };
-  refundInvoice: (invoiceId: string) => void;
 
   // Paymob
   updatePaymob: (patch: Partial<PaymobConfig>) => void;
@@ -194,12 +193,6 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     return { invoice, transaction };
   },
 
-  refundInvoice: (invoiceId) => {
-    set((s) => ({
-      invoices: s.invoices.map((inv) => (inv.id === invoiceId ? { ...inv, status: 'refunded' } : inv)),
-      transactions: s.transactions.map((t) => (t.invoiceId === invoiceId ? { ...t, status: 'refunded' } : t)),
-    }));
-  },
 
   updatePaymob: (patch) => set((s) => ({ paymob: { ...s.paymob, ...patch } })),
 

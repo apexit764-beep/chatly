@@ -56,6 +56,7 @@ interface DataState {
   editMessage: (conversationId: string, messageId: string, newContent: string) => void;
   assignConversation: (conversationId: string, agentId: string | null) => void;
   setConversationStatus: (conversationId: string, status: Conversation['status']) => void;
+  reopenConversation: (conversationId: string) => void;
   markConversationRead: (conversationId: string) => void;
   addNote: (conversationId: string, note: string) => void;
   addConversation: (data: {
@@ -221,9 +222,9 @@ export const useDataStore = create<DataState>((set) => ({
             ? {
                 ...c,
                 messages: [...c.messages, message],
-                // Notes don't update last-customer-message preview
                 lastMessage: isNote ? c.lastMessage : content,
                 lastMessageAt: isNote ? c.lastMessageAt : message.timestamp,
+                status: !isNote && c.status === 'open' ? 'in_progress' as const : c.status,
               }
             : c
         ),
@@ -260,6 +261,15 @@ export const useDataStore = create<DataState>((set) => ({
     set((state) => ({
       conversations: state.conversations.map((c) =>
         c.id === conversationId ? { ...c, status } : c
+      ),
+    })),
+
+  reopenConversation: (conversationId) =>
+    set((state) => ({
+      conversations: state.conversations.map((c) =>
+        c.id === conversationId
+          ? { ...c, status: 'open' as const, sessionCount: c.sessionCount + 1 }
+          : c
       ),
     })),
 
@@ -300,7 +310,8 @@ export const useDataStore = create<DataState>((set) => ({
           channelId: data.channelId,
           assignedTo: data.assignedTo ?? state.currentUserId,
           departmentId: data.departmentId ?? null,
-          status: 'new',
+          status: 'open',
+          sessionCount: 1,
           lastMessage: data.initialMessage,
           lastMessageAt: now,
           unreadCount: 0,
@@ -540,7 +551,8 @@ export const useDataStore = create<DataState>((set) => ({
             lastMessage: content,
             lastMessageAt: message.timestamp,
             unreadCount: c.unreadCount + 1,
-            status: wasClosed ? 'new' as const : c.status,
+            status: c.status !== 'open' ? 'open' as const : c.status,
+            sessionCount: wasClosed ? c.sessionCount + 1 : c.sessionCount,
             ...(wasClosed && aiEnabledOnChannel
               ? { aiActive: true, aiHandedOff: false, assignedTo: null }
               : {}),
@@ -577,7 +589,8 @@ export const useDataStore = create<DataState>((set) => ({
             lastMessage: '🎤 رسالة صوتية',
             lastMessageAt: message.timestamp,
             unreadCount: c.unreadCount + 1,
-            status: wasClosed ? 'new' as const : c.status,
+            status: c.status !== 'open' ? 'open' as const : c.status,
+            sessionCount: wasClosed ? c.sessionCount + 1 : c.sessionCount,
             ...(wasClosed && aiEnabledOnChannel
               ? { aiActive: true, aiHandedOff: false, assignedTo: null }
               : {}),

@@ -7,7 +7,6 @@ import {
   Search,
   Download,
   FileText,
-  RefreshCcw,
   CreditCard,
   ArrowDownToLine,
 } from 'lucide-react';
@@ -23,26 +22,18 @@ import { cn } from '@/utils/cn';
 import type { Invoice, InvoiceStatus, Transaction, TransactionStatus } from '@/types';
 
 const invStatusLabel: Record<InvoiceStatus, string> = {
-  draft: 'مسودة',
-  pending: 'معلّقة',
   paid: 'مدفوعة',
   failed: 'فشلت',
-  refunded: 'مرتجعة',
 };
 
 const invStatusColor: Record<InvoiceStatus, string> = {
-  draft: 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark',
-  pending: 'bg-warning/15 text-warning',
   paid: 'bg-success/15 text-success',
   failed: 'bg-danger/15 text-danger',
-  refunded: 'bg-info/15 text-info',
 };
 
 const txnStatusLabel: Record<TransactionStatus, string> = {
   succeeded: 'نجحت',
   failed: 'فشلت',
-  pending: 'معلّقة',
-  refunded: 'مرتجعة',
 };
 
 export default function AdminFinance(): JSX.Element {
@@ -51,7 +42,6 @@ export default function AdminFinance(): JSX.Element {
   const transactions = useAdminStore((s) => s.transactions);
   const countries = useAdminStore((s) => s.countries);
   const subscriptions = useAdminStore((s) => s.subscriptions);
-  const refundInvoice = useAdminStore((s) => s.refundInvoice);
   const showToast = useUIStore((s) => s.showToast);
   const { confirm } = useConfirm();
 
@@ -184,9 +174,7 @@ export default function AdminFinance(): JSX.Element {
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | InvoiceStatus)} className="h-10 px-4 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary">
               <option value="all">كل الحالات</option>
               <option value="paid">مدفوعة</option>
-              <option value="pending">معلّقة</option>
               <option value="failed">فشلت</option>
-              <option value="refunded">مرتجعة</option>
             </select>
             <button onClick={handleExportInvoices} className="h-10 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex items-center gap-2">
               <Download className="h-4 w-4" /> CSV
@@ -228,23 +216,6 @@ export default function AdminFinance(): JSX.Element {
                           <button title="طباعة PDF" onClick={() => handleDownloadInvoice(inv)} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center">
                             <FileText className="h-4 w-4" />
                           </button>
-                          {inv.status === 'paid' && (
-                            <button
-                              title="استرجاع"
-                              onClick={() => {
-                                void (async () => {
-                                  const ok = await confirm({ title: `استرجاع فاتورة ${inv.number}؟`, message: `سيتم إرجاع ${inv.total} ${inv.currency} للعميل`, variant: 'warning', confirmText: 'استرجاع' });
-                                  if (ok) {
-                                    refundInvoice(inv.id);
-                                    showToast('تم استرجاع الفاتورة', 'success');
-                                  }
-                                })();
-                              }}
-                              className="h-8 w-8 rounded-full hover:bg-warning/10 text-muted-light dark:text-muted-dark hover:text-warning flex items-center justify-center"
-                            >
-                              <RefreshCcw className="h-4 w-4" />
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -297,9 +268,7 @@ export default function AdminFinance(): JSX.Element {
                       <td className="px-4 py-3 hidden md:table-cell">
                         <span className={cn('inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold',
                           t.status === 'succeeded' && 'bg-success/15 text-success',
-                          t.status === 'failed' && 'bg-danger/15 text-danger',
-                          t.status === 'pending' && 'bg-warning/15 text-warning',
-                          t.status === 'refunded' && 'bg-info/15 text-info'
+                          t.status === 'failed' && 'bg-danger/15 text-danger'
                         )}>
                           {t.status === 'succeeded' ? <CheckCircle2 className="h-3 w-3" /> : t.status === 'failed' ? <AlertTriangle className="h-3 w-3" /> : null}
                           {txnStatusLabel[t.status]}

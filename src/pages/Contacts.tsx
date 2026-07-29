@@ -49,7 +49,7 @@ export default function Contacts(): JSX.Element {
   const { confirm } = useConfirm();
 
   const [typeFilter, setTypeFilter] = useState<'all' | ContactType>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'blocked'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'blocked'>('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
@@ -64,8 +64,6 @@ export default function Contacts(): JSX.Element {
   const filtered = useMemo(() => {
     return contacts.filter((c) => {
       if (typeFilter !== 'all' && c.type !== typeFilter) return false;
-      if (statusFilter === 'active' && (c.active === false || c.blocked)) return false;
-      if (statusFilter === 'inactive' && c.active !== false) return false;
       if (statusFilter === 'blocked' && !c.blocked) return false;
       return true;
     });
@@ -146,7 +144,7 @@ export default function Contacts(): JSX.Element {
       'النوع': contactTypeLabel[c.type],
       'الوسوم': c.tags.join('|'),
       'المحادثات': c.conversationCount,
-      'محظور': c.blocked ? 'نعم' : 'لا',
+      'الحالة': c.blocked ? 'محظور' : 'فعّال',
       'تاريخ الإضافة': new Date(c.createdAt).toLocaleDateString('en-US'),
     })));
     showToast(`${t('تم تصدير')} ${rows.length} ${t('جهة اتصال')}`, 'success');
@@ -187,36 +185,6 @@ export default function Contacts(): JSX.Element {
     { key: 'type', header: t('النوع'), accessor: (r) => r.type, cell: (r) => <Badge className={contactTypeColor[r.type]}>{contactTypeLabel[r.type]}</Badge> },
     { key: 'last', header: t('آخر تواصل'), accessor: (r) => r.lastContact, hideOn: 'lg', cell: (r) => <span className="text-small text-muted-light dark:text-muted-dark">{timeAgo(r.lastContact)}</span> },
     { key: 'conv', header: t('المحادثات'), accessor: (r) => r.conversationCount, hideOn: 'lg' },
-    {
-      key: 'status', header: t('الحالة'), accessor: (r) => (r.active === false ? 0 : 1), align: 'center',
-      cell: (r) => {
-        const isActive = r.active !== false;
-        return (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              updateContact(r.id, { active: !isActive });
-              showToast(isActive ? t('تم تعطيل الحساب') : t('تم تفعيل الحساب'), 'success');
-            }}
-            className={cn(
-              'relative h-5 w-9 rounded-full transition-colors mx-auto block',
-              isActive ? 'bg-primary' : 'bg-border-light dark:bg-border-dark'
-            )}
-            role="switch"
-            aria-checked={isActive}
-            title={isActive ? t('فعّال — اضغط للتعطيل') : t('معطّل — اضغط للتفعيل')}
-          >
-            <span
-              className={cn(
-                'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all',
-                isActive ? 'start-0.5' : 'end-0.5'
-              )}
-            />
-          </button>
-        );
-      },
-    },
     {
       key: 'actions', header: '', sortable: false, width: '80px', align: 'end',
       cell: (r) => (
@@ -292,8 +260,6 @@ export default function Contacts(): JSX.Element {
               onChange={(v) => setStatusFilter(v as typeof statusFilter)}
               options={[
                 { value: 'all', label: t('الكل') },
-                { value: 'active', label: t('فعّال'), leading: <span className="h-2 w-2 rounded-full bg-success" /> },
-                { value: 'inactive', label: t('معطّل'), leading: <span className="h-2 w-2 rounded-full bg-muted-light" /> },
                 { value: 'blocked', label: t('محظور'), leading: <span className="h-2 w-2 rounded-full bg-danger" /> },
               ]}
             />

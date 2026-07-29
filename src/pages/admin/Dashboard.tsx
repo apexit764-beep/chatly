@@ -219,10 +219,9 @@ export default function AdminDashboard(): JSX.Element {
                       <td className="px-3 py-2.5">
                         <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold',
                           t.status === 'succeeded' && 'bg-success/15 text-success',
-                          t.status === 'failed' && 'bg-danger/15 text-danger',
-                          t.status === 'refunded' && 'bg-info/15 text-info'
+                          t.status === 'failed' && 'bg-danger/15 text-danger'
                         )}>
-                          {t.status === 'succeeded' ? 'نجحت' : t.status === 'failed' ? 'فشلت' : 'مرتجعة'}
+                          {t.status === 'succeeded' ? 'نجحت' : 'فشلت'}
                         </span>
                       </td>
                       <td className="px-3 py-2.5 text-small text-muted-light dark:text-muted-dark">{timeAgo(t.createdAt)}</td>

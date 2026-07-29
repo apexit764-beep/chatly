@@ -36,7 +36,7 @@ const map: Record<ChannelType, { icon: IconComp; color: string; bg: string; labe
   email: { icon: Mail, color: 'text-muted-light', bg: 'bg-bg-light', label: 'Email' },
   gmail: { icon: GmailIcon, color: 'text-[#EA4335]', bg: 'bg-[#EA4335]/10', label: 'Gmail' },
   outlook: { icon: OutlookIcon, color: 'text-[#0078D4]', bg: 'bg-[#0078D4]/10', label: 'Outlook' },
-  yahoo: { icon: YahooIcon, color: 'text-[#6001D2]', bg: 'bg-[#6001D2]/10', label: 'Yahoo' },
+  yahoo: { icon: YahooIcon, color: 'text-[#7D2EFF]', bg: 'bg-[#7D2EFF]/10', label: 'Yahoo' },
   smtp: { icon: Server, color: 'text-muted-light', bg: 'bg-bg-light', label: 'SMTP' },
   salla: { icon: SallaIcon, color: 'text-[#0F766E]', bg: 'bg-[#BAF3DB]/30', label: 'سلة' },
   zid: { icon: ZidIcon, color: 'text-[#7B61FF]', bg: 'bg-[#7B61FF]/10', label: 'زد' },

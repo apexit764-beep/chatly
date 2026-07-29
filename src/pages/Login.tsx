@@ -212,6 +212,13 @@ export default function Login(): JSX.Element {
                 </>
               )}
             </button>
+
+            <p className="text-center text-small text-muted-light dark:text-muted-dark">
+              ما عندك حساب؟{' '}
+              <Link to="/register" className="text-primary font-semibold hover:underline">
+                أنشئ حساب جديد
+              </Link>
+            </p>
           </form>
         </motion.div>
 

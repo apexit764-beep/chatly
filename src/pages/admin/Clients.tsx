@@ -461,10 +461,8 @@ function ClientDrawerBody({ client, onEdit, onDelete }: { client: Client; onEdit
                   <p className="font-semibold">{formatMoney(inv.total, inv.currency)}</p>
                   <span className={cn('text-[10px] font-semibold',
                     inv.status === 'paid' && 'text-success',
-                    inv.status === 'failed' && 'text-danger',
-                    inv.status === 'pending' && 'text-warning',
-                    inv.status === 'refunded' && 'text-muted-light dark:text-muted-dark'
-                  )}>{inv.status === 'paid' ? 'مدفوعة' : inv.status === 'failed' ? 'فشلت' : inv.status === 'pending' ? 'معلّقة' : 'مرتجعة'}</span>
+                    inv.status === 'failed' && 'text-danger'
+                  )}>{inv.status === 'paid' ? 'مدفوعة' : 'فشلت'}</span>
                 </div>
               </div>
             ))}
