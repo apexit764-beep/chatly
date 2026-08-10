@@ -686,6 +686,18 @@ export default function Inbox(): JSX.Element {
               {/* Spacer */}
               <div className="flex-1" />
 
+              {/* Call button */}
+              {selectedContact.phone && (
+                <a
+                  href={`tel:${selectedContact.phone}`}
+                  className="h-8 w-8 rounded-full hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center justify-center text-green-600 dark:text-green-400 transition-colors"
+                  title={`اتصال ${formatPhone(selectedContact.phone)}`}
+                  aria-label="اتصال بالعميل"
+                >
+                  <Phone className="h-4.5 w-4.5" />
+                </a>
+              )}
+
               {/* Status pill */}
               <StatusDropdown
                 status={selected.status}
