@@ -1050,10 +1050,13 @@ export default function Inbox(): JSX.Element {
                 )}
               </div>
               {ch && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-btn bg-bg-light dark:bg-bg-dark">
-                  <ChannelIcon type={ch.type} size={16} />
-                  <span className="text-small font-medium">{channelLabel(ch.type)}</span>
-                  <span className="h-2 w-2 rounded-full bg-success" />
+                <div className="flex items-center gap-2 px-3 py-2 rounded-btn bg-bg-light dark:bg-bg-dark">
+                  <ChannelIcon type={ch.type} size={18} />
+                  <div className="flex flex-col text-start">
+                    <span className="text-small font-medium leading-tight">{ch.name}</span>
+                    <span className="text-small text-muted-light dark:text-muted-dark leading-tight" dir="ltr">{ch.identifier}</span>
+                  </div>
+                  <span className="h-2 w-2 rounded-full bg-success mr-auto" />
                 </div>
               )}
             </div>
