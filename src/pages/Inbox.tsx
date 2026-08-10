@@ -1041,39 +1041,33 @@ export default function Inbox(): JSX.Element {
         const ch = channels.find((c) => c.id === selected.channelId);
         return (
           <Modal open={callModalOpen} onClose={() => setCallModalOpen(false)} title="اتصال صوتي" size="sm">
-            <div className="flex flex-col items-center gap-4 py-2">
+            <div className="flex flex-col items-center gap-5 py-3">
               <Avatar name={selectedContact.name} size="lg" />
               <div className="text-center">
-                <p className="text-h3 font-bold">{selectedContact.name}</p>
+                <p className="text-h2 font-bold">{selectedContact.name}</p>
                 {selectedContact.phone && (
-                  <p className="text-sm text-muted-light dark:text-muted-dark mt-1" dir="ltr">{formatPhone(selectedContact.phone)}</p>
+                  <p className="text-body text-muted-light dark:text-muted-dark mt-1" dir="ltr">{formatPhone(selectedContact.phone)}</p>
                 )}
               </div>
               {ch && (
-                <div className="flex items-center gap-1.5 text-xs text-muted-light dark:text-muted-dark">
-                  <ChannelIcon type={ch.type} size={14} />
-                  <span>{channelLabel(ch.type)}</span>
-                  <span className="h-2 w-2 rounded-full bg-green-500" />
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-btn bg-bg-light dark:bg-bg-dark">
+                  <ChannelIcon type={ch.type} size={16} />
+                  <span className="text-small font-medium">{channelLabel(ch.type)}</span>
+                  <span className="h-2 w-2 rounded-full bg-success" />
                 </div>
               )}
             </div>
-            <div className="flex gap-2 mt-4">
+            <div className="flex gap-3 mt-5">
               <button
                 onClick={() => { showToast('جاري بدء الاتصال...', 'success'); setCallModalOpen(false); }}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-warning text-black font-semibold rounded-btn hover:bg-warning/90 transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 h-10 px-4 bg-primary hover:bg-primary-dark text-white font-medium rounded-btn transition-colors"
               >
                 <Phone className="h-4 w-4" />
                 ابدأ الاتصال
               </button>
               <button
-                onClick={() => { showToast('تم إرسال طلب إذن الاتصال', 'success'); setCallModalOpen(false); }}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-border-light dark:border-border-dark rounded-btn hover:bg-bg-light dark:hover:bg-bg-dark transition-colors text-sm"
-              >
-                طلب إذن الاتصال
-              </button>
-              <button
                 onClick={() => setCallModalOpen(false)}
-                className="px-4 py-2.5 border border-border-light dark:border-border-dark rounded-btn hover:bg-bg-light dark:hover:bg-bg-dark transition-colors text-sm"
+                className="h-10 px-5 border border-border-light dark:border-border-dark rounded-btn hover:bg-bg-light dark:hover:bg-bg-dark transition-colors text-body font-medium"
               >
                 إلغاء
               </button>
