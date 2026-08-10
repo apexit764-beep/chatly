@@ -117,6 +117,7 @@ export default function Inbox(): JSX.Element {
   const [showChatMobile, setShowChatMobile] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [newConvOpen, setNewConvOpen] = useState(false);
+  const [callModalOpen, setCallModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -688,14 +689,14 @@ export default function Inbox(): JSX.Element {
 
               {/* Call button */}
               {selectedContact.phone && (
-                <a
-                  href={`tel:${selectedContact.phone}`}
+                <button
+                  onClick={() => setCallModalOpen(true)}
                   className="h-8 w-8 rounded-full hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center justify-center text-green-600 dark:text-green-400 transition-colors"
-                  title={`اتصال ${formatPhone(selectedContact.phone)}`}
-                  aria-label="اتصال بالعميل"
+                  title="اتصال صوتي"
+                  aria-label="اتصال صوتي"
                 >
-                  <Phone className="h-4.5 w-4.5" />
-                </a>
+                  <Phone className="h-3.5 w-3.5" />
+                </button>
               )}
 
               {/* Status pill */}
@@ -1034,6 +1035,52 @@ export default function Inbox(): JSX.Element {
           conversation={selected}
         />
       )}
+
+      {/* Call modal */}
+      {selected && selectedContact && (() => {
+        const ch = channels.find((c) => c.id === selected.channelId);
+        return (
+          <Modal open={callModalOpen} onClose={() => setCallModalOpen(false)} title="اتصال صوتي" size="sm">
+            <div className="flex flex-col items-center gap-4 py-2">
+              <Avatar name={selectedContact.name} size="lg" />
+              <div className="text-center">
+                <p className="text-h3 font-bold">{selectedContact.name}</p>
+                {selectedContact.phone && (
+                  <p className="text-sm text-muted-light dark:text-muted-dark mt-1" dir="ltr">{formatPhone(selectedContact.phone)}</p>
+                )}
+              </div>
+              {ch && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-light dark:text-muted-dark">
+                  <ChannelIcon type={ch.type} size={14} />
+                  <span>{channelLabel(ch.type)}</span>
+                  <span className="h-2 w-2 rounded-full bg-green-500" />
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => { showToast('جاري بدء الاتصال...', 'success'); setCallModalOpen(false); }}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-warning text-black font-semibold rounded-btn hover:bg-warning/90 transition-colors"
+              >
+                <Phone className="h-4 w-4" />
+                ابدأ الاتصال
+              </button>
+              <button
+                onClick={() => { showToast('تم إرسال طلب إذن الاتصال', 'success'); setCallModalOpen(false); }}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-border-light dark:border-border-dark rounded-btn hover:bg-bg-light dark:hover:bg-bg-dark transition-colors text-sm"
+              >
+                طلب إذن الاتصال
+              </button>
+              <button
+                onClick={() => setCallModalOpen(false)}
+                className="px-4 py-2.5 border border-border-light dark:border-border-dark rounded-btn hover:bg-bg-light dark:hover:bg-bg-dark transition-colors text-sm"
+              >
+                إلغاء
+              </button>
+            </div>
+          </Modal>
+        );
+      })()}
 
       {/* New conv modal */}
       <NewConversationModal open={newConvOpen} onClose={() => setNewConvOpen(false)} preselectedContact={selectedContact} />
