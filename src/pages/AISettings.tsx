@@ -79,7 +79,7 @@ interface ProviderInfo {
 const PROVIDERS: ProviderInfo[] = [
   {
     value: 'openai',
-    name: 'ChatGPT',
+    name: 'OpenAI',
     tagline: 'الأشهر — مجموعة GPT-4o',
     brandColor: '#10A37F',
     Icon: OpenAIIcon,
@@ -352,7 +352,7 @@ export default function AISettings(): JSX.Element {
           <SectionCard
             icon={<KeyRound className="h-5 w-5" />}
             title="ربط مزوّد الذكاء الاصطناعي"
-            description="اختر مزوّد الـ AI (Claude / ChatGPT / Gemini) ثم أدخل مفتاح الـ API. المفتاح محفوظ عندك ولا يُشارك مع أي طرف ثالث."
+            description="اختر مزوّد الـ AI (Claude / OpenAI / Gemini) ثم أدخل مفتاح الـ API. المفتاح محفوظ عندك ولا يُشارك مع أي طرف ثالث."
             headerExtra={
               form.apiKey ? (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/15 text-success text-[11px] font-semibold">
