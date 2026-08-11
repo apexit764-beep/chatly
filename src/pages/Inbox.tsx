@@ -706,7 +706,9 @@ export default function Inbox(): JSX.Element {
                     return ch ? (
                       <div className="flex items-center gap-1 text-[11px] text-muted-light dark:text-muted-dark -mt-0.5">
                         <ChannelIcon type={ch.type} size={10} className="!h-3.5 !w-3.5" />
-                        <span>{channelLabel(ch.type)}</span>
+                        <span>{ch.name}</span>
+                        <span className="opacity-60">·</span>
+                        <span className="opacity-60" dir="ltr">{ch.identifier}</span>
                       </div>
                     ) : null;
                   })()}
