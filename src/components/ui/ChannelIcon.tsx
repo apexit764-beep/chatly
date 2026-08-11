@@ -22,6 +22,7 @@ interface Props {
   type: ChannelType;
   size?: number;
   className?: string;
+  style?: React.CSSProperties;
   /** Render only the bare icon (no rounded colored wrapper). Inherits text color from parent. */
   plain?: boolean;
 }
@@ -44,11 +45,11 @@ const map: Record<ChannelType, { icon: IconComp; color: string; bg: string; labe
   woocommerce: { icon: WooCommerceIcon, color: 'text-[#7F54B3]', bg: 'bg-[#7F54B3]/10', label: 'WooCommerce' },
 };
 
-export function ChannelIcon({ type, size = 16, className, plain }: Props): JSX.Element {
+export function ChannelIcon({ type, size = 16, className, style, plain }: Props): JSX.Element {
   const item = map[type];
   const Icon = item.icon;
   if (plain) {
-    return <Icon className={className} style={{ width: size, height: size }} />;
+    return <Icon className={className} style={{ width: size, height: size, ...style }} />;
   }
   return (
     <span className={cn('inline-flex items-center justify-center rounded-lg', item.bg, item.color, className)} style={{ width: size + 16, height: size + 16 }}>

@@ -70,10 +70,10 @@ export default function Channels(): JSX.Element {
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div
-                        className="h-12 w-12 rounded-xl flex items-center justify-center text-white"
-                        style={{ background: meta.brandColor }}
+                        className="h-12 w-12 rounded-xl flex items-center justify-center"
+                        style={{ background: `${meta.brandColor}15` }}
                       >
-                        <ChannelIcon type={meta.type} size={24} plain className="text-white" />
+                        <ChannelIcon type={meta.type} size={24} plain style={{ color: meta.brandColor }} />
                       </div>
                       {total > 0 && (
                         <div className="flex items-center gap-1">
