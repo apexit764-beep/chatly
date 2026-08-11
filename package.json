@@ -9,6 +9,7 @@
     "build:single": "vite build --config vite.config.singlefile.ts",
     "deploy": "npm run build:single && cp dist-single/index.html /var/www/apexes.click/chats-product/index.html",
     "preview": "vite preview",
+    "verify:deploy": "node scripts/verify-deploy.mjs https://qhub-client.apexes.click",
     "lint": "eslint . --ext ts,tsx"
   },
   "dependencies": {

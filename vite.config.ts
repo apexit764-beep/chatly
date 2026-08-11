@@ -49,5 +49,11 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    // Must match the directory served in production. Bump this (assets-v3, ...)
+    // whenever a bad deploy may have left 404s cached in users' browsers —
+    // /assets/* is served with a long immutable max-age, so a cached 404 for a
+    // chunk sticks even after the file is restored. A fresh directory gives
+    // every chunk a URL no browser has an entry for. See CLAUDE.md § Deploying.
+    assetsDir: 'assets-v2',
   },
 });
