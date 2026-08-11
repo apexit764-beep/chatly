@@ -24,21 +24,28 @@ const presetColors = ['#2563EB', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#E
 
 export type WidgetSubTab = 'appearance' | 'messages' | 'behavior' | 'install';
 
+interface WidgetSettingsProps {
+  subTab: WidgetSubTab;
+  channelId: string;
+}
+
 /**
  * Widget settings shell: editor panel on the start side, live preview on the end side.
- * Rendered inside ChannelDetail when the active channel is `widget`.
+ * Reads/writes the per-account widgetConfig from the channel record.
  */
-export function WidgetSettings({ subTab }: { subTab: WidgetSubTab }): JSX.Element {
-  const config = useDataStore((s) => s.widgetConfig);
+export function WidgetSettings({ subTab, channelId }: WidgetSettingsProps): JSX.Element {
+  const channel = useDataStore((s) => s.channels.find((c) => c.id === channelId));
+  const globalConfig = useDataStore((s) => s.widgetConfig);
+  const config = channel?.widgetConfig ?? globalConfig;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
       {/* Editor */}
       <div className="lg:col-span-2 bg-white dark:bg-surface-dark rounded-card border border-border-light dark:border-border-dark p-5">
-        {subTab === 'appearance' && <AppearancePanel />}
-        {subTab === 'messages' && <MessagesPanel />}
-        {subTab === 'behavior' && <BehaviorPanel />}
-        {subTab === 'install' && <InstallPanel />}
+        {subTab === 'appearance' && <AppearancePanel channelId={channelId} />}
+        {subTab === 'messages' && <MessagesPanel channelId={channelId} />}
+        {subTab === 'behavior' && <BehaviorPanel channelId={channelId} />}
+        {subTab === 'install' && <InstallPanel channelId={channelId} />}
       </div>
 
       {/* Live preview */}
@@ -48,7 +55,7 @@ export function WidgetSettings({ subTab }: { subTab: WidgetSubTab }): JSX.Elemen
             <Eye className="h-4 w-4 text-primary" />
             معاينة مباشرة
           </p>
-          <span className="text-[10px] text-muted-light dark:text-muted-dark font-mono">yourstore.com</span>
+          <span className="text-[10px] text-muted-light dark:text-muted-dark font-mono">{channel?.identifier ?? 'yourstore.com'}</span>
         </div>
         <div
           className="relative overflow-hidden h-[560px]"
@@ -69,9 +76,17 @@ export function WidgetSettings({ subTab }: { subTab: WidgetSubTab }): JSX.Elemen
   );
 }
 
-function AppearancePanel(): JSX.Element {
-  const config = useDataStore((s) => s.widgetConfig);
-  const updateConfig = useDataStore((s) => s.updateWidgetConfig);
+function useChannelWidgetConfig(channelId: string) {
+  const channel = useDataStore((s) => s.channels.find((c) => c.id === channelId));
+  const globalConfig = useDataStore((s) => s.widgetConfig);
+  const updateChannelConfig = useDataStore((s) => s.updateChannelWidgetConfig);
+  const config = channel?.widgetConfig ?? globalConfig;
+  const updateConfig = (patch: Partial<WidgetConfig>) => updateChannelConfig(channelId, patch);
+  return { config, updateConfig };
+}
+
+function AppearancePanel({ channelId }: { channelId: string }): JSX.Element {
+  const { config, updateConfig } = useChannelWidgetConfig(channelId);
   return (
     <div className="space-y-6">
       <div>
@@ -155,9 +170,8 @@ function AppearancePanel(): JSX.Element {
   );
 }
 
-function MessagesPanel(): JSX.Element {
-  const config = useDataStore((s) => s.widgetConfig);
-  const updateConfig = useDataStore((s) => s.updateWidgetConfig);
+function MessagesPanel({ channelId }: { channelId: string }): JSX.Element {
+  const { config, updateConfig } = useChannelWidgetConfig(channelId);
   return (
     <div className="space-y-5">
       <Input label={<>اسم الفريق<span className="text-danger ms-0.5">*</span></>} value={config.teamName} onChange={(e) => updateConfig({ teamName: e.target.value })} placeholder="فريق Qhub" icon={<ImageIcon className="h-4 w-4" />} />
@@ -167,9 +181,8 @@ function MessagesPanel(): JSX.Element {
   );
 }
 
-function BehaviorPanel(): JSX.Element {
-  const config = useDataStore((s) => s.widgetConfig);
-  const updateConfig = useDataStore((s) => s.updateWidgetConfig);
+function BehaviorPanel({ channelId }: { channelId: string }): JSX.Element {
+  const { config, updateConfig } = useChannelWidgetConfig(channelId);
   return (
     <div className="space-y-3">
       <SwitchRow
@@ -206,10 +219,10 @@ function BehaviorPanel(): JSX.Element {
   );
 }
 
-function InstallPanel(): JSX.Element {
+function InstallPanel({ channelId }: { channelId: string }): JSX.Element {
   const showToast = useUIStore((s) => s.showToast);
   const [copied, setCopied] = useState(false);
-  const widgetId = 'wdgt_qhub_8f3a2b';
+  const widgetId = `wdgt_${channelId}`;
   const installCode = `<!-- Qhub Live Chat Widget -->
 <script>
   (function(s,e,k,a){

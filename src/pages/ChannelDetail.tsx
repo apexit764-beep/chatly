@@ -18,6 +18,7 @@ import {
   Code,
   KeyRound,
   ChevronDown,
+  ChevronLeft,
 } from 'lucide-react';
 import {
   Avatar,
@@ -69,11 +70,15 @@ export default function ChannelDetail(): JSX.Element {
   const [whatsappWizardOpen, setWhatsappWizardOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [openMethod, setOpenMethod] = useState<string | null>(meta?.methods?.[0]?.key ?? null);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
-  // Per-channel tabs. Base channels keep a single "overview" tab; widget adds settings tabs.
-  const tabs: ChannelTab[] = meta?.type === 'widget'
+  const selectedAccount = selectedAccountId
+    ? channels.find((c) => c.id === selectedAccountId) ?? null
+    : null;
+
+  // Per-channel tabs. Widget shows settings tabs only when an account is selected.
+  const tabs: ChannelTab[] = meta?.type === 'widget' && selectedAccountId
     ? [
-        { key: 'overview', label: t('نظرة عامة'), icon: Info },
         { key: 'appearance', label: t('المظهر'), icon: Paintbrush },
         { key: 'messages', label: t('الرسائل'), icon: MessageCircle },
         { key: 'behavior', label: t('السلوك'), icon: SettingsIcon },
@@ -199,6 +204,30 @@ export default function ChannelDetail(): JSX.Element {
         </div>
       </div>
 
+      {/* Account-level header + back button (widget with selected account) */}
+      {meta.type === 'widget' && selectedAccount && (
+        <div className="bg-white dark:bg-surface-dark rounded-card border border-border-light dark:border-border-dark p-4 flex items-center gap-3">
+          <button
+            onClick={() => { setSelectedAccountId(null); setActiveTab('overview'); }}
+            className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center text-muted-light dark:text-muted-dark flex-shrink-0"
+          >
+            <ArrowRight className="h-4 w-4" />
+          </button>
+          <div
+            className={cn(
+              'h-2.5 w-2.5 rounded-full flex-shrink-0',
+              selectedAccount.status === 'connected' && 'bg-success',
+              selectedAccount.status === 'pending' && 'bg-warning',
+              selectedAccount.status === 'disconnected' && 'bg-danger'
+            )}
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-body font-bold truncate">{selectedAccount.name}</p>
+            <p className="text-small text-muted-light dark:text-muted-dark font-mono">{selectedAccount.identifier}</p>
+          </div>
+        </div>
+      )}
+
       {/* Tab bar (shown when channel has more than one tab) */}
       {tabs.length > 1 && (
         <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark overflow-x-auto">
@@ -223,9 +252,9 @@ export default function ChannelDetail(): JSX.Element {
         </div>
       )}
 
-      {/* Widget settings tabs */}
-      {meta.type === 'widget' && activeTab !== 'overview' && (
-        <WidgetSettings subTab={activeTab as WidgetSubTab} />
+      {/* Widget settings tabs (per-account) */}
+      {meta.type === 'widget' && selectedAccountId && activeTab !== 'overview' && (
+        <WidgetSettings subTab={activeTab as WidgetSubTab} channelId={selectedAccountId} />
       )}
 
 {/* Overview tab — two-column layout */}
@@ -280,7 +309,16 @@ export default function ChannelDetail(): JSX.Element {
                   return (
                     <div
                       key={channel.id}
-                      className="p-3 rounded-card border border-border-light dark:border-border-dark hover:border-primary/30 transition-colors flex items-center gap-3"
+                      onClick={() => {
+                        if (meta.type === 'widget') {
+                          setSelectedAccountId(channel.id);
+                          setActiveTab('appearance');
+                        }
+                      }}
+                      className={cn(
+                        'p-3 rounded-card border border-border-light dark:border-border-dark hover:border-primary/30 transition-colors flex items-center gap-3',
+                        meta.type === 'widget' && 'cursor-pointer'
+                      )}
                     >
                       <div
                         className={cn(
@@ -330,7 +368,10 @@ export default function ChannelDetail(): JSX.Element {
                           </div>
                         ))}
                       </div>
-                      <div className="relative">
+                      {meta.type === 'widget' && (
+                        <ChevronLeft className="h-4 w-4 text-muted-light dark:text-muted-dark flex-shrink-0" />
+                      )}
+                      <div className="relative" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={(e) => {
                             if (openMenu === channel.id) { setOpenMenu(null); return; }

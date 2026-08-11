@@ -119,6 +119,7 @@ interface DataState {
 
   // Widget config
   updateWidgetConfig: (patch: Partial<WidgetConfig>) => void;
+  updateChannelWidgetConfig: (channelId: string, patch: Partial<WidgetConfig>) => void;
 
   // App settings
   updateAppSettings: (patch: Partial<AppSettings>) => void;
@@ -446,7 +447,13 @@ export const useDataStore = create<DataState>((set) => ({
     set((state) => ({
       channels: [
         ...state.channels,
-        { ...c, id: newId(), unreadCount: 0, createdAt: new Date().toISOString() },
+        {
+          ...c,
+          id: newId(),
+          unreadCount: 0,
+          createdAt: new Date().toISOString(),
+          ...(c.type === 'widget' && !c.widgetConfig ? { widgetConfig: { ...state.widgetConfig } } : {}),
+        },
       ],
     })),
 
@@ -502,6 +509,15 @@ export const useDataStore = create<DataState>((set) => ({
 
   updateWidgetConfig: (patch) =>
     set((state) => ({ widgetConfig: { ...state.widgetConfig, ...patch } })),
+
+  updateChannelWidgetConfig: (channelId, patch) =>
+    set((state) => ({
+      channels: state.channels.map((c) =>
+        c.id === channelId && c.widgetConfig
+          ? { ...c, widgetConfig: { ...c.widgetConfig, ...patch } }
+          : c
+      ),
+    })),
 
   updateAppSettings: (patch) =>
     set((state) => ({ appSettings: { ...state.appSettings, ...patch } })),

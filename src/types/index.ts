@@ -107,6 +107,8 @@ export interface Channel {
   color?: string;          // for badge / icon background
   /** Connection secrets (API keys, tokens). Demo-only — stored as-is. */
   credentials?: Record<string, string>;
+  /** Per-account widget settings (only for type === 'widget') */
+  widgetConfig?: WidgetConfig;
 }
 
 export interface Department {
