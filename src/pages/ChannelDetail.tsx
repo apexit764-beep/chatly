@@ -177,32 +177,35 @@ export default function ChannelDetail(): JSX.Element {
         {t('العودة إلى القنوات')}
       </button>
 
-      {/* Header card */}
-      <div
-        className="rounded-card border border-border-light dark:border-border-dark overflow-hidden"
-        style={{ background: `${meta.brandColor}10` }}
-      >
-        <div className="px-6 py-6 flex items-start gap-4">
-          <div
-            className="h-16 w-16 rounded-xl flex items-center justify-center text-white flex-shrink-0"
-            style={{ background: meta.brandColor }}
-          >
-            <ChannelIcon type={meta.type} size={32} plain className="text-white" />
+      {/* Header card — hidden while editing one account, where the channel-wide
+          title and the "add account" action are out of place */}
+      {!selectedAccount && (
+        <div
+          className="rounded-card border border-border-light dark:border-border-dark overflow-hidden"
+          style={{ background: `${meta.brandColor}10` }}
+        >
+          <div className="px-6 py-6 flex items-start gap-4">
+            <div
+              className="h-16 w-16 rounded-xl flex items-center justify-center text-white flex-shrink-0"
+              style={{ background: meta.brandColor }}
+            >
+              <ChannelIcon type={meta.type} size={32} plain className="text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-h1 font-bold">{meta.name}</h1>
+              <p className="text-body text-muted-light dark:text-muted-dark mt-1">{meta.tagline}</p>
+            </div>
+            <button
+              onClick={openAdd}
+              className="h-10 px-5 rounded-full text-white text-small font-medium flex items-center gap-2 hover:opacity-90 transition-opacity flex-shrink-0"
+              style={{ background: meta.brandColor }}
+            >
+              <Plus className="h-4 w-4" />
+              {t('ربط حساب جديد')}
+            </button>
           </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-h1 font-bold">{meta.name}</h1>
-            <p className="text-body text-muted-light dark:text-muted-dark mt-1">{meta.tagline}</p>
-          </div>
-          <button
-            onClick={openAdd}
-            className="h-10 px-5 rounded-full text-white text-small font-medium flex items-center gap-2 hover:opacity-90 transition-opacity flex-shrink-0"
-            style={{ background: meta.brandColor }}
-          >
-            <Plus className="h-4 w-4" />
-            {t('ربط حساب جديد')}
-          </button>
         </div>
-      </div>
+      )}
 
       {/* Account-level header + back button (widget with selected account) */}
       {meta.type === 'widget' && selectedAccount && (
