@@ -79,7 +79,7 @@ export interface Role {
 export type AgentStatus = 'online' | 'busy' | 'offline';
 export type MessageDirection = 'in' | 'out';
 export type MessageType = 'text' | 'image' | 'document' | 'voice' | 'note';
-export type CampaignStatus = 'draft' | 'scheduled' | 'completed' | 'failed';
+export type CampaignStatus = 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed';
 export interface TemplateCategoryItem {
   id: string;
   name: string;

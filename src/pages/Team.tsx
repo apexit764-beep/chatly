@@ -905,18 +905,18 @@ export default function Team(): JSX.Element {
             </div>
           )}
           <Input
+            label={<>{t('الاسم')}<span className="text-danger ms-0.5">*</span></>}
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder={t('اسم الموظف')}
+          />
+          <Input
             label={<>{t('البريد الإلكتروني')}<span className="text-danger ms-0.5">*</span></>}
             type="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
             icon={<Mail className="h-4 w-4" />}
             placeholder="employee@company.com"
-          />
-          <Input
-            label={<>{t('الاسم')}<span className="text-danger ms-0.5">*</span></>}
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder={t('اسم الموظف')}
           />
           <div className="space-y-1.5">
             <label className="text-small font-medium text-muted-light dark:text-muted-dark block">{t('الدور')}<span className="text-danger ms-0.5">*</span></label>

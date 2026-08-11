@@ -463,7 +463,7 @@ export const templates: Template[] = [
 export const campaigns: Campaign[] = [
   { id: 'cm1', name: 'عروض موسم الخريف 2026', message: 'استمتع بعروض حصرية على إيجار السيارات والشاليهات في صلالة لهذا الموسم. للحجز راسلنا الآن!', targetCount: 1245, sentCount: 1245, openRate: 78, status: 'completed', scheduledAt: nowMinus(60 * 24 * 5), createdAt: nowMinus(60 * 24 * 10) },
   { id: 'cm2', name: 'تجديد عقود المالكين', message: 'مرحباً {{اسم_العميل}}، حان وقت تجديد عقد العقار. تواصل معنا لمناقشة الشروط الجديدة.', targetCount: 87, sentCount: 87, openRate: 92, status: 'completed', scheduledAt: nowMinus(60 * 24 * 2), createdAt: nowMinus(60 * 24 * 7) },
-  { id: 'cm3', name: 'إطلاق مجمع الخوض الجديد', message: 'يسرنا الإعلان عن افتتاح مجمع الخوض السكني الجديد. شقق فاخرة بأسعار تنافسية.', targetCount: 540, sentCount: 0, openRate: 0, status: 'scheduled', scheduledAt: new Date(Date.now() + 60 * 60 * 24 * 1000).toISOString(), createdAt: nowMinus(60 * 24) },
+  { id: 'cm3', name: 'إطلاق مجمع الخوض الجديد', message: 'يسرنا الإعلان عن افتتاح مجمع الخوض السكني الجديد. شقق فاخرة بأسعار تنافسية.', targetCount: 540, sentCount: 312, openRate: 0, status: 'sending', scheduledAt: nowMinus(60 * 2), createdAt: nowMinus(60 * 24) },
   { id: 'cm4', name: 'استبيان رضا العملاء', message: 'نرحب بتقييمك لخدماتنا. ساعدنا في التحسين عبر الرابط التالي.', targetCount: 0, sentCount: 0, openRate: 0, status: 'draft', scheduledAt: null, createdAt: nowMinus(60 * 12) },
   { id: 'cm5', name: 'عيد الفطر - عروض حصرية', message: 'بمناسبة عيد الفطر، استمتع بخصم 15% على جميع عقود الإيجار الجديدة. عيد سعيد!', targetCount: 2100, sentCount: 1890, openRate: 65, status: 'failed', scheduledAt: nowMinus(60 * 24 * 30), createdAt: nowMinus(60 * 24 * 35) },
 ];

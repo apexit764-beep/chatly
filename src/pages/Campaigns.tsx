@@ -20,6 +20,7 @@ import {
   Sparkles,
   Paperclip,
   Mail,
+  Loader2,
 } from 'lucide-react';
 import {
   Badge,
@@ -59,6 +60,7 @@ export default function Campaigns(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   const [channelFilter, setChannelFilter] = useState<CampaignChannelType>('whatsapp');
+  const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
   const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 29); d.setHours(0,0,0,0); return d; });
   const [dateTo, setDateTo] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
   const [modalOpen, setModalOpen] = useState(false);
@@ -109,6 +111,7 @@ export default function Campaigns(): JSX.Element {
 
   const filteredCampaigns = campaigns
     .filter((c) => (c.channelType ?? 'whatsapp') === channelFilter)
+    .filter((c) => statusFilter === 'all' || c.status === statusFilter)
     .filter((c) => {
       const t = Date.parse(c.scheduledAt ?? c.createdAt);
       return t >= dateFrom.getTime() && t <= dateTo.getTime() + 86400000;
@@ -248,6 +251,7 @@ export default function Campaigns(): JSX.Element {
   const statusIcon = (s: CampaignStatus): JSX.Element => {
     if (s === 'completed') return <CheckCircle2 className="h-3.5 w-3.5" />;
     if (s === 'scheduled') return <Clock className="h-3.5 w-3.5" />;
+    if (s === 'sending') return <Loader2 className="h-3.5 w-3.5 animate-spin" />;
     if (s === 'failed') return <XCircle className="h-3.5 w-3.5" />;
     return <Edit2 className="h-3.5 w-3.5" />;
   };
@@ -382,6 +386,20 @@ export default function Campaigns(): JSX.Element {
         searchPlaceholder="ابحث عن حملة..."
         searchAccessor={(c) => `${c.name} ${c.message}`}
         pageSize={10}
+        filters={
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as CampaignStatus | 'all')}
+            className="h-9 ps-3 pe-8 rounded-full border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-small focus:outline-none focus:border-primary"
+          >
+            <option value="all">جميع الحالات</option>
+            <option value="draft">مسودة</option>
+            <option value="scheduled">مجدولة</option>
+            <option value="sending">جاري الإرسال</option>
+            <option value="completed">مكتملة</option>
+            <option value="failed">فشلت</option>
+          </select>
+        }
         toolbar={
           <>
             <DateRangePicker

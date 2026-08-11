@@ -50,6 +50,7 @@ export const agentStatusColor: Record<AgentStatus, string> = {
 export const campaignStatusLabel: Record<CampaignStatus, string> = {
   draft: 'مسودة',
   scheduled: 'مجدولة',
+  sending: 'جاري الإرسال',
   completed: 'مكتملة',
   failed: 'فشلت',
 };
@@ -57,6 +58,7 @@ export const campaignStatusLabel: Record<CampaignStatus, string> = {
 export const campaignStatusColor: Record<CampaignStatus, string> = {
   draft: 'bg-muted-light/15 text-muted-light dark:text-muted-dark',
   scheduled: 'bg-info/15 text-info',
+  sending: 'bg-warning/15 text-warning',
   completed: 'bg-success/15 text-success',
   failed: 'bg-danger/15 text-danger',
 };
