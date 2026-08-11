@@ -1,10 +1,11 @@
 import { FormEvent, useState } from 'react';
-import { Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
 import {
   Eye,
   EyeOff,
   Lock,
   Mail,
+  User,
   Shield,
   ArrowRight,
   Sun,
@@ -15,43 +16,51 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { AuthHero } from '@components/auth/AuthHero';
+import { PhoneField } from '@components/ui/PhoneField';
 import { cn } from '@/utils/cn';
 
-export default function Login(): JSX.Element {
+export default function SignUp(): JSX.Element {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const login = useAuthStore((s) => s.login);
   const navigate = useNavigate();
-  const location = useLocation();
 
-  const from = (location.state as { from?: string } | null)?.from ?? '/inbox';
-
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [countryCode, setCountryCode] = useState('+968');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [pwdError, setPwdError] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [remember, setRemember] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [pwdError, setPwdError] = useState<string | null>(null);
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggle);
   const language = useLanguageStore((s) => s.language);
   const toggleLanguage = useLanguageStore((s) => s.toggle);
 
   if (isAuthenticated) {
-    return <Navigate to={from} replace />;
+    return <Navigate to="/overview" replace />;
   }
 
   const validate = (): boolean => {
     let ok = true;
+    setNameError(null);
     setEmailError(null);
+    setPhoneError(null);
     setPwdError(null);
     setError(null);
+
+    if (!name.trim()) { setNameError('الاسم مطلوب'); ok = false; }
     const emailRe = /^[\w.+-]+@[\w-]+\.[\w.-]+$/;
     if (!email.trim()) { setEmailError('البريد مطلوب'); ok = false; }
     else if (!emailRe.test(email.trim())) { setEmailError('صيغة البريد غير صحيحة'); ok = false; }
+    if (!phone.trim()) { setPhoneError('رقم الجوال مطلوب'); ok = false; }
     if (!password) { setPwdError('كلمة المرور مطلوبة'); ok = false; }
     else if (password.length < 6) { setPwdError('كلمة المرور 6 أحرف على الأقل'); ok = false; }
+    if (!agreed) { setError('يرجى الموافقة على الشروط والأحكام'); ok = false; }
     return ok;
   };
 
@@ -60,14 +69,9 @@ export default function Login(): JSX.Element {
     if (!validate()) return;
     setLoading(true);
     setTimeout(() => {
-      const result = login(email, password);
-      if (!result.ok) {
-        setError(result.error ?? 'فشل تسجيل الدخول');
-        setLoading(false);
-        return;
-      }
-      navigate(from, { replace: true });
-    }, 400);
+      setLoading(false);
+      navigate('/login', { state: { registered: true } });
+    }, 1200);
   };
 
   return (
@@ -106,12 +110,36 @@ export default function Login(): JSX.Element {
           transition={{ duration: 0.3 }}
           className="my-auto max-w-md w-full mx-auto"
         >
-          <h1 className="text-display font-extrabold mb-2">مرحباً بعودتك</h1>
+          <h1 className="text-display font-extrabold mb-2">إنشاء حساب جديد</h1>
           <p className="text-body text-muted-light dark:text-muted-dark mb-8">
-            سجّل دخولك لإدارة محادثاتك في Qhub
+            ابدأ تجربتك المجانية في Qhub — لا حاجة لبطاقة ائتمان
           </p>
 
           <form onSubmit={onSubmit} className="space-y-4">
+            {/* Name */}
+            <div className="space-y-1.5">
+              <label className="text-small font-semibold text-[#374151] dark:text-[#D1D5DB]">
+                الاسم الكامل<span className="text-danger ms-0.5">*</span>
+              </label>
+              <div className="relative">
+                <User className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark" />
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => { setName(e.target.value); setNameError(null); }}
+                  className={cn(
+                    'w-full h-12 ps-4 pe-11 rounded-xl bg-bg-light dark:bg-bg-dark border text-body focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all',
+                    nameError ? 'border-danger focus:border-danger focus:ring-danger/10' : 'border-border-light dark:border-border-dark focus:border-primary'
+                  )}
+                  placeholder="مثال: أحمد محمد"
+                  aria-invalid={!!nameError}
+                />
+              </div>
+              {nameError && <p className="text-small text-danger flex items-center gap-1.5"><Shield className="h-3 w-3" />{nameError}</p>}
+            </div>
+
+            {/* Email */}
             <div className="space-y-1.5">
               <label className="text-small font-semibold text-[#374151] dark:text-[#D1D5DB]">
                 البريد الإلكتروني<span className="text-danger ms-0.5">*</span>
@@ -129,21 +157,30 @@ export default function Login(): JSX.Element {
                   )}
                   placeholder="you@company.com"
                   aria-invalid={!!emailError}
-                  aria-describedby={emailError ? 'email-error' : undefined}
                 />
               </div>
-              {emailError && <p id="email-error" className="text-small text-danger flex items-center gap-1.5"><Shield className="h-3 w-3" />{emailError}</p>}
+              {emailError && <p className="text-small text-danger flex items-center gap-1.5"><Shield className="h-3 w-3" />{emailError}</p>}
             </div>
 
+            {/* Phone */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-small font-semibold text-[#374151] dark:text-[#D1D5DB]">
-                  كلمة المرور<span className="text-danger ms-0.5">*</span>
-                </label>
-                <Link to="/forgot-password" className="text-small text-primary font-medium hover:underline">
-                  نسيت كلمة المرور؟
-                </Link>
-              </div>
+              <label className="text-small font-semibold text-[#374151] dark:text-[#D1D5DB]">
+                رقم الجوال<span className="text-danger ms-0.5">*</span>
+              </label>
+              <PhoneField
+                countryCode={countryCode}
+                phone={phone}
+                onCountryCodeChange={setCountryCode}
+                onPhoneChange={(v) => { setPhone(v); setPhoneError(null); }}
+                error={phoneError ?? undefined}
+              />
+            </div>
+
+            {/* Password */}
+            <div className="space-y-1.5">
+              <label className="text-small font-semibold text-[#374151] dark:text-[#D1D5DB]">
+                كلمة المرور<span className="text-danger ms-0.5">*</span>
+              </label>
               <div className="relative">
                 <Lock className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark" />
                 <input
@@ -155,9 +192,8 @@ export default function Login(): JSX.Element {
                     'w-full h-12 ps-11 pe-11 rounded-xl bg-bg-light dark:bg-bg-dark border text-body focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all',
                     pwdError ? 'border-danger focus:border-danger focus:ring-danger/10' : 'border-border-light dark:border-border-dark focus:border-primary'
                   )}
-                  placeholder="••••••••"
+                  placeholder="6 أحرف على الأقل"
                   aria-invalid={!!pwdError}
-                  aria-describedby={pwdError ? 'pwd-error' : undefined}
                 />
                 <button
                   type="button"
@@ -168,17 +204,23 @@ export default function Login(): JSX.Element {
                   {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {pwdError && <p id="pwd-error" className="text-small text-danger flex items-center gap-1.5"><Shield className="h-3 w-3" />{pwdError}</p>}
+              {pwdError && <p className="text-small text-danger flex items-center gap-1.5"><Shield className="h-3 w-3" />{pwdError}</p>}
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer select-none">
+            {/* Terms */}
+            <label className="flex items-start gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
-                checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
-                className="h-4 w-4 accent-primary rounded"
+                checked={agreed}
+                onChange={(e) => { setAgreed(e.target.checked); if (e.target.checked) setError(null); }}
+                className="h-4 w-4 accent-primary rounded mt-0.5"
               />
-              <span className="text-small text-muted-light dark:text-muted-dark">تذكّرني</span>
+              <span className="text-small text-muted-light dark:text-muted-dark">
+                أوافق على{' '}
+                <a href="#" className="text-primary hover:underline">الشروط والأحكام</a>
+                {' '}و{' '}
+                <a href="#" className="text-primary hover:underline">سياسة الخصوصية</a>
+              </span>
             </label>
 
             {error && (
@@ -207,18 +249,18 @@ export default function Login(): JSX.Element {
                 <span className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
               ) : (
                 <>
-                  تسجيل الدخول
+                  ابدأ مجاناً
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
             </button>
           </form>
 
-          {/* Sign up link */}
+          {/* Login link */}
           <p className="text-center text-small text-muted-light dark:text-muted-dark mt-6">
-            ما عندك حساب؟{' '}
-            <Link to="/signup" className="text-primary font-semibold hover:underline">
-              أنشئ حساب جديد
+            عندك حساب؟{' '}
+            <Link to="/login" className="text-primary font-semibold hover:underline">
+              سجّل دخول
             </Link>
           </p>
         </motion.div>
@@ -241,4 +283,3 @@ export default function Login(): JSX.Element {
     </div>
   );
 }
-
