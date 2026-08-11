@@ -41,7 +41,6 @@ export default function RatingPublic(): JSX.Element {
   const [searchParams] = useSearchParams();
   const token = paramToken || searchParams.get('t') || '';
   const general = useSettingsStore((s) => s.general);
-  const ratingPrefs = useSettingsStore((s) => s.rating);
   const theme = useThemeStore((s) => s.theme);
   const findByToken = useRatingStore((s) => s.findByToken);
   const submitRating = useRatingStore((s) => s.submitRating);
@@ -64,7 +63,7 @@ export default function RatingPublic(): JSX.Element {
     if (!satisfaction) { setError('يرجى اختيار مستوى الرضا'); return; }
     const ok = submitRating(token, {
       ratingConversation: convStars,
-      ratingAgent: ratingPrefs.askAgentRating ? agentStars || null : null,
+      ratingAgent: rating.askAgentRating ? agentStars || null : null,
       satisfaction,
       comment: comment.trim(),
     });
@@ -146,7 +145,7 @@ export default function RatingPublic(): JSX.Element {
               </div>
 
               {/* Agent rating */}
-              {ratingPrefs.askAgentRating && (
+              {rating.askAgentRating && (
                 <div className="mb-5">
                   <p className="text-small font-semibold mb-2 text-center">
                     تقييم الموظف <span className="text-muted-light dark:text-muted-dark font-normal">({rating.agentName})</span>

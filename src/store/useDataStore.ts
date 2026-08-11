@@ -11,6 +11,7 @@ import type {
   Integration,
   Message,
   Notification,
+  RatingConfig,
   Role,
   Template,
   TemplateCategoryItem,
@@ -120,6 +121,9 @@ interface DataState {
   // Widget config
   updateWidgetConfig: (patch: Partial<WidgetConfig>) => void;
   updateChannelWidgetConfig: (channelId: string, patch: Partial<WidgetConfig>) => void;
+
+  // Rating config (per linked account)
+  setChannelRatingConfig: (channelId: string, config: RatingConfig) => void;
 
   // App settings
   updateAppSettings: (patch: Partial<AppSettings>) => void;
@@ -516,6 +520,15 @@ export const useDataStore = create<DataState>((set) => ({
         c.id === channelId && c.widgetConfig
           ? { ...c, widgetConfig: { ...c.widgetConfig, ...patch } }
           : c
+      ),
+    })),
+
+  // Full replace rather than a patch: an account with no ratingConfig is
+  // showing the inherited defaults, and the caller already holds every field.
+  setChannelRatingConfig: (channelId, config) =>
+    set((state) => ({
+      channels: state.channels.map((c) =>
+        c.id === channelId ? { ...c, ratingConfig: { ...config } } : c
       ),
     })),
 

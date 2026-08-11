@@ -27,9 +27,10 @@ import {
   Smartphone,
   Mail,
 } from 'lucide-react';
-import { Avatar, Modal, useConfirm } from '@components/ui';
+import { Avatar, ChannelIcon, Modal, useConfirm } from '@components/ui';
 import { PhoneField, PHONE_COUNTRIES } from '@components/ui/PhoneField';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useDataStore } from '@/store/useDataStore';
 import { useInboxStore } from '@/store/useInboxStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useThemeStore } from '@/store/useThemeStore';
@@ -595,23 +596,103 @@ function AppearanceTab(): JSX.Element {
 
 function RatingTab(): JSX.Element {
   const rating = useSettingsStore((s) => s.rating);
-  const setRating = useSettingsStore((s) => s.setRating);
+  const channels = useDataStore((s) => s.channels);
+  const setChannelRatingConfig = useDataStore((s) => s.setChannelRatingConfig);
   const showToast = useUIStore((s) => s.showToast);
-  const [enabled, setEnabled] = useState(rating.enabled);
-  const [message, setMessage] = useState(rating.message);
-  const [expireDays, setExpireDays] = useState(rating.expireDays);
-  const [askAgentRating, setAskAgentRating] = useState(rating.askAgentRating);
+
+  const accounts = useMemo(
+    () => channels.filter((c) => c.status !== 'disconnected'),
+    [channels]
+  );
+
+  const [selectedId, setSelectedId] = useState<string | null>(accounts[0]?.id ?? null);
+  // An account added while this tab is open would otherwise leave selectedId dangling.
+  const selected = accounts.find((c) => c.id === selectedId) ?? accounts[0] ?? null;
+
+  // Accounts without their own config show the account-wide defaults.
+  const effective = selected?.ratingConfig ?? rating;
+
+  const [enabled, setEnabled] = useState(effective.enabled);
+  const [message, setMessage] = useState(effective.message);
+  const [expireDays, setExpireDays] = useState(effective.expireDays);
+  const [askAgentRating, setAskAgentRating] = useState(effective.askAgentRating);
+
+  // Reload the form whenever a different account is picked.
+  useEffect(() => {
+    const cfg = selected?.ratingConfig ?? rating;
+    setEnabled(cfg.enabled);
+    setMessage(cfg.message);
+    setExpireDays(cfg.expireDays);
+    setAskAgentRating(cfg.askAgentRating);
+  }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = (): void => {
+    if (!selected) return;
     if (!message.trim()) { showToast('نص الرسالة مطلوب', 'error'); return; }
     if (expireDays < 1 || expireDays > 90) { showToast('مدة الصلاحية بين 1 و 90 يوم', 'error'); return; }
-    setRating({ enabled, message, expireDays, askAgentRating });
-    showToast('تم حفظ إعدادات التقييم', 'success');
+    setChannelRatingConfig(selected.id, { enabled, message, expireDays, askAgentRating });
+    showToast(`تم حفظ إعدادات التقييم لـ${selected.name}`, 'success');
   };
+
+  if (!selected) {
+    return (
+      <div>
+        <TabHeader icon={<Star className="h-5 w-5" />} title="تقييم العملاء" subtitle="إعدادات استبيان رضا العملاء بعد إغلاق المحادثة" />
+        <p className="text-body text-muted-light dark:text-muted-dark py-8 text-center">
+          اربط حساباً أولاً حتى تقدر تضبط إعدادات التقييم الخاصة فيه
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <TabHeader icon={<Star className="h-5 w-5" />} title="تقييم العملاء" subtitle="إعدادات استبيان رضا العملاء بعد إغلاق المحادثة" />
+      <TabHeader icon={<Star className="h-5 w-5" />} title="تقييم العملاء" subtitle="إعدادات استبيان رضا العملاء لكل حساب مربوط على حدة" />
+
+      {/* Account picker — each linked account keeps its own settings */}
+      <div className="mb-6">
+        <p className="text-body font-medium mb-1">الحساب</p>
+        <p className="text-small text-muted-light dark:text-muted-dark mb-3">
+          اختر الحساب اللي بدك تضبط إعدادات التقييم الخاصة فيه
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {accounts.map((acc) => {
+            const cfg = acc.ratingConfig ?? rating;
+            const isActive = acc.id === selected.id;
+            return (
+              <button
+                key={acc.id}
+                onClick={() => setSelectedId(acc.id)}
+                className={cn(
+                  'flex items-center gap-3 p-3 rounded-card border text-start transition-colors',
+                  isActive
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border-light dark:border-border-dark hover:border-primary/30'
+                )}
+              >
+                <ChannelIcon type={acc.type} size={28} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-body font-medium truncate">{acc.name}</p>
+                  <p className="text-small text-muted-light dark:text-muted-dark font-mono truncate">{acc.identifier}</p>
+                </div>
+                <span
+                  className={cn(
+                    'text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0',
+                    cfg.enabled ? 'bg-success/15 text-success' : 'bg-muted-light/15 text-muted-light dark:text-muted-dark'
+                  )}
+                >
+                  {cfg.enabled ? 'مفعّل' : 'موقوف'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {!selected.ratingConfig && (
+          <p className="text-small text-muted-light dark:text-muted-dark mt-3">
+            هذا الحساب يستخدم الإعدادات الافتراضية — أي تعديل تحفظه هنا بينطبق عليه لحاله.
+          </p>
+        )}
+      </div>
 
       <Row label="تفعيل التقييم" hint="إرسال رابط تقييم تلقائياً بعد إغلاق المحادثة">
         <Toggle checked={enabled} onChange={setEnabled} />

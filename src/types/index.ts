@@ -109,6 +109,8 @@ export interface Channel {
   credentials?: Record<string, string>;
   /** Per-account widget settings (only for type === 'widget') */
   widgetConfig?: WidgetConfig;
+  /** Per-account rating settings. Absent means "inherit the account-wide defaults". */
+  ratingConfig?: RatingConfig;
 }
 
 export interface Department {
@@ -332,6 +334,18 @@ export interface AppSettings {
   language: 'ar' | 'en';
   timezone: string;
   dateFormat: string;
+}
+
+/**
+ * Post-conversation rating survey settings. Held per linked account on
+ * `Channel.ratingConfig`; the defaults in the settings store apply to any
+ * account that has not been given its own.
+ */
+export interface RatingConfig {
+  enabled: boolean;
+  message: string;
+  expireDays: number;
+  askAgentRating: boolean;
 }
 
 export interface WidgetConfig {

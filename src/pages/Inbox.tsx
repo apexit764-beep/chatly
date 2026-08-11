@@ -318,7 +318,10 @@ export default function Inbox(): JSX.Element {
 
   const closeConversation = async (): Promise<void> => {
     if (!selected || !selectedContact) return;
-    const ratingPrefs = useSettingsStore.getState().rating;
+    // Rating is configured per linked account; accounts without their own
+    // settings fall back to the account-wide defaults.
+    const convChannel = channels.find((c) => c.id === selected.channelId);
+    const ratingPrefs = convChannel?.ratingConfig ?? useSettingsStore.getState().rating;
     const ok = await confirm({
       title: 'إغلاق المحادثة؟',
       message: ratingPrefs.enabled
@@ -333,16 +336,19 @@ export default function Inbox(): JSX.Element {
     if (ratingPrefs.enabled) {
       const agentId = selected.assignedTo ?? currentUserId;
       const agent = agents.find((a) => a.id === agentId);
-      const channel = channels.find((c) => c.id === selected.channelId);
-      const token = useRatingStore.getState().generateToken({
-        conversationId: selected.id,
-        contactId: selectedContact.id,
-        contactName: selectedContact.name,
-        agentId: agentId ?? '',
-        agentName: agent?.name ?? 'فريق الدعم',
-        channelType: channel?.type ?? 'whatsapp',
-        channelName: channel?.name ?? '',
-      });
+      const token = useRatingStore.getState().generateToken(
+        {
+          conversationId: selected.id,
+          contactId: selectedContact.id,
+          contactName: selectedContact.name,
+          agentId: agentId ?? '',
+          agentName: agent?.name ?? 'فريق الدعم',
+          channelType: convChannel?.type ?? 'whatsapp',
+          channelName: convChannel?.name ?? '',
+          askAgentRating: ratingPrefs.askAgentRating,
+        },
+        ratingPrefs.expireDays,
+      );
       const url = `${window.location.origin}/rate/?t=${token}`;
       sendMessage(selected.id, `${ratingPrefs.message}\n${url}`);
     }
