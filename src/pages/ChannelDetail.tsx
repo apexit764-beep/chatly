@@ -19,6 +19,7 @@ import {
   KeyRound,
   ChevronDown,
   ChevronLeft,
+  Star,
 } from 'lucide-react';
 import {
   Avatar,
@@ -30,10 +31,11 @@ import {
   useConfirm,
 } from '@components/ui';
 import { useDataStore } from '@/store/useDataStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useTranslation } from '@/i18n/useTranslation';
 import { cn } from '@/utils/cn';
-import type { Channel, ChannelType } from '@/types';
+import type { Channel, ChannelType, RatingConfig } from '@/types';
 import { CHANNEL_TYPES } from './channelTypes';
 import WhatsAppConnectWizard from './WhatsAppConnectWizard';
 import { WidgetSettings, type WidgetSubTab } from './channelSettings/WidgetSettings';
@@ -57,6 +59,8 @@ export default function ChannelDetail(): JSX.Element {
   const addChannel = useDataStore((s) => s.addChannel);
   const updateChannel = useDataStore((s) => s.updateChannel);
   const deleteChannel = useDataStore((s) => s.deleteChannel);
+  const setChannelRatingConfig = useDataStore((s) => s.setChannelRatingConfig);
+  const ratingDefaults = useSettingsStore((s) => s.rating);
   const showToast = useUIStore((s) => s.showToast);
   const { confirm } = useConfirm();
 
@@ -66,6 +70,7 @@ export default function ChannelDetail(): JSX.Element {
   const [creds, setCreds] = useState<Record<string, string>>({});
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const [ratingFor, setRatingFor] = useState<Channel | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [whatsappWizardOpen, setWhatsappWizardOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('overview');
@@ -413,6 +418,14 @@ export default function ChannelDetail(): JSX.Element {
                                 }}
                               />
                               <MenuItem
+                                icon={<Star className="h-4 w-4" />}
+                                label={t('إعدادات التقييم')}
+                                onClick={() => {
+                                  setRatingFor(channel);
+                                  setOpenMenu(null);
+                                }}
+                              />
+                              <MenuItem
                                 icon={<Power className="h-4 w-4" />}
                                 label={channel.status === 'connected' ? t('فصل') : t('اتصال')}
                                 onClick={() => {
@@ -719,7 +732,164 @@ export default function ChannelDetail(): JSX.Element {
           </div>
         </div>
       </Modal>
+
+      {ratingFor && (
+        <RatingSettingsModal
+          channel={ratingFor}
+          defaults={ratingDefaults}
+          onSave={(config) => {
+            setChannelRatingConfig(ratingFor.id, config);
+            showToast(`${t('تم حفظ إعدادات التقييم لـ')}${ratingFor.name}`, 'success');
+            setRatingFor(null);
+          }}
+          onClose={() => setRatingFor(null)}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * Rating survey settings for one linked account. A channel with no
+ * ratingConfig of its own opens showing the account-wide defaults.
+ */
+function RatingSettingsModal({
+  channel,
+  defaults,
+  onSave,
+  onClose,
+}: {
+  channel: Channel;
+  defaults: RatingConfig;
+  onSave: (config: RatingConfig) => void;
+  onClose: () => void;
+}): JSX.Element {
+  const { t } = useTranslation();
+  const showToast = useUIStore((s) => s.showToast);
+  const initial = channel.ratingConfig ?? defaults;
+
+  const [enabled, setEnabled] = useState(initial.enabled);
+  const [message, setMessage] = useState(initial.message);
+  const [expireDays, setExpireDays] = useState(initial.expireDays);
+  const [askAgentRating, setAskAgentRating] = useState(initial.askAgentRating);
+
+  const submit = (): void => {
+    if (!message.trim()) { showToast(t('نص الرسالة مطلوب'), 'error'); return; }
+    if (expireDays < 1 || expireDays > 90) { showToast(t('مدة الصلاحية بين 1 و 90 يوم'), 'error'); return; }
+    onSave({ enabled, message, expireDays, askAgentRating });
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`${t('إعدادات التقييم')} — ${channel.name}`}
+      size="md"
+      footer={
+        <>
+          <button
+            onClick={onClose}
+            className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark"
+          >
+            {t('إلغاء')}
+          </button>
+          <button
+            onClick={submit}
+            className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium"
+          >
+            {t('حفظ')}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-5">
+        {!channel.ratingConfig && (
+          <p className="text-small text-muted-light dark:text-muted-dark bg-bg-light dark:bg-bg-dark rounded-card p-3">
+            {t('هذا الحساب يستخدم الإعدادات الافتراضية — أي تعديل تحفظه هنا بينطبق عليه لحاله.')}
+          </p>
+        )}
+
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-body font-medium">{t('تفعيل التقييم')}</p>
+            <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
+              {t('إرسال رابط تقييم تلقائياً بعد إغلاق المحادثة')}
+            </p>
+          </div>
+          <button
+            onClick={() => setEnabled(!enabled)}
+            role="switch"
+            aria-checked={enabled}
+            className={cn(
+              'relative h-6 w-11 rounded-full transition-colors flex-shrink-0',
+              enabled ? 'bg-primary' : 'bg-border-light dark:bg-border-dark'
+            )}
+          >
+            <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all', enabled ? 'start-0.5' : 'end-0.5')} />
+          </button>
+        </div>
+
+        <div>
+          <p className="text-body font-medium mb-1">{t('نص الرسالة')}</p>
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={3}
+            disabled={!enabled}
+            className={cn(
+              'w-full px-3 py-2 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none text-body resize-none',
+              !enabled && 'opacity-50'
+            )}
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-body font-medium">{t('صلاحية الرابط')}</p>
+            <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
+              {t('عدد الأيام التي يكون فيها الرابط فعّال')}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <input
+              type="number"
+              min={1}
+              max={90}
+              value={expireDays}
+              disabled={!enabled}
+              onChange={(e) => setExpireDays(Math.max(1, Math.min(90, Number(e.target.value) || 1)))}
+              className={cn(
+                'w-24 h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none text-body',
+                !enabled && 'opacity-50'
+              )}
+            />
+            <span className="text-muted-light dark:text-muted-dark text-small">{t('يوم')}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-body font-medium">{t('تقييم الموظف')}</p>
+            <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
+              {t('السماح للعميل بتقييم الموظف الذي تعامل معه')}
+            </p>
+          </div>
+          <button
+            onClick={() => setAskAgentRating(!askAgentRating)}
+            role="switch"
+            aria-checked={askAgentRating}
+            disabled={!enabled}
+            className={cn(
+              'relative h-6 w-11 rounded-full transition-colors flex-shrink-0',
+              askAgentRating ? 'bg-primary' : 'bg-border-light dark:bg-border-dark',
+              !enabled && 'opacity-50 pointer-events-none'
+            )}
+          >
+            <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all', askAgentRating ? 'start-0.5' : 'end-0.5')} />
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 

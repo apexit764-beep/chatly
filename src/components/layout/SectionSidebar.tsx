@@ -33,7 +33,6 @@ const settingsItems: { key: string; label: string; icon: ReactNode }[] = [
   { key: 'notifications', label: 'الإشعارات', icon: <Bell className="h-4 w-4" /> },
   { key: 'appearance', label: 'المظهر', icon: <Palette className="h-4 w-4" /> },
   { key: 'security', label: 'الأمان', icon: <Shield className="h-4 w-4" /> },
-  { key: 'rating', label: 'تقييم العملاء', icon: <Star className="h-4 w-4" /> },
   { key: 'language', label: 'اللغة والمنطقة', icon: <Languages className="h-4 w-4" /> },
 ];
 

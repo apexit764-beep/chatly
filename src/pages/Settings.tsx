@@ -13,7 +13,6 @@ import {
   Trash2,
   Plus,
   AlertTriangle,
-  Star,
   Pencil,
   KeyRound,
   Phone,
@@ -27,10 +26,9 @@ import {
   Smartphone,
   Mail,
 } from 'lucide-react';
-import { Avatar, ChannelIcon, Modal, useConfirm } from '@components/ui';
+import { Avatar, Modal, useConfirm } from '@components/ui';
 import { PhoneField, PHONE_COUNTRIES } from '@components/ui/PhoneField';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useDataStore } from '@/store/useDataStore';
 import { useInboxStore } from '@/store/useInboxStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useThemeStore } from '@/store/useThemeStore';
@@ -44,7 +42,6 @@ const SETTINGS_TABS: { key: string; label: string; icon: ReactNode }[] = [
   { key: 'notifications', label: 'الإشعارات', icon: <Bell className="h-4 w-4" /> },
   { key: 'appearance', label: 'المظهر', icon: <Palette className="h-4 w-4" /> },
   { key: 'security', label: 'الأمان', icon: <Shield className="h-4 w-4" /> },
-  { key: 'rating', label: 'تقييم العملاء', icon: <Star className="h-4 w-4" /> },
   { key: 'language', label: 'اللغة والمنطقة', icon: <Languages className="h-4 w-4" /> },
   { key: 'finance', label: 'المالية', icon: <Wallet className="h-4 w-4" /> },
 ];
@@ -90,7 +87,6 @@ export default function Settings(): JSX.Element {
           {tab === 'notifications' && <NotificationsTab />}
           {tab === 'appearance' && <AppearanceTab />}
           {tab === 'security' && <SecurityTab />}
-          {tab === 'rating' && <RatingTab />}
           {tab === 'language' && <LanguageTab />}
           {tab === 'finance' && <FinanceTab />}
         </div>
@@ -589,148 +585,6 @@ function AppearanceTab(): JSX.Element {
       </Row>
       <div className="flex justify-end pt-6">
         <button onClick={() => showToast('تم حفظ المظهر', 'success')} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">حفظ التغييرات</button>
-      </div>
-    </div>
-  );
-}
-
-function RatingTab(): JSX.Element {
-  const rating = useSettingsStore((s) => s.rating);
-  const channels = useDataStore((s) => s.channels);
-  const setChannelRatingConfig = useDataStore((s) => s.setChannelRatingConfig);
-  const showToast = useUIStore((s) => s.showToast);
-
-  const accounts = useMemo(
-    () => channels.filter((c) => c.status !== 'disconnected'),
-    [channels]
-  );
-
-  const [selectedId, setSelectedId] = useState<string | null>(accounts[0]?.id ?? null);
-  // An account added while this tab is open would otherwise leave selectedId dangling.
-  const selected = accounts.find((c) => c.id === selectedId) ?? accounts[0] ?? null;
-
-  // Accounts without their own config show the account-wide defaults.
-  const effective = selected?.ratingConfig ?? rating;
-
-  const [enabled, setEnabled] = useState(effective.enabled);
-  const [message, setMessage] = useState(effective.message);
-  const [expireDays, setExpireDays] = useState(effective.expireDays);
-  const [askAgentRating, setAskAgentRating] = useState(effective.askAgentRating);
-
-  // Reload the form whenever a different account is picked.
-  useEffect(() => {
-    const cfg = selected?.ratingConfig ?? rating;
-    setEnabled(cfg.enabled);
-    setMessage(cfg.message);
-    setExpireDays(cfg.expireDays);
-    setAskAgentRating(cfg.askAgentRating);
-  }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const save = (): void => {
-    if (!selected) return;
-    if (!message.trim()) { showToast('نص الرسالة مطلوب', 'error'); return; }
-    if (expireDays < 1 || expireDays > 90) { showToast('مدة الصلاحية بين 1 و 90 يوم', 'error'); return; }
-    setChannelRatingConfig(selected.id, { enabled, message, expireDays, askAgentRating });
-    showToast(`تم حفظ إعدادات التقييم لـ${selected.name}`, 'success');
-  };
-
-  if (!selected) {
-    return (
-      <div>
-        <TabHeader icon={<Star className="h-5 w-5" />} title="تقييم العملاء" subtitle="إعدادات استبيان رضا العملاء بعد إغلاق المحادثة" />
-        <p className="text-body text-muted-light dark:text-muted-dark py-8 text-center">
-          اربط حساباً أولاً حتى تقدر تضبط إعدادات التقييم الخاصة فيه
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <TabHeader icon={<Star className="h-5 w-5" />} title="تقييم العملاء" subtitle="إعدادات استبيان رضا العملاء لكل حساب مربوط على حدة" />
-
-      {/* Account picker — each linked account keeps its own settings */}
-      <div className="mb-6">
-        <p className="text-body font-medium mb-1">الحساب</p>
-        <p className="text-small text-muted-light dark:text-muted-dark mb-3">
-          اختر الحساب اللي بدك تضبط إعدادات التقييم الخاصة فيه
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {accounts.map((acc) => {
-            const cfg = acc.ratingConfig ?? rating;
-            const isActive = acc.id === selected.id;
-            return (
-              <button
-                key={acc.id}
-                onClick={() => setSelectedId(acc.id)}
-                className={cn(
-                  'flex items-center gap-3 p-3 rounded-card border text-start transition-colors',
-                  isActive
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border-light dark:border-border-dark hover:border-primary/30'
-                )}
-              >
-                <ChannelIcon type={acc.type} size={28} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-body font-medium truncate">{acc.name}</p>
-                  <p className="text-small text-muted-light dark:text-muted-dark font-mono truncate">{acc.identifier}</p>
-                </div>
-                <span
-                  className={cn(
-                    'text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0',
-                    cfg.enabled ? 'bg-success/15 text-success' : 'bg-muted-light/15 text-muted-light dark:text-muted-dark'
-                  )}
-                >
-                  {cfg.enabled ? 'مفعّل' : 'موقوف'}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        {!selected.ratingConfig && (
-          <p className="text-small text-muted-light dark:text-muted-dark mt-3">
-            هذا الحساب يستخدم الإعدادات الافتراضية — أي تعديل تحفظه هنا بينطبق عليه لحاله.
-          </p>
-        )}
-      </div>
-
-      <Row label="تفعيل التقييم" hint="إرسال رابط تقييم تلقائياً بعد إغلاق المحادثة">
-        <Toggle checked={enabled} onChange={setEnabled} />
-      </Row>
-
-      <Row label="نص الرسالة" hint="الرسالة التي ترسل للعميل مع رابط التقييم">
-        <textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          rows={3}
-          disabled={!enabled}
-          className={cn('w-full px-3 py-2 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none text-body resize-none', !enabled && 'opacity-50')}
-        />
-      </Row>
-
-      <Row label="صلاحية الرابط" hint="عدد الأيام التي يكون فيها الرابط فعّال">
-        <div className="flex items-center gap-2">
-          <input
-            type="number"
-            min={1}
-            max={90}
-            value={expireDays}
-            disabled={!enabled}
-            onChange={(e) => setExpireDays(Math.max(1, Math.min(90, Number(e.target.value) || 1)))}
-            className={cn('w-24 h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none text-body', !enabled && 'opacity-50')}
-          />
-          <span className="text-muted-light dark:text-muted-dark text-small">يوم</span>
-        </div>
-      </Row>
-
-      <Row label="تقييم الموظف" hint="السماح للعميل بتقييم الموظف الذي تعامل معه">
-        <div className={cn(!enabled && 'opacity-50 pointer-events-none')}>
-          <Toggle checked={askAgentRating} onChange={setAskAgentRating} />
-        </div>
-      </Row>
-
-      <div className="flex justify-end pt-6">
-        <button onClick={save} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">حفظ التغييرات</button>
       </div>
     </div>
   );
