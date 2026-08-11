@@ -75,3 +75,15 @@
     - WooCommerceIcon: استبدال الأيقونة البسيطة بشعار WooCommerce الحقيقي (فقاعة محادثة بنفسجية مع نص "Woo")
     - جميع الأيقونات مستخرجة من ملفات PDF الرسمية للبراندات
     - الحالة: تم الرفع على السيرفر
+
+13. إعدادات الويدجت لكل حساب (Per-Account Widget Settings)
+    - الموديول: src/types/index.ts, src/store/useDataStore.ts, src/store/mockData.ts, src/pages/channelSettings/WidgetSettings.tsx, src/pages/ChannelDetail.tsx
+    - إضافة حقل widgetConfig داخل كل Channel بدلاً من إعداد عام مشترك
+    - كل حساب ويدجت له إعداداته الخاصة (اللون، الرسائل، السلوك، كود التثبيت)
+    - في صفحة تفاصيل القناة: يجب اختيار الحساب أولاً ثم تظهر التبويبات (المظهر، الرسائل، السلوك، التثبيت)
+    - زر رجوع للعودة من إعدادات الحساب لقائمة الحسابات
+    - سهم توجيهي (ChevronLeft) على كل حساب ويدجت كإشارة للضغط
+    - كود التثبيت يولد widget ID فريد لكل حساب (wdgt_channelId)
+    - إضافة action جديد updateChannelWidgetConfig في الستور
+    - الحسابات الجديدة من نوع widget تأخذ نسخة من الإعدادات الافتراضية تلقائياً
+    - الحالة: تم الرفع على السيرفر
