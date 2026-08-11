@@ -22,6 +22,7 @@ import {
   ChevronUp,
   Plus,
   Phone,
+  PhoneOff,
   MapPin,
   Clock as ClockIcon,
   Monitor,
@@ -118,6 +119,9 @@ export default function Inbox(): JSX.Element {
   const [transferOpen, setTransferOpen] = useState(false);
   const [newConvOpen, setNewConvOpen] = useState(false);
   const [callModalOpen, setCallModalOpen] = useState(false);
+  const [callState, setCallState] = useState<'idle' | 'calling' | 'connected'>('idle');
+  const [callTimer, setCallTimer] = useState(0);
+  const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -126,6 +130,31 @@ export default function Inbox(): JSX.Element {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (callState === 'calling') {
+      const timeout = setTimeout(() => setCallState('connected'), 2500);
+      return () => clearTimeout(timeout);
+    }
+    if (callState === 'connected') {
+      setCallTimer(0);
+      callTimerRef.current = setInterval(() => setCallTimer((t) => t + 1), 1000);
+      return () => { if (callTimerRef.current) clearInterval(callTimerRef.current); };
+    }
+    setCallTimer(0);
+    if (callTimerRef.current) clearInterval(callTimerRef.current);
+  }, [callState]);
+
+  const endCall = (): void => {
+    setCallState('idle');
+    setCallModalOpen(false);
+  };
+
+  const formatCallTime = (s: number): string => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+  };
 
   const filtered = useMemo(() => {
     return conversations
@@ -1040,13 +1069,29 @@ export default function Inbox(): JSX.Element {
       {selected && selectedContact && (() => {
         const ch = channels.find((c) => c.id === selected.channelId);
         return (
-          <Modal open={callModalOpen} onClose={() => setCallModalOpen(false)} title="اتصال صوتي" size="sm">
+          <Modal open={callModalOpen} onClose={() => { if (callState !== 'idle') endCall(); else setCallModalOpen(false); }} title="اتصال صوتي" size="sm">
             <div className="flex flex-col items-center gap-5 py-3">
-              <Avatar name={selectedContact.name} size="lg" />
+              <div className="relative">
+                {callState !== 'idle' && (
+                  <>
+                    <span className="absolute inset-0 rounded-full border-2 border-primary animate-ping opacity-40" />
+                    <span className="absolute -inset-1.5 rounded-full border-2 border-primary/30 animate-pulse" />
+                    {callState === 'connected' && <span className="absolute -inset-3 rounded-full border border-primary/15 animate-pulse" style={{ animationDelay: '0.5s' }} />}
+                  </>
+                )}
+                {callState === 'idle' && <span className="absolute -inset-1.5 rounded-full border-2 border-primary/20 animate-pulse" />}
+                <Avatar name={selectedContact.name} size="lg" />
+              </div>
               <div className="text-center">
                 <p className="text-h2 font-bold">{selectedContact.name}</p>
                 {selectedContact.phone && (
                   <p className="text-body text-muted-light dark:text-muted-dark mt-1" dir="ltr">{formatPhone(selectedContact.phone)}</p>
+                )}
+                {callState === 'calling' && (
+                  <p className="text-body text-primary mt-2 animate-pulse font-medium">جاري الاتصال...</p>
+                )}
+                {callState === 'connected' && (
+                  <p className="text-body text-success mt-2 font-medium">{formatCallTime(callTimer)}</p>
                 )}
               </div>
               {ch && (
@@ -1061,19 +1106,31 @@ export default function Inbox(): JSX.Element {
               )}
             </div>
             <div className="flex gap-3 mt-5">
-              <button
-                onClick={() => { showToast('جاري بدء الاتصال...', 'success'); setCallModalOpen(false); }}
-                className="flex-1 flex items-center justify-center gap-2 h-10 px-4 bg-primary hover:bg-primary-dark text-white font-medium rounded-btn transition-colors"
-              >
-                <Phone className="h-4 w-4" />
-                ابدأ الاتصال
-              </button>
-              <button
-                onClick={() => setCallModalOpen(false)}
-                className="h-10 px-5 border border-border-light dark:border-border-dark rounded-btn hover:bg-bg-light dark:hover:bg-bg-dark transition-colors text-body font-medium"
-              >
-                إلغاء
-              </button>
+              {callState === 'idle' ? (
+                <>
+                  <button
+                    onClick={() => setCallState('calling')}
+                    className="flex-1 flex items-center justify-center gap-2 h-10 px-4 bg-primary hover:bg-primary-dark text-white font-medium rounded-btn transition-colors"
+                  >
+                    <Phone className="h-4 w-4" />
+                    ابدأ الاتصال
+                  </button>
+                  <button
+                    onClick={() => setCallModalOpen(false)}
+                    className="h-10 px-5 border border-border-light dark:border-border-dark rounded-btn hover:bg-bg-light dark:hover:bg-bg-dark transition-colors text-body font-medium"
+                  >
+                    إلغاء
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={endCall}
+                  className="flex-1 flex items-center justify-center gap-2 h-10 px-4 bg-danger hover:bg-red-600 text-white font-medium rounded-btn transition-colors"
+                >
+                  <PhoneOff className="h-4 w-4" />
+                  إنهاء الاتصال
+                </button>
+              )}
             </div>
           </Modal>
         );
