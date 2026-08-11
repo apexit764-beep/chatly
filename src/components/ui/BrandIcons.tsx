@@ -59,21 +59,10 @@ export function TelegramIcon({ className, style }: IconProps): JSX.Element {
   );
 }
 
-/** Salla — simplified monogram (Arabic "س" stylized as a flower/petal) */
 export function SallaIcon({ className, style }: IconProps): JSX.Element {
   return (
-    <svg viewBox="0 0 24 24" className={className} style={style} aria-hidden="true">
-      <defs>
-        <radialGradient id="salla-grad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#A0E8C5" />
-          <stop offset="100%" stopColor="#5BC79F" />
-        </radialGradient>
-      </defs>
-      <circle cx="12" cy="12" r="11" fill="url(#salla-grad)" />
-      <path
-        d="M 12 6.5 C 14 6.5 15.5 8 15.5 10 C 15.5 11.5 14.5 12.5 13 13 L 13 14.5 C 13 16 11.5 17 10 17 L 9 17 L 9 15 L 10 15 C 10.5 15 11 14.7 11 14 L 11 12.5 C 9 12 7.5 10.5 7.5 8.5 C 7.5 7.5 8 6.5 9 6.5 L 12 6.5 Z"
-        fill="white"
-      />
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} style={style} aria-hidden="true">
+      <path d="M18.862 13.439a1.27 1.27 0 0 0-.81-.555 1.27 1.27 0 0 0-.964.18c-3.422 2.231-6.75 2.231-10.178 0a1.27 1.27 0 0 0-.964-.18 1.283 1.283 0 0 0-.434 2.327c2.142 1.394 4.326 2.1 6.49 2.1 2.166 0 4.348-.706 6.488-2.102a1.27 1.27 0 0 0 .555-.81 1.27 1.27 0 0 0-.18-.964zm5.103 2.82-1.171-9.764a5.24 5.24 0 0 0-5.2-4.614H6.406a5.236 5.236 0 0 0-5.198 4.612l-1.17 9.766a5.235 5.235 0 0 0 5.198 5.86h13.529a5.238 5.238 0 0 0 5.198-5.86zm-3.21 2.4c-.532.6-1.265.929-2.066.929H5.311c-.801 0-1.536-.33-2.066-.929a2.73 2.73 0 0 1-.676-2.16l1.157-9.657A2.764 2.764 0 0 1 6.468 4.41h11.064a2.765 2.765 0 0 1 2.742 2.432l1.157 9.656a2.72 2.72 0 0 1-.676 2.161" />
     </svg>
   );
 }
