@@ -14,6 +14,7 @@ import {
   Bot,
 } from 'lucide-react';
 import { Card, StatCard, Avatar, DateRangePicker } from '@components/ui';
+import { ChannelIcon } from '@components/ui/ChannelIcon';
 import { LineChart } from '@components/charts/LineChart';
 import { BarChart } from '@components/charts/BarChart';
 import { Heatmap } from '@components/charts/Heatmap';
@@ -31,10 +32,12 @@ function addDays(d: Date, n: number): Date { const r = new Date(d); r.setDate(r.
 
 export default function Reports(): JSX.Element {
   const agents = useDataStore((s) => s.agents);
-  const conversations = useDataStore((s) => s.conversations);
+  const allConversations = useDataStore((s) => s.conversations);
+  const channels = useDataStore((s) => s.channels);
   const contacts = useDataStore((s) => s.contacts);
   const aiSettings = useAIStore((s) => s.settings);
   const showToast = useUIStore((s) => s.showToast);
+  const [channelFilter, setChannelFilter] = useState<string>('all');
   const [range, setRange] = useState<Range>('week');
   const [dateFrom, setDateFrom] = useState(() => startOfDay(addDays(new Date(), -6)));
   const [dateTo, setDateTo] = useState(() => startOfDay(new Date()));
@@ -43,6 +46,9 @@ export default function Reports(): JSX.Element {
   const dayLabels = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
   // === Real data derived from store ===
+  const conversations = channelFilter === 'all'
+    ? allConversations
+    : allConversations.filter((c) => c.channelId === channelFilter);
 
   const daysCount = Math.max(1, Math.round((dateTo.getTime() - dateFrom.getTime()) / 86400000) + 1);
   const rangeStart = new Date(dateFrom);
@@ -231,19 +237,31 @@ export default function Reports(): JSX.Element {
 
       {/* Range filter */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <DateRangePicker
-          from={dateFrom}
-          to={dateTo}
-          onChangeRange={(f, t, preset) => {
-            setDateFrom(f);
-            setDateTo(t);
-            setRangeKey((k) => k + 1);
-            if (preset === 'today' || preset === 'yesterday') setRange('today');
-            else if (preset === 'thisWeek' || preset === 'lastWeek' || preset === 'last7') setRange('week');
-            else if (preset === 'thisMonth' || preset === 'lastMonth' || preset === 'last30' || preset === 'last14') setRange('month');
-            else setRange('custom');
-          }}
-        />
+        <div className="flex items-center gap-2 flex-wrap">
+          <DateRangePicker
+            from={dateFrom}
+            to={dateTo}
+            onChangeRange={(f, t, preset) => {
+              setDateFrom(f);
+              setDateTo(t);
+              setRangeKey((k) => k + 1);
+              if (preset === 'today' || preset === 'yesterday') setRange('today');
+              else if (preset === 'thisWeek' || preset === 'lastWeek' || preset === 'last7') setRange('week');
+              else if (preset === 'thisMonth' || preset === 'lastMonth' || preset === 'last30' || preset === 'last14') setRange('month');
+              else setRange('custom');
+            }}
+          />
+          <select
+            value={channelFilter}
+            onChange={(e) => { setChannelFilter(e.target.value); setRangeKey((k) => k + 1); }}
+            className="h-10 ps-3 pe-9 rounded-xl border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-small focus:outline-none focus:border-primary"
+          >
+            <option value="all">جميع الحسابات</option>
+            {channels.map((ch) => (
+              <option key={ch.id} value={ch.id}>{ch.name} — {ch.identifier}</option>
+            ))}
+          </select>
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => onExport('pdf')}
