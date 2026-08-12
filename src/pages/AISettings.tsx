@@ -18,6 +18,7 @@ import {
   Eye,
   EyeOff,
   Radio,
+  ArrowRight,
   ExternalLink,
   AlertCircle,
   UserCog,
@@ -229,6 +230,7 @@ export default function AISettings(): JSX.Element {
   };
 
   const scopedAccount = scope ? channels.find((c) => c.id === scope) ?? null : null;
+  const customCount = channels.filter((c) => channelBehaviors[c.id]).length;
 
   const save = async (): Promise<void> => {
     const modelLabel = (currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '');
@@ -277,19 +279,30 @@ export default function AISettings(): JSX.Element {
 
   const arSelected = form.languages.includes('ar');
 
-  const [tab, setTab] = useState<'connection' | 'personality' | 'knowledge' | 'transfer'>('connection');
+  type BehaviorTab = 'personality' | 'knowledge' | 'transfer';
+  const [tab, setTab] = useState<'connection' | BehaviorTab | 'accounts'>('connection');
+  /** Which behavior section is open while editing one account. */
+  const [accountTab, setAccountTab] = useState<BehaviorTab>('personality');
 
-  // The connection tab is hidden while editing one account — don't strand the
-  // user on a tab that is no longer rendered.
-  useEffect(() => {
-    if (scope && tab === 'connection') setTab('personality');
-  }, [scope, tab]);
+  /**
+   * The behavior sections are shared: the top-level tabs edit the defaults, and
+   * the accounts tab shows the same sections for whichever account is open.
+   */
+  const behaviorTab: BehaviorTab | null =
+    tab === 'accounts' ? (scope ? accountTab : null) : tab === 'connection' ? null : tab;
+
+  const goToTab = (next: typeof tab): void => {
+    // Every tab but "accounts" edits the defaults.
+    if (next !== 'accounts') setScope(null);
+    setTab(next);
+  };
 
   const tabDescriptions: Record<typeof tab, string> = {
     connection: 'إعدادات الربط بـ OpenAI، اختيار النموذج، وتحديد القنوات المُفعّلة',
     personality: 'حدّد لغات الرد، نبرة المساعد، واللهجة العربية المفضّلة',
     knowledge: 'معرفة الشركة التي يعتمد عليها المساعد والمواضيع الممنوعة',
     transfer: 'إعدادات التحويل لموظف بشري وساعات عمل المساعد',
+    accounts: 'خصّص أسلوب المساعد ومعرفته وقواعد تحويله لكل حساب مربوط على حدة',
   };
 
   return (
@@ -321,88 +334,23 @@ export default function AISettings(): JSX.Element {
         </div>
       </Card>
 
-      {/* Scope switcher — the connection is shared, the behavior is per account */}
-      <Card className="p-5">
-        <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
-          <div>
-            <p className="text-body font-bold">نطاق الإعدادات</p>
-            <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
-              الربط بالمزوّد مشترك للمنصة كلها. أما الأسلوب والمعرفة والتحويل والجدولة فلكل حساب على حدة.
-            </p>
-          </div>
-          {scopedAccount && channelBehaviors[scopedAccount.id] && (
-            <button
-              onClick={() => {
-                clearChannelBehavior(scopedAccount.id);
-                showToast(`رجع ${scopedAccount.name} للإعدادات الافتراضية`, 'success');
-              }}
-              className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex-shrink-0"
-            >
-              إرجاع للافتراضي
-            </button>
-          )}
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setScope(null)}
-            className={cn(
-              'h-9 px-4 rounded-full text-small font-medium border transition-colors',
-              scope === null
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-border-light dark:border-border-dark hover:border-primary/30'
-            )}
-          >
-            الإعدادات الافتراضية
-          </button>
-          {channels.map((c) => {
-            const custom = Boolean(channelBehaviors[c.id]);
-            return (
-              <button
-                key={c.id}
-                onClick={() => setScope(c.id)}
-                className={cn(
-                  'h-9 px-3 rounded-full text-small font-medium border transition-colors flex items-center gap-2',
-                  scope === c.id
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border-light dark:border-border-dark hover:border-primary/30'
-                )}
-              >
-                <ChannelIcon type={c.type} size={16} />
-                <span className="truncate max-w-[10rem]">{c.name}</span>
-                {custom && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/15 text-success font-bold">
-                    مخصّص
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        {scopedAccount && !channelBehaviors[scopedAccount.id] && (
-          <p className="text-small text-muted-light dark:text-muted-dark mt-3">
-            هذا الحساب يستخدم الإعدادات الافتراضية — أي تعديل تحفظه هنا بينطبق عليه لحاله.
-          </p>
-        )}
-      </Card>
-
-      {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2">
-        {!scopedAccount && (
+      {/* Tabs — the first four edit the defaults; the last one customises
+          individual accounts. */}
+      <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2 overflow-x-auto">
         <button
-          onClick={() => setTab('connection')}
+          onClick={() => goToTab('connection')}
           className={cn(
-            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2',
+            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
             tab === 'connection' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
           )}
         >
           <KeyRound className="h-4 w-4" />
           إعدادات الربط
         </button>
-        )}
         <button
-          onClick={() => setTab('personality')}
+          onClick={() => goToTab('personality')}
           className={cn(
-            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2',
+            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
             tab === 'personality' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
           )}
         >
@@ -410,9 +358,9 @@ export default function AISettings(): JSX.Element {
           اللغة والأسلوب
         </button>
         <button
-          onClick={() => setTab('knowledge')}
+          onClick={() => goToTab('knowledge')}
           className={cn(
-            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2',
+            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
             tab === 'knowledge' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
           )}
         >
@@ -420,16 +368,125 @@ export default function AISettings(): JSX.Element {
           المعرفة والقيود
         </button>
         <button
-          onClick={() => setTab('transfer')}
+          onClick={() => goToTab('transfer')}
           className={cn(
-            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2',
+            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
             tab === 'transfer' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
           )}
         >
           <UserCog className="h-4 w-4" />
           التحويل والجدولة
         </button>
+        <button
+          onClick={() => goToTab('accounts')}
+          className={cn(
+            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
+            tab === 'accounts' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+          )}
+        >
+          <Radio className="h-4 w-4" />
+          تخصيص لكل حساب
+          {customCount > 0 && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/15 text-success font-bold">
+              {customCount}
+            </span>
+          )}
+        </button>
       </div>
+
+      {/* Accounts tab — pick an account, then edit its own behavior */}
+      {tab === 'accounts' && !scopedAccount && (
+        <Card className="p-5">
+          <p className="text-body font-bold">تخصيص لكل حساب</p>
+          <p className="text-small text-muted-light dark:text-muted-dark mt-0.5 mb-4">
+            الربط بالمزوّد مشترك للمنصة كلها. اختر حساباً لتخصيص أسلوبه ومعرفته وقواعد تحويله وجدوله — والحسابات غير المخصّصة تتبع الإعدادات الافتراضية.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {channels.map((c) => {
+              const custom = Boolean(channelBehaviors[c.id]);
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setScope(c.id)}
+                  className="flex items-center gap-3 p-3 rounded-card border border-border-light dark:border-border-dark hover:border-primary/30 transition-colors text-start"
+                >
+                  <ChannelIcon type={c.type} size={28} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-body font-medium truncate">{c.name}</p>
+                    <p className="text-small text-muted-light dark:text-muted-dark font-mono truncate">{c.identifier}</p>
+                  </div>
+                  <span
+                    className={cn(
+                      'text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0',
+                      custom ? 'bg-success/15 text-success' : 'bg-muted-light/15 text-muted-light dark:text-muted-dark'
+                    )}
+                  >
+                    {custom ? 'مخصّص' : 'افتراضي'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* One account open: header + its own behavior sub-tabs */}
+      {tab === 'accounts' && scopedAccount && (
+        <>
+          <Card className="p-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={() => setScope(null)}
+                className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center text-muted-light dark:text-muted-dark flex-shrink-0"
+                aria-label="العودة إلى الحسابات"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <ChannelIcon type={scopedAccount.type} size={28} />
+              <div className="flex-1 min-w-0">
+                <p className="text-body font-bold truncate">{scopedAccount.name}</p>
+                <p className="text-small text-muted-light dark:text-muted-dark font-mono truncate">{scopedAccount.identifier}</p>
+              </div>
+              {channelBehaviors[scopedAccount.id] && (
+                <button
+                  onClick={() => {
+                    clearChannelBehavior(scopedAccount.id);
+                    showToast(`رجع ${scopedAccount.name} للإعدادات الافتراضية`, 'success');
+                  }}
+                  className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex-shrink-0"
+                >
+                  إرجاع للافتراضي
+                </button>
+              )}
+            </div>
+            {!channelBehaviors[scopedAccount.id] && (
+              <p className="text-small text-muted-light dark:text-muted-dark mt-3">
+                هذا الحساب يستخدم الإعدادات الافتراضية — أي تعديل تحفظه هنا بينطبق عليه لحاله.
+              </p>
+            )}
+          </Card>
+
+          <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2 overflow-x-auto">
+            {([
+              { key: 'personality', label: 'اللغة والأسلوب', Icon: Mic },
+              { key: 'knowledge', label: 'المعرفة والقيود', Icon: BookOpen },
+              { key: 'transfer', label: 'التحويل والجدولة', Icon: UserCog },
+            ] as { key: BehaviorTab; label: string; Icon: typeof Mic }[]).map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setAccountTab(t.key)}
+                className={cn(
+                  'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
+                  accountTab === t.key ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+                )}
+              >
+                <t.Icon className="h-4 w-4" />
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
 
 
@@ -649,7 +706,7 @@ export default function AISettings(): JSX.Element {
       )}
 
       {/* ═══ Tab 2: الشخصية واللغة ═══ */}
-      {tab === 'personality' && (
+      {behaviorTab === 'personality' && (
         <div className="space-y-5">
           {/* Languages */}
           <SectionCard
@@ -796,7 +853,7 @@ export default function AISettings(): JSX.Element {
       )}
 
       {/* ═══ Tab 3: المعرفة والقيود ═══ */}
-      {tab === 'knowledge' && (
+      {behaviorTab === 'knowledge' && (
         <div className="space-y-5">
           {/* Prompt / Knowledge — أهم قسم أولاً */}
           <SectionCard
@@ -886,7 +943,7 @@ export default function AISettings(): JSX.Element {
       )}
 
       {/* ═══ Tab 4: التحويل والدوام ═══ */}
-      {tab === 'transfer' && (
+      {behaviorTab === 'transfer' && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
           {/* Transfer to staff */}
           <SectionCard
