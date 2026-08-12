@@ -170,6 +170,11 @@ export interface Contact {
   id: string;
   name: string;
   phone: string;
+  /**
+   * Handle on channels that identify people by name rather than number
+   * (Instagram, Telegram, Messenger, X). Absent on phone-based channels.
+   */
+  username?: string;
   type: ContactType;
   notes?: string;
   tags: string[];

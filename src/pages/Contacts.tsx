@@ -18,6 +18,7 @@ import {
 import {
   Avatar,
   Badge,
+  ChannelIcon,
   DataTable,
   Drawer,
   FilterDropdown,
@@ -36,7 +37,21 @@ import { contactTypeColor, contactTypeLabel } from '@/utils/labels';
 import { formatDate, formatPhone, timeAgo } from '@/utils/format';
 import { downloadCsv } from '@/utils/csv';
 import { cn } from '@/utils/cn';
-import type { Contact, ContactType } from '@/types';
+import type { ChannelType, Contact, ContactType } from '@/types';
+
+/** Channels that identify people by handle instead of phone number. */
+const HANDLE_CHANNELS: ChannelType[] = ['instagram', 'messenger', 'telegram', 'x'];
+
+/**
+ * The account a contact reaches us on: their first linked channel, plus the
+ * identifier that channel actually uses.
+ */
+function accountOf(c: Contact): { channel: ChannelType; label: string } {
+  const channel = c.channels?.[0] ?? 'whatsapp';
+  const label =
+    HANDLE_CHANNELS.includes(channel) && c.username ? c.username : formatPhone(c.phone);
+  return { channel, label };
+}
 
 export default function Contacts(): JSX.Element {
   const { t } = useTranslation();
@@ -183,7 +198,21 @@ export default function Contacts(): JSX.Element {
         </div>
       ),
     },
-    { key: 'phone', header: t('الواتساب'), accessor: (r) => r.phone, hideOn: 'md', cell: (r) => <span className="text-muted-light dark:text-muted-dark font-mono text-small" dir="ltr">{formatPhone(r.phone)}</span> },
+    {
+      key: 'account',
+      header: t('الحساب'),
+      accessor: (r) => accountOf(r).label,
+      hideOn: 'md',
+      cell: (r) => {
+        const { channel, label } = accountOf(r);
+        return (
+          <span className="flex items-center gap-2">
+            <ChannelIcon type={channel} size={18} />
+            <span className="text-muted-light dark:text-muted-dark font-mono text-small" dir="ltr">{label}</span>
+          </span>
+        );
+      },
+    },
     { key: 'type', header: t('النوع'), accessor: (r) => r.type, cell: (r) => <Badge className={contactTypeColor[r.type]}>{contactTypeLabel[r.type]}</Badge> },
     { key: 'last', header: t('آخر تواصل'), accessor: (r) => r.lastContact, hideOn: 'lg', cell: (r) => <span className="text-small text-muted-light dark:text-muted-dark">{timeAgo(r.lastContact)}</span> },
     { key: 'conv', header: t('المحادثات'), accessor: (r) => r.conversationCount, hideOn: 'lg' },
@@ -247,12 +276,21 @@ export default function Contacts(): JSX.Element {
 
   return (
     <div className="p-4 lg:p-6 space-y-5 page-fade">
-      {/* Page header */}
-      <div>
-        <h1 className="text-h1 font-bold">{t('العملاء')}</h1>
-        <p className="text-body text-muted-light dark:text-muted-dark mt-1">
-          {t('أدِر جهات اتصال عملائك وصنّفهم وتابع سجل تواصلهم معك')}
-        </p>
+      {/* Page header. Managing the categories themselves is a page-level action,
+          not a filter on the table, so it sits here rather than in the toolbar. */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-h1 font-bold">{t('العملاء')}</h1>
+          <p className="text-body text-muted-light dark:text-muted-dark mt-1">
+            {t('أدِر جهات اتصال عملائك وصنّفهم وتابع سجل تواصلهم معك')}
+          </p>
+        </div>
+        <button
+          onClick={() => setCategoryDrawerOpen(true)}
+          className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex items-center gap-2 flex-shrink-0"
+        >
+          <Tag className="h-4 w-4" /> {t('إدارة التصنيفات')}
+        </button>
       </div>
 
       <DataTable
@@ -260,7 +298,7 @@ export default function Contacts(): JSX.Element {
         columns={columns}
         rowKey={(c) => c.id}
         searchPlaceholder={t('ابحث بالاسم أو الرقم...')}
-        searchAccessor={(c) => `${c.name} ${c.phone}`}
+        searchAccessor={(c) => `${c.name} ${c.phone} ${c.username ?? ''}`}
         selectable
         onRowClick={(c) => setDrawer(c)}
         bulkActions={(selected, clear) => (
@@ -301,12 +339,6 @@ export default function Contacts(): JSX.Element {
         }
         toolbar={
           <>
-            <button
-              onClick={() => setCategoryDrawerOpen(true)}
-              className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex items-center gap-2"
-            >
-              <Tag className="h-4 w-4" /> {t('إدارة التصنيفات')}
-            </button>
             <ImportExportMenu onImport={() => setImportOpen(true)} onExport={() => handleExport(filtered)} />
             <button onClick={openCreate} className="h-9 px-4 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2">
               <Plus className="h-4 w-4" /> {t('عميل جديد')}

@@ -264,6 +264,7 @@ export const en: Record<string, string> = {
   'إدارة التصنيفات': 'Manage Categories',
   'الاسم': 'Name',
   'الواتساب': 'WhatsApp',
+  'الحساب': 'Account',
   'آخر تواصل': 'Last Contact',
   'تم تعطيل الحساب': 'Account Disabled',
   'تم تفعيل الحساب': 'Account Enabled',
