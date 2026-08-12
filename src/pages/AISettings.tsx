@@ -18,7 +18,6 @@ import {
   Eye,
   EyeOff,
   Radio,
-  ArrowRight,
   ExternalLink,
   AlertCircle,
   UserCog,
@@ -394,60 +393,19 @@ export default function AISettings(): JSX.Element {
         </button>
       </div>
 
-      {/* Accounts tab — pick an account, then edit its own behavior */}
-      {tab === 'accounts' && !scopedAccount && (
-        <Card className="p-5">
-          <p className="text-body font-bold">تخصيص لكل حساب</p>
-          <p className="text-small text-muted-light dark:text-muted-dark mt-0.5 mb-4">
-            الربط بالمزوّد مشترك للمنصة كلها. اختر حساباً لتخصيص أسلوبه ومعرفته وقواعد تحويله وجدوله — والحسابات غير المخصّصة تتبع الإعدادات الافتراضية.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {channels.map((c) => {
-              const custom = Boolean(channelBehaviors[c.id]);
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => setScope(c.id)}
-                  className="flex items-center gap-3 p-3 rounded-card border border-border-light dark:border-border-dark hover:border-primary/30 transition-colors text-start"
-                >
-                  <ChannelIcon type={c.type} size={28} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-body font-medium truncate">{c.name}</p>
-                    <p className="text-small text-muted-light dark:text-muted-dark font-mono truncate">{c.identifier}</p>
-                  </div>
-                  <span
-                    className={cn(
-                      'text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0',
-                      custom ? 'bg-success/15 text-success' : 'bg-muted-light/15 text-muted-light dark:text-muted-dark'
-                    )}
-                  >
-                    {custom ? 'مخصّص' : 'افتراضي'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </Card>
-      )}
-
-      {/* One account open: header + its own behavior sub-tabs */}
-      {tab === 'accounts' && scopedAccount && (
+      {/* Accounts tab — a strip of the linked accounts, then the settings of
+          whichever one is picked. */}
+      {tab === 'accounts' && (
         <>
-          <Card className="p-4">
-            <div className="flex items-center gap-3 flex-wrap">
-              <button
-                onClick={() => setScope(null)}
-                className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center text-muted-light dark:text-muted-dark flex-shrink-0"
-                aria-label="العودة إلى الحسابات"
-              >
-                <ArrowRight className="h-4 w-4" />
-              </button>
-              <ChannelIcon type={scopedAccount.type} size={28} />
-              <div className="flex-1 min-w-0">
-                <p className="text-body font-bold truncate">{scopedAccount.name}</p>
-                <p className="text-small text-muted-light dark:text-muted-dark font-mono truncate">{scopedAccount.identifier}</p>
+          <Card className="p-5">
+            <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
+              <div>
+                <p className="text-body font-bold">الحسابات المربوطة</p>
+                <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
+                  الربط بالمزوّد مشترك للمنصة كلها. اختر حساباً لتخصيص أسلوبه ومعرفته وقواعد تحويله وجدوله.
+                </p>
               </div>
-              {channelBehaviors[scopedAccount.id] && (
+              {scopedAccount && channelBehaviors[scopedAccount.id] && (
                 <button
                   onClick={() => {
                     clearChannelBehavior(scopedAccount.id);
@@ -459,32 +417,63 @@ export default function AISettings(): JSX.Element {
                 </button>
               )}
             </div>
-            {!channelBehaviors[scopedAccount.id] && (
-              <p className="text-small text-muted-light dark:text-muted-dark mt-3">
-                هذا الحساب يستخدم الإعدادات الافتراضية — أي تعديل تحفظه هنا بينطبق عليه لحاله.
-              </p>
-            )}
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {channels.map((c) => {
+                const custom = Boolean(channelBehaviors[c.id]);
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setScope(c.id)}
+                    className={cn(
+                      'h-9 px-3 rounded-full text-small font-medium border transition-colors flex items-center gap-2',
+                      scope === c.id
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border-light dark:border-border-dark hover:border-primary/30'
+                    )}
+                  >
+                    <ChannelIcon type={c.type} size={16} />
+                    <span className="truncate max-w-[10rem]">{c.name}</span>
+                    {custom && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/15 text-success font-bold">
+                        مخصّص
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <p className="text-small text-muted-light dark:text-muted-dark mt-3">
+              {!scopedAccount
+                ? 'اختر حساباً من الشريط أعلاه لعرض إعداداته.'
+                : channelBehaviors[scopedAccount.id]
+                  ? `${scopedAccount.name} له إعداداته الخاصة.`
+                  : `${scopedAccount.name} يستخدم الإعدادات الافتراضية — أي تعديل تحفظه هنا بينطبق عليه لحاله.`}
+            </p>
           </Card>
 
-          <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2 overflow-x-auto">
-            {([
-              { key: 'personality', label: 'اللغة والأسلوب', Icon: Mic },
-              { key: 'knowledge', label: 'المعرفة والقيود', Icon: BookOpen },
-              { key: 'transfer', label: 'التحويل والجدولة', Icon: UserCog },
-            ] as { key: BehaviorTab; label: string; Icon: typeof Mic }[]).map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setAccountTab(t.key)}
-                className={cn(
-                  'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
-                  accountTab === t.key ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
-                )}
-              >
-                <t.Icon className="h-4 w-4" />
-                {t.label}
-              </button>
-            ))}
-          </div>
+          {scopedAccount && (
+            <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2 overflow-x-auto">
+              {([
+                { key: 'personality', label: 'اللغة والأسلوب', Icon: Mic },
+                { key: 'knowledge', label: 'المعرفة والقيود', Icon: BookOpen },
+                { key: 'transfer', label: 'التحويل والجدولة', Icon: UserCog },
+              ] as { key: BehaviorTab; label: string; Icon: typeof Mic }[]).map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setAccountTab(t.key)}
+                  className={cn(
+                    'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
+                    accountTab === t.key ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+                  )}
+                >
+                  <t.Icon className="h-4 w-4" />
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
         </>
       )}
 
