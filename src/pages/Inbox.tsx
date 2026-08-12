@@ -211,6 +211,7 @@ export default function Inbox(): JSX.Element {
   }, [selectedId, markRead]);
 
   const aiSettings = useAIStore((s) => s.settings);
+  const aiBehaviors = useAIStore((s) => s.channelBehaviors);
   const updateTranscription = useDataStore((s) => s.updateMessageTranscription);
   const setTranscribing = useDataStore((s) => s.setMessageTranscribing);
   const simulateAIReply = useDataStore((s) => s.simulateAIReply);
@@ -243,7 +244,13 @@ export default function Inbox(): JSX.Element {
                     role: (m.direction === 'in' ? 'user' : 'assistant') as 'user' | 'assistant',
                     content: m.transcription || m.content,
                   }));
-                const reply = await getAIResponse(transcription, aiSettings, history);
+                // Tone, prompt, forbidden topics and handover rules are set per
+                // account; only the vendor connection is shared.
+                const reply = await getAIResponse(
+                  transcription,
+                  { ...aiSettings, ...(aiBehaviors[conv.channelId] ?? {}) },
+                  history,
+                );
                 simulateAIReply(conv.id, reply);
               }
             } catch {
@@ -253,7 +260,7 @@ export default function Inbox(): JSX.Element {
         }
       });
     });
-  }, [conversations, aiSettings, updateTranscription, setTranscribing, simulateAIReply]);
+  }, [conversations, aiSettings, aiBehaviors, updateTranscription, setTranscribing, simulateAIReply]);
 
   // ESC exits focus mode
   useEffect(() => {

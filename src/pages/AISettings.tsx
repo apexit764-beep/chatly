@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { Card, ChannelIcon, Select, useConfirm, Drawer } from '@components/ui';
 import { OpenAIIcon, ClaudeIcon, GeminiIcon } from '@components/ui/BrandIcons';
-import { useAIStore, type AISettings as AISettingsType, type AILanguage, type AITone, type AIDialect, type AIGulfCountry, type AIModel, type AIProvider, type DaySchedule } from '@/store/useAIStore';
+import { useAIStore, pickBehavior, type AISettings as AISettingsType, type AILanguage, type AITone, type AIDialect, type AIGulfCountry, type AIModel, type AIProvider, type DaySchedule } from '@/store/useAIStore';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { cn } from '@/utils/cn';
@@ -130,6 +130,12 @@ const PROVIDERS: ProviderInfo[] = [
 export default function AISettings(): JSX.Element {
   const saved = useAIStore((s) => s.settings);
   const setSettings = useAIStore((s) => s.setSettings);
+  const channelBehaviors = useAIStore((s) => s.channelBehaviors);
+  const setChannelBehavior = useAIStore((s) => s.setChannelBehavior);
+  const clearChannelBehavior = useAIStore((s) => s.clearChannelBehavior);
+
+  /** null = the shared defaults; otherwise the id of the account being edited. */
+  const [scope, setScope] = useState<string | null>(null);
 
   const channels = useDataStore((s) => s.channels);
   const agents = useDataStore((s) => s.agents);
@@ -147,7 +153,13 @@ export default function AISettings(): JSX.Element {
     { id: '3', name: 'الأسئلة الشائعة.txt', size: '120 KB', date: '2025-06-15' },
   ]);
 
-  useEffect(() => { setForm(saved); }, [saved]);
+  // The form always shows the shared connection; the behavior half comes from
+  // whichever scope is selected.
+  useEffect(() => {
+    const behavior = scope ? channelBehaviors[scope] ?? pickBehavior(saved) : pickBehavior(saved);
+    setForm({ ...saved, ...behavior });
+    setDirty(false);
+  }, [saved, scope, channelBehaviors]);
 
   const update = <K extends keyof AISettingsType>(key: K, value: AISettingsType[K]): void => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -216,14 +228,22 @@ export default function AISettings(): JSX.Element {
     })));
   };
 
+  const scopedAccount = scope ? channels.find((c) => c.id === scope) ?? null : null;
+
   const save = async (): Promise<void> => {
     const modelLabel = (currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '');
-    const summary: { label: string; value: string }[] = [
-      { label: 'المزوّد', value: currentProvider.name },
-      { label: 'النموذج', value: modelLabel },
-      { label: 'القنوات المُفعّلة', value: `${form.enabledChannels.length} / ${channels.length}` },
-      { label: 'حالة المساعد', value: form.enabled ? 'مُفعّل' : 'مُعطّل' },
-    ];
+    const summary: { label: string; value: string }[] = scopedAccount
+      ? [
+          { label: 'الحساب', value: scopedAccount.name },
+          { label: 'النبرة واللهجة', value: `${TONES.find((t) => t.value === form.tone)?.label ?? form.tone}` },
+          { label: 'ساعات العمل', value: form.alwaysOn ? 'على مدار الساعة' : 'حسب الجدول' },
+        ]
+      : [
+          { label: 'المزوّد', value: currentProvider.name },
+          { label: 'النموذج', value: modelLabel },
+          { label: 'القنوات المُفعّلة', value: `${form.enabledChannels.length} / ${channels.length}` },
+          { label: 'حالة المساعد', value: form.enabled ? 'مُفعّل' : 'مُعطّل' },
+        ];
     const ok = await confirm({
       title: 'تأكيد حفظ التغييرات',
       message: (
@@ -244,14 +264,26 @@ export default function AISettings(): JSX.Element {
       variant: 'info',
     });
     if (!ok) return;
-    setSettings(form);
+    if (scopedAccount) {
+      // Connection fields are read-only in this scope, so only behavior is written.
+      setChannelBehavior(scopedAccount.id, pickBehavior(form));
+      showToast(`تم حفظ إعدادات المساعد لـ${scopedAccount.name}`, 'success');
+    } else {
+      setSettings(form);
+      showToast('تم حفظ إعدادات المساعد', 'success');
+    }
     setDirty(false);
-    showToast('تم حفظ إعدادات المساعد', 'success');
   };
 
   const arSelected = form.languages.includes('ar');
 
   const [tab, setTab] = useState<'connection' | 'personality' | 'knowledge' | 'transfer'>('connection');
+
+  // The connection tab is hidden while editing one account — don't strand the
+  // user on a tab that is no longer rendered.
+  useEffect(() => {
+    if (scope && tab === 'connection') setTab('personality');
+  }, [scope, tab]);
 
   const tabDescriptions: Record<typeof tab, string> = {
     connection: 'إعدادات الربط بـ OpenAI، اختيار النموذج، وتحديد القنوات المُفعّلة',
@@ -289,8 +321,73 @@ export default function AISettings(): JSX.Element {
         </div>
       </Card>
 
+      {/* Scope switcher — the connection is shared, the behavior is per account */}
+      <Card className="p-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
+          <div>
+            <p className="text-body font-bold">نطاق الإعدادات</p>
+            <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
+              الربط بالمزوّد مشترك للمنصة كلها. أما الأسلوب والمعرفة والتحويل والجدولة فلكل حساب على حدة.
+            </p>
+          </div>
+          {scopedAccount && channelBehaviors[scopedAccount.id] && (
+            <button
+              onClick={() => {
+                clearChannelBehavior(scopedAccount.id);
+                showToast(`رجع ${scopedAccount.name} للإعدادات الافتراضية`, 'success');
+              }}
+              className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex-shrink-0"
+            >
+              إرجاع للافتراضي
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setScope(null)}
+            className={cn(
+              'h-9 px-4 rounded-full text-small font-medium border transition-colors',
+              scope === null
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border-light dark:border-border-dark hover:border-primary/30'
+            )}
+          >
+            الإعدادات الافتراضية
+          </button>
+          {channels.map((c) => {
+            const custom = Boolean(channelBehaviors[c.id]);
+            return (
+              <button
+                key={c.id}
+                onClick={() => setScope(c.id)}
+                className={cn(
+                  'h-9 px-3 rounded-full text-small font-medium border transition-colors flex items-center gap-2',
+                  scope === c.id
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border-light dark:border-border-dark hover:border-primary/30'
+                )}
+              >
+                <ChannelIcon type={c.type} size={16} />
+                <span className="truncate max-w-[10rem]">{c.name}</span>
+                {custom && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/15 text-success font-bold">
+                    مخصّص
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {scopedAccount && !channelBehaviors[scopedAccount.id] && (
+          <p className="text-small text-muted-light dark:text-muted-dark mt-3">
+            هذا الحساب يستخدم الإعدادات الافتراضية — أي تعديل تحفظه هنا بينطبق عليه لحاله.
+          </p>
+        )}
+      </Card>
+
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2">
+        {!scopedAccount && (
         <button
           onClick={() => setTab('connection')}
           className={cn(
@@ -301,6 +398,7 @@ export default function AISettings(): JSX.Element {
           <KeyRound className="h-4 w-4" />
           إعدادات الربط
         </button>
+        )}
         <button
           onClick={() => setTab('personality')}
           className={cn(

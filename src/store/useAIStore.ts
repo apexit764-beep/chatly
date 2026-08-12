@@ -60,9 +60,41 @@ export interface AISettings {
   offHoursMessage: string;
 }
 
+/**
+ * Fields that describe the vendor connection and which accounts the assistant
+ * answers on. One subscription and one key serve the whole workspace, so these
+ * stay shared rather than being duplicated per account.
+ */
+export const AI_SHARED_KEYS = [
+  'enabled',
+  'provider',
+  'apiKey',
+  'model',
+  'maxResponseTokens',
+  'enabledChannels',
+] as const;
+
+/** Everything else: how the assistant talks and when it hands over. Per account. */
+export type AIBehavior = Omit<AISettings, (typeof AI_SHARED_KEYS)[number]>;
+
+export function pickBehavior(s: AISettings | AIBehavior): AIBehavior {
+  const out = { ...s } as Record<string, unknown>;
+  for (const k of AI_SHARED_KEYS) delete out[k];
+  return out as AIBehavior;
+}
+
 interface AIState {
+  /** Shared connection + the default behavior inherited by unconfigured accounts. */
   settings: AISettings;
+  /** Behavior overrides, keyed by channel id. Absent means "inherit the defaults". */
+  channelBehaviors: Record<string, AIBehavior>;
   setSettings: (patch: Partial<AISettings>) => void;
+  /** Give one account its own behavior. */
+  setChannelBehavior: (channelId: string, behavior: AIBehavior) => void;
+  /** Drop an account's override so it follows the defaults again. */
+  clearChannelBehavior: (channelId: string) => void;
+  /** Behavior in effect for an account, falling back to the defaults. */
+  behaviorFor: (channelId: string) => AIBehavior;
   reset: () => void;
 }
 
@@ -139,6 +171,7 @@ const DEFAULT_SETTINGS: AISettings = {
 };
 
 const STORAGE_KEY = 'qhub_ai_settings';
+const BEHAVIORS_KEY = 'qhub_ai_channel_behaviors';
 
 function loadInitial(): AISettings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS;
@@ -151,20 +184,58 @@ function loadInitial(): AISettings {
   }
 }
 
+function loadBehaviors(): Record<string, AIBehavior> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(BEHAVIORS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, Partial<AIBehavior>>;
+    // Fill any field added since the override was written, so a stored override
+    // never leaves the form with undefined values.
+    const base = pickBehavior(DEFAULT_SETTINGS);
+    return Object.fromEntries(
+      Object.entries(parsed).map(([id, b]) => [id, { ...base, ...b }])
+    );
+  } catch {
+    return {};
+  }
+}
+
 function persist(s: AISettings): void {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* ignore */ }
 }
 
-export const useAIStore = create<AIState>((set) => ({
+function persistBehaviors(b: Record<string, AIBehavior>): void {
+  try { localStorage.setItem(BEHAVIORS_KEY, JSON.stringify(b)); } catch { /* ignore */ }
+}
+
+export const useAIStore = create<AIState>((set, get) => ({
   settings: loadInitial(),
+  channelBehaviors: loadBehaviors(),
   setSettings: (patch) =>
     set((s) => {
       const next = { ...s.settings, ...patch };
       persist(next);
       return { settings: next };
     }),
+  setChannelBehavior: (channelId, behavior) =>
+    set((s) => {
+      const next = { ...s.channelBehaviors, [channelId]: pickBehavior(behavior) };
+      persistBehaviors(next);
+      return { channelBehaviors: next };
+    }),
+  clearChannelBehavior: (channelId) =>
+    set((s) => {
+      const next = { ...s.channelBehaviors };
+      delete next[channelId];
+      persistBehaviors(next);
+      return { channelBehaviors: next };
+    }),
+  behaviorFor: (channelId) =>
+    get().channelBehaviors[channelId] ?? pickBehavior(get().settings),
   reset: () => {
     persist(DEFAULT_SETTINGS);
-    set({ settings: DEFAULT_SETTINGS });
+    persistBehaviors({});
+    set({ settings: DEFAULT_SETTINGS, channelBehaviors: {} });
   },
 }));
