@@ -173,13 +173,21 @@ export default function ChannelDetail(): JSX.Element {
 
   return (
     <div className="p-4 lg:p-6 space-y-5 page-fade">
-      {/* Breadcrumb */}
+      {/* Breadcrumb — the single back affordance. While an account is open it
+          steps back to that channel's account list, not all the way out. */}
       <button
-        onClick={() => navigate('/channels')}
+        onClick={() => {
+          if (selectedAccount) {
+            setSelectedAccountId(null);
+            setActiveTab('overview');
+          } else {
+            navigate('/channels');
+          }
+        }}
         className="inline-flex items-center gap-1.5 text-small text-muted-light dark:text-muted-dark hover:text-current transition-colors"
       >
         <ArrowRight className="h-3.5 w-3.5" />
-        {t('العودة إلى القنوات')}
+        {selectedAccount ? t('العودة إلى الحسابات المربوطة') : t('العودة إلى القنوات')}
       </button>
 
       {/* Header card — hidden while editing one account, where the channel-wide
@@ -212,15 +220,10 @@ export default function ChannelDetail(): JSX.Element {
         </div>
       )}
 
-      {/* Account-level header + back button (widget with selected account) */}
+      {/* Account-level header (widget with selected account). Going back is the
+          breadcrumb's job — a second arrow here just duplicated it. */}
       {meta.type === 'widget' && selectedAccount && (
         <div className="bg-white dark:bg-surface-dark rounded-card border border-border-light dark:border-border-dark p-4 flex items-center gap-3">
-          <button
-            onClick={() => { setSelectedAccountId(null); setActiveTab('overview'); }}
-            className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center text-muted-light dark:text-muted-dark flex-shrink-0"
-          >
-            <ArrowRight className="h-4 w-4" />
-          </button>
           <div
             className={cn(
               'h-2.5 w-2.5 rounded-full flex-shrink-0',

@@ -320,6 +320,7 @@ export const en: Record<string, string> = {
   'القناة غير موجودة': 'Channel not found',
   'العودة للقنوات': 'Back to Channels',
   'العودة إلى القنوات': 'Back to Channels',
+  'العودة إلى الحسابات المربوطة': 'Back to Connected Accounts',
   'عن القناة': 'About the Channel',
   'الحسابات المربوطة': 'Connected Accounts',
   'لا توجد حسابات مربوطة بعد': 'No connected accounts yet',
