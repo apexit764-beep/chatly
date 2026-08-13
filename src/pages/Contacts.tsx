@@ -829,11 +829,19 @@ const activityActionLabel: Record<ContactActivityAction, string> = {
 };
 
 const activityActionIcon: Record<ContactActivityAction, React.ReactNode> = {
-  created: <UserPlus className="h-4 w-4" />,
-  edited: <UserCog className="h-4 w-4" />,
-  activated: <Power className="h-4 w-4 text-success" />,
-  deactivated: <Power className="h-4 w-4 text-danger" />,
-  type_changed: <RefreshCw className="h-4 w-4 text-info" />,
+  created: <UserPlus className="h-3 w-3" />,
+  edited: <UserCog className="h-3 w-3" />,
+  activated: <Power className="h-3 w-3 text-success" />,
+  deactivated: <Power className="h-3 w-3 text-danger" />,
+  type_changed: <RefreshCw className="h-3 w-3 text-info" />,
+};
+
+const activityActionColor: Record<ContactActivityAction, string> = {
+  created: 'bg-primary/10 text-primary',
+  edited: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400',
+  activated: 'bg-success/10 text-success',
+  deactivated: 'bg-danger/10 text-danger',
+  type_changed: 'bg-info/10 text-info',
 };
 
 function ContactActivityLog({ contact, agents }: { contact: Contact; agents: { id: string; name: string }[] }): JSX.Element {
@@ -844,36 +852,35 @@ function ContactActivityLog({ contact, agents }: { contact: Contact; agents: { i
     return agents.find((a) => a.id === id)?.name ?? id;
   };
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
+    <div>
+      <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-border-light dark:border-border-dark">
         <Avatar name={contact.name} size="sm" />
-        <div>
-          <p className="font-semibold">{contact.name}</p>
-          <p className="text-small text-muted-light dark:text-muted-dark" dir="ltr">{formatPhone(contact.phone)}</p>
+        <div className="min-w-0">
+          <p className="font-semibold text-sm truncate">{contact.name}</p>
+          <p className="text-xs text-muted-light dark:text-muted-dark" dir="ltr">{formatPhone(contact.phone)}</p>
         </div>
       </div>
 
       {entries.length === 0 ? (
-        <p className="text-small text-muted-light dark:text-muted-dark italic text-center py-8">{t('لا يوجد سجل أنشطة')}</p>
+        <p className="text-xs text-muted-light dark:text-muted-dark italic text-center py-6">{t('لا يوجد سجل أنشطة')}</p>
       ) : (
         <div className="relative">
-          <div className="absolute start-5 top-0 bottom-0 w-px bg-border-light dark:bg-border-dark" />
-          <div className="space-y-0">
+          <div className="absolute start-[11px] top-2 bottom-2 w-px bg-border-light dark:bg-border-dark" />
+          <div>
             {entries.map((entry) => (
-              <div key={entry.id} className="relative flex gap-3 py-3">
-                <div className="relative z-10 h-10 w-10 rounded-full bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark flex items-center justify-center flex-shrink-0">
+              <div key={entry.id} className="relative flex items-start gap-2.5 py-2">
+                <div className={`relative z-10 h-[22px] w-[22px] rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${activityActionColor[entry.action]}`}>
                   {activityActionIcon[entry.action]}
                 </div>
-                <div className="flex-1 min-w-0 pt-1.5">
-                  <p className="text-body font-medium">{t(activityActionLabel[entry.action])}</p>
-                  {entry.details && (
-                    <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">{entry.details}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-1 text-small text-muted-light dark:text-muted-dark">
-                    <span>{agentName(entry.by)}</span>
-                    <span className="opacity-40">·</span>
-                    <span>{formatDate(entry.timestamp)}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-xs font-medium">{t(activityActionLabel[entry.action])}</span>
+                    <span className="text-[10px] text-muted-light dark:text-muted-dark flex-shrink-0">{formatDate(entry.timestamp)}</span>
                   </div>
+                  {entry.details && (
+                    <p className="text-[11px] text-muted-light dark:text-muted-dark leading-tight mt-0.5">{entry.details}</p>
+                  )}
+                  <p className="text-[10px] text-muted-light dark:text-muted-dark mt-0.5">{agentName(entry.by)}</p>
                 </div>
               </div>
             ))}
