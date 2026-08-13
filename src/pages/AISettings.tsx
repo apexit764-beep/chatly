@@ -279,28 +279,21 @@ export default function AISettings(): JSX.Element {
   const arSelected = form.languages.includes('ar');
 
   type BehaviorTab = 'personality' | 'knowledge' | 'transfer';
-  const [tab, setTab] = useState<'connection' | BehaviorTab | 'accounts'>('connection');
-  /** Which behavior section is open while editing one account. */
-  const [accountTab, setAccountTab] = useState<BehaviorTab>('personality');
+  const [tab, setTab] = useState<'connection' | 'template' | 'accounts'>('connection');
+  /** Which behavior sub-tab is open (shared by template & accounts). */
+  const [subTab, setSubTab] = useState<BehaviorTab>('personality');
 
-  /**
-   * The behavior sections are shared: the top-level tabs edit the defaults, and
-   * the accounts tab shows the same sections for whichever account is open.
-   */
   const behaviorTab: BehaviorTab | null =
-    tab === 'accounts' ? (scope ? accountTab : null) : tab === 'connection' ? null : tab;
+    tab === 'connection' ? null : tab === 'template' ? subTab : scope ? subTab : null;
 
   const goToTab = (next: typeof tab): void => {
-    // Every tab but "accounts" edits the defaults.
     if (next !== 'accounts') setScope(null);
     setTab(next);
   };
 
   const tabDescriptions: Record<typeof tab, string> = {
     connection: 'إعدادات الربط بـ OpenAI، اختيار النموذج، وتحديد القنوات المُفعّلة',
-    personality: 'حدّد لغات الرد، نبرة المساعد، واللهجة العربية المفضّلة',
-    knowledge: 'معرفة الشركة التي يعتمد عليها المساعد والمواضيع الممنوعة',
-    transfer: 'إعدادات التحويل لموظف بشري وساعات عمل المساعد',
+    template: 'القالب الافتراضي — اللغة والأسلوب والمعرفة وقواعد التحويل. كل حساب يرثه ما لم يُخصَّص.',
     accounts: 'خصّص أسلوب المساعد ومعرفته وقواعد تحويله لكل حساب مربوط على حدة',
   };
 
@@ -333,8 +326,7 @@ export default function AISettings(): JSX.Element {
         </div>
       </Card>
 
-      {/* Tabs — the first four edit the defaults; the last one customises
-          individual accounts. */}
+      {/* Top-level tabs */}
       <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2 overflow-x-auto">
         <button
           onClick={() => goToTab('connection')}
@@ -347,34 +339,14 @@ export default function AISettings(): JSX.Element {
           إعدادات الربط
         </button>
         <button
-          onClick={() => goToTab('personality')}
+          onClick={() => goToTab('template')}
           className={cn(
             'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
-            tab === 'personality' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+            tab === 'template' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
           )}
         >
-          <Mic className="h-4 w-4" />
-          اللغة والأسلوب
-        </button>
-        <button
-          onClick={() => goToTab('knowledge')}
-          className={cn(
-            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
-            tab === 'knowledge' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
-          )}
-        >
-          <BookOpen className="h-4 w-4" />
-          المعرفة والقيود
-        </button>
-        <button
-          onClick={() => goToTab('transfer')}
-          className={cn(
-            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
-            tab === 'transfer' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
-          )}
-        >
-          <UserCog className="h-4 w-4" />
-          التحويل والجدولة
+          <MessageSquareShare className="h-4 w-4" />
+          القالب الافتراضي
         </button>
         <button
           onClick={() => goToTab('accounts')}
@@ -393,88 +365,86 @@ export default function AISettings(): JSX.Element {
         </button>
       </div>
 
-      {/* Accounts tab — a strip of the linked accounts, then the settings of
-          whichever one is picked. */}
+      {/* Accounts tab — channel picker strip */}
       {tab === 'accounts' && (
-        <>
-          <Card className="p-5">
-            <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
-              <div>
-                <p className="text-body font-bold">الحسابات المربوطة</p>
-                <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
-                  الربط بالمزوّد مشترك للمنصة كلها. اختر حساباً لتخصيص أسلوبه ومعرفته وقواعد تحويله وجدوله.
-                </p>
-              </div>
-              {scopedAccount && channelBehaviors[scopedAccount.id] && (
-                <button
-                  onClick={() => {
-                    clearChannelBehavior(scopedAccount.id);
-                    showToast(`رجع ${scopedAccount.name} للإعدادات الافتراضية`, 'success');
-                  }}
-                  className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex-shrink-0"
-                >
-                  إرجاع للافتراضي
-                </button>
-              )}
+        <Card className="p-5">
+          <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
+            <div>
+              <p className="text-body font-bold">الحسابات المربوطة</p>
+              <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
+                اختر حساباً لتخصيص أسلوبه ومعرفته وقواعد تحويله. الحسابات غير المخصّصة ترث القالب الافتراضي.
+              </p>
             </div>
+            {scopedAccount && channelBehaviors[scopedAccount.id] && (
+              <button
+                onClick={() => {
+                  clearChannelBehavior(scopedAccount.id);
+                  showToast(`رجع ${scopedAccount.name} للإعدادات الافتراضية`, 'success');
+                }}
+                className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex-shrink-0"
+              >
+                إرجاع للافتراضي
+              </button>
+            )}
+          </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              {channels.map((c) => {
-                const custom = Boolean(channelBehaviors[c.id]);
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => setScope(c.id)}
-                    className={cn(
-                      'h-9 px-3 rounded-full text-small font-medium border transition-colors flex items-center gap-2',
-                      scope === c.id
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border-light dark:border-border-dark hover:border-primary/30'
-                    )}
-                  >
-                    <ChannelIcon type={c.type} size={16} />
-                    <span className="truncate max-w-[10rem]">{c.name}</span>
-                    {custom && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/15 text-success font-bold">
-                        مخصّص
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            <p className="text-small text-muted-light dark:text-muted-dark mt-3">
-              {!scopedAccount
-                ? 'اختر حساباً من الشريط أعلاه لعرض إعداداته.'
-                : channelBehaviors[scopedAccount.id]
-                  ? `${scopedAccount.name} له إعداداته الخاصة.`
-                  : `${scopedAccount.name} يستخدم الإعدادات الافتراضية — أي تعديل تحفظه هنا بينطبق عليه لحاله.`}
-            </p>
-          </Card>
-
-          {scopedAccount && (
-            <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2 overflow-x-auto">
-              {([
-                { key: 'personality', label: 'اللغة والأسلوب', Icon: Mic },
-                { key: 'knowledge', label: 'المعرفة والقيود', Icon: BookOpen },
-                { key: 'transfer', label: 'التحويل والجدولة', Icon: UserCog },
-              ] as { key: BehaviorTab; label: string; Icon: typeof Mic }[]).map((t) => (
+          <div className="flex items-center gap-2 flex-wrap">
+            {channels.map((c) => {
+              const custom = Boolean(channelBehaviors[c.id]);
+              return (
                 <button
-                  key={t.key}
-                  onClick={() => setAccountTab(t.key)}
+                  key={c.id}
+                  onClick={() => setScope(c.id)}
                   className={cn(
-                    'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
-                    accountTab === t.key ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+                    'h-9 px-3 rounded-full text-small font-medium border transition-colors flex items-center gap-2',
+                    scope === c.id
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border-light dark:border-border-dark hover:border-primary/30'
                   )}
                 >
-                  <t.Icon className="h-4 w-4" />
-                  {t.label}
+                  <ChannelIcon type={c.type} size={16} />
+                  <span className="truncate max-w-[10rem]">{c.name}</span>
+                  {custom && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/15 text-success font-bold">
+                      مخصّص
+                    </span>
+                  )}
                 </button>
-              ))}
-            </div>
-          )}
-        </>
+              );
+            })}
+          </div>
+
+          <p className="text-small text-muted-light dark:text-muted-dark mt-3">
+            {!scopedAccount
+              ? 'اختر حساباً من الشريط أعلاه لعرض إعداداته.'
+              : channelBehaviors[scopedAccount.id]
+                ? `${scopedAccount.name} له إعداداته الخاصة.`
+                : `${scopedAccount.name} يستخدم القالب الافتراضي — أي تعديل تحفظه هنا بينطبق عليه لحاله.`}
+          </p>
+        </Card>
+      )}
+
+      {/* Behavior sub-tabs — visible for template (always) and accounts (when scoped) */}
+      {(tab === 'template' || (tab === 'accounts' && scopedAccount)) && (
+        <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2 overflow-x-auto">
+          {([
+            { key: 'personality', label: 'اللغة والأسلوب', Icon: Mic },
+            { key: 'knowledge', label: 'المعرفة والقيود', Icon: BookOpen },
+            { key: 'transfer', label: 'التحويل والجدولة', Icon: UserCog },
+          ] as { key: BehaviorTab; label: string; Icon: typeof Mic }[]).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setSubTab(t.key)}
+              className={cn(
+                'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
+                subTab === t.key ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+              )}
+            >
+              <t.Icon className="h-4 w-4" />
+              {t.label}
+            </button>
+          ))}
+        </div>
       )}
 
 
