@@ -24,6 +24,18 @@ import {
   X,
   Database,
   Upload,
+  Image,
+  Video,
+  FileText,
+  AudioLines,
+  FileBarChart,
+  Lightbulb,
+  HeartPulse,
+  Bell,
+  Gauge,
+  Mail,
+  CreditCard,
+  TrendingUp,
 } from 'lucide-react';
 import { Card, ChannelIcon, Select, useConfirm, Drawer } from '@components/ui';
 import { OpenAIIcon, ClaudeIcon, GeminiIcon } from '@components/ui/BrandIcons';
@@ -278,7 +290,7 @@ export default function AISettings(): JSX.Element {
   const arSelected = form.languages.includes('ar');
 
   type BehaviorTab = 'knowledge' | 'transfer';
-  const [tab, setTab] = useState<'connection' | 'personality' | 'accounts'>('connection');
+  const [tab, setTab] = useState<'connection' | 'personality' | 'features' | 'accounts'>('connection');
   /** Which behavior sub-tab is open inside the accounts tab. */
   const [subTab, setSubTab] = useState<BehaviorTab>('knowledge');
 
@@ -340,6 +352,16 @@ export default function AISettings(): JSX.Element {
         >
           <Mic className="h-4 w-4" />
           اللغة والأسلوب
+        </button>
+        <button
+          onClick={() => goToTab('features')}
+          className={cn(
+            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
+            tab === 'features' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+          )}
+        >
+          <Gauge className="h-4 w-4" />
+          الميزات والرصيد
         </button>
         <button
           onClick={() => goToTab('accounts')}
@@ -656,7 +678,196 @@ export default function AISettings(): JSX.Element {
         </div>
       )}
 
-      {/* ═══ Tab 2: اللغة والأسلوب ═══ */}
+      {/* ═══ Tab 2: الميزات والرصيد ═══ */}
+      {tab === 'features' && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+          {/* AI Features */}
+          <SectionCard
+            icon={<Sparkles className="h-5 w-5" />}
+            title="ميزات المساعد الذكي"
+            description="فعّل أو عطّل الميزات حسب احتياجك. كل ميزة تستهلك كريدت عند الاستخدام."
+          >
+            <div className="divide-y divide-border-light dark:divide-border-dark">
+              <FeatureRow
+                icon={<Image className="h-4 w-4" />}
+                title="تحليل الصور"
+                desc="يفهم الصور المرسلة من العملاء ويرد عليها"
+                cost="2 كريدت/صورة"
+                checked={form.imageAnalysis}
+                onChange={(v) => update('imageAnalysis', v)}
+              />
+              <FeatureRow
+                icon={<Video className="h-4 w-4" />}
+                title="تحليل الفيديو"
+                desc="يحلل الفيديوهات القصيرة (حتى 30 ثانية)"
+                cost="5 كريدت/فيديو"
+                checked={form.videoAnalysis}
+                onChange={(v) => update('videoAnalysis', v)}
+              />
+              <FeatureRow
+                icon={<FileText className="h-4 w-4" />}
+                title="تحليل المستندات (PDF)"
+                desc="يقرأ ملفات PDF ويرد على أسئلة عنها"
+                cost="3 كريدت/ملف"
+                checked={form.pdfAnalysis}
+                onChange={(v) => update('pdfAnalysis', v)}
+              />
+              <FeatureRow
+                icon={<AudioLines className="h-4 w-4" />}
+                title="تحليل الرسائل الصوتية"
+                desc="يحوّل الصوت لنص ويفهمه ويرد"
+                cost="1 كريدت/رسالة"
+                checked={form.voiceAnalysis}
+                onChange={(v) => update('voiceAnalysis', v)}
+              />
+              <FeatureRow
+                icon={<FileBarChart className="h-4 w-4" />}
+                title="تلخيص المحادثات"
+                desc="ملخص تلقائي لكل محادثة بعد إغلاقها"
+                cost="1 كريدت/محادثة"
+                checked={form.conversationSummary}
+                onChange={(v) => update('conversationSummary', v)}
+              />
+              <FeatureRow
+                icon={<Lightbulb className="h-4 w-4" />}
+                title="اقتراحات ذكية للموظفين"
+                desc="يقترح ردود جاهزة للموظف البشري"
+                cost="0.5 كريدت/اقتراح"
+                checked={form.smartSuggestions}
+                onChange={(v) => update('smartSuggestions', v)}
+              />
+              <FeatureRow
+                icon={<HeartPulse className="h-4 w-4" />}
+                title="تحليل المشاعر"
+                desc="يكشف مشاعر العميل (إيجابي/سلبي/محايد)"
+                cost="0.5 كريدت/محادثة"
+                checked={form.sentimentAnalysis}
+                onChange={(v) => update('sentimentAnalysis', v)}
+              />
+            </div>
+          </SectionCard>
+
+          {/* Credit Management */}
+          <div className="space-y-5">
+            <SectionCard
+              icon={<CreditCard className="h-5 w-5" />}
+              title="الرصيد الحالي"
+              description="رصيد كريدت الذكاء الاصطناعي المتبقي في حسابك."
+            >
+              <div className="space-y-3">
+                <div className="flex items-baseline justify-between">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-extrabold tabular-nums">{form.creditBalance.toLocaleString('en-US')}</span>
+                    <span className="text-small text-muted-light dark:text-muted-dark font-medium">كريدت</span>
+                  </div>
+                  {form.monthlyLimitEnabled && (
+                    <span className="text-[11px] text-muted-light dark:text-muted-dark">
+                      من أصل {form.monthlyLimit.toLocaleString('en-US')}
+                    </span>
+                  )}
+                </div>
+                <div className="h-3 w-full rounded-full bg-bg-light dark:bg-bg-dark overflow-hidden">
+                  <div
+                    className={cn(
+                      'h-full rounded-full transition-all',
+                      form.creditBalance > form.creditWarningThreshold
+                        ? 'bg-success'
+                        : form.creditBalance > form.creditWarningThreshold * 0.5
+                          ? 'bg-warning'
+                          : 'bg-danger'
+                    )}
+                    style={{
+                      width: `${Math.min(100, form.monthlyLimitEnabled
+                        ? (form.creditBalance / form.monthlyLimit) * 100
+                        : Math.min(100, (form.creditBalance / 1000) * 100)
+                      )}%`,
+                    }}
+                  />
+                </div>
+                <div className="flex items-center gap-4 flex-wrap text-[11px] text-muted-light dark:text-muted-dark">
+                  <span className="flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3" />
+                    استهلاك اليوم: 23 كريدت
+                  </span>
+                  <span>متوسط يومي: 31 كريدت</span>
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              icon={<Bell className="h-5 w-5" />}
+              title="التنبيهات والحدود"
+              description="اضبط التنبيهات والحد الأقصى لاستهلاك الكريدت."
+            >
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-bg-light dark:bg-bg-dark">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-small font-bold">تنبيه قبل نفاد الرصيد</p>
+                    <p className="text-[11px] text-muted-light dark:text-muted-dark">إشعار عندما يقل الرصيد عن الحد المُحدّد</p>
+                  </div>
+                  <Toggle checked={form.creditWarningEnabled} onChange={(v) => update('creditWarningEnabled', v)} />
+                </div>
+                {form.creditWarningEnabled && (
+                  <div className="ps-4">
+                    <label className="text-small font-semibold block mb-1.5">نبّهني عند</label>
+                    <div className="relative w-48">
+                      <input
+                        type="number"
+                        min={10}
+                        max={10000}
+                        step={10}
+                        value={form.creditWarningThreshold}
+                        onChange={(e) => update('creditWarningThreshold', Math.max(10, Number(e.target.value) || 100))}
+                        className="w-full h-10 ps-4 pe-16 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small font-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                      />
+                      <span className="absolute end-3 top-1/2 -translate-y-1/2 text-[11px] text-muted-light dark:text-muted-dark font-semibold pointer-events-none">كريدت</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="h-px bg-border-light dark:bg-border-dark" />
+
+                <div className="flex items-center justify-between p-3 rounded-xl bg-bg-light dark:bg-bg-dark">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-small font-bold">حد أقصى شهري</p>
+                    <p className="text-[11px] text-muted-light dark:text-muted-dark">إيقاف المساعد تلقائياً عند بلوغ الحد</p>
+                  </div>
+                  <Toggle checked={form.monthlyLimitEnabled} onChange={(v) => update('monthlyLimitEnabled', v)} />
+                </div>
+                {form.monthlyLimitEnabled && (
+                  <div className="ps-4">
+                    <label className="text-small font-semibold block mb-1.5">الحد الشهري</label>
+                    <div className="relative w-48">
+                      <input
+                        type="number"
+                        min={100}
+                        max={100000}
+                        step={100}
+                        value={form.monthlyLimit}
+                        onChange={(e) => update('monthlyLimit', Math.max(100, Number(e.target.value) || 5000))}
+                        className="w-full h-10 ps-4 pe-16 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small font-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                      />
+                      <span className="absolute end-3 top-1/2 -translate-y-1/2 text-[11px] text-muted-light dark:text-muted-dark font-semibold pointer-events-none">كريدت</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="h-px bg-border-light dark:bg-border-dark" />
+
+                <div className="flex items-center justify-between p-3 rounded-xl bg-bg-light dark:bg-bg-dark">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-small font-bold">تقرير يومي بالاستهلاك</p>
+                    <p className="text-[11px] text-muted-light dark:text-muted-dark">ملخص يومي بالبريد الإلكتروني يوضّح استهلاك الكريدت</p>
+                  </div>
+                  <Toggle checked={form.dailyReportEnabled} onChange={(v) => update('dailyReportEnabled', v)} />
+                </div>
+              </div>
+            </SectionCard>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Tab 3: اللغة والأسلوب ═══ */}
       {tab === 'personality' && (
         <div className="space-y-5">
           {/* Languages */}
@@ -1204,6 +1415,44 @@ function SectionCard({
       </div>
       <div className="ps-12">{children}</div>
     </Card>
+  );
+}
+
+function FeatureRow({
+  icon,
+  title,
+  desc,
+  cost,
+  checked,
+  onChange,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  cost: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}): JSX.Element {
+  return (
+    <div className="flex items-center gap-3 py-3">
+      <span className={cn(
+        'h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0',
+        checked ? 'bg-primary/10 text-primary' : 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark'
+      )}>
+        {icon}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-small font-semibold">{title}</p>
+        <p className="text-[11px] text-muted-light dark:text-muted-dark">{desc}</p>
+      </div>
+      <span className={cn(
+        'text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap flex-shrink-0',
+        checked ? 'bg-primary/10 text-primary' : 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark'
+      )}>
+        {cost}
+      </span>
+      <Toggle checked={checked} onChange={onChange} />
+    </div>
   );
 }
 

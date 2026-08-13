@@ -29,6 +29,21 @@ export interface AISettings {
   maxResponseTokens: number;
   /** Channel IDs where the AI bot is active */
   enabledChannels: string[];
+  /** AI feature toggles */
+  imageAnalysis: boolean;
+  videoAnalysis: boolean;
+  pdfAnalysis: boolean;
+  voiceAnalysis: boolean;
+  conversationSummary: boolean;
+  smartSuggestions: boolean;
+  sentimentAnalysis: boolean;
+  /** Credit management */
+  creditBalance: number;
+  creditWarningEnabled: boolean;
+  creditWarningThreshold: number;
+  monthlyLimitEnabled: boolean;
+  monthlyLimit: number;
+  dailyReportEnabled: boolean;
   languages: AILanguage[];
   tone: AITone;
   dialect: AIDialect;
@@ -72,6 +87,19 @@ export const AI_SHARED_KEYS = [
   'model',
   'maxResponseTokens',
   'enabledChannels',
+  'imageAnalysis',
+  'videoAnalysis',
+  'pdfAnalysis',
+  'voiceAnalysis',
+  'conversationSummary',
+  'smartSuggestions',
+  'sentimentAnalysis',
+  'creditBalance',
+  'creditWarningEnabled',
+  'creditWarningThreshold',
+  'monthlyLimitEnabled',
+  'monthlyLimit',
+  'dailyReportEnabled',
 ] as const;
 
 /** Everything else: how the assistant talks and when it hands over. Per account. */
@@ -137,6 +165,19 @@ const DEFAULT_SETTINGS: AISettings = {
   model: 'gpt-4o-mini',
   maxResponseTokens: 600,
   enabledChannels: [],
+  imageAnalysis: true,
+  videoAnalysis: false,
+  pdfAnalysis: true,
+  voiceAnalysis: true,
+  conversationSummary: false,
+  smartSuggestions: true,
+  sentimentAnalysis: false,
+  creditBalance: 500,
+  creditWarningEnabled: true,
+  creditWarningThreshold: 100,
+  monthlyLimitEnabled: false,
+  monthlyLimit: 5000,
+  dailyReportEnabled: false,
   languages: ['ar', 'en'],
   tone: 'friendly',
   dialect: 'msa',
