@@ -256,18 +256,84 @@ export const agents: Agent[] = [
 // Contacts
 // ============================================================
 export const contacts: Contact[] = [
-  { id: 'c1', name: 'أحمد الشعيلي', phone: '+96891234567', type: 'customer', notes: 'يبحث عن شقة في مسقط بإيجار شهري لا يتجاوز 350 ر.ع', tags: ['مسقط', 'شقة'], blocked: false, conversationCount: 8, lastContact: nowMinus(15), createdAt: nowMinus(60 * 24 * 30), channels: ['whatsapp'] },
-  { id: 'c2', name: 'سارة المعمري', phone: '+96892345678', type: 'company', notes: 'تملك 3 شقق في الخوض، تريد عرضها للإيجار', tags: ['الخوض', 'مالك ذهبي'], blocked: false, conversationCount: 14, lastContact: nowMinus(45), createdAt: nowMinus(60 * 24 * 90), channels: ['whatsapp', 'messenger'] },
-  { id: 'c3', name: 'شركة الوفاء للتطوير', phone: '+96893456789', type: 'company', notes: 'شركة تطوير عقاري - مشاريع متعددة', tags: ['B2B', 'مطور'], blocked: false, conversationCount: 23, lastContact: nowMinus(120), createdAt: nowMinus(60 * 24 * 200), channels: ['whatsapp'] },
-  { id: 'c4', name: 'عبدالله الهنائي', phone: '+96894567890', type: 'lead', tags: ['صلالة'], blocked: false, conversationCount: 3, lastContact: nowMinus(240), createdAt: nowMinus(60 * 24 * 7), channels: ['widget'] },
-  { id: 'c5', name: 'منى الزدجالية', phone: '+96895678901', type: 'vip', notes: 'عميلة VIP - استجابة فورية مطلوبة', tags: ['VIP', 'استجابة سريعة'], blocked: false, conversationCount: 31, lastContact: nowMinus(8), createdAt: nowMinus(60 * 24 * 365), channels: ['whatsapp', 'instagram'] },
-  { id: 'c6', name: 'يوسف البوسعيدي', phone: '+96896789012', type: 'customer', tags: ['نزوى'], blocked: false, conversationCount: 5, lastContact: nowMinus(60), createdAt: nowMinus(60 * 24 * 15), channels: ['whatsapp'] },
-  { id: 'c7', name: 'هدى الفارسي', phone: '+96897890123', type: 'company', tags: ['صحار'], blocked: false, conversationCount: 9, lastContact: nowMinus(300), createdAt: nowMinus(60 * 24 * 120), channels: ['whatsapp', 'widget'] },
-  { id: 'c8', name: 'بدر السيابي', phone: '+96898901234', username: '@badr.alsiyabi', type: 'lead', tags: ['سيارة', 'تويوتا'], blocked: false, conversationCount: 2, lastContact: nowMinus(35), createdAt: nowMinus(60 * 24 * 3), channels: ['instagram'] },
-  { id: 'c9', name: 'ريم اللواتي', phone: '+96899012345', type: 'customer', tags: ['مسقط', 'فيلا'], blocked: false, conversationCount: 12, lastContact: nowMinus(90), createdAt: nowMinus(60 * 24 * 45), channels: ['whatsapp'] },
-  { id: 'c10', name: 'مجموعة العمري التجارية', phone: '+96890123456', type: 'company', tags: ['B2B'], blocked: false, conversationCount: 17, lastContact: nowMinus(420), createdAt: nowMinus(60 * 24 * 180), channels: ['whatsapp', 'messenger'] },
-  { id: 'c11', name: 'علي الجابري', phone: '+96891111111', type: 'customer', tags: ['مسقط'], blocked: true, conversationCount: 1, lastContact: nowMinus(60 * 24 * 60), createdAt: nowMinus(60 * 24 * 80), channels: ['whatsapp'] },
-  { id: 'c12', name: 'لطيفة الحبسي', phone: '+96892222222', type: 'vip', tags: ['VIP'], blocked: false, conversationCount: 28, lastContact: nowMinus(25), createdAt: nowMinus(60 * 24 * 300), channels: ['whatsapp'] },
+  { id: 'c1', name: 'أحمد الشعيلي', phone: '+96891234567', type: 'customer', notes: 'يبحث عن شقة في مسقط بإيجار شهري لا يتجاوز 350 ر.ع', tags: ['مسقط', 'شقة'], blocked: false, conversationCount: 8, lastContact: nowMinus(15), createdAt: nowMinus(60 * 24 * 30), channels: ['whatsapp'], activityLog: [
+    { id: 'al1', action: 'created', by: 'system', timestamp: nowMinus(60 * 24 * 30) },
+    { id: 'al2', action: 'type_changed', details: 'زائر → عميل محتمل', by: 'a2', timestamp: nowMinus(60 * 24 * 25) },
+    { id: 'al3', action: 'edited', details: 'تحديث رقم الجوال والملاحظات', by: 'a2', timestamp: nowMinus(60 * 24 * 20) },
+    { id: 'al4', action: 'type_changed', details: 'عميل محتمل → عميل', by: 'a1', timestamp: nowMinus(60 * 24 * 10) },
+    { id: 'al5', action: 'edited', details: 'إضافة تصنيف "شقة"', by: 'a2', timestamp: nowMinus(60 * 24 * 5) },
+  ] },
+  { id: 'c2', name: 'سارة المعمري', phone: '+96892345678', type: 'company', notes: 'تملك 3 شقق في الخوض، تريد عرضها للإيجار', tags: ['الخوض', 'مالك ذهبي'], blocked: false, conversationCount: 14, lastContact: nowMinus(45), createdAt: nowMinus(60 * 24 * 90), channels: ['whatsapp', 'messenger'], activityLog: [
+    { id: 'al6', action: 'created', by: 'a1', timestamp: nowMinus(60 * 24 * 90) },
+    { id: 'al7', action: 'edited', details: 'إضافة ملاحظات عن الشقق المتاحة', by: 'a1', timestamp: nowMinus(60 * 24 * 85) },
+    { id: 'al8', action: 'type_changed', details: 'عميل → شركة', by: 'a1', timestamp: nowMinus(60 * 24 * 60) },
+    { id: 'al9', action: 'edited', details: 'تحديث التصنيفات وإضافة "مالك ذهبي"', by: 'a3', timestamp: nowMinus(60 * 24 * 30) },
+  ] },
+  { id: 'c3', name: 'شركة الوفاء للتطوير', phone: '+96893456789', type: 'company', notes: 'شركة تطوير عقاري - مشاريع متعددة', tags: ['B2B', 'مطور'], blocked: false, conversationCount: 23, lastContact: nowMinus(120), createdAt: nowMinus(60 * 24 * 200), channels: ['whatsapp'], activityLog: [
+    { id: 'al10', action: 'created', by: 'a1', timestamp: nowMinus(60 * 24 * 200) },
+    { id: 'al11', action: 'edited', details: 'إضافة بيانات الشركة والسجل التجاري', by: 'a1', timestamp: nowMinus(60 * 24 * 195) },
+    { id: 'al12', action: 'type_changed', details: 'عميل → شركة', by: 'a1', timestamp: nowMinus(60 * 24 * 195) },
+    { id: 'al13', action: 'deactivated', details: 'توقف مؤقت بسبب تأخر الدفع', by: 'a3', timestamp: nowMinus(60 * 24 * 100) },
+    { id: 'al14', action: 'activated', by: 'a1', timestamp: nowMinus(60 * 24 * 90) },
+    { id: 'al15', action: 'edited', details: 'تحديث بيانات التواصل', by: 'a2', timestamp: nowMinus(60 * 24 * 15) },
+  ] },
+  { id: 'c4', name: 'عبدالله الهنائي', phone: '+96894567890', type: 'lead', tags: ['صلالة'], blocked: false, conversationCount: 3, lastContact: nowMinus(240), createdAt: nowMinus(60 * 24 * 7), channels: ['widget'], activityLog: [
+    { id: 'al16', action: 'created', by: 'system', timestamp: nowMinus(60 * 24 * 7) },
+    { id: 'al17', action: 'type_changed', details: 'زائر → عميل محتمل', by: 'a2', timestamp: nowMinus(60 * 24 * 5) },
+    { id: 'al18', action: 'edited', details: 'إضافة رقم الجوال', by: 'a2', timestamp: nowMinus(60 * 24 * 5) },
+  ] },
+  { id: 'c5', name: 'منى الزدجالية', phone: '+96895678901', type: 'vip', notes: 'عميلة VIP - استجابة فورية مطلوبة', tags: ['VIP', 'استجابة سريعة'], blocked: false, conversationCount: 31, lastContact: nowMinus(8), createdAt: nowMinus(60 * 24 * 365), channels: ['whatsapp', 'instagram'], activityLog: [
+    { id: 'al19', action: 'created', by: 'a1', timestamp: nowMinus(60 * 24 * 365) },
+    { id: 'al20', action: 'type_changed', details: 'عميل → VIP', by: 'a1', timestamp: nowMinus(60 * 24 * 300) },
+    { id: 'al21', action: 'edited', details: 'تفعيل أولوية الاستجابة الفورية', by: 'a1', timestamp: nowMinus(60 * 24 * 300) },
+    { id: 'al22', action: 'edited', details: 'ربط حساب انستقرام', by: 'a3', timestamp: nowMinus(60 * 24 * 200) },
+    { id: 'al23', action: 'edited', details: 'تحديث الملاحظات والتصنيفات', by: 'a2', timestamp: nowMinus(60 * 24 * 50) },
+  ] },
+  { id: 'c6', name: 'يوسف البوسعيدي', phone: '+96896789012', type: 'customer', tags: ['نزوى'], blocked: false, conversationCount: 5, lastContact: nowMinus(60), createdAt: nowMinus(60 * 24 * 15), channels: ['whatsapp'], activityLog: [
+    { id: 'al24', action: 'created', by: 'system', timestamp: nowMinus(60 * 24 * 15) },
+    { id: 'al25', action: 'type_changed', details: 'زائر → عميل', by: 'a5', timestamp: nowMinus(60 * 24 * 12) },
+    { id: 'al26', action: 'edited', details: 'إضافة الاسم الكامل والتصنيف', by: 'a5', timestamp: nowMinus(60 * 24 * 12) },
+  ] },
+  { id: 'c7', name: 'هدى الفارسي', phone: '+96897890123', type: 'company', tags: ['صحار'], blocked: false, conversationCount: 9, lastContact: nowMinus(300), createdAt: nowMinus(60 * 24 * 120), channels: ['whatsapp', 'widget'], activityLog: [
+    { id: 'al27', action: 'created', by: 'a1', timestamp: nowMinus(60 * 24 * 120) },
+    { id: 'al28', action: 'edited', details: 'إضافة معلومات النشاط التجاري', by: 'a1', timestamp: nowMinus(60 * 24 * 115) },
+    { id: 'al29', action: 'type_changed', details: 'عميل → شركة', by: 'a1', timestamp: nowMinus(60 * 24 * 100) },
+    { id: 'al30', action: 'deactivated', details: 'طلب العميل إيقاف الرسائل مؤقتاً', by: 'a2', timestamp: nowMinus(60 * 24 * 50) },
+    { id: 'al31', action: 'activated', by: 'a1', timestamp: nowMinus(60 * 24 * 30) },
+    { id: 'al32', action: 'edited', details: 'ربط قناة الويدجت', by: 'a3', timestamp: nowMinus(60 * 24 * 20) },
+  ] },
+  { id: 'c8', name: 'بدر السيابي', phone: '+96898901234', username: '@badr.alsiyabi', type: 'lead', tags: ['سيارة', 'تويوتا'], blocked: false, conversationCount: 2, lastContact: nowMinus(35), createdAt: nowMinus(60 * 24 * 3), channels: ['instagram'], activityLog: [
+    { id: 'al33', action: 'created', by: 'system', timestamp: nowMinus(60 * 24 * 3) },
+    { id: 'al34', action: 'edited', details: 'إضافة رقم الجوال وحساب انستقرام', by: 'a4', timestamp: nowMinus(60 * 24 * 2) },
+    { id: 'al35', action: 'type_changed', details: 'زائر → عميل محتمل', by: 'a4', timestamp: nowMinus(60 * 24 * 2) },
+  ] },
+  { id: 'c9', name: 'ريم اللواتي', phone: '+96899012345', type: 'customer', tags: ['مسقط', 'فيلا'], blocked: false, conversationCount: 12, lastContact: nowMinus(90), createdAt: nowMinus(60 * 24 * 45), channels: ['whatsapp'], activityLog: [
+    { id: 'al36', action: 'created', by: 'system', timestamp: nowMinus(60 * 24 * 45) },
+    { id: 'al37', action: 'type_changed', details: 'زائر → عميل محتمل', by: 'a2', timestamp: nowMinus(60 * 24 * 40) },
+    { id: 'al38', action: 'edited', details: 'تحديث البيانات وإضافة تصنيف "فيلا"', by: 'a2', timestamp: nowMinus(60 * 24 * 35) },
+    { id: 'al39', action: 'type_changed', details: 'عميل محتمل → عميل', by: 'a1', timestamp: nowMinus(60 * 24 * 20) },
+  ] },
+  { id: 'c10', name: 'مجموعة العمري التجارية', phone: '+96890123456', type: 'company', tags: ['B2B'], blocked: false, conversationCount: 17, lastContact: nowMinus(420), createdAt: nowMinus(60 * 24 * 180), channels: ['whatsapp', 'messenger'], activityLog: [
+    { id: 'al40', action: 'created', by: 'a1', timestamp: nowMinus(60 * 24 * 180) },
+    { id: 'al41', action: 'type_changed', details: 'عميل → شركة', by: 'a1', timestamp: nowMinus(60 * 24 * 175) },
+    { id: 'al42', action: 'edited', details: 'إضافة بيانات الشركة والسجل التجاري', by: 'a1', timestamp: nowMinus(60 * 24 * 175) },
+    { id: 'al43', action: 'edited', details: 'ربط قناة ماسنجر', by: 'a3', timestamp: nowMinus(60 * 24 * 120) },
+    { id: 'al44', action: 'deactivated', details: 'انتهاء العقد السنوي', by: 'a1', timestamp: nowMinus(60 * 24 * 60) },
+    { id: 'al45', action: 'activated', by: 'a1', timestamp: nowMinus(60 * 24 * 55) },
+    { id: 'al46', action: 'edited', details: 'تجديد العقد وتحديث البيانات', by: 'a3', timestamp: nowMinus(60 * 24 * 55) },
+  ] },
+  { id: 'c11', name: 'علي الجابري', phone: '+96891111111', type: 'customer', tags: ['مسقط'], blocked: true, conversationCount: 1, lastContact: nowMinus(60 * 24 * 60), createdAt: nowMinus(60 * 24 * 80), channels: ['whatsapp'], activityLog: [
+    { id: 'al47', action: 'created', by: 'system', timestamp: nowMinus(60 * 24 * 80) },
+    { id: 'al48', action: 'type_changed', details: 'زائر → عميل', by: 'a2', timestamp: nowMinus(60 * 24 * 75) },
+    { id: 'al49', action: 'deactivated', details: 'رسائل مزعجة متكررة', by: 'a2', timestamp: nowMinus(60 * 24 * 60) },
+  ] },
+  { id: 'c12', name: 'لطيفة الحبسي', phone: '+96892222222', type: 'vip', tags: ['VIP'], blocked: false, conversationCount: 28, lastContact: nowMinus(25), createdAt: nowMinus(60 * 24 * 300), channels: ['whatsapp'], activityLog: [
+    { id: 'al50', action: 'created', by: 'a1', timestamp: nowMinus(60 * 24 * 300) },
+    { id: 'al51', action: 'edited', details: 'إضافة بيانات التواصل الكاملة', by: 'a1', timestamp: nowMinus(60 * 24 * 295) },
+    { id: 'al52', action: 'type_changed', details: 'عميل → VIP', by: 'a1', timestamp: nowMinus(60 * 24 * 250) },
+    { id: 'al53', action: 'edited', details: 'تحديث الملاحظات والأولوية', by: 'a2', timestamp: nowMinus(60 * 24 * 150) },
+    { id: 'al54', action: 'edited', details: 'تحديث التصنيفات', by: 'a3', timestamp: nowMinus(60 * 24 * 30) },
+  ] },
 ];
 
 // ============================================================
