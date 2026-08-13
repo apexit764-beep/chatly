@@ -24,7 +24,6 @@ import {
   X,
   Database,
   Upload,
-  MessageSquareShare,
 } from 'lucide-react';
 import { Card, ChannelIcon, Select, useConfirm, Drawer } from '@components/ui';
 import { OpenAIIcon, ClaudeIcon, GeminiIcon } from '@components/ui/BrandIcons';
@@ -278,23 +277,17 @@ export default function AISettings(): JSX.Element {
 
   const arSelected = form.languages.includes('ar');
 
-  type BehaviorTab = 'personality' | 'knowledge' | 'transfer';
-  const [tab, setTab] = useState<'connection' | 'template' | 'accounts'>('connection');
-  /** Which behavior sub-tab is open (shared by template & accounts). */
-  const [subTab, setSubTab] = useState<BehaviorTab>('personality');
+  type BehaviorTab = 'knowledge' | 'transfer';
+  const [tab, setTab] = useState<'connection' | 'personality' | 'accounts'>('connection');
+  /** Which behavior sub-tab is open inside the accounts tab. */
+  const [subTab, setSubTab] = useState<BehaviorTab>('knowledge');
 
   const behaviorTab: BehaviorTab | null =
-    tab === 'connection' ? null : tab === 'template' ? subTab : scope ? subTab : null;
+    tab === 'accounts' && scope ? subTab : null;
 
   const goToTab = (next: typeof tab): void => {
     if (next !== 'accounts') setScope(null);
     setTab(next);
-  };
-
-  const tabDescriptions: Record<typeof tab, string> = {
-    connection: 'إعدادات الربط بـ OpenAI، اختيار النموذج، وتحديد القنوات المُفعّلة',
-    template: 'القالب الافتراضي — اللغة والأسلوب والمعرفة وقواعد التحويل. كل حساب يرثه ما لم يُخصَّص.',
-    accounts: 'خصّص أسلوب المساعد ومعرفته وقواعد تحويله لكل حساب مربوط على حدة',
   };
 
   return (
@@ -339,14 +332,14 @@ export default function AISettings(): JSX.Element {
           إعدادات الربط
         </button>
         <button
-          onClick={() => goToTab('template')}
+          onClick={() => goToTab('personality')}
           className={cn(
             'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
-            tab === 'template' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+            tab === 'personality' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
           )}
         >
-          <MessageSquareShare className="h-4 w-4" />
-          القالب الافتراضي
+          <Mic className="h-4 w-4" />
+          اللغة والأسلوب
         </button>
         <button
           onClick={() => goToTab('accounts')}
@@ -356,7 +349,7 @@ export default function AISettings(): JSX.Element {
           )}
         >
           <Radio className="h-4 w-4" />
-          تخصيص لكل حساب
+          تخصيص الحسابات المربوطة
           {customCount > 0 && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/15 text-success font-bold">
               {customCount}
@@ -372,7 +365,7 @@ export default function AISettings(): JSX.Element {
             <div>
               <p className="text-body font-bold">الحسابات المربوطة</p>
               <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
-                اختر حساباً لتخصيص أسلوبه ومعرفته وقواعد تحويله. الحسابات غير المخصّصة ترث القالب الافتراضي.
+                اختر حساباً لتخصيص معرفته وقيوده وقواعد تحويله. الحسابات غير المخصّصة ترث الإعدادات الافتراضية.
               </p>
             </div>
             {scopedAccount && channelBehaviors[scopedAccount.id] && (
@@ -419,16 +412,15 @@ export default function AISettings(): JSX.Element {
               ? 'اختر حساباً من الشريط أعلاه لعرض إعداداته.'
               : channelBehaviors[scopedAccount.id]
                 ? `${scopedAccount.name} له إعداداته الخاصة.`
-                : `${scopedAccount.name} يستخدم القالب الافتراضي — أي تعديل تحفظه هنا بينطبق عليه لحاله.`}
+                : `${scopedAccount.name} يستخدم الإعدادات الافتراضية — أي تعديل تحفظه هنا بينطبق عليه لحاله.`}
           </p>
         </Card>
       )}
 
-      {/* Behavior sub-tabs — visible for template (always) and accounts (when scoped) */}
-      {(tab === 'template' || (tab === 'accounts' && scopedAccount)) && (
+      {/* Behavior sub-tabs — visible only in accounts tab when an account is selected */}
+      {tab === 'accounts' && scopedAccount && (
         <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2 overflow-x-auto">
           {([
-            { key: 'personality', label: 'اللغة والأسلوب', Icon: Mic },
             { key: 'knowledge', label: 'المعرفة والقيود', Icon: BookOpen },
             { key: 'transfer', label: 'التحويل والجدولة', Icon: UserCog },
           ] as { key: BehaviorTab; label: string; Icon: typeof Mic }[]).map((t) => (
@@ -664,8 +656,8 @@ export default function AISettings(): JSX.Element {
         </div>
       )}
 
-      {/* ═══ Tab 2: الشخصية واللغة ═══ */}
-      {behaviorTab === 'personality' && (
+      {/* ═══ Tab 2: اللغة والأسلوب ═══ */}
+      {tab === 'personality' && (
         <div className="space-y-5">
           {/* Languages */}
           <SectionCard
