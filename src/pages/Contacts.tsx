@@ -8,12 +8,16 @@ import {
   Edit2,
   Trash2,
   MoreHorizontal,
-  Ban,
-  CheckCircle2,
+  History,
   ArrowDownUp,
   ChevronDown,
   FileText,
   Tag,
+  AlertTriangle,
+  UserPlus,
+  UserCog,
+  Power,
+  RefreshCw,
 } from 'lucide-react';
 import {
   Avatar,
@@ -37,7 +41,7 @@ import { contactTypeColor, contactTypeLabel } from '@/utils/labels';
 import { formatDate, formatPhone, timeAgo } from '@/utils/format';
 import { downloadCsv } from '@/utils/csv';
 import { cn } from '@/utils/cn';
-import type { ChannelType, Contact, ContactType } from '@/types';
+import type { ChannelType, Contact, ContactActivityAction, ContactType } from '@/types';
 
 /** Channels that identify people by handle instead of phone number. */
 const HANDLE_CHANNELS: ChannelType[] = ['instagram', 'messenger', 'telegram', 'x'];
@@ -57,14 +61,15 @@ export default function Contacts(): JSX.Element {
   const { t } = useTranslation();
   const contacts = useDataStore((s) => s.contacts);
   const conversations = useDataStore((s) => s.conversations);
+  const agents = useDataStore((s) => s.agents);
+  const currentUserId = useDataStore((s) => s.currentUserId);
   const addContact = useDataStore((s) => s.addContact);
   const updateContact = useDataStore((s) => s.updateContact);
-  const deleteContact = useDataStore((s) => s.deleteContact);
+  const addContactActivity = useDataStore((s) => s.addContactActivity);
   const showToast = useUIStore((s) => s.showToast);
-  const { confirm } = useConfirm();
 
   const [typeFilter, setTypeFilter] = useState<'all' | ContactType>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'blocked'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
@@ -75,13 +80,15 @@ export default function Contacts(): JSX.Element {
   });
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState<Contact | null>(null);
+  const [deactivateReason, setDeactivateReason] = useState('');
+  const [activityLogTarget, setActivityLogTarget] = useState<Contact | null>(null);
 
   const filtered = useMemo(() => {
     return contacts.filter((c) => {
       if (typeFilter !== 'all' && c.type !== typeFilter) return false;
-      if (statusFilter === 'active' && (c.active === false || c.blocked)) return false;
+      if (statusFilter === 'active' && c.active === false) return false;
       if (statusFilter === 'inactive' && c.active !== false) return false;
-      if (statusFilter === 'blocked' && !c.blocked) return false;
       return true;
     });
   }, [contacts, typeFilter, statusFilter]);
@@ -116,6 +123,10 @@ export default function Contacts(): JSX.Element {
     const payload = { name: form.name, phone: fullPhone, type: form.type, notes: form.notes };
     if (editing) {
       updateContact(editing.id, payload);
+      addContactActivity(editing.id, { action: 'edited', by: currentUserId });
+      if (editing.type !== form.type) {
+        addContactActivity(editing.id, { action: 'type_changed', by: currentUserId, details: `${contactTypeLabel[editing.type]} → ${contactTypeLabel[form.type]}` });
+      }
       showToast(t('تم التحديث'), 'success');
     } else {
       addContact(payload);
@@ -124,34 +135,17 @@ export default function Contacts(): JSX.Element {
     setModalOpen(false);
   };
 
-  const remove = async (c: Contact): Promise<void> => {
-    const ok = await confirm({
-      title: `${t('حذف')} ${c.name}؟`,
-      message: t('هذه العملية لا يمكن التراجع عنها'),
-      variant: 'danger',
-      confirmText: t('حذف'),
+  const confirmDeactivate = (): void => {
+    if (!deactivateTarget) return;
+    updateContact(deactivateTarget.id, { active: false, deactivationReason: deactivateReason || undefined });
+    addContactActivity(deactivateTarget.id, {
+      action: 'deactivated',
+      by: currentUserId,
+      details: deactivateReason || undefined,
     });
-    if (ok) {
-      deleteContact(c.id);
-      showToast(t('تم الحذف'), 'success');
-      setDrawer(null);
-      setOpenMenu(null);
-    }
-  };
-
-  const toggleBlock = async (c: Contact): Promise<void> => {
-    setOpenMenu(null);
-    const ok = await confirm({
-      title: c.blocked ? `${t('إلغاء حظر')} "${c.name}"؟` : `${t('حظر')} "${c.name}"؟`,
-      message: c.blocked
-        ? t('سيتمكن العميل من إرسال الرسائل وستظهر محادثاته في صندوق الوارد.')
-        : t('لن تستقبل رسائل من هذا العميل وسيتم إخفاء محادثاته من صندوق الوارد.'),
-      variant: c.blocked ? 'info' : 'danger',
-      confirmText: c.blocked ? t('إلغاء الحظر') : t('حظر'),
-    });
-    if (!ok) return;
-    updateContact(c.id, { blocked: !c.blocked });
-    showToast(c.blocked ? t('تم إلغاء الحظر') : t('تم حظر العميل'), 'success');
+    showToast(t('تم تعطيل الحساب'), 'success');
+    setDeactivateTarget(null);
+    setDeactivateReason('');
   };
 
   const handleExport = (rows: Contact[]): void => {
@@ -161,7 +155,7 @@ export default function Contacts(): JSX.Element {
       'النوع': contactTypeLabel[c.type],
       'الوسوم': c.tags.join('|'),
       'المحادثات': c.conversationCount,
-      'محظور': c.blocked ? 'نعم' : 'لا',
+      'الحالة': c.active === false ? 'معطّل' : 'فعّال',
       'تاريخ الإضافة': new Date(c.createdAt).toLocaleDateString('en-US'),
     })));
     showToast(`${t('تم تصدير')} ${rows.length} ${t('جهة اتصال')}`, 'success');
@@ -225,8 +219,14 @@ export default function Contacts(): JSX.Element {
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              updateContact(r.id, { active: !isActive });
-              showToast(isActive ? t('تم تعطيل الحساب') : t('تم تفعيل الحساب'), 'success');
+              if (isActive) {
+                setDeactivateTarget(r);
+                setDeactivateReason('');
+              } else {
+                updateContact(r.id, { active: true, deactivationReason: undefined });
+                addContactActivity(r.id, { action: 'activated', by: currentUserId });
+                showToast(t('تم تفعيل الحساب'), 'success');
+              }
             }}
             className={cn(
               'relative h-5 w-9 rounded-full transition-colors mx-auto block',
@@ -247,11 +247,14 @@ export default function Contacts(): JSX.Element {
       },
     },
     {
-      key: 'actions', header: '', sortable: false, width: '80px', align: 'end',
+      key: 'actions', header: '', sortable: false, width: '110px', align: 'end',
       cell: (r) => (
         <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
           <button onClick={() => setDrawer(r)} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title={t('عرض')}>
             <Eye className="h-4 w-4" />
+          </button>
+          <button onClick={() => setActivityLogTarget(r)} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-info flex items-center justify-center" title={t('سجل الأنشطة')}>
+            <History className="h-4 w-4" />
           </button>
           <div className="relative">
             <button onClick={() => setOpenMenu(openMenu === r.id ? null : r.id)} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark flex items-center justify-center" aria-label={t('المزيد')}>
@@ -262,9 +265,6 @@ export default function Contacts(): JSX.Element {
                 <div className="fixed inset-0 z-10" onClick={() => setOpenMenu(null)} />
                 <div className="absolute end-0 mt-1 w-44 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1 z-20">
                   <MenuItem icon={<Edit2 className="h-4 w-4" />} label={t('تعديل')} onClick={() => openEdit(r)} />
-                  <MenuItem icon={r.blocked ? <CheckCircle2 className="h-4 w-4" /> : <Ban className="h-4 w-4" />} label={r.blocked ? t('إلغاء الحظر') : t('حظر')} onClick={() => toggleBlock(r)} />
-                  <div className="h-px bg-border-light dark:bg-border-dark my-1" />
-                  <MenuItem icon={<Trash2 className="h-4 w-4" />} label={t('حذف')} danger onClick={() => remove(r)} />
                 </div>
               </>
             )}
@@ -334,7 +334,6 @@ export default function Contacts(): JSX.Element {
                 { value: 'all', label: t('الكل') },
                 { value: 'active', label: t('فعّال'), leading: <span className="h-2 w-2 rounded-full bg-success" /> },
                 { value: 'inactive', label: t('معطّل'), leading: <span className="h-2 w-2 rounded-full bg-muted-light" /> },
-                { value: 'blocked', label: t('محظور'), leading: <span className="h-2 w-2 rounded-full bg-danger" /> },
               ]}
             />
           </>
@@ -392,15 +391,64 @@ export default function Contacts(): JSX.Element {
       </Modal>
 
       <Drawer open={!!drawer} onClose={() => setDrawer(null)} title={t('تفاصيل جهة الاتصال')} side="start" width="w-[420px]">
-        {drawer && <ContactDrawerBody contact={drawer} onEdit={() => { openEdit(drawer); setDrawer(null); }} onDelete={() => remove(drawer)} />}
+        {drawer && <ContactDrawerBody contact={drawer} onEdit={() => { openEdit(drawer); setDrawer(null); }} />}
       </Drawer>
 
       <ContactCategoriesDrawer open={categoryDrawerOpen} onClose={() => setCategoryDrawerOpen(false)} />
+
+      {/* Deactivation confirmation modal */}
+      <Modal
+        open={!!deactivateTarget}
+        onClose={() => { setDeactivateTarget(null); setDeactivateReason(''); }}
+        title={t('تأكيد تعطيل العميل')}
+        size="md"
+        footer={
+          <>
+            <button onClick={() => { setDeactivateTarget(null); setDeactivateReason(''); }} className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">{t('إلغاء')}</button>
+            <button onClick={confirmDeactivate} className="h-10 px-5 rounded-full bg-danger hover:bg-danger/90 text-white text-small font-medium">{t('تأكيد التعطيل')}</button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-4 rounded-card bg-warning/10 border border-warning/20">
+            <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-body font-semibold text-warning">{t('تنبيه')}</p>
+              <p className="text-small mt-1">
+                {t('سيتم إيقاف إرسال واستقبال الرسائل والتعامل مع العميل والحملات')}
+              </p>
+              <p className="text-small text-muted-light dark:text-muted-dark mt-1 italic">
+                ({t('على النظام فقط')})
+              </p>
+            </div>
+          </div>
+          {deactivateTarget && (
+            <div className="flex items-center gap-3 p-3 rounded-card bg-bg-light dark:bg-bg-dark">
+              <Avatar name={deactivateTarget.name} size="sm" />
+              <div>
+                <p className="font-semibold">{deactivateTarget.name}</p>
+                <p className="text-small text-muted-light dark:text-muted-dark" dir="ltr">{formatPhone(deactivateTarget.phone)}</p>
+              </div>
+            </div>
+          )}
+          <Textarea
+            label={t('سبب التعطيل')}
+            value={deactivateReason}
+            onChange={(e) => setDeactivateReason(e.target.value)}
+            placeholder={t('اكتب سبب التعطيل (اختياري)...')}
+          />
+        </div>
+      </Modal>
+
+      {/* Activity log drawer */}
+      <Drawer open={!!activityLogTarget} onClose={() => setActivityLogTarget(null)} title={t('سجل الأنشطة')} side="start" width="w-[420px]">
+        {activityLogTarget && <ContactActivityLog contact={activityLogTarget} agents={agents} />}
+      </Drawer>
     </div>
   );
 }
 
-function ContactDrawerBody({ contact, onEdit, onDelete }: { contact: Contact; onEdit: () => void; onDelete: () => void }): JSX.Element {
+function ContactDrawerBody({ contact, onEdit }: { contact: Contact; onEdit: () => void }): JSX.Element {
   const { t } = useTranslation();
   const conversations = useDataStore((s) => s.conversations);
   const contactConvs = conversations.filter((c) => c.contactId === contact.id);
@@ -413,14 +461,9 @@ function ContactDrawerBody({ contact, onEdit, onDelete }: { contact: Contact; on
         <Badge className={cn('mt-2', contactTypeColor[contact.type])}>{contactTypeLabel[contact.type]}</Badge>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <button onClick={onEdit} className="h-10 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center gap-2">
-          <Edit2 className="h-4 w-4" /> {t('تعديل')}
-        </button>
-        <button onClick={onDelete} className="h-10 px-4 rounded-full bg-danger/10 text-danger text-small font-medium hover:bg-danger/15 flex items-center justify-center gap-2">
-          <Trash2 className="h-4 w-4" /> {t('حذف')}
-        </button>
-      </div>
+      <button onClick={onEdit} className="w-full h-10 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center gap-2">
+        <Edit2 className="h-4 w-4" /> {t('تعديل')}
+      </button>
 
       <div className="space-y-2">
         <p className="text-small font-semibold">{t('المعلومات')}</p>
@@ -795,6 +838,70 @@ function ImportContactsModal({
         </div>
       </div>
     </Modal>
+  );
+}
+
+const activityActionLabel: Record<ContactActivityAction, string> = {
+  created: 'إضافة العميل',
+  edited: 'تعديل البيانات',
+  activated: 'تفعيل العميل',
+  deactivated: 'تعطيل العميل',
+  type_changed: 'تغيير النوع',
+};
+
+const activityActionIcon: Record<ContactActivityAction, React.ReactNode> = {
+  created: <UserPlus className="h-4 w-4" />,
+  edited: <UserCog className="h-4 w-4" />,
+  activated: <Power className="h-4 w-4 text-success" />,
+  deactivated: <Power className="h-4 w-4 text-danger" />,
+  type_changed: <RefreshCw className="h-4 w-4 text-info" />,
+};
+
+function ContactActivityLog({ contact, agents }: { contact: Contact; agents: { id: string; name: string }[] }): JSX.Element {
+  const { t } = useTranslation();
+  const entries = [...(contact.activityLog ?? [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const agentName = (id: string): string => {
+    if (id === 'system') return t('النظام');
+    return agents.find((a) => a.id === id)?.name ?? id;
+  };
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <Avatar name={contact.name} size="sm" />
+        <div>
+          <p className="font-semibold">{contact.name}</p>
+          <p className="text-small text-muted-light dark:text-muted-dark" dir="ltr">{formatPhone(contact.phone)}</p>
+        </div>
+      </div>
+
+      {entries.length === 0 ? (
+        <p className="text-small text-muted-light dark:text-muted-dark italic text-center py-8">{t('لا يوجد سجل أنشطة')}</p>
+      ) : (
+        <div className="relative">
+          <div className="absolute start-5 top-0 bottom-0 w-px bg-border-light dark:bg-border-dark" />
+          <div className="space-y-0">
+            {entries.map((entry) => (
+              <div key={entry.id} className="relative flex gap-3 py-3">
+                <div className="relative z-10 h-10 w-10 rounded-full bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark flex items-center justify-center flex-shrink-0">
+                  {activityActionIcon[entry.action]}
+                </div>
+                <div className="flex-1 min-w-0 pt-1.5">
+                  <p className="text-body font-medium">{t(activityActionLabel[entry.action])}</p>
+                  {entry.details && (
+                    <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">{entry.details}</p>
+                  )}
+                  <div className="flex items-center gap-2 mt-1 text-small text-muted-light dark:text-muted-dark">
+                    <span>{agentName(entry.by)}</span>
+                    <span className="opacity-40">·</span>
+                    <span>{formatDate(entry.timestamp)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

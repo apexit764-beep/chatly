@@ -6,6 +6,7 @@ import type {
   CampaignTemplate,
   Channel,
   Contact,
+  ContactActivityLogEntry,
   Conversation,
   Department,
   Integration,
@@ -81,6 +82,7 @@ interface DataState {
   addContact: (c: Omit<Contact, 'id' | 'conversationCount' | 'lastContact' | 'createdAt' | 'tags' | 'blocked'>) => void;
   updateContact: (id: string, patch: Partial<Contact>) => void;
   deleteContact: (id: string) => void;
+  addContactActivity: (contactId: string, entry: Omit<ContactActivityLogEntry, 'id' | 'timestamp'>) => void;
 
   // Template actions
   addTemplate: (t: Omit<Template, 'id' | 'usageCount' | 'createdAt'>) => void;
@@ -363,6 +365,7 @@ export const useDataStore = create<DataState>((set, get) => ({
             lastContact: now,
             createdAt: now,
             channels: channel ? [channel.type] : undefined,
+            activityLog: [{ id: newId(), action: 'created' as const, by: 'system', timestamp: now }],
           },
           ...s.contacts,
         ],
@@ -377,26 +380,39 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
 
   addContact: (c) =>
-    set((state) => ({
-      contacts: [
-        {
-          ...c,
-          id: newId(),
-          tags: [],
-          blocked: false,
-          conversationCount: 0,
-          lastContact: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-        },
-        ...state.contacts,
-      ],
-    })),
+    set((state) => {
+      const now = new Date().toISOString();
+      return {
+        contacts: [
+          {
+            ...c,
+            id: newId(),
+            tags: [],
+            blocked: false,
+            conversationCount: 0,
+            lastContact: now,
+            createdAt: now,
+            activityLog: [{ id: newId(), action: 'created' as const, by: state.currentUserId, timestamp: now }],
+          },
+          ...state.contacts,
+        ],
+      };
+    }),
 
   updateContact: (id, patch) =>
     set((state) => ({ contacts: state.contacts.map((c) => (c.id === id ? { ...c, ...patch } : c)) })),
 
   deleteContact: (id) =>
     set((state) => ({ contacts: state.contacts.filter((c) => c.id !== id) })),
+
+  addContactActivity: (contactId, entry) =>
+    set((state) => ({
+      contacts: state.contacts.map((c) =>
+        c.id === contactId
+          ? { ...c, activityLog: [...(c.activityLog ?? []), { ...entry, id: newId(), timestamp: new Date().toISOString() }] }
+          : c
+      ),
+    })),
 
   addTemplate: (t) =>
     set((state) => ({

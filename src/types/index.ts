@@ -1,5 +1,15 @@
 export type ConversationStatus = 'open' | 'in_progress' | 'closed' | 'new';
 export type ContactType = 'visitor' | 'lead' | 'customer' | 'returning' | 'vip' | 'company';
+
+export type ContactActivityAction = 'created' | 'edited' | 'activated' | 'deactivated' | 'type_changed';
+
+export interface ContactActivityLogEntry {
+  id: string;
+  action: ContactActivityAction;
+  details?: string;
+  by: string;
+  timestamp: string;
+}
 export type AgentRole = 'manager' | 'agent';
 
 export type PermissionKey =
@@ -184,6 +194,8 @@ export interface Contact {
   lastContact: string;
   createdAt: string;
   channels?: ChannelType[]; // which channels this contact uses
+  activityLog?: ContactActivityLogEntry[];
+  deactivationReason?: string;
 }
 
 export type MessageSender = 'agent' | 'ai';
