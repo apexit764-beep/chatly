@@ -317,10 +317,12 @@ export default function Contacts(): JSX.Element {
               onChange={(v) => setTypeFilter(v as 'all' | ContactType)}
               options={[
                 { value: 'all', label: t('كل الأنواع') },
-                { value: 'customer', label: t('عميل'), leading: <span className="h-2 w-2 rounded-full bg-success" /> },
+                { value: 'visitor', label: t('زائر'), leading: <span className="h-2 w-2 rounded-full bg-muted-light dark:bg-muted-dark" /> },
                 { value: 'lead', label: t('محتمل'), leading: <span className="h-2 w-2 rounded-full bg-warning" /> },
-                { value: 'company', label: t('شركة'), leading: <span className="h-2 w-2 rounded-full bg-primary" /> },
+                { value: 'customer', label: t('عميل'), leading: <span className="h-2 w-2 rounded-full bg-success" /> },
+                { value: 'returning', label: t('عميل دائم'), leading: <span className="h-2 w-2 rounded-full bg-info" /> },
                 { value: 'vip', label: 'VIP', leading: <span className="h-2 w-2 rounded-full bg-danger" /> },
+                { value: 'company', label: t('شركة'), leading: <span className="h-2 w-2 rounded-full bg-primary" /> },
               ]}
             />
             <FilterDropdown
@@ -378,10 +380,12 @@ export default function Contacts(): JSX.Element {
             error={errors.phone ?? undefined}
           />
           <Select label={<>{t('النوع')}<span className="text-danger ms-0.5">*</span></>} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as ContactType })}>
-            <option value="customer">{t('عميل')}</option>
+            <option value="visitor">{t('زائر')}</option>
             <option value="lead">{t('محتمل')}</option>
-            <option value="company">{t('شركة')}</option>
+            <option value="customer">{t('عميل')}</option>
+            <option value="returning">{t('عميل دائم')}</option>
             <option value="vip">VIP</option>
+            <option value="company">{t('شركة')}</option>
           </Select>
           <Textarea label={<>{t('ملاحظات')}<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={t('معلومات إضافية...')} />
         </div>

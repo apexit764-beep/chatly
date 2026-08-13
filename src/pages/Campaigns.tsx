@@ -576,10 +576,12 @@ export default function Campaigns(): JSX.Element {
                 className="w-full h-10 ps-3 pe-9 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
               >
                 <option value="all">كل العملاء</option>
-                <option value="customer">عملاء فقط</option>
+                <option value="visitor">زوار فقط</option>
                 <option value="lead">عملاء محتملون</option>
-                <option value="company">شركات فقط</option>
+                <option value="customer">عملاء فقط</option>
+                <option value="returning">عملاء دائمون</option>
                 <option value="vip">VIP فقط</option>
+                <option value="company">شركات فقط</option>
               </select>
             </div>
             <Select label="التوقيت" value={form.schedule} onChange={(e) => setForm({ ...form, schedule: e.target.value as 'now' | 'later' })}>

@@ -67,6 +67,15 @@ interface DataState {
     assignedTo?: string | null;
     departmentId?: string | null;
   }) => string;
+  /** Simulates an incoming conversation from a client.
+   *  If no contact with `phone` exists, one is auto-created as a visitor. */
+  addIncomingConversation: (data: {
+    channelId: string;
+    phone: string;
+    name?: string;
+    username?: string;
+    initialMessage: string;
+  }) => string;
 
   // Contact actions
   addContact: (c: Omit<Contact, 'id' | 'conversationCount' | 'lastContact' | 'createdAt' | 'tags' | 'blocked'>) => void;
@@ -162,7 +171,7 @@ interface DataState {
 
 const newId = (): string => Math.random().toString(36).slice(2, 10);
 
-export const useDataStore = create<DataState>((set) => ({
+export const useDataStore = create<DataState>((set, get) => ({
   currentUserId: 'a1',
   agents: initialAgents,
   contacts: initialContacts,
@@ -326,6 +335,45 @@ export const useDataStore = create<DataState>((set) => ({
       ],
     }));
     return id;
+  },
+
+  addIncomingConversation: (data) => {
+    const state = get();
+    const existing = state.contacts.find(
+      (c) => (data.phone && c.phone === data.phone) || (data.username && c.username === data.username),
+    );
+    let contactId: string;
+    if (existing) {
+      contactId = existing.id;
+    } else {
+      const channel = state.channels.find((ch) => ch.id === data.channelId);
+      const cId = newId();
+      const now = new Date().toISOString();
+      set((s) => ({
+        contacts: [
+          {
+            id: cId,
+            name: data.name || data.phone || data.username || 'زائر',
+            phone: data.phone || '',
+            username: data.username,
+            type: 'visitor' as const,
+            tags: [],
+            blocked: false,
+            conversationCount: 0,
+            lastContact: now,
+            createdAt: now,
+            channels: channel ? [channel.type] : undefined,
+          },
+          ...s.contacts,
+        ],
+      }));
+      contactId = cId;
+    }
+    return state.addConversation({
+      contactId,
+      channelId: data.channelId,
+      initialMessage: data.initialMessage,
+    });
   },
 
   addContact: (c) =>

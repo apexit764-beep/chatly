@@ -8,17 +8,21 @@ import type {
 } from '@/types';
 
 export const contactTypeLabel: Record<ContactType, string> = {
-  customer: 'عميل',
+  visitor: 'زائر',
   lead: 'محتمل',
-  company: 'شركة',
+  customer: 'عميل',
+  returning: 'عميل دائم',
   vip: 'VIP',
+  company: 'شركة',
 };
 
 export const contactTypeColor: Record<ContactType, string> = {
-  customer: 'bg-success/15 text-success border-success/30',
+  visitor: 'bg-muted-light/15 text-muted-light border-muted-light/30 dark:bg-muted-dark/15 dark:text-muted-dark dark:border-muted-dark/30',
   lead: 'bg-warning/15 text-warning border-warning/30',
-  company: 'bg-primary/15 text-primary border-primary/30',
+  customer: 'bg-success/15 text-success border-success/30',
+  returning: 'bg-info/15 text-info border-info/30',
   vip: 'bg-danger/15 text-danger border-danger/30',
+  company: 'bg-primary/15 text-primary border-primary/30',
 };
 
 export const conversationStatusLabel: Record<ConversationStatus, string> = {

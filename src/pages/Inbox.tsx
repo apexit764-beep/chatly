@@ -1807,8 +1807,15 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
   };
 
   const allTags = storeTags;
-  const contactCategories = ['عميل جديد', 'عميل دائم', 'عميل VIP', 'شريك', 'مورّد', 'محتمل'];
-  const currentCategory = contact.type === 'vip' ? 'عميل VIP' : contact.type === 'customer' ? 'عميل دائم' : contact.type === 'lead' ? 'محتمل' : 'عميل جديد';
+  const contactTypeEntries: { type: import('@/types').ContactType; label: string }[] = [
+    { type: 'visitor', label: 'زائر' },
+    { type: 'lead', label: 'محتمل' },
+    { type: 'customer', label: 'عميل' },
+    { type: 'returning', label: 'عميل دائم' },
+    { type: 'vip', label: 'VIP' },
+    { type: 'company', label: 'شركة' },
+  ];
+  const currentCategory = contactTypeLabel[contact.type];
 
   const aiAgentOption = { id: '__ai__', name: 'AI Agent (Default)' };
   const assigneeOptions = [aiAgentOption, ...agents.map((a) => ({ id: a.id, name: a.name }))];
@@ -1998,10 +2005,10 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
             <>
               <div className="fixed inset-0 z-10" onClick={() => setCategoriesOpen(false)} />
               <div className="absolute top-full mt-1 inset-x-0 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-card-hover py-1 z-20">
-                {contactCategories.map((cat) => (
-                  <button key={cat} onClick={() => { setCategoriesOpen(false); showToast(`تم تعيين التصنيف: ${cat}`, 'success'); }} className="w-full flex items-center gap-2 px-3 py-2 text-small hover:bg-bg-light dark:hover:bg-bg-dark text-start">
-                    <span className="flex-1">{cat}</span>
-                    {cat === currentCategory && <Check className="h-3.5 w-3.5 text-primary" />}
+                {contactTypeEntries.map((entry) => (
+                  <button key={entry.type} onClick={() => { updateContact(contact.id, { type: entry.type }); setCategoriesOpen(false); showToast(`تم تعيين التصنيف: ${entry.label}`, 'success'); }} className="w-full flex items-center gap-2 px-3 py-2 text-small hover:bg-bg-light dark:hover:bg-bg-dark text-start">
+                    <span className="flex-1">{entry.label}</span>
+                    {entry.label === currentCategory && <Check className="h-3.5 w-3.5 text-primary" />}
                   </button>
                 ))}
               </div>

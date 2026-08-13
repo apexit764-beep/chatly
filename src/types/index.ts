@@ -1,5 +1,5 @@
 export type ConversationStatus = 'open' | 'in_progress' | 'closed' | 'new';
-export type ContactType = 'customer' | 'lead' | 'company' | 'vip';
+export type ContactType = 'visitor' | 'lead' | 'customer' | 'returning' | 'vip' | 'company';
 export type AgentRole = 'manager' | 'agent';
 
 export type PermissionKey =
