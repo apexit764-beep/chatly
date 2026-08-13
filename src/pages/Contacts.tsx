@@ -7,7 +7,6 @@ import {
   Eye,
   Edit2,
   Trash2,
-  MoreHorizontal,
   History,
   ArrowDownUp,
   ChevronDown,
@@ -74,7 +73,6 @@ export default function Contacts(): JSX.Element {
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
   const [drawer, setDrawer] = useState<Contact | null>(null);
-  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [form, setForm] = useState<{ name: string; countryCode: string; phone: string; type: ContactType; notes: string }>({
     name: '', countryCode: '+968', phone: '', type: 'lead', notes: '',
   });
@@ -109,7 +107,6 @@ export default function Contacts(): JSX.Element {
     setForm({ name: c.name, countryCode: cc, phone: local, type: c.type, notes: c.notes ?? '' });
     setErrors({});
     setModalOpen(true);
-    setOpenMenu(null);
   };
 
   const submit = (): void => {
@@ -250,25 +247,15 @@ export default function Contacts(): JSX.Element {
       key: 'actions', header: '', sortable: false, width: '110px', align: 'end',
       cell: (r) => (
         <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-          <button onClick={() => setDrawer(r)} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title={t('عرض')}>
-            <Eye className="h-4 w-4" />
-          </button>
           <button onClick={() => setActivityLogTarget(r)} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-info flex items-center justify-center" title={t('سجل الأنشطة')}>
             <History className="h-4 w-4" />
           </button>
-          <div className="relative">
-            <button onClick={() => setOpenMenu(openMenu === r.id ? null : r.id)} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark flex items-center justify-center" aria-label={t('المزيد')}>
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
-            {openMenu === r.id && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setOpenMenu(null)} />
-                <div className="absolute end-0 mt-1 w-44 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1 z-20">
-                  <MenuItem icon={<Edit2 className="h-4 w-4" />} label={t('تعديل')} onClick={() => openEdit(r)} />
-                </div>
-              </>
-            )}
-          </div>
+          <button onClick={() => setDrawer(r)} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title={t('عرض')}>
+            <Eye className="h-4 w-4" />
+          </button>
+          <button onClick={() => openEdit(r)} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title={t('تعديل')}>
+            <Edit2 className="h-4 w-4" />
+          </button>
         </div>
       ),
     },
@@ -410,18 +397,6 @@ export default function Contacts(): JSX.Element {
         }
       >
         <div className="space-y-4">
-          <div className="flex items-start gap-3 p-4 rounded-card bg-warning/10 border border-warning/20">
-            <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-body font-semibold text-warning">{t('تنبيه')}</p>
-              <p className="text-small mt-1">
-                {t('سيتم إيقاف إرسال واستقبال الرسائل والتعامل مع العميل والحملات')}
-              </p>
-              <p className="text-small text-muted-light dark:text-muted-dark mt-1 italic">
-                ({t('على النظام فقط')})
-              </p>
-            </div>
-          </div>
           {deactivateTarget && (
             <div className="flex items-center gap-3 p-3 rounded-card bg-bg-light dark:bg-bg-dark">
               <Avatar name={deactivateTarget.name} size="sm" />
@@ -437,6 +412,10 @@ export default function Contacts(): JSX.Element {
             onChange={(e) => setDeactivateReason(e.target.value)}
             placeholder={t('اكتب سبب التعطيل (اختياري)...')}
           />
+          <p className="flex items-center gap-2 text-small text-warning">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+            {t('سيتم إيقاف الرسائل والحملات لهذا العميل')} ({t('على النظام فقط')})
+          </p>
         </div>
       </Modal>
 
@@ -905,11 +884,3 @@ function ContactActivityLog({ contact, agents }: { contact: Contact; agents: { i
   );
 }
 
-function MenuItem({ icon, label, onClick, danger }: { icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean }): JSX.Element {
-  return (
-    <button onClick={onClick} className={cn('w-full flex items-center gap-2.5 px-3 py-2 text-body hover:bg-bg-light dark:hover:bg-bg-dark text-start', danger ? 'text-danger' : '')}>
-      <span className={danger ? 'text-danger' : 'text-muted-light dark:text-muted-dark'}>{icon}</span>
-      {label}
-    </button>
-  );
-}
