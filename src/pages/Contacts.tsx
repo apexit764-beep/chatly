@@ -62,6 +62,7 @@ export default function Contacts(): JSX.Element {
   const conversations = useDataStore((s) => s.conversations);
   const agents = useDataStore((s) => s.agents);
   const currentUserId = useDataStore((s) => s.currentUserId);
+  const channelAccounts = useDataStore((s) => s.channels);
   const addContact = useDataStore((s) => s.addContact);
   const updateContact = useDataStore((s) => s.updateContact);
   const addContactActivity = useDataStore((s) => s.addContactActivity);
@@ -73,10 +74,10 @@ export default function Contacts(): JSX.Element {
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
   const [drawer, setDrawer] = useState<Contact | null>(null);
-  const [form, setForm] = useState<{ name: string; countryCode: string; phone: string; type: ContactType; notes: string }>({
-    name: '', countryCode: '+968', phone: '', type: 'lead', notes: '',
+  const [form, setForm] = useState<{ name: string; channelId: string; countryCode: string; phone: string; identifier: string; type: ContactType; notes: string }>({
+    name: '', channelId: '', countryCode: '+968', phone: '', identifier: '', type: 'lead', notes: '',
   });
-  const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; phone?: string; channelId?: string; identifier?: string }>({});
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<Contact | null>(null);
   const [deactivateReason, setDeactivateReason] = useState('');
@@ -91,33 +92,53 @@ export default function Contacts(): JSX.Element {
     });
   }, [contacts, typeFilter, statusFilter]);
 
+  const connectedChannels = useMemo(() => channelAccounts.filter((ch) => ch.status === 'connected'), [channelAccounts]);
+
+  const selectedChannel = useMemo(() => connectedChannels.find((ch) => ch.id === form.channelId), [connectedChannels, form.channelId]);
+  const isHandleChannel = selectedChannel ? HANDLE_CHANNELS.includes(selectedChannel.type) : false;
+
   const openCreate = (): void => {
     setEditing(null);
-    setForm({ name: '', countryCode: '+968', phone: '', type: 'lead', notes: '' });
+    setForm({ name: '', channelId: '', countryCode: '+968', phone: '', identifier: '', type: 'lead', notes: '' });
     setErrors({});
     setModalOpen(true);
   };
 
   const openEdit = (c: Contact): void => {
     setEditing(c);
-    // Split a saved phone like "+96891234567" into country code + national digits
     const match = c.phone?.match(/^(\+\d{1,4})\s*(.*)$/);
     const cc = match ? match[1] : '+968';
     const local = match ? match[2].replace(/\D/g, '') : c.phone?.replace(/\D/g, '') ?? '';
-    setForm({ name: c.name, countryCode: cc, phone: local, type: c.type, notes: c.notes ?? '' });
+    const chType = c.channels?.[0] ?? 'whatsapp';
+    const linkedChannel = connectedChannels.find((ch) => ch.type === chType);
+    setForm({ name: c.name, channelId: linkedChannel?.id ?? '', countryCode: cc, phone: local, identifier: c.username ?? '', type: c.type, notes: c.notes ?? '' });
     setErrors({});
     setModalOpen(true);
   };
 
   const submit = (): void => {
     const e: typeof errors = {};
-    const fullPhone = `${form.countryCode}${form.phone.replace(/^0+/, '')}`;
     if (!form.name.trim()) e.name = t('الاسم مطلوب');
-    if (!form.phone.trim()) e.phone = t('الرقم مطلوب');
-    else if (!/^\+?\d{8,}$/.test(fullPhone.replace(/\s/g, ''))) e.phone = t('رقم غير صحيح');
+    if (!form.channelId) e.channelId = t('اختر القناة');
+    const useHandle = selectedChannel && HANDLE_CHANNELS.includes(selectedChannel.type);
+    let fullPhone = '';
+    if (useHandle) {
+      if (!form.identifier.trim()) e.identifier = t('المعرّف مطلوب');
+    } else {
+      fullPhone = `${form.countryCode}${form.phone.replace(/^0+/, '')}`;
+      if (!form.phone.trim()) e.phone = t('الرقم مطلوب');
+      else if (!/^\+?\d{8,}$/.test(fullPhone.replace(/\s/g, ''))) e.phone = t('رقم غير صحيح');
+    }
     setErrors(e);
     if (Object.keys(e).length > 0) return;
-    const payload = { name: form.name, phone: fullPhone, type: form.type, notes: form.notes };
+    const payload = {
+      name: form.name,
+      phone: useHandle ? '' : fullPhone,
+      username: useHandle ? form.identifier : undefined,
+      type: form.type,
+      notes: form.notes,
+      channels: selectedChannel ? [selectedChannel.type] : undefined,
+    };
     if (editing) {
       updateContact(editing.id, payload);
       addContactActivity(editing.id, { action: 'edited', by: currentUserId });
@@ -356,15 +377,58 @@ export default function Contacts(): JSX.Element {
       >
         <div className="space-y-3">
           <Input label={<>{t('الاسم الكامل')}<span className="text-danger ms-0.5">*</span></>} value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors({ ...errors, name: undefined }); }} placeholder={t('مثال: أحمد الشعيلي')} error={errors.name ?? undefined} />
-          <PhoneField
-            label={<>{t('رقم الواتساب')}<span className="text-danger ms-0.5">*</span></>}
-            countryCode={form.countryCode}
-            phone={form.phone}
-            onCountryCodeChange={(c) => setForm({ ...form, countryCode: c })}
-            onPhoneChange={(p) => { setForm({ ...form, phone: p }); setErrors({ ...errors, phone: undefined }); }}
-            placeholder="9999 1111"
-            error={errors.phone ?? undefined}
-          />
+
+          {/* Channel selector */}
+          <div>
+            <label className="block text-small font-medium mb-1.5">{t('القناة')}<span className="text-danger ms-0.5">*</span></label>
+            <div className="grid grid-cols-2 gap-2">
+              {connectedChannels.map((ch) => (
+                <button
+                  key={ch.id}
+                  type="button"
+                  onClick={() => { setForm({ ...form, channelId: ch.id, phone: '', identifier: '' }); setErrors({ ...errors, channelId: undefined, phone: undefined, identifier: undefined }); }}
+                  className={cn(
+                    'flex items-center gap-2 p-2.5 rounded-lg border text-start transition-all',
+                    form.channelId === ch.id
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                      : 'border-border-light dark:border-border-dark hover:border-primary/40 hover:bg-bg-light dark:hover:bg-bg-dark',
+                  )}
+                >
+                  <ChannelIcon type={ch.type} size={18} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium truncate">{ch.name}</p>
+                    <p className="text-[10px] text-muted-light dark:text-muted-dark truncate" dir="ltr">{ch.identifier}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            {errors.channelId && <p className="text-xs text-danger mt-1">{errors.channelId}</p>}
+          </div>
+
+          {/* Dynamic identifier field based on channel type */}
+          {form.channelId && (
+            isHandleChannel ? (
+              <Input
+                label={<>{t(selectedChannel?.type === 'instagram' ? 'حساب الانستقرام' : selectedChannel?.type === 'telegram' ? 'يوزر التيليجرام' : selectedChannel?.type === 'messenger' ? 'حساب الماسنجر' : 'المعرّف')}<span className="text-danger ms-0.5">*</span></>}
+                value={form.identifier}
+                onChange={(e) => { setForm({ ...form, identifier: e.target.value }); setErrors({ ...errors, identifier: undefined }); }}
+                placeholder={selectedChannel?.type === 'instagram' ? '@username' : selectedChannel?.type === 'telegram' ? '@username' : t('المعرّف')}
+                error={errors.identifier ?? undefined}
+                dir="ltr"
+              />
+            ) : (
+              <PhoneField
+                label={<>{t('رقم الواتساب')}<span className="text-danger ms-0.5">*</span></>}
+                countryCode={form.countryCode}
+                phone={form.phone}
+                onCountryCodeChange={(c) => setForm({ ...form, countryCode: c })}
+                onPhoneChange={(p) => { setForm({ ...form, phone: p }); setErrors({ ...errors, phone: undefined }); }}
+                placeholder="9999 1111"
+                error={errors.phone ?? undefined}
+              />
+            )
+          )}
+
           <Select label={<>{t('النوع')}<span className="text-danger ms-0.5">*</span></>} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as ContactType })}>
             <option value="visitor">{t('زائر')}</option>
             <option value="lead">{t('محتمل')}</option>
