@@ -45,6 +45,16 @@ import type { ChannelType, Contact, ContactActivityAction, ContactType } from '@
 /** Channels that identify people by handle instead of phone number. */
 const HANDLE_CHANNELS: ChannelType[] = ['instagram', 'messenger', 'telegram', 'x'];
 
+/** Channel types available when adding/editing a contact. */
+const CONTACT_CHANNEL_OPTIONS: { type: ChannelType; label: string }[] = [
+  { type: 'whatsapp', label: 'WhatsApp' },
+  { type: 'instagram', label: 'Instagram' },
+  { type: 'messenger', label: 'Messenger' },
+  { type: 'telegram', label: 'Telegram' },
+  { type: 'x', label: 'X (Twitter)' },
+  { type: 'widget', label: 'Live Chat' },
+];
+
 /**
  * The account a contact reaches us on: their first linked channel, plus the
  * identifier that channel actually uses.
@@ -62,7 +72,6 @@ export default function Contacts(): JSX.Element {
   const conversations = useDataStore((s) => s.conversations);
   const agents = useDataStore((s) => s.agents);
   const currentUserId = useDataStore((s) => s.currentUserId);
-  const channelAccounts = useDataStore((s) => s.channels);
   const addContact = useDataStore((s) => s.addContact);
   const updateContact = useDataStore((s) => s.updateContact);
   const addContactActivity = useDataStore((s) => s.addContactActivity);
@@ -74,10 +83,10 @@ export default function Contacts(): JSX.Element {
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
   const [drawer, setDrawer] = useState<Contact | null>(null);
-  const [form, setForm] = useState<{ name: string; channelId: string; countryCode: string; phone: string; identifier: string; type: ContactType; notes: string }>({
-    name: '', channelId: '', countryCode: '+968', phone: '', identifier: '', type: 'lead', notes: '',
+  const [form, setForm] = useState<{ name: string; channelType: ChannelType | ''; countryCode: string; phone: string; identifier: string; type: ContactType; notes: string }>({
+    name: '', channelType: '', countryCode: '+968', phone: '', identifier: '', type: 'lead', notes: '',
   });
-  const [errors, setErrors] = useState<{ name?: string; phone?: string; channelId?: string; identifier?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; phone?: string; channelType?: string; identifier?: string }>({});
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<Contact | null>(null);
   const [deactivateReason, setDeactivateReason] = useState('');
@@ -92,14 +101,11 @@ export default function Contacts(): JSX.Element {
     });
   }, [contacts, typeFilter, statusFilter]);
 
-  const connectedChannels = useMemo(() => channelAccounts.filter((ch) => ch.status === 'connected'), [channelAccounts]);
-
-  const selectedChannel = useMemo(() => connectedChannels.find((ch) => ch.id === form.channelId), [connectedChannels, form.channelId]);
-  const isHandleChannel = selectedChannel ? HANDLE_CHANNELS.includes(selectedChannel.type) : false;
+  const isHandleChannel = form.channelType ? HANDLE_CHANNELS.includes(form.channelType) : false;
 
   const openCreate = (): void => {
     setEditing(null);
-    setForm({ name: '', channelId: '', countryCode: '+968', phone: '', identifier: '', type: 'lead', notes: '' });
+    setForm({ name: '', channelType: '', countryCode: '+968', phone: '', identifier: '', type: 'lead', notes: '' });
     setErrors({});
     setModalOpen(true);
   };
@@ -110,8 +116,7 @@ export default function Contacts(): JSX.Element {
     const cc = match ? match[1] : '+968';
     const local = match ? match[2].replace(/\D/g, '') : c.phone?.replace(/\D/g, '') ?? '';
     const chType = c.channels?.[0] ?? 'whatsapp';
-    const linkedChannel = connectedChannels.find((ch) => ch.type === chType);
-    setForm({ name: c.name, channelId: linkedChannel?.id ?? '', countryCode: cc, phone: local, identifier: c.username ?? '', type: c.type, notes: c.notes ?? '' });
+    setForm({ name: c.name, channelType: chType, countryCode: cc, phone: local, identifier: c.username ?? '', type: c.type, notes: c.notes ?? '' });
     setErrors({});
     setModalOpen(true);
   };
@@ -119,12 +124,12 @@ export default function Contacts(): JSX.Element {
   const submit = (): void => {
     const e: typeof errors = {};
     if (!form.name.trim()) e.name = t('الاسم مطلوب');
-    if (!form.channelId) e.channelId = t('اختر القناة');
-    const useHandle = selectedChannel && HANDLE_CHANNELS.includes(selectedChannel.type);
+    if (!form.channelType) e.channelType = t('اختر القناة');
+    const useHandle = form.channelType && HANDLE_CHANNELS.includes(form.channelType);
     let fullPhone = '';
     if (useHandle) {
       if (!form.identifier.trim()) e.identifier = t('المعرّف مطلوب');
-    } else {
+    } else if (form.channelType) {
       fullPhone = `${form.countryCode}${form.phone.replace(/^0+/, '')}`;
       if (!form.phone.trim()) e.phone = t('الرقم مطلوب');
       else if (!/^\+?\d{8,}$/.test(fullPhone.replace(/\s/g, ''))) e.phone = t('رقم غير صحيح');
@@ -137,7 +142,7 @@ export default function Contacts(): JSX.Element {
       username: useHandle ? form.identifier : undefined,
       type: form.type,
       notes: form.notes,
-      channels: selectedChannel ? [selectedChannel.type] : undefined,
+      channels: form.channelType ? [form.channelType] : undefined,
     };
     if (editing) {
       updateContact(editing.id, payload);
@@ -378,41 +383,38 @@ export default function Contacts(): JSX.Element {
         <div className="space-y-3">
           <Input label={<>{t('الاسم الكامل')}<span className="text-danger ms-0.5">*</span></>} value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors({ ...errors, name: undefined }); }} placeholder={t('مثال: أحمد الشعيلي')} error={errors.name ?? undefined} />
 
-          {/* Channel selector */}
+          {/* Channel type tag selector */}
           <div>
             <label className="block text-small font-medium mb-1.5">{t('القناة')}<span className="text-danger ms-0.5">*</span></label>
-            <div className="grid grid-cols-2 gap-2">
-              {connectedChannels.map((ch) => (
+            <div className="flex flex-wrap gap-2">
+              {CONTACT_CHANNEL_OPTIONS.map((opt) => (
                 <button
-                  key={ch.id}
+                  key={opt.type}
                   type="button"
-                  onClick={() => { setForm({ ...form, channelId: ch.id, phone: '', identifier: '' }); setErrors({ ...errors, channelId: undefined, phone: undefined, identifier: undefined }); }}
+                  onClick={() => { setForm({ ...form, channelType: opt.type, phone: '', identifier: '' }); setErrors({ ...errors, channelType: undefined, phone: undefined, identifier: undefined }); }}
                   className={cn(
-                    'flex items-center gap-2 p-2.5 rounded-lg border text-start transition-all',
-                    form.channelId === ch.id
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
-                      : 'border-border-light dark:border-border-dark hover:border-primary/40 hover:bg-bg-light dark:hover:bg-bg-dark',
+                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all',
+                    form.channelType === opt.type
+                      ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/30'
+                      : 'border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:border-primary/40 hover:text-primary',
                   )}
                 >
-                  <ChannelIcon type={ch.type} size={18} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium truncate">{ch.name}</p>
-                    <p className="text-[10px] text-muted-light dark:text-muted-dark truncate" dir="ltr">{ch.identifier}</p>
-                  </div>
+                  <ChannelIcon type={opt.type} size={14} />
+                  {opt.label}
                 </button>
               ))}
             </div>
-            {errors.channelId && <p className="text-xs text-danger mt-1">{errors.channelId}</p>}
+            {errors.channelType && <p className="text-xs text-danger mt-1">{errors.channelType}</p>}
           </div>
 
           {/* Dynamic identifier field based on channel type */}
-          {form.channelId && (
+          {form.channelType && (
             isHandleChannel ? (
               <Input
-                label={<>{t(selectedChannel?.type === 'instagram' ? 'حساب الانستقرام' : selectedChannel?.type === 'telegram' ? 'يوزر التيليجرام' : selectedChannel?.type === 'messenger' ? 'حساب الماسنجر' : 'المعرّف')}<span className="text-danger ms-0.5">*</span></>}
+                label={<>{t(form.channelType === 'instagram' ? 'حساب الانستقرام' : form.channelType === 'telegram' ? 'يوزر التيليجرام' : form.channelType === 'messenger' ? 'حساب الماسنجر' : 'المعرّف')}<span className="text-danger ms-0.5">*</span></>}
                 value={form.identifier}
                 onChange={(e) => { setForm({ ...form, identifier: e.target.value }); setErrors({ ...errors, identifier: undefined }); }}
-                placeholder={selectedChannel?.type === 'instagram' ? '@username' : selectedChannel?.type === 'telegram' ? '@username' : t('المعرّف')}
+                placeholder={form.channelType === 'instagram' ? '@username' : form.channelType === 'telegram' ? '@username' : t('المعرّف')}
                 error={errors.identifier ?? undefined}
                 dir="ltr"
               />
