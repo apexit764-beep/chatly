@@ -677,11 +677,7 @@ function CheckoutFlow({ plan, country, cycle, proratedAmount, isUpgrade, current
   const total = Math.round((baseAmount + tax) * 100) / 100;
 
   const [card, setCard] = useState({ number: testMode ? '5123 4567 8901 2346' : '', name: '', exp: testMode ? '12/29' : '', cvv: testMode ? '123' : '' });
-<<<<<<< HEAD
-  const [save, setSave] = useState(true);
-=======
   const [save, setSave] = useState(false);
->>>>>>> 169debf (feat: implement US-131 Change Plan (تغيير الباقة) with slider-based selection)
   const [autoRenew, setAutoRenew] = useState(true);
   const [selectedCardId, setSelectedCardId] = useState<string>('card_1');
 
@@ -705,53 +701,10 @@ function CheckoutFlow({ plan, country, cycle, proratedAmount, isUpgrade, current
 
       <h2 className="text-h1 font-bold text-center mb-6">إتمام الدفع</h2>
 
-<<<<<<< HEAD
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark">رقم البطاقة <span className="text-danger ms-0.5">*</span></label>
-            <div className="relative">
-              <input
-                type="text"
-                value={card.number}
-                onChange={(e) => setCard({ ...card, number: e.target.value })}
-                placeholder="1234 5678 9012 3456"
-                maxLength={19}
-                className="w-full h-12 px-3 pe-14 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body font-mono tracking-wider focus:outline-none focus:border-primary"
-              />
-              <span className="absolute end-3 top-1/2 -translate-y-1/2 inline-flex items-center justify-center h-7 px-2 rounded bg-gradient-to-r from-[#1a1f71] to-[#0f1c5e] text-white text-[10px] font-extrabold italic">VISA</span>
-            </div>
-          </div>
-          <Input label="اسم حامل البطاقة" value={card.name} onChange={(e) => setCard({ ...card, name: e.target.value })} placeholder="MOHAMMED AL KINDI" className="font-mono uppercase tracking-wide" />
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="تاريخ الانتهاء" value={card.exp} onChange={(e) => setCard({ ...card, exp: e.target.value })} placeholder="MM/YY" maxLength={5} className="font-mono" />
-            <Input label="CVV" value={card.cvv} onChange={(e) => setCard({ ...card, cvv: e.target.value })} placeholder="123" maxLength={4} className="font-mono" />
-          </div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={save} onChange={(e) => setSave(e.target.checked)} className="h-4 w-4 accent-primary" />
-            <span className="text-small">حفظ البطاقة للاستخدام المستقبلي (Tokenization آمنة)</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" checked={autoRenew} onChange={(e) => setAutoRenew(e.target.checked)} className="h-4 w-4 accent-primary" />
-            <span className="text-small">التجديد التلقائي عند انتهاء الاشتراك</span>
-          </label>
-
-          <button onClick={handlePay} className="w-full h-12 rounded-full bg-primary hover:bg-primary-dark text-white text-body font-semibold flex items-center justify-center gap-2 transition-colors mt-2">
-            <Lock className="h-4 w-4" />
-            ادفع {formatMoney(total, country.currency)}
-          </button>
-        </div>
-      </Card>
-
-      {/* Right: order summary */}
-      <Card className="p-6 h-fit">
-        <h3 className="text-h3 font-bold mb-4">ملخص الطلب</h3>
-        <div className="space-y-3 text-small mb-4 pb-4 border-b border-border-light dark:border-border-dark">
-=======
       {/* Order summary */}
       <Card className="p-5 mb-5">
         <p className="text-small font-semibold text-muted-light dark:text-muted-dark mb-3">ملخص الطلب</p>
         <div className="space-y-2 text-small mb-3 pb-3 border-b border-border-light dark:border-border-dark">
->>>>>>> 169debf (feat: implement US-131 Change Plan (تغيير الباقة) with slider-based selection)
           <div className="flex justify-between">
             <span className="text-muted-light dark:text-muted-dark">الباقة</span>
             <span className="font-semibold">{plan.nameAr}</span>
