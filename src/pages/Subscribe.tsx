@@ -1,7 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Check,
+  X as XIcon,
   Star,
   Lock,
   Shield,
@@ -10,29 +11,36 @@ import {
   ArrowLeft,
   Sparkles,
   Infinity as InfinityIcon,
-  X,
   CheckCircle2,
   AlertTriangle,
   ChevronDown,
   Plus,
   MessageCircle,
+  Calendar,
 } from 'lucide-react';
 import { Card, Input, Modal, Textarea, useConfirm } from '@components/ui';
 import { useAdminStore } from '@/store/useAdminStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
+import { formatDate } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import type { Plan } from '@/types';
 
-// In the demo, the client is Sekaa (client_1 in admin store)
 const CURRENT_CLIENT_ID = 'client_1';
 
-type Step = 'select' | 'checkout' | 'processing' | 'success' | 'failed';
+type Step = 'select' | 'confirm-downgrade' | 'checkout' | 'processing' | 'success' | 'failed';
+
+interface SliderStop {
+  conversations: number;
+  label: string;
+  planId: string;
+}
 
 export default function Subscribe(): JSX.Element {
   const plans = useAdminStore((s) => s.plans);
   const clients = useAdminStore((s) => s.clients);
   const countries = useAdminStore((s) => s.countries);
+  const subscriptions = useAdminStore((s) => s.subscriptions);
   const paymob = useAdminStore((s) => s.paymob);
   const createSubscription = useAdminStore((s) => s.createSubscription);
   const recordPayment = useAdminStore((s) => s.recordPayment);
@@ -40,51 +48,162 @@ export default function Subscribe(): JSX.Element {
   const navigate = useNavigate();
 
   const client = clients.find((c) => c.id === CURRENT_CLIENT_ID);
-  // Country is auto-detected from the client's IP / billing address — not user-selectable.
   const selectedCountry = countries.find((c) => c.code === client?.country) ?? countries[0];
   const country = selectedCountry.code;
-
-  const [cycle, setCycle] = useState<'monthly' | 'yearly'>('yearly');
-  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [step, setStep] = useState<Step>('select');
-  const [contactOpen, setContactOpen] = useState(false);
-  const [contactPlan, setContactPlan] = useState<Plan | null>(null);
-
   const activePlans = plans.filter((p) => p.active);
   const currentPlanId = client?.planId ?? null;
+  const currentPlan = activePlans.find((p) => p.id === currentPlanId) ?? null;
+  const sub = subscriptions.find((s) => s.clientId === CURRENT_CLIENT_ID && s.status === 'active');
 
-  const handleSubscribe = (plan: Plan): void => {
-    setSelectedPlan(plan);
-    setStep('checkout');
+  const [cycle, setCycle] = useState<'monthly' | 'yearly'>(sub?.billingCycle ?? 'yearly');
+  const [step, setStep] = useState<Step>('select');
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [contactOpen, setContactOpen] = useState(false);
+
+  const sliderStops: SliderStop[] = useMemo(() => {
+    const stops: SliderStop[] = [];
+    activePlans
+      .filter((p) => p.tier !== 'enterprise')
+      .sort((a, b) => a.limits.conversations - b.limits.conversations)
+      .forEach((p) => {
+        stops.push({ conversations: p.limits.conversations, label: (p.limits.conversations / 1000).toFixed(0) + 'K', planId: p.id });
+      });
+    stops.push({ conversations: -1, label: 'غير محدود', planId: activePlans.find((p) => p.tier === 'enterprise')?.id ?? '' });
+    return stops;
+  }, [activePlans]);
+
+  const currentStopIdx = useMemo(() => {
+    if (!currentPlan) return 0;
+    const idx = sliderStops.findIndex((s) => s.planId === currentPlan.id);
+    return idx >= 0 ? idx : 0;
+  }, [currentPlan, sliderStops]);
+
+  const [sliderIdx, setSliderIdx] = useState(currentStopIdx);
+
+  useEffect(() => {
+    setSliderIdx(currentStopIdx);
+  }, [currentStopIdx]);
+
+  const activePlanAtSlider = activePlans.find((p) => p.id === sliderStops[sliderIdx]?.planId) ?? null;
+  const isCurrent = activePlanAtSlider?.id === currentPlanId;
+  const isEnterprise = activePlanAtSlider?.tier === 'enterprise';
+
+  const currentPlanPrice = currentPlan ? (currentPlan.pricesPerCountry[country] ?? { monthly: 0, yearly: 0 }) : { monthly: 0, yearly: 0 };
+  const sliderPlanPrice = activePlanAtSlider ? (activePlanAtSlider.pricesPerCountry[country] ?? { monthly: 0, yearly: 0 }) : { monthly: 0, yearly: 0 };
+
+  const isUpgrade = (() => {
+    if (!activePlanAtSlider || !currentPlan || isCurrent) return false;
+    const currentAmount = cycle === 'monthly' ? currentPlanPrice.monthly : currentPlanPrice.yearly;
+    const newAmount = cycle === 'monthly' ? sliderPlanPrice.monthly : sliderPlanPrice.yearly;
+    return newAmount > currentAmount;
+  })();
+
+  const proratedAmount = (() => {
+    if (!isUpgrade || !sub || !activePlanAtSlider) return 0;
+    const currentAmount = cycle === 'monthly' ? currentPlanPrice.monthly : currentPlanPrice.yearly;
+    const newAmount = cycle === 'monthly' ? sliderPlanPrice.monthly : sliderPlanPrice.yearly;
+    const periodMs = new Date(sub.currentPeriodEnd).getTime() - new Date(sub.currentPeriodStart).getTime();
+    const remainMs = Math.max(0, new Date(sub.currentPeriodEnd).getTime() - Date.now());
+    const remainFraction = periodMs > 0 ? remainMs / periodMs : 0;
+    const diff = newAmount - currentAmount;
+    return Math.max(0, Math.round(diff * remainFraction * 100) / 100);
+  })();
+
+  const handleSubscribeClick = (): void => {
+    if (!activePlanAtSlider || isCurrent || isEnterprise) return;
+    setSelectedPlan(activePlanAtSlider);
+    if (isUpgrade) {
+      setStep('checkout');
+    } else {
+      setStep('confirm-downgrade');
+    }
   };
 
+  const allFeatures: string[] = useMemo(() => {
+    const seen = new Set<string>();
+    const result: string[] = [];
+    activePlans
+      .sort((a, b) => {
+        const order = { starter: 0, pro: 1, business: 2, enterprise: 3 };
+        return (order[a.tier] ?? 0) - (order[b.tier] ?? 0);
+      })
+      .forEach((p) => {
+        p.features.forEach((f) => {
+          if (!seen.has(f)) { seen.add(f); result.push(f); }
+        });
+      });
+    return result;
+  }, [activePlans]);
+
+  const currentFeatureSet = useMemo(() => {
+    if (!activePlanAtSlider) return new Set<string>();
+    const tierOrder = { starter: 0, pro: 1, business: 2, enterprise: 3 };
+    const selectedRank = tierOrder[activePlanAtSlider.tier] ?? 0;
+    const included = new Set<string>();
+    activePlans.forEach((p) => {
+      if ((tierOrder[p.tier] ?? 0) <= selectedRank) {
+        p.features.forEach((f) => included.add(f));
+      }
+    });
+    return included;
+  }, [activePlanAtSlider, activePlans]);
+
   return (
-    <div className="p-4 lg:p-8 page-fade max-w-7xl mx-auto">
+    <div className="p-4 lg:p-8 page-fade max-w-5xl mx-auto">
       {step === 'select' && (
         <>
           <button onClick={() => navigate(-1)} className="text-small text-muted-light dark:text-muted-dark hover:text-current flex items-center gap-1 mb-4">
             <ArrowLeft className="h-4 w-4" /> عودة
           </button>
 
-          {/* Hero */}
           <div className="text-center mb-8">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-small font-semibold mb-3">
-              <Sparkles className="h-3.5 w-3.5" /> الاشتراكات
-            </span>
-            <h1 className="text-display font-extrabold mb-2">اختر الباقة المناسبة لك</h1>
+            <h1 className="text-h1 font-extrabold mb-2">تغيير الباقة</h1>
             <p className="text-body text-muted-light dark:text-muted-dark max-w-2xl mx-auto">
-              ابدأ بالباقة التي تناسب حجم فريقك واحتياجاتك. يمكنك الترقية أو التخفيض في أي وقت
+              حرّك المؤشر لتحديد عدد المحادثات الشهرية المتوقعة — سيظهر السعر والباقة المناسبة تلقائياً
             </p>
           </div>
 
+          {/* Slider */}
+          <Card className="p-6 mb-6">
+            <h2 className="text-h2 font-bold text-center mb-6">المحادثات الشهرية المتوقعة</h2>
+            <div className="px-2">
+              <input
+                type="range"
+                min={0}
+                max={sliderStops.length - 1}
+                step={1}
+                value={sliderIdx}
+                onChange={(e) => setSliderIdx(Number(e.target.value))}
+                className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary bg-border-light dark:bg-border-dark [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-4 [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-4 [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:shadow-md"
+                style={{
+                  background: `linear-gradient(to left, #2563EB ${((sliderIdx / (sliderStops.length - 1)) * 100)}%, #e5e7eb ${((sliderIdx / (sliderStops.length - 1)) * 100)}%)`,
+                }}
+              />
+              <div className="flex justify-between mt-2 text-small text-muted-light dark:text-muted-dark">
+                {sliderStops.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSliderIdx(i)}
+                    className={cn(
+                      'transition-colors',
+                      sliderIdx === i && 'text-primary font-bold',
+                    )}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Card>
+
           {/* Cycle toggle */}
-          <div className="flex flex-wrap items-center justify-center gap-3 mb-3">
+          <div className="flex items-center justify-center gap-3 mb-6">
             <div className="flex items-center gap-1 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-full p-1">
               <button
                 onClick={() => setCycle('monthly')}
                 className={cn(
-                  'px-4 py-1.5 rounded-full text-small font-medium transition-colors',
-                  cycle === 'monthly' ? 'bg-primary text-white shadow' : 'text-muted-light dark:text-muted-dark'
+                  'px-5 py-2 rounded-full text-small font-medium transition-colors',
+                  cycle === 'monthly' ? 'bg-primary text-white shadow' : 'text-muted-light dark:text-muted-dark',
                 )}
                 style={cycle === 'monthly' ? { color: '#fff' } : undefined}
               >
@@ -93,115 +212,124 @@ export default function Subscribe(): JSX.Element {
               <button
                 onClick={() => setCycle('yearly')}
                 className={cn(
-                  'px-4 py-1.5 rounded-full text-small font-medium transition-colors flex items-center gap-1.5',
-                  cycle === 'yearly' ? 'bg-primary text-white shadow' : 'text-muted-light dark:text-muted-dark'
+                  'px-5 py-2 rounded-full text-small font-medium transition-colors',
+                  cycle === 'yearly' ? 'bg-primary text-white shadow' : 'text-muted-light dark:text-muted-dark',
                 )}
                 style={cycle === 'yearly' ? { color: '#fff' } : undefined}
               >
                 سنوي
-                <span
-                  className={cn(
-                    'text-[10px] px-1.5 py-0.5 rounded-full font-bold',
-                    cycle === 'yearly' ? 'bg-white text-primary' : 'bg-success/15 text-success'
-                  )}
-                  style={cycle === 'yearly' ? { color: '#2563EB' } : undefined}
-                >
-                  وفّر شهرين
-                </span>
               </button>
             </div>
           </div>
 
-          {/* Plans grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-            {activePlans.map((plan) => {
-              const price = plan.pricesPerCountry[country] ?? { monthly: 0, yearly: 0 };
-              const isCurrent = plan.id === currentPlanId;
-              const isEnterprise = plan.tier === 'enterprise';
-              const display = cycle === 'monthly' ? price.monthly : Math.round(price.yearly / 12);
-              const handleContactSales = (): void => {
-                setContactPlan(plan);
-                setContactOpen(true);
-              };
-              return (
-                <Card key={plan.id} className={cn(
-                  'p-6 relative transition-all flex flex-col',
-                  plan.popular && 'border-2 border-primary shadow-card-hover scale-[1.02]'
-                )}>
-                  {plan.popular && (
-                    <span className="absolute -top-3 start-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary text-white text-[10px] font-bold shadow-lg">
-                      <Star className="h-3 w-3 fill-current" /> الأكثر شعبية
+          {/* Two cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {/* Left: plan details */}
+            <Card className={cn(
+              'p-6 flex flex-col relative',
+              activePlanAtSlider?.popular && 'border-2 border-primary',
+            )}>
+              {activePlanAtSlider?.popular && (
+                <span className="absolute -top-3 start-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary text-white text-[10px] font-bold shadow-lg">
+                  <Star className="h-3 w-3 fill-current" /> الأكثر شعبية
+                </span>
+              )}
+              <h3 className="text-h2 font-extrabold mb-1">{activePlanAtSlider?.nameAr ?? ''}</h3>
+              <p className="text-small text-muted-light dark:text-muted-dark mb-4">{activePlanAtSlider?.tagline ?? ''}</p>
+
+              {isEnterprise ? (
+                <div className="mb-4">
+                  <p className="text-display font-extrabold">حسب الطلب</p>
+                  <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">تسعير مخصّص لاحتياجاتك</p>
+                </div>
+              ) : (
+                <div className="mb-4">
+                  <div className="flex items-baseline gap-1">
+                    <p className="text-display font-extrabold">
+                      {formatMoney(cycle === 'yearly' ? sliderPlanPrice.yearly : sliderPlanPrice.monthly, selectedCountry.currency)}
+                    </p>
+                    <span className="text-small text-muted-light dark:text-muted-dark">
+                      / {cycle === 'yearly' ? 'سنوياً' : 'شهرياً'}
                     </span>
-                  )}
-                  <h3 className="text-h2 font-extrabold">{plan.nameAr}</h3>
-                  <p className="text-small text-muted-light dark:text-muted-dark mt-1 mb-4 min-h-[2.5em]">{plan.tagline}</p>
-
-                  <div className="mb-4 pb-4 border-b border-border-light dark:border-border-dark">
-                    {isEnterprise ? (
-                      <div>
-                        <p className="text-display font-extrabold">حسب الطلب</p>
-                        <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">تسعير مخصّص لاحتياجاتك</p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex items-baseline gap-1">
-                          <p className="text-display font-extrabold">{formatMoney(display, selectedCountry.currency)}</p>
-                          <span className="text-small text-muted-light dark:text-muted-dark">/شهر</span>
-                        </div>
-                        {cycle === 'yearly' && (
-                          <p className="text-small text-success font-medium mt-0.5">
-                            {formatMoney(price.yearly, selectedCountry.currency)} سنوياً
-                          </p>
-                        )}
-                      </>
-                    )}
                   </div>
-
-                  <ul className="space-y-2 mb-6 flex-1 text-small">
-                    {plan.features.map((f, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {isEnterprise ? (
-                    <button
-                      onClick={handleContactSales}
-                      className="w-full h-11 rounded-full text-body font-semibold transition-colors bg-white dark:bg-surface-dark border-2 border-primary text-primary hover:bg-primary hover:text-white flex items-center justify-center gap-2"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      تواصل معنا
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleSubscribe(plan)}
-                      disabled={isCurrent}
-                      className={cn(
-                        'w-full h-11 rounded-full text-body font-semibold transition-colors',
-                        isCurrent
-                          ? 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark cursor-default'
-                          : plan.popular
-                            ? 'bg-primary hover:bg-primary-dark text-white'
-                            : 'bg-white dark:bg-surface-dark border-2 border-primary text-primary hover:bg-primary hover:text-white'
-                      )}
-                    >
-                      {isCurrent ? 'باقتك الحالية ✓' : 'اشترك الآن'}
-                    </button>
+                  {cycle === 'yearly' && (
+                    <p className="text-small text-success font-medium mt-1">
+                      يعادل {formatMoney(Math.round(sliderPlanPrice.yearly / 12), selectedCountry.currency)} / شهرياً — أقل من سعر الاشتراك الشهري
+                    </p>
                   )}
+                </div>
+              )}
 
-                  {/* Limits */}
-                  <div className="grid grid-cols-2 gap-2 mt-4 text-small">
-                    <LimitRow label="موظف" value={plan.limits.agents} />
-                    <LimitRow label="قناة" value={plan.limits.channels} />
-                    <LimitRow label="محادثة" value={plan.limits.conversations === -1 ? '∞' : `${plan.limits.conversations / 1000}K`} />
-                    <LimitRow label="جهة اتصال" value={plan.limits.contacts === -1 ? '∞' : plan.limits.contacts} />
-                  </div>
-                </Card>
-              );
-            })}
+              {isEnterprise ? (
+                <button
+                  onClick={() => setContactOpen(true)}
+                  className="w-full h-11 rounded-full text-body font-semibold transition-colors bg-white dark:bg-surface-dark border-2 border-primary text-primary hover:bg-primary hover:text-white flex items-center justify-center gap-2 mt-auto"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  تواصل معنا
+                </button>
+              ) : isCurrent ? (
+                <button
+                  disabled
+                  className="w-full h-11 rounded-full text-body font-semibold bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark cursor-default mt-auto"
+                >
+                  الباقة الحالية
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubscribeClick}
+                  className="w-full h-11 rounded-full text-body font-semibold bg-primary hover:bg-primary-dark text-white transition-colors mt-auto"
+                >
+                  اشترك الآن
+                </button>
+              )}
+            </Card>
+
+            {/* Right: conversations count */}
+            <Card className="p-6 flex flex-col items-center justify-center text-center">
+              {isEnterprise ? (
+                <>
+                  <InfinityIcon className="h-12 w-12 text-primary mb-2" />
+                  <p className="text-h2 font-bold text-muted-light dark:text-muted-dark">غير محدود</p>
+                  <p className="text-small text-muted-light dark:text-muted-dark">محادثة / شهرياً</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[3rem] font-extrabold leading-none mb-1">
+                    {(sliderStops[sliderIdx]?.conversations ?? 0).toLocaleString('en')}
+                  </p>
+                  <p className="text-small text-muted-light dark:text-muted-dark">محادثة / شهرياً</p>
+                </>
+              )}
+            </Card>
           </div>
+
+          {/* Features list */}
+          <Card className="p-6 mb-8">
+            <h2 className="text-h2 font-bold text-center mb-5">كل الميزات (عبر كل الباقات)</h2>
+            <div className="space-y-3">
+              {allFeatures.map((f) => {
+                const included = currentFeatureSet.has(f);
+                return (
+                  <div key={f} className="flex items-center gap-3">
+                    {included ? (
+                      <span className="h-6 w-6 rounded-full bg-success/15 text-success flex items-center justify-center flex-shrink-0">
+                        <Check className="h-3.5 w-3.5" />
+                      </span>
+                    ) : (
+                      <span className="h-6 w-6 rounded-full bg-danger/10 text-danger flex items-center justify-center flex-shrink-0">
+                        <XIcon className="h-3.5 w-3.5" />
+                      </span>
+                    )}
+                    <span className={cn('text-body', !included && 'text-muted-light dark:text-muted-dark')}>{f}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-muted-light dark:text-muted-dark text-center mt-5">
+              الميزات وربطها بكل باقة يتحكم فيه الأدمن (موديول الباقات)
+            </p>
+          </Card>
 
           {/* Trust badges */}
           <div className="flex flex-wrap items-center justify-center gap-6 text-small text-muted-light dark:text-muted-dark">
@@ -216,14 +344,60 @@ export default function Subscribe(): JSX.Element {
             <h2 className="text-h2 font-bold mb-4">أسئلة شائعة</h2>
             <FAQList
               items={[
-                { q: 'هل يمكنني الترقية أو التخفيض لاحقاً؟', a: 'نعم، يمكنك تغيير باقتك في أي وقت من صفحة "الباقات والاشتراك". سيتم احتساب الفرق الزمني المتبقي من باقتك الحالية تلقائياً، وتدفع فقط الفرق وليس قيمة الباقة كاملة.' },
-                { q: 'هل هناك فترة تجريبية؟', a: 'نعم، نوفر فترة تجريبية مجانية لمدة 14 يوماً لجميع الباقات بدون الحاجة لإدخال بطاقة الدفع. تستطيع تجربة كل المزايا قبل الاشتراك.' },
+                { q: 'هل يمكنني الترقية أو التخفيض لاحقاً؟', a: 'نعم، يمكنك تغيير باقتك في أي وقت من صفحة "الباقات والاشتراك". عند الترقية يتم احتساب الفرق الزمني المتبقي تلقائياً وتدفع فقط الفرق. عند التخفيض يبقى اشتراكك الحالي حتى نهاية الفترة المدفوعة ثم يتحول تلقائياً.' },
+                { q: 'هل هناك فترة تجريبية؟', a: 'نعم، نوفر فترة تجريبية مجانية لمدة 14 يوماً لجميع الباقات بدون الحاجة لإدخال بطاقة الدفع.' },
                 { q: 'ما طرق الدفع المقبولة؟', a: 'حالياً نقبل بطاقات Visa و Mastercard عبر بوابة Paymob الآمنة والمشفّرة. الفاتورة تصل تلقائياً على بريدك الإلكتروني بعد كل عملية دفع.' },
-                { q: 'هل يمكنني إلغاء اشتراكي في أي وقت؟', a: 'نعم، يمكنك إلغاء اشتراكك في أي وقت بدون أي رسوم إضافية. سيستمر حسابك بالعمل حتى نهاية الفترة المدفوعة، ولن يتم تجديد الاشتراك تلقائياً.' },
+                { q: 'هل يمكنني إلغاء اشتراكي في أي وقت؟', a: 'نعم، يمكنك إلغاء اشتراكك في أي وقت بدون أي رسوم إضافية. سيستمر حسابك بالعمل حتى نهاية الفترة المدفوعة.' },
               ]}
             />
           </Card>
         </>
+      )}
+
+      {step === 'confirm-downgrade' && selectedPlan && sub && (
+        <Card className="max-w-lg mx-auto p-8 text-center">
+          <div className="h-16 w-16 rounded-full bg-warning/15 text-warning flex items-center justify-center mx-auto mb-4">
+            <Calendar className="h-8 w-8" />
+          </div>
+          <h2 className="text-h1 font-bold mb-2">تأكيد تخفيض الباقة</h2>
+          <p className="text-body text-muted-light dark:text-muted-dark mb-6">
+            سيتم التحويل لباقة <strong>{selectedPlan.nameAr}</strong> تلقائياً عند انتهاء فترتك الحالية. لن يتم خصم أو إرجاع أي مبالغ الآن.
+          </p>
+          <div className="rounded-card border border-border-light dark:border-border-dark divide-y divide-border-light dark:divide-border-dark text-small mb-6">
+            <div className="flex justify-between p-4">
+              <span className="text-muted-light dark:text-muted-dark">الباقة الجديدة</span>
+              <span className="font-semibold">{selectedPlan.nameAr}</span>
+            </div>
+            <div className="flex justify-between p-4">
+              <span className="text-muted-light dark:text-muted-dark">تاريخ التفعيل المتوقع</span>
+              <span className="font-semibold">{formatDate(sub.currentPeriodEnd)}</span>
+            </div>
+            <div className="flex justify-between p-4">
+              <span className="text-muted-light dark:text-muted-dark">السعر الجديد</span>
+              <span className="font-bold text-primary">
+                {formatMoney(cycle === 'yearly' ? sliderPlanPrice.yearly : sliderPlanPrice.monthly, selectedCountry.currency)}
+                <span className="font-normal text-muted-light dark:text-muted-dark"> / {cycle === 'yearly' ? 'سنة' : 'شهر'}</span>
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 justify-center">
+            <button
+              onClick={() => { setStep('select'); setSelectedPlan(null); }}
+              className="h-11 px-6 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
+            >
+              إلغاء
+            </button>
+            <button
+              onClick={() => {
+                showToast(`سيتم التحول لباقة ${selectedPlan.nameAr} في ${formatDate(sub.currentPeriodEnd)}`, 'success');
+                navigate('/billing');
+              }}
+              className="h-11 px-6 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold transition-colors"
+            >
+              تأكيد التخفيض
+            </button>
+          </div>
+        </Card>
       )}
 
       {step === 'checkout' && selectedPlan && (
@@ -231,13 +405,15 @@ export default function Subscribe(): JSX.Element {
           plan={selectedPlan}
           country={selectedCountry}
           cycle={cycle}
-          onBack={() => setStep('select')}
+          proratedAmount={proratedAmount}
+          isUpgrade={isUpgrade}
+          currentPlan={currentPlan}
+          onBack={() => { setStep('select'); setSelectedPlan(null); }}
           onProcessing={() => setStep('processing')}
           onSuccess={() => {
-            // Actually create subscription + record payment
             createSubscription(CURRENT_CLIENT_ID, selectedPlan.id, cycle);
             const price = selectedPlan.pricesPerCountry[country];
-            const amount = cycle === 'monthly' ? price.monthly : price.yearly;
+            const amount = proratedAmount > 0 ? proratedAmount : (cycle === 'monthly' ? price.monthly : price.yearly);
             recordPayment(CURRENT_CLIENT_ID, selectedPlan.id, amount, selectedCountry.currency, '4242');
             setStep('success');
           }}
@@ -263,9 +439,9 @@ export default function Subscribe(): JSX.Element {
           <div className="h-20 w-20 rounded-full bg-success/15 text-success flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="h-10 w-10" />
           </div>
-          <h2 className="text-h1 font-bold mb-1">تم الاشتراك بنجاح! 🎉</h2>
+          <h2 className="text-h1 font-bold mb-1">تم تغيير الباقة بنجاح! 🎉</h2>
           <p className="text-body text-muted-light dark:text-muted-dark mb-5">
-            تم تفعيل باقة <strong>{selectedPlan.nameAr}</strong> على حسابك. مرحباً بك في عائلة Qhub الممتدة!
+            تم تفعيل باقة <strong>{selectedPlan.nameAr}</strong> على حسابك فوراً.
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button onClick={() => navigate('/billing')} className="h-11 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">
@@ -296,7 +472,7 @@ export default function Subscribe(): JSX.Element {
       <ContactSalesModal
         open={contactOpen}
         onClose={() => setContactOpen(false)}
-        plan={contactPlan}
+        plan={activePlanAtSlider}
         defaultName={client?.contactName ?? ''}
         defaultEmail={client?.email ?? ''}
         defaultCompany={client?.companyName ?? ''}
@@ -309,6 +485,10 @@ export default function Subscribe(): JSX.Element {
     </div>
   );
 }
+
+/* ================================================================ */
+/* Contact Sales Modal                                              */
+/* ================================================================ */
 
 interface ContactSalesModalProps {
   open: boolean;
@@ -356,7 +536,6 @@ function ContactSalesModal({
     e.preventDefault();
     if (!isValid) return;
     setSubmitting(true);
-    // Simulate async send (in a real app this would hit an API)
     setTimeout(() => {
       setSubmitting(false);
       onSubmitted();
@@ -381,45 +560,22 @@ function ContactSalesModal({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="text-small font-medium mb-1 block">الاسم الكامل <span className="text-danger ms-0.5">*</span></label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="أحمد الحارثي"
-              required
-            />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="أحمد الحارثي" required />
           </div>
           <div>
             <label className="text-small font-medium mb-1 block">اسم الشركة <span className="text-danger ms-0.5">*</span></label>
-            <Input
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              placeholder="شركة الأنوار"
-              required
-            />
+            <Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="شركة الأنوار" required />
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="text-small font-medium mb-1 block">البريد الإلكتروني <span className="text-danger ms-0.5">*</span></label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@company.com"
-              required
-              dir="ltr"
-            />
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" required dir="ltr" />
           </div>
           <div>
             <label className="text-small font-medium mb-1 block">رقم الجوال <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
-            <Input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+968 9XXX XXXX"
-              dir="ltr"
-            />
+            <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+968 9XXX XXXX" dir="ltr" />
           </div>
         </div>
 
@@ -441,20 +597,11 @@ function ContactSalesModal({
 
         <div>
           <label className="text-small font-medium mb-1 block">احتياجاتك أو استفسارك <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
-          <Textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="أخبرنا باحتياجاتك الخاصة، الميزات المطلوبة، أو أي متطلبات أمنية…"
-            rows={4}
-          />
+          <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="أخبرنا باحتياجاتك الخاصة، الميزات المطلوبة، أو أي متطلبات أمنية…" rows={4} />
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-border-light dark:border-border-dark">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-10 px-5 rounded-full text-small font-medium border border-border-light dark:border-border-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
-          >
+          <button type="button" onClick={onClose} className="h-10 px-5 rounded-full text-small font-medium border border-border-light dark:border-border-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors">
             إلغاء
           </button>
           <button
@@ -472,15 +619,9 @@ function ContactSalesModal({
   );
 }
 
-function LimitRow({ label, value }: { label: string; value: number | string }): JSX.Element {
-  const isInfinite = value === '∞' || value === -1;
-  return (
-    <div className="flex items-center gap-1.5 text-small">
-      <span className="font-bold">{isInfinite ? <InfinityIcon className="h-3.5 w-3.5 inline" /> : value}</span>
-      <span className="text-muted-light dark:text-muted-dark">{label}</span>
-    </div>
-  );
-}
+/* ================================================================ */
+/* FAQ                                                              */
+/* ================================================================ */
 
 function FAQList({ items }: { items: { q: string; a: string }[] }): JSX.Element {
   const [openIdx, setOpenIdx] = useState<number | null>(0);
@@ -490,30 +631,13 @@ function FAQList({ items }: { items: { q: string; a: string }[] }): JSX.Element 
         const isOpen = openIdx === i;
         return (
           <div key={i}>
-            <button
-              onClick={() => setOpenIdx(isOpen ? null : i)}
-              className="w-full flex items-center justify-between gap-3 py-4 text-start group"
-            >
-              <span className="text-body font-semibold group-hover:text-primary transition-colors">
-                {item.q}
-              </span>
-              <ChevronDown
-                className={cn(
-                  'h-5 w-5 text-muted-light dark:text-muted-dark flex-shrink-0 transition-transform',
-                  isOpen && 'rotate-180 text-primary'
-                )}
-              />
+            <button onClick={() => setOpenIdx(isOpen ? null : i)} className="w-full flex items-center justify-between gap-3 py-4 text-start group">
+              <span className="text-body font-semibold group-hover:text-primary transition-colors">{item.q}</span>
+              <ChevronDown className={cn('h-5 w-5 text-muted-light dark:text-muted-dark flex-shrink-0 transition-transform', isOpen && 'rotate-180 text-primary')} />
             </button>
-            <div
-              className={cn(
-                'grid transition-all duration-200',
-                isOpen ? 'grid-rows-[1fr] opacity-100 pb-4' : 'grid-rows-[0fr] opacity-0'
-              )}
-            >
+            <div className={cn('grid transition-all duration-200', isOpen ? 'grid-rows-[1fr] opacity-100 pb-4' : 'grid-rows-[0fr] opacity-0')}>
               <div className="overflow-hidden">
-                <p className="text-small text-muted-light dark:text-muted-dark leading-[1.9]">
-                  {item.a}
-                </p>
+                <p className="text-small text-muted-light dark:text-muted-dark leading-[1.9]">{item.a}</p>
               </div>
             </div>
           </div>
@@ -523,10 +647,22 @@ function FAQList({ items }: { items: { q: string; a: string }[] }): JSX.Element 
   );
 }
 
+/* ================================================================ */
+/* Checkout                                                         */
+/* ================================================================ */
+
+const SAVED_CARDS: { id: string; brand: 'visa' | 'mastercard'; last4: string; expiry: string; holder: string }[] = [
+  { id: 'card_1', brand: 'visa', last4: '7743', expiry: '12/29', holder: 'Mohammed Al Kindi' },
+  { id: 'card_2', brand: 'mastercard', last4: '8842', expiry: '08/27', holder: 'Mohammed Al Kindi' },
+];
+
 interface CheckoutFlowProps {
   plan: Plan;
   country: { code: string; name: string; nameAr: string; flag: string; currency: string; symbol: string };
   cycle: 'monthly' | 'yearly';
+  proratedAmount: number;
+  isUpgrade: boolean;
+  currentPlan: Plan | null;
   onBack: () => void;
   onProcessing: () => void;
   onSuccess: () => void;
@@ -534,56 +670,27 @@ interface CheckoutFlowProps {
   testMode: boolean;
 }
 
-function CheckoutFlow({ plan, country, cycle, onBack, onProcessing, onSuccess, onFailure, testMode }: CheckoutFlowProps): JSX.Element {
+function CheckoutFlow({ plan, country, cycle, proratedAmount, isUpgrade, currentPlan, onBack, onProcessing, onSuccess, onFailure, testMode }: CheckoutFlowProps): JSX.Element {
   const price = plan.pricesPerCountry[country.code];
-  const amount = cycle === 'monthly' ? price.monthly : price.yearly;
-  const tax = Math.round(amount * 0.05);
-  const total = amount + tax;
+  const baseAmount = isUpgrade && proratedAmount > 0 ? proratedAmount : (cycle === 'monthly' ? price.monthly : price.yearly);
+  const tax = Math.round(baseAmount * 5) / 100;
+  const total = Math.round((baseAmount + tax) * 100) / 100;
 
   const [card, setCard] = useState({ number: testMode ? '5123 4567 8901 2346' : '', name: '', exp: testMode ? '12/29' : '', cvv: testMode ? '123' : '' });
+<<<<<<< HEAD
   const [save, setSave] = useState(true);
+=======
+  const [save, setSave] = useState(false);
+>>>>>>> 169debf (feat: implement US-131 Change Plan (تغيير الباقة) with slider-based selection)
   const [autoRenew, setAutoRenew] = useState(true);
   const [selectedCardId, setSelectedCardId] = useState<string>('card_1');
-  const { confirm } = useConfirm();
 
-  const handlePay = async (): Promise<void> => {
-    if (!card.number || !card.name || !card.exp || !card.cvv) {
-      return;
-    }
-    const last4 = card.number.replace(/\s/g, '').slice(-4);
-    const ok = await confirm({
-      title: 'تأكيد الدفع',
-      variant: 'info',
-      confirmText: `ادفع ${formatMoney(total, country.currency)}`,
-      cancelText: 'إلغاء',
-      message: (
-        <div className="space-y-3 text-start">
-          <p className="text-small leading-[1.8] text-muted-light dark:text-muted-dark">
-            راجع تفاصيل العملية قبل التأكيد. سيتم خصم المبلغ من بطاقتك فوراً.
-          </p>
-          <div className="rounded-card border border-border-light dark:border-border-dark divide-y divide-border-light dark:divide-border-dark text-small">
-            <div className="flex justify-between p-3">
-              <span className="text-muted-light dark:text-muted-dark">الباقة</span>
-              <span className="font-semibold">{plan.nameAr} · {cycle === 'monthly' ? 'شهري' : 'سنوي'}</span>
-            </div>
-            <div className="flex justify-between p-3">
-              <span className="text-muted-light dark:text-muted-dark">البطاقة</span>
-              <span className="font-mono">**** **** **** {last4}</span>
-            </div>
-            <div className="flex justify-between p-3">
-              <span className="text-muted-light dark:text-muted-dark">المبلغ</span>
-              <span className="font-bold text-primary">{formatMoney(total, country.currency)}</span>
-            </div>
-          </div>
-        </div>
-      ),
-    });
-    if (!ok) return;
+  const handlePay = (): void => {
+    const usingNew = selectedCardId === 'new';
+    if (usingNew && (!card.number || !card.name || !card.exp || !card.cvv)) return;
 
     onProcessing();
-    // Simulate Paymob's iframe response (in real prod this would be a webhook)
     setTimeout(() => {
-      // Test card 4242 = success, 4000 = fail (just for mock)
       const sanitized = card.number.replace(/\s/g, '');
       if (sanitized.endsWith('0000') || sanitized === '4000000000000002') onFailure();
       else onSuccess();
@@ -591,14 +698,14 @@ function CheckoutFlow({ plan, country, cycle, onBack, onProcessing, onSuccess, o
   };
 
   return (
-    <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
-      {/* Left: card form (Paymob iframe simulation) */}
-      <Card className="p-6 lg:p-8">
-        <button onClick={onBack} className="text-small text-muted-light dark:text-muted-dark hover:text-current flex items-center gap-1 mb-5">
-          <ArrowLeft className="h-4 w-4" /> العودة للباقات
-        </button>
+    <div className="max-w-2xl mx-auto">
+      <button onClick={onBack} className="text-small text-muted-light dark:text-muted-dark hover:text-current flex items-center gap-1 mb-5">
+        <ArrowLeft className="h-4 w-4" /> العودة
+      </button>
 
+      <h2 className="text-h1 font-bold text-center mb-6">إتمام الدفع</h2>
 
+<<<<<<< HEAD
         <div className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-small font-medium text-muted-light dark:text-muted-dark">رقم البطاقة <span className="text-danger ms-0.5">*</span></label>
@@ -639,6 +746,12 @@ function CheckoutFlow({ plan, country, cycle, onBack, onProcessing, onSuccess, o
       <Card className="p-6 h-fit">
         <h3 className="text-h3 font-bold mb-4">ملخص الطلب</h3>
         <div className="space-y-3 text-small mb-4 pb-4 border-b border-border-light dark:border-border-dark">
+=======
+      {/* Order summary */}
+      <Card className="p-5 mb-5">
+        <p className="text-small font-semibold text-muted-light dark:text-muted-dark mb-3">ملخص الطلب</p>
+        <div className="space-y-2 text-small mb-3 pb-3 border-b border-border-light dark:border-border-dark">
+>>>>>>> 169debf (feat: implement US-131 Change Plan (تغيير الباقة) with slider-based selection)
           <div className="flex justify-between">
             <span className="text-muted-light dark:text-muted-dark">الباقة</span>
             <span className="font-semibold">{plan.nameAr}</span>
@@ -647,42 +760,78 @@ function CheckoutFlow({ plan, country, cycle, onBack, onProcessing, onSuccess, o
             <span className="text-muted-light dark:text-muted-dark">دورة الفوترة</span>
             <span className="font-semibold">{cycle === 'monthly' ? 'شهري' : 'سنوي'}</span>
           </div>
-        </div>
-
-        <div className="space-y-2 text-small mb-4 pb-4 border-b border-border-light dark:border-border-dark">
+          {isUpgrade && proratedAmount > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-light dark:text-muted-dark">الفرق (Proration)</span>
+              <span className="font-semibold">{formatMoney(proratedAmount, country.currency)}</span>
+            </div>
+          )}
           <div className="flex justify-between">
-            <span className="text-muted-light dark:text-muted-dark">المبلغ</span>
-            <span>{formatMoney(amount, country.currency)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-light dark:text-muted-dark">ضريبة القيمة المضافة (5%)</span>
-            <span>{formatMoney(tax, country.currency)}</span>
+            <span className="text-muted-light dark:text-muted-dark">ضريبة القيمة المضافة 5%</span>
+            <span className="font-semibold">{formatMoney(tax, country.currency)}</span>
           </div>
         </div>
-
-        <div className="flex justify-between items-baseline mb-4 pb-4 border-b border-border-light dark:border-border-dark">
-          <span className="text-body font-semibold">الإجمالي</span>
-          <div className="text-end">
-            <p className="text-h2 font-extrabold">{formatMoney(total, country.currency)}</p>
-            <p className="text-[10px] text-muted-light dark:text-muted-dark">{cycle === 'monthly' ? 'تتجدد شهرياً' : 'تتجدد سنوياً'}</p>
-          </div>
+        <div className="flex justify-between text-body font-bold">
+          <span>الإجمالي</span>
+          <span>{formatMoney(total, country.currency)}</span>
         </div>
-
-        {/* Saved cards / add new card */}
-        <SavedCardPicker
-          cards={SAVED_CARDS}
-          selectedId={selectedCardId}
-          onSelect={setSelectedCardId}
-        />
       </Card>
+
+      {/* Payment method */}
+      <Card className="p-5 mb-5">
+        <p className="text-small font-semibold text-muted-light dark:text-muted-dark mb-3">طريقة الدفع</p>
+        <SavedCardPicker cards={SAVED_CARDS} selectedId={selectedCardId} onSelect={setSelectedCardId} />
+
+        {selectedCardId === 'new' && (
+          <div className="space-y-3 mt-4 pt-4 border-t border-border-light dark:border-border-dark">
+            <div className="relative">
+              <input
+                type="text"
+                value={card.number}
+                onChange={(e) => setCard({ ...card, number: e.target.value })}
+                placeholder="رقم البطاقة"
+                maxLength={19}
+                className="w-full h-12 px-3 pe-14 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body font-mono tracking-wider focus:outline-none focus:border-primary"
+              />
+              <span className="absolute end-3 top-1/2 -translate-y-1/2 inline-flex items-center justify-center h-7 px-2 rounded bg-gradient-to-r from-[#1a1f71] to-[#0f1c5e] text-white text-[10px] font-extrabold italic">VISA</span>
+            </div>
+            <Input label="اسم حامل البطاقة" value={card.name} onChange={(e) => setCard({ ...card, name: e.target.value })} placeholder="MOHAMMED AL KINDI" className="font-mono uppercase tracking-wide" />
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="تاريخ الانتهاء" value={card.exp} onChange={(e) => setCard({ ...card, exp: e.target.value })} placeholder="MM/YY" maxLength={5} className="font-mono" />
+              <Input label="CVV" value={card.cvv} onChange={(e) => setCard({ ...card, cvv: e.target.value })} placeholder="123" maxLength={4} className="font-mono" />
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-4 mt-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={save} onChange={(e) => setSave(e.target.checked)} className="h-4 w-4 accent-primary" />
+            <span className="text-small">حفظ البطاقة</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={autoRenew} onChange={(e) => setAutoRenew(e.target.checked)} className="h-4 w-4 accent-primary" />
+            <span className="text-small">التجديد التلقائي</span>
+          </label>
+        </div>
+      </Card>
+
+      {/* Pay button */}
+      <button
+        onClick={handlePay}
+        className="w-full h-14 rounded-full bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 text-white text-body font-bold flex items-center justify-center gap-2 transition-colors"
+      >
+        ادفع {formatMoney(total, country.currency)}
+      </button>
+      <p className="text-[11px] text-muted-light dark:text-muted-dark text-center mt-3">
+        عند نجاح الدفع، الباقة تتحول فوراً
+      </p>
     </div>
   );
 }
 
-const SAVED_CARDS: { id: string; brand: 'visa' | 'mastercard'; last4: string; expiry: string; holder: string }[] = [
-  { id: 'card_1', brand: 'visa', last4: '5123', expiry: '12/29', holder: 'Mohammed Al Kindi' },
-  { id: 'card_2', brand: 'mastercard', last4: '8842', expiry: '08/27', holder: 'Mohammed Al Kindi' },
-];
+/* ================================================================ */
+/* Saved Card Picker                                                */
+/* ================================================================ */
 
 function SavedCardPicker({
   cards,
@@ -695,7 +844,6 @@ function SavedCardPicker({
 }): JSX.Element {
   return (
     <div className="space-y-2">
-      <p className="text-small font-semibold">طريقة الدفع</p>
       {cards.map((c) => {
         const active = selectedId === c.id;
         return (
@@ -738,7 +886,7 @@ function SavedCardPicker({
         )}
       >
         <Plus className="h-4 w-4" />
-        <span className="text-small font-semibold">إضافة بطاقة جديدة</span>
+        <span className="text-small font-semibold">+ إضافة بطاقة جديدة</span>
       </button>
     </div>
   );

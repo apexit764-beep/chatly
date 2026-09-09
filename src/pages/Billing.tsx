@@ -175,7 +175,7 @@ export default function Billing(): JSX.Element {
           </div>
           <div className="flex flex-col gap-2">
             <Link to="/subscribe" className="h-10 px-5 rounded-full bg-white text-primary text-small font-semibold flex items-center gap-2 hover:bg-white/90 transition-colors">
-              <ArrowUpRight className="h-4 w-4" /> ترقية
+              <ArrowUpRight className="h-4 w-4" /> تغيير الباقة
             </Link>
             <button onClick={() => setShowSubDetails(true)} className="h-10 px-5 rounded-full bg-white/15 backdrop-blur text-white text-small font-semibold hover:bg-white/25 transition-colors flex items-center gap-2">
               <Eye className="h-4 w-4" /> تفاصيل الاشتراك
