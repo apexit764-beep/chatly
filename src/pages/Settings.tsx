@@ -22,6 +22,8 @@ import {
   Copy,
   Check,
   ShieldCheck,
+  Eye,
+  EyeOff,
   ShieldOff,
   Smartphone,
   Mail,
@@ -35,7 +37,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { cn } from '@/utils/cn';
-import { DEMO_BACKUP_CODES, DEMO_TOTP_SECRET, otpAuthUri, verifyTotpCode } from '@/utils/twoFactor';
+import { DEMO_BACKUP_CODES, DEMO_TOTP_SECRET, otpAuthUri, verifyBackupCode, verifyTotpCode } from '@/utils/twoFactor';
 import Billing from './Billing';
 
 const SETTINGS_TABS: { key: string; label: string; icon: ReactNode }[] = [
@@ -872,6 +874,9 @@ function SecurityTab(): JSX.Element {
   );
 }
 
+/** Ceiling on guesses when turning 2FA off — six digits fall fast without one. */
+const MAX_DISABLE_ATTEMPTS = 5;
+
 function TwoFactorRow(): JSX.Element {
   const security = useSettingsStore((s) => s.security);
   const setSecurity = useSettingsStore((s) => s.setSecurity);
@@ -880,8 +885,18 @@ function TwoFactorRow(): JSX.Element {
   // The account label the authenticator app will show next to the code.
   const user = useAuthStore((s) => s.user);
 
+  const verifyPassword = useAuthStore((s) => s.verifyPassword);
+
   const [setupOpen, setSetupOpen] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [disableOpen, setDisableOpen] = useState(false);
+  const [disableMode, setDisableMode] = useState<'password' | 'code'>('password');
+  const [disablePassword, setDisablePassword] = useState('');
+  const [disableShowPwd, setDisableShowPwd] = useState(false);
+  const [disableCode, setDisableCode] = useState('');
+  const [disableError, setDisableError] = useState<string | null>(null);
+  const [disableBusy, setDisableBusy] = useState(false);
+  const [disableAttempts, setDisableAttempts] = useState(0);
   const [tfaDigits, setTfaDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [codeError, setCodeError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -955,17 +970,51 @@ function TwoFactorRow(): JSX.Element {
     showToast('تم تفعيل المصادقة الثنائية بنجاح', 'success');
   };
 
-  const handleDisable = async (): Promise<void> => {
-    const ok = await confirm({
-      title: 'تعطيل المصادقة الثنائية؟',
-      message: 'سيتم إزالة طبقة الحماية الإضافية من حسابك. يمكنك إعادة تفعيلها لاحقاً.',
-      variant: 'danger',
-      confirmText: 'نعم، تعطيل',
-    });
-    if (ok) {
-      setSecurity({ twoFactor: false });
-      showToast('تم تعطيل المصادقة الثنائية', 'info');
+  const closeDisable = (): void => {
+    setDisableOpen(false);
+    setDisablePassword('');
+    setDisableCode('');
+    setDisableError(null);
+  };
+
+  /**
+   * Turning 2FA off must cost the same proof as getting past it, otherwise the
+   * protection is only as strong as an unattended open tab: whoever reaches this
+   * page could switch it off and from then on the password alone opens the
+   * account. Either factor is accepted — the password, or a code from the
+   * authenticator (or a backup code) for someone whose password is the thing
+   * they suspect is compromised.
+   */
+  const confirmDisable = async (): Promise<void> => {
+    if (disableAttempts >= MAX_DISABLE_ATTEMPTS) return;
+    setDisableBusy(true);
+    let ok: boolean;
+    if (disableMode === 'password') {
+      ok = disablePassword.length > 0 && verifyPassword(disablePassword);
+    } else {
+      const trimmed = disableCode.trim();
+      ok = trimmed.includes('-') ? verifyBackupCode(trimmed) : await verifyTotpCode(trimmed);
     }
+    setDisableBusy(false);
+
+    if (!ok) {
+      const next = disableAttempts + 1;
+      setDisableAttempts(next);
+      setDisablePassword('');
+      setDisableCode('');
+      // A six-digit code is trivially guessable without a ceiling on attempts.
+      setDisableError(
+        next >= MAX_DISABLE_ATTEMPTS
+          ? 'تم تجاوز عدد المحاولات. أعد تحميل الصفحة وحاول من جديد'
+          : disableMode === 'password' ? 'كلمة المرور غير صحيحة' : 'رمز غير صحيح أو منتهي',
+      );
+      return;
+    }
+
+    setSecurity({ twoFactor: false });
+    setDisableAttempts(0);
+    closeDisable();
+    showToast('تم تعطيل المصادقة الثنائية', 'info');
   };
 
   const copyToClipboard = (text: string, type: 'key' | 'codes'): void => {
@@ -984,7 +1033,7 @@ function TwoFactorRow(): JSX.Element {
               <ShieldCheck className="h-3.5 w-3.5" />
               مفعّلة
             </span>
-            <button onClick={handleDisable} className="text-small text-danger hover:underline font-medium">تعطيل</button>
+            <button onClick={() => { setDisableMode('password'); setDisableOpen(true); }} className="text-small text-danger hover:underline font-medium">تعطيل</button>
           </div>
         ) : (
           <button
@@ -996,6 +1045,86 @@ function TwoFactorRow(): JSX.Element {
           </button>
         )}
       </Row>
+
+      <Modal open={disableOpen} onClose={closeDisable} title="تعطيل المصادقة الثنائية" size="sm">
+        <div className="space-y-4">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-danger/10 mb-3">
+              <ShieldCheck className="h-6 w-6 text-danger" />
+            </div>
+            <h3 className="text-h3 font-semibold mb-1">تأكيد هويتك</h3>
+            <p className="text-small text-muted-light dark:text-muted-dark">
+              {disableMode === 'password'
+                ? 'أدخل كلمة المرور لتأكيد تعطيل المصادقة الثنائية'
+                : 'أدخل رمزاً من تطبيق المصادقة، أو أحد الرموز الاحتياطية'}
+            </p>
+          </div>
+
+          {disableMode === 'password' ? (
+            <div className="relative">
+              <input
+                type={disableShowPwd ? 'text' : 'password'}
+                value={disablePassword}
+                onChange={(e) => { setDisableError(null); setDisablePassword(e.target.value); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' && disablePassword) void confirmDisable(); }}
+                placeholder="كلمة المرور"
+                autoFocus
+                disabled={disableBusy || disableAttempts >= MAX_DISABLE_ATTEMPTS}
+                className="w-full h-11 px-3 pe-10 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:opacity-60"
+              />
+              <button
+                type="button"
+                onClick={() => setDisableShowPwd((v) => !v)}
+                className="absolute inset-y-0 end-3 flex items-center text-muted-light dark:text-muted-dark"
+                aria-label={disableShowPwd ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+              >
+                {disableShowPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          ) : (
+            <input
+              value={disableCode}
+              onChange={(e) => { setDisableError(null); setDisableCode(e.target.value.toUpperCase()); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' && disableCode.trim()) void confirmDisable(); }}
+              placeholder="123456 أو XXXX-XXXX"
+              dir="ltr"
+              autoFocus
+              disabled={disableBusy || disableAttempts >= MAX_DISABLE_ATTEMPTS}
+              className="w-full h-11 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-center text-body font-mono tracking-widest focus:outline-none focus:border-primary disabled:opacity-60"
+            />
+          )}
+
+          {disableError && <p className="text-small text-danger text-center" role="alert">{disableError}</p>}
+
+          <button
+            type="button"
+            onClick={() => void confirmDisable()}
+            disabled={
+              disableBusy
+              || disableAttempts >= MAX_DISABLE_ATTEMPTS
+              || (disableMode === 'password' ? !disablePassword : !disableCode.trim())
+            }
+            className="w-full h-11 rounded-full bg-danger text-white font-semibold disabled:opacity-50"
+          >
+            {disableBusy ? '…' : 'تعطيل المصادقة الثنائية'}
+          </button>
+
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={() => {
+                setDisableMode((m) => (m === 'password' ? 'code' : 'password'));
+                setDisableError(null);
+                setDisablePassword('');
+                setDisableCode('');
+              }}
+              className="text-small text-primary hover:underline"
+            >
+              {disableMode === 'password' ? 'أو استخدم رمزاً من تطبيق المصادقة' : 'أو استخدم كلمة المرور'}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={setupOpen} onClose={closeSetup} title="إعداد المصادقة الثنائية (2FA)" size="md">
         {/* Steps indicator */}

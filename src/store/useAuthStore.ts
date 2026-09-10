@@ -23,6 +23,8 @@ interface AuthState {
   lockedUntil: number | null;
   login: (email: string, password: string) => { ok: boolean; needs2FA?: boolean; error?: string };
   verifySecondFactor: (code: string) => Promise<{ ok: boolean; error?: string }>;
+  /** Re-check the signed-in user's password, for actions that must not ride on an open session. */
+  verifyPassword: (password: string) => boolean;
   cancelPending: () => void;
   updateUser: (patch: Partial<AuthUser>) => void;
   logout: () => void;
@@ -111,6 +113,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     persist(pending);
     set({ isAuthenticated: true, user: pending, pending: null, attempts: 0, lockedUntil: null });
     return { ok: true };
+  },
+  verifyPassword: (password) => {
+    const creds = getAppMode() === 'admin' ? ADMIN_CREDS : CLIENT_CREDS;
+    return password === creds.password;
   },
   cancelPending: () => set({ pending: null, attempts: 0, lockedUntil: null }),
   updateUser: (patch) => {
