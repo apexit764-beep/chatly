@@ -30,6 +30,8 @@ import {
   Drawer,
   FilterDropdown,
   Input,
+  PhoneField,
+  PHONE_COUNTRIES,
   useConfirm,
 } from '@components/ui';
 import { useDataStore } from '@/store/useDataStore';
@@ -61,6 +63,8 @@ export default function Team(): JSX.Element {
   const [form, setForm] = useState<{
     name: string;
     email: string;
+    phoneCode: string;
+    phone: string;
     roleId: string;
     departments: string[];
     channels: string[];
@@ -74,6 +78,8 @@ export default function Team(): JSX.Element {
   }>({
     name: '',
     email: '',
+    phoneCode: '+968',
+    phone: '',
     roleId: 'role_support',
     departments: [],
     channels: [],
@@ -168,6 +174,8 @@ export default function Team(): JSX.Element {
     setForm({
       name: '',
       email: '',
+      phoneCode: '+968',
+      phone: '',
       roleId: 'role_support',
       departments: [],
       channels: [],
@@ -183,9 +191,17 @@ export default function Team(): JSX.Element {
   };
   const openEdit = (a: Agent): void => {
     setEditing(a);
+    // Longest dial code wins, so +968 is not mistaken for +96 or +9.
+    const dial = a.phone
+      ? [...PHONE_COUNTRIES].sort((x, y) => y.code.length - x.code.length).find((c) => a.phone!.startsWith(c.code))
+      : undefined;
+    const code = dial?.code ?? '+968';
+    const local = dial ? a.phone!.slice(dial.code.length) : '';
     setForm({
       name: a.name,
       email: a.email,
+      phoneCode: code,
+      phone: local,
       roleId: a.roleId,
       departments: a.departments,
       channels: a.channels,
@@ -203,6 +219,8 @@ export default function Team(): JSX.Element {
     if (!form.name.trim()) { showToast(t('أدخل اسم الموظف'), 'error'); return; }
     if (!form.email.trim()) { showToast(t('أدخل البريد الإلكتروني'), 'error'); return; }
     if (!/^\S+@\S+\.\S+$/.test(form.email)) { showToast(t('بريد إلكتروني غير صحيح'), 'error'); return; }
+    // Optional: only stored when actually filled in, so a blank field leaves no dangling country code.
+    const fullPhone = form.phone.trim() ? `${form.phoneCode}${form.phone.trim()}` : undefined;
     const workingHours = { enabled: form.whEnabled, start: form.whStart, end: form.whEnd, days: form.whDays };
     if (editing) {
       updateAgent(editing.id, {
@@ -215,6 +233,7 @@ export default function Team(): JSX.Element {
         timezone: form.timezone,
         workingHours,
         hidePhoneNumbers: form.hidePhoneNumbers,
+        phone: fullPhone,
       });
       showToast(t('تم تحديث الموظف'), 'success');
     } else {
@@ -224,6 +243,7 @@ export default function Team(): JSX.Element {
         roleId: form.roleId,
         departments: form.departments,
         channels: form.channels,
+        phone: fullPhone,
       });
       showToast(t(`تم إرسال دعوة إلى ${form.email}`), 'success');
     }
@@ -918,6 +938,13 @@ export default function Team(): JSX.Element {
             icon={<Mail className="h-4 w-4" />}
             placeholder="employee@company.com"
           />
+          <PhoneField
+            label={<>{t('رقم الهاتف')}<span className="text-muted-light dark:text-muted-dark font-normal ms-1">({t('اختياري')})</span></>}
+            countryCode={form.phoneCode}
+            phone={form.phone}
+            onCountryCodeChange={(code) => setForm({ ...form, phoneCode: code })}
+            onPhoneChange={(phone) => setForm({ ...form, phone })}
+          />
           <div className="space-y-1.5">
             <label className="text-small font-medium text-muted-light dark:text-muted-dark block">{t('الدور')}<span className="text-danger ms-0.5">*</span></label>
             <select
@@ -1116,6 +1143,7 @@ export default function Team(): JSX.Element {
                   </span>
                 )}
               </div>
+              {drawer.phone && <Row label={t('رقم الهاتف')} value={drawer.phone} />}
               <Row label={t('الأقسام')} value={drawer.departments.map((id) => departments.find((d) => d.id === id)?.name).filter(Boolean).join('، ') || '—'} />
               <Row label={t('القنوات')} value={`${drawer.channels.length} ${t('قناة')}`} />
               <Row label={drawer.invitationStatus === 'pending' ? t('تاريخ الدعوة') : t('آخر نشاط')} value={timeAgo(drawer.invitationStatus === 'pending' && drawer.invitedAt ? drawer.invitedAt : drawer.lastActive)} />

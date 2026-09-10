@@ -98,7 +98,7 @@ interface DataState {
   addAgent: (a: Omit<Agent, 'id' | 'lastActive' | 'status'>) => void;
   updateAgent: (id: string, patch: Partial<Agent>) => void;
   deleteAgent: (id: string) => void;
-  inviteAgent: (data: { email: string; name: string; roleId: string; departments: string[]; channels: string[] }) => void;
+  inviteAgent: (data: { email: string; name: string; roleId: string; departments: string[]; channels: string[]; phone?: string }) => void;
   resendInvitation: (id: string) => void;
   cancelInvitation: (id: string) => void;
 
@@ -478,6 +478,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         id,
         name: data.name || data.email.split('@')[0],
         email: data.email,
+        phone: data.phone,
         role: legacyRole,
         roleId: data.roleId,
         invitationStatus: 'pending',

@@ -152,6 +152,8 @@ export interface Agent {
   id: string;
   name: string;
   email: string;
+  /** Optional — staff can be invited without one */
+  phone?: string;
   /** Legacy role kept for backwards compatibility — derived from roleId */
   role: AgentRole;
   /** New: references roles[].id — drives permissions */
