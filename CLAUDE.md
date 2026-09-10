@@ -15,8 +15,25 @@ Three deployment targets:
 1. **VPS (primary)**: `qhub-client.apexes.click`
    - Path: `/var/www/apexes.click/qhub-client/`
    - Assets are served from `/assets-v2/` (set by `build.assetsDir` in `vite.config.ts`)
-   - SPA routing: each route has its own `index.html` copy (50 total: root + `404.html` + 33 routes + `admin/` + 14 admin subroutes)
-   - All route HTML files must be updated together on deploy to avoid version mismatch
+   - SPA routing: each route has its own `index.html` copy — **114 total**, and the
+     tree is **nested**, not flat. Do not work from a remembered count; enumerate the
+     tree with `list_dir` every deploy, because routes get added to the server over time.
+     As of build `793b4e4b`:
+     - root `index.html` + `404.html` (2)
+     - 41 top-level client routes
+     - `settings/` × 6 (`api`, `appearance`, `general`, `languages`, `notifications`, `security`)
+     - `channels/` × 16 (`email`, `gmail`, `instagram`, `messenger`, `new`, `outlook`,
+       `salla`, `shopify`, `smtp`, `telegram`, `whatsapp`, `widget`, `woocommerce`,
+       `x`, `yahoo`, `zid`)
+     - `reports/` × 2 (`overview`, `ratings`), `team/roles`, `campaigns/templates`
+     - `dashboard/` × 23 — a full nested copy of the route set from an older router layout
+     - `admin/` + 21 admin subroutes (22)
+   - All route HTML files must be updated together on deploy to avoid version mismatch.
+     **A missed nested copy does not fail loudly**: it still loads, from whatever old
+     `/assets/` bundle it points at, so that one route silently serves a months-old app
+     while every other route is current. Its build id also disagrees with `version.json`,
+     so the version-check script reloads it on a timer. This bit us on
+     `/settings/security` — it was stuck on build `26696f1b` long after the rest moved on.
    - Use VPS Server MCP tools to read/write files on production
 
 ### Deploy order (must not be reordered)
@@ -30,7 +47,12 @@ So always:
 2. Run `npm run verify:deploy` — it fetches each asset from the live site and
    compares status, size, and content-type against the local build. Do not
    continue while it reports failures.
-3. Only then publish `index.html` (all 50 copies) and `version.json`.
+3. Only then publish `index.html` (**every** copy — enumerate the tree, don't assume
+   a count) and `version.json` last.
+
+Since `verify:deploy` cannot reach the domain from the agent proxy, diff the list of
+files you actually uploaded against `ls dist/assets-v2` before touching any HTML —
+doing that by eye misses files. It caught `channelTypes-vTlv0ltc.js` on build `793b4e4b`.
 
 Keep `index.html` and `version.json` on the **same** build ID at every moment.
 A mismatch makes the version-check script reload in a loop.
