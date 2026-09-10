@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Check,
-  X as XIcon,
   Star,
   Lock,
   Shield,
@@ -10,7 +9,6 @@ import {
   Loader2,
   ArrowLeft,
   Sparkles,
-  Infinity as InfinityIcon,
   CheckCircle2,
   AlertTriangle,
   ChevronDown,
@@ -85,71 +83,101 @@ export default function Subscribe(): JSX.Element {
   }, [currentStopIdx]);
 
   const activePlanAtSlider = activePlans.find((p) => p.id === sliderStops[sliderIdx]?.planId) ?? null;
-  const isCurrent = activePlanAtSlider?.id === currentPlanId;
-  const isEnterprise = activePlanAtSlider?.tier === 'enterprise';
 
   const currentPlanPrice = currentPlan ? (currentPlan.pricesPerCountry[country] ?? { monthly: 0, yearly: 0 }) : { monthly: 0, yearly: 0 };
-  const sliderPlanPrice = activePlanAtSlider ? (activePlanAtSlider.pricesPerCountry[country] ?? { monthly: 0, yearly: 0 }) : { monthly: 0, yearly: 0 };
 
-  const isUpgrade = (() => {
-    if (!activePlanAtSlider || !currentPlan || isCurrent) return false;
-    const currentAmount = cycle === 'monthly' ? currentPlanPrice.monthly : currentPlanPrice.yearly;
-    const newAmount = cycle === 'monthly' ? sliderPlanPrice.monthly : sliderPlanPrice.yearly;
-    return newAmount > currentAmount;
-  })();
+  // Every column in the comparison table needs its own price and its own
+  // upgrade/downgrade verdict, so these take a plan rather than reading the
+  // slider — the slider only recommends, it no longer decides what you buy.
+  const priceOf = (plan: Plan | null): { monthly: number; yearly: number } =>
+    plan ? (plan.pricesPerCountry[country] ?? { monthly: 0, yearly: 0 }) : { monthly: 0, yearly: 0 };
 
-  const proratedAmount = (() => {
-    if (!isUpgrade || !sub || !activePlanAtSlider) return 0;
-    const currentAmount = cycle === 'monthly' ? currentPlanPrice.monthly : currentPlanPrice.yearly;
-    const newAmount = cycle === 'monthly' ? sliderPlanPrice.monthly : sliderPlanPrice.yearly;
+  const amountFor = (plan: Plan | null): number => {
+    const p = priceOf(plan);
+    return cycle === 'monthly' ? p.monthly : p.yearly;
+  };
+
+  const isUpgradeTo = (plan: Plan | null): boolean => {
+    if (!plan || !currentPlan || plan.id === currentPlanId) return false;
+    return amountFor(plan) > amountFor(currentPlan);
+  };
+
+  const proratedFor = (plan: Plan | null): number => {
+    if (!isUpgradeTo(plan) || !sub || !plan) return 0;
     const periodMs = new Date(sub.currentPeriodEnd).getTime() - new Date(sub.currentPeriodStart).getTime();
     const remainMs = Math.max(0, new Date(sub.currentPeriodEnd).getTime() - Date.now());
     const remainFraction = periodMs > 0 ? remainMs / periodMs : 0;
-    const diff = newAmount - currentAmount;
+    const diff = amountFor(plan) - amountFor(currentPlan);
     return Math.max(0, Math.round(diff * remainFraction * 100) / 100);
-  })();
-
-  const handleSubscribeClick = (): void => {
-    if (!activePlanAtSlider || isCurrent || isEnterprise) return;
-    setSelectedPlan(activePlanAtSlider);
-    if (isUpgrade) {
-      setStep('checkout');
-    } else {
-      setStep('confirm-downgrade');
-    }
   };
+
+  const isUpgrade = isUpgradeTo(selectedPlan);
+  const proratedAmount = proratedFor(selectedPlan);
+
+  const handleSubscribeClick = (plan: Plan | null): void => {
+    if (!plan || plan.id === currentPlanId || plan.tier === 'enterprise') return;
+    setSelectedPlan(plan);
+    setStep(isUpgradeTo(plan) ? 'checkout' : 'confirm-downgrade');
+  };
+
+  const TIER_RANK: Record<string, number> = { starter: 0, pro: 1, business: 2, enterprise: 3 };
+
+  /**
+   * Each tier lists only what it adds, behind a "كل مزايا باقة X" pointer to the
+   * tier below. That reads fine as prose but is useless as a table row, and a
+   * plain `features.includes()` matrix would wrongly mark the inherited ones as
+   * missing. So the pointers are dropped and inheritance is resolved into real
+   * ticks — the table then states the inheritance instead of alluding to it.
+   */
+  const isInheritPointer = (f: string): boolean => f.startsWith('كل مزايا');
+
+  const rankedPlans = useMemo(
+    () => [...activePlans].sort((a, b) => (TIER_RANK[a.tier] ?? 0) - (TIER_RANK[b.tier] ?? 0)),
+    [activePlans],
+  );
 
   const allFeatures: string[] = useMemo(() => {
     const seen = new Set<string>();
     const result: string[] = [];
-    activePlans
-      .sort((a, b) => {
-        const order = { starter: 0, pro: 1, business: 2, enterprise: 3 };
-        return (order[a.tier] ?? 0) - (order[b.tier] ?? 0);
-      })
-      .forEach((p) => {
-        p.features.forEach((f) => {
-          if (!seen.has(f)) { seen.add(f); result.push(f); }
-        });
+    rankedPlans.forEach((p) => {
+      p.features.filter((f) => !isInheritPointer(f)).forEach((f) => {
+        if (!seen.has(f)) { seen.add(f); result.push(f); }
       });
-    return result;
-  }, [activePlans]);
-
-  const currentFeatureSet = useMemo(() => {
-    if (!activePlanAtSlider) return new Set<string>();
-    const tierOrder = { starter: 0, pro: 1, business: 2, enterprise: 3 };
-    const selectedRank = tierOrder[activePlanAtSlider.tier] ?? 0;
-    const included = new Set<string>();
-    activePlans.forEach((p) => {
-      if ((tierOrder[p.tier] ?? 0) <= selectedRank) {
-        p.features.forEach((f) => included.add(f));
-      }
     });
-    return included;
-  }, [activePlanAtSlider, activePlans]);
+    return result;
+  }, [rankedPlans]);
+
+  const featureSetFor = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    rankedPlans.forEach((plan) => {
+      const rank = TIER_RANK[plan.tier] ?? 0;
+      const included = new Set<string>();
+      rankedPlans.forEach((p) => {
+        if ((TIER_RANK[p.tier] ?? 0) <= rank) {
+          p.features.filter((f) => !isInheritPointer(f)).forEach((f) => included.add(f));
+        }
+      });
+      map.set(plan.id, included);
+    });
+    return map;
+  }, [rankedPlans]);
+
+  /** -1 is the sentinel for "no ceiling" across every limit. */
+  const limitLabel = (n: number): string => (n === -1 ? 'غير محدود' : n.toLocaleString('en'));
+
+  /** Yearly is billed as ten months, so the discount is derived, never typed in. */
+  const yearlySavingPct = useMemo(() => {
+    const ref = rankedPlans.find((p) => p.tier === 'pro') ?? rankedPlans[0];
+    if (!ref) return 0;
+    const p = ref.pricesPerCountry[country];
+    if (!p || !p.monthly) return 0;
+    return Math.round((1 - p.yearly / (p.monthly * 12)) * 100);
+  }, [rankedPlans, country]);
+
+  const recommendedPlanId = sliderStops[sliderIdx]?.planId ?? null;
 
   return (
-    <div className="p-4 lg:p-8 page-fade max-w-5xl mx-auto">
+    <div className="p-4 lg:p-8 page-fade max-w-6xl mx-auto">
       {step === 'select' && (
         <>
           <button onClick={() => navigate(-1)} className="text-small text-muted-light dark:text-muted-dark hover:text-current flex items-center gap-1 mb-4">
@@ -157,47 +185,14 @@ export default function Subscribe(): JSX.Element {
           </button>
 
           <div className="text-center mb-8">
-            <h1 className="text-h1 font-extrabold mb-2">تغيير الباقة</h1>
+            <h1 className="text-h1 font-extrabold mb-2">أربع باقات باشتراك شهري أو سنوي</h1>
             <p className="text-body text-muted-light dark:text-muted-dark max-w-2xl mx-auto">
-              حرّك المؤشر لتحديد عدد المحادثات الشهرية المتوقعة — سيظهر السعر والباقة المناسبة تلقائياً
+              قارن الباقات جنباً إلى جنب — ويمكنك ترقية باقتك أو تخفيضها في أي وقت
             </p>
           </div>
 
-          {/* Slider */}
-          <Card className="p-6 mb-6">
-            <h2 className="text-h2 font-bold text-center mb-6">المحادثات الشهرية المتوقعة</h2>
-            <div className="px-2">
-              <input
-                type="range"
-                min={0}
-                max={sliderStops.length - 1}
-                step={1}
-                value={sliderIdx}
-                onChange={(e) => setSliderIdx(Number(e.target.value))}
-                className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary bg-border-light dark:bg-border-dark [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-4 [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-4 [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:shadow-md"
-                style={{
-                  background: `linear-gradient(to left, #2563EB ${((sliderIdx / (sliderStops.length - 1)) * 100)}%, #e5e7eb ${((sliderIdx / (sliderStops.length - 1)) * 100)}%)`,
-                }}
-              />
-              <div className="flex justify-between mt-2 text-small text-muted-light dark:text-muted-dark">
-                {sliderStops.map((s, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setSliderIdx(i)}
-                    className={cn(
-                      'transition-colors',
-                      sliderIdx === i && 'text-primary font-bold',
-                    )}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </Card>
-
-          {/* Cycle toggle */}
-          <div className="flex items-center justify-center gap-3 mb-6">
+          {/* Cycle toggle — the saving is derived from the prices, not asserted */}
+          <div className="flex items-center justify-center mb-6">
             <div className="flex items-center gap-1 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-full p-1">
               <button
                 onClick={() => setCycle('monthly')}
@@ -212,123 +207,233 @@ export default function Subscribe(): JSX.Element {
               <button
                 onClick={() => setCycle('yearly')}
                 className={cn(
-                  'px-5 py-2 rounded-full text-small font-medium transition-colors',
+                  'px-5 py-2 rounded-full text-small font-medium transition-colors inline-flex items-center gap-1.5',
                   cycle === 'yearly' ? 'bg-primary text-white shadow' : 'text-muted-light dark:text-muted-dark',
                 )}
                 style={cycle === 'yearly' ? { color: '#fff' } : undefined}
               >
                 سنوي
+                {yearlySavingPct > 0 && (
+                  <span className={cn(
+                    'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                    cycle === 'yearly' ? 'bg-white/20' : 'bg-success/15 text-success',
+                  )}>
+                    وفّر {yearlySavingPct}%
+                  </span>
+                )}
               </button>
             </div>
           </div>
 
-          {/* Two cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {/* Left: plan details */}
-            <Card className={cn(
-              'p-6 flex flex-col relative',
-              activePlanAtSlider?.popular && 'border-2 border-primary',
-            )}>
-              {activePlanAtSlider?.popular && (
-                <span className="absolute -top-3 start-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary text-white text-[10px] font-bold shadow-lg">
-                  <Star className="h-3 w-3 fill-current" /> الأكثر شعبية
-                </span>
-              )}
-              <h3 className="text-h2 font-extrabold mb-1">{activePlanAtSlider?.nameAr ?? ''}</h3>
-              <p className="text-small text-muted-light dark:text-muted-dark mb-4">{activePlanAtSlider?.tagline ?? ''}</p>
-
-              {isEnterprise ? (
-                <div className="mb-4">
-                  <p className="text-display font-extrabold">حسب الطلب</p>
-                  <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">تسعير مخصّص لاحتياجاتك</p>
-                </div>
-              ) : (
-                <div className="mb-4">
-                  <div className="flex items-baseline gap-1">
-                    <p className="text-display font-extrabold">
-                      {formatMoney(cycle === 'yearly' ? sliderPlanPrice.yearly : sliderPlanPrice.monthly, selectedCountry.currency)}
-                    </p>
-                    <span className="text-small text-muted-light dark:text-muted-dark">
-                      / {cycle === 'yearly' ? 'سنوياً' : 'شهرياً'}
-                    </span>
-                  </div>
-                  {cycle === 'yearly' && (
-                    <p className="text-small text-success font-medium mt-1">
-                      يعادل {formatMoney(Math.round(sliderPlanPrice.yearly / 12), selectedCountry.currency)} / شهرياً — أقل من سعر الاشتراك الشهري
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {isEnterprise ? (
-                <button
-                  onClick={() => setContactOpen(true)}
-                  className="w-full h-11 rounded-full text-body font-semibold transition-colors bg-white dark:bg-surface-dark border-2 border-primary text-primary hover:bg-primary hover:text-white flex items-center justify-center gap-2 mt-auto"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  تواصل معنا
-                </button>
-              ) : isCurrent ? (
-                <button
-                  disabled
-                  className="w-full h-11 rounded-full text-body font-semibold bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark cursor-default mt-auto"
-                >
-                  الباقة الحالية
-                </button>
-              ) : (
-                <button
-                  onClick={handleSubscribeClick}
-                  className="w-full h-11 rounded-full text-body font-semibold bg-primary hover:bg-primary-dark text-white transition-colors mt-auto"
-                >
-                  اشترك الآن
-                </button>
-              )}
-            </Card>
-
-            {/* Right: conversations count */}
-            <Card className="p-6 flex flex-col items-center justify-center text-center">
-              {isEnterprise ? (
-                <>
-                  <InfinityIcon className="h-12 w-12 text-primary mb-2" />
-                  <p className="text-h2 font-bold text-muted-light dark:text-muted-dark">غير محدود</p>
-                  <p className="text-small text-muted-light dark:text-muted-dark">محادثة / شهرياً</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-[3rem] font-extrabold leading-none mb-1">
-                    {(sliderStops[sliderIdx]?.conversations ?? 0).toLocaleString('en')}
-                  </p>
-                  <p className="text-small text-muted-light dark:text-muted-dark">محادثة / شهرياً</p>
-                </>
-              )}
-            </Card>
+          {/* Slider — now a recommendation, not the thing that picks your plan */}
+          <div className="max-w-2xl mx-auto mb-8">
+            <p className="text-small text-center text-muted-light dark:text-muted-dark mb-3">
+              كم محادثة تتوقّعها شهرياً؟ اسحب المؤشر —{' '}
+              <span className="text-primary font-semibold">
+                الباقة المناسبة: {activePlanAtSlider?.nameAr ?? '—'}
+              </span>
+            </p>
+            <div className="px-2">
+              <input
+                type="range"
+                min={0}
+                max={sliderStops.length - 1}
+                step={1}
+                value={sliderIdx}
+                onChange={(e) => setSliderIdx(Number(e.target.value))}
+                aria-label="عدد المحادثات الشهرية المتوقعة"
+                className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary bg-border-light dark:bg-border-dark [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-4 [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-4 [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:shadow-md"
+                style={{
+                  background: `linear-gradient(to left, #2563EB ${((sliderIdx / (sliderStops.length - 1)) * 100)}%, #e5e7eb ${((sliderIdx / (sliderStops.length - 1)) * 100)}%)`,
+                }}
+              />
+              <div className="flex justify-between mt-2 text-small text-muted-light dark:text-muted-dark">
+                {sliderStops.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSliderIdx(i)}
+                    className={cn('transition-colors', sliderIdx === i && 'text-primary font-bold')}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Features list */}
-          <Card className="p-6 mb-8">
-            <h2 className="text-h2 font-bold text-center mb-5">كل الميزات (عبر كل الباقات)</h2>
-            <div className="space-y-3">
-              {allFeatures.map((f) => {
-                const included = currentFeatureSet.has(f);
-                return (
-                  <div key={f} className="flex items-center gap-3">
-                    {included ? (
-                      <span className="h-6 w-6 rounded-full bg-success/15 text-success flex items-center justify-center flex-shrink-0">
-                        <Check className="h-3.5 w-3.5" />
-                      </span>
-                    ) : (
-                      <span className="h-6 w-6 rounded-full bg-danger/10 text-danger flex items-center justify-center flex-shrink-0">
-                        <XIcon className="h-3.5 w-3.5" />
-                      </span>
-                    )}
-                    <span className={cn('text-body', !included && 'text-muted-light dark:text-muted-dark')}>{f}</span>
-                  </div>
-                );
-              })}
+          {/* Comparison table — every plan side by side, the way the landing page reads */}
+          <Card className="p-0 overflow-hidden mb-8">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] border-collapse text-small">
+                <thead>
+                  <tr>
+                    <th
+                      className="text-start align-bottom p-4 bg-white dark:bg-surface-dark sticky z-10 w-[190px]"
+                      style={{ insetInlineStart: 0 }}
+                    >
+                      <span className="text-body font-bold">قارن المزايا</span>
+                    </th>
+                    {rankedPlans.map((plan) => {
+                      const price = priceOf(plan);
+                      const isThisCurrent = plan.id === currentPlanId;
+                      const isEnt = plan.tier === 'enterprise';
+                      const monthlyEquivalent = cycle === 'yearly' ? Math.round(price.yearly / 12) : price.monthly;
+                      const annualSaving = price.monthly * 12 - price.yearly;
+                      return (
+                        <th
+                          key={plan.id}
+                          className={cn(
+                            'p-4 align-top text-center font-normal border-b border-border-light dark:border-border-dark relative',
+                            plan.id === recommendedPlanId && 'bg-primary/[0.04]',
+                          )}
+                        >
+                          {/* Every slot is reserved whether or not it is filled, so the
+                              names, the prices and the buttons each sit on one line
+                              across all four columns instead of drifting. */}
+                          <div className="h-6 flex items-center justify-center">
+                            {plan.popular && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                <Star className="h-2.5 w-2.5 fill-current" /> الأكثر اختياراً
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-body font-bold mb-1">{plan.nameAr}</p>
+                          <div className="h-[58px] flex flex-col justify-center">
+                            {isEnt ? (
+                              <p className="text-h2 font-extrabold">حسب الطلب</p>
+                            ) : (
+                              <>
+                                <p className="text-h1 font-extrabold leading-tight">
+                                  {formatMoney(monthlyEquivalent, selectedCountry.currency)}
+                                  <span className="text-[11px] font-normal text-muted-light dark:text-muted-dark"> / شهر</span>
+                                </p>
+                                {cycle === 'yearly' && annualSaving > 0 ? (
+                                  <p className="text-[11px] text-success font-medium">
+                                    وفّر {formatMoney(annualSaving, selectedCountry.currency)} سنوياً
+                                  </p>
+                                ) : (
+                                  <p className="text-[11px] text-muted-light dark:text-muted-dark">يُفوتر شهرياً</p>
+                                )}
+                              </>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-muted-light dark:text-muted-dark h-4 mb-2">
+                            {limitLabel(plan.limits.conversations)} محادثة / شهر
+                          </p>
+
+                          {isEnt ? (
+                            <button
+                              onClick={() => setContactOpen(true)}
+                              className="w-full h-9 rounded-full border border-primary/40 text-primary text-[12px] font-semibold hover:bg-primary/5 transition-colors inline-flex items-center justify-center gap-1.5"
+                            >
+                              <MessageCircle className="h-3.5 w-3.5" /> تواصل معنا
+                            </button>
+                          ) : isThisCurrent ? (
+                            <button
+                              disabled
+                              className="w-full h-9 rounded-full bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark text-[12px] font-semibold cursor-default"
+                            >
+                              باقتك الحالية
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleSubscribeClick(plan)}
+                              className={cn(
+                                'w-full h-9 rounded-full text-[12px] font-semibold transition-colors',
+                                plan.popular || plan.id === recommendedPlanId
+                                  ? 'bg-primary hover:bg-primary-dark text-white'
+                                  : 'border border-border-light dark:border-border-dark hover:bg-bg-light dark:hover:bg-bg-dark',
+                              )}
+                            >
+                              {isUpgradeTo(plan) ? 'ترقية' : 'تخفيض'}
+                            </button>
+                          )}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  <SectionRow title="الأساسيات" span={rankedPlans.length + 1} />
+                  {([
+                    ['القنوات المتصلة', (p: Plan) => limitLabel(p.limits.channels)],
+                    ['عدد الموظفين', (p: Plan) => limitLabel(p.limits.agents)],
+                    ['المحادثات شهرياً', (p: Plan) => limitLabel(p.limits.conversations)],
+                    ['جهات الاتصال', (p: Plan) => limitLabel(p.limits.contacts)],
+                  ] as [string, (p: Plan) => string][]).map(([label, valueOf]) => (
+                    <tr key={label} className="border-b border-border-light dark:border-border-dark">
+                      <td
+                        className="p-3 text-muted-light dark:text-muted-dark bg-white dark:bg-surface-dark sticky z-10"
+                        style={{ insetInlineStart: 0 }}
+                      >
+                        {label}
+                      </td>
+                      {rankedPlans.map((plan) => (
+                        <td
+                          key={plan.id}
+                          className={cn(
+                            'p-3 text-center font-medium',
+                            plan.id === recommendedPlanId && 'bg-primary/[0.04]',
+                          )}
+                        >
+                          {valueOf(plan)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+
+                  <SectionRow title="المزايا" span={rankedPlans.length + 1} />
+                  {allFeatures.map((f) => (
+                    <tr key={f} className="border-b border-border-light dark:border-border-dark">
+                      <td
+                        className="p-3 text-muted-light dark:text-muted-dark bg-white dark:bg-surface-dark sticky z-10"
+                        style={{ insetInlineStart: 0 }}
+                      >
+                        {f}
+                      </td>
+                      {rankedPlans.map((plan) => {
+                        const included = featureSetFor.get(plan.id)?.has(f) ?? false;
+                        return (
+                          <td
+                            key={plan.id}
+                            className={cn(
+                              'p-3 text-center',
+                              plan.id === recommendedPlanId && 'bg-primary/[0.04]',
+                            )}
+                          >
+                            {included ? (
+                              <Check className="h-4 w-4 text-primary mx-auto" aria-label="مشمولة" />
+                            ) : (
+                              <span className="text-muted-light dark:text-muted-dark" aria-label="غير مشمولة">—</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <p className="text-[11px] text-muted-light dark:text-muted-dark text-center mt-5">
-              الميزات وربطها بكل باقة يتحكم فيه الأدمن (موديول الباقات)
-            </p>
+          </Card>
+
+          {/* Not sure which plan */}
+          <Card className="p-5 mb-8 flex flex-col sm:flex-row items-center justify-center gap-4 text-center sm:text-start">
+            <span className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+              <Sparkles className="h-5 w-5" />
+            </span>
+            <div className="flex-1">
+              <p className="text-body font-semibold">مش متأكد أي باقة تناسبك؟</p>
+              <p className="text-small text-muted-light dark:text-muted-dark">
+                تحدّث إلينا لنساعدك في الاختيار حسب حجم فريقك وعدد محادثاتك.
+              </p>
+            </div>
+            <button
+              onClick={() => setContactOpen(true)}
+              className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex-shrink-0"
+            >
+              تواصل معنا
+            </button>
           </Card>
 
           {/* Trust badges */}
@@ -375,7 +480,7 @@ export default function Subscribe(): JSX.Element {
             <div className="flex justify-between p-4">
               <span className="text-muted-light dark:text-muted-dark">السعر الجديد</span>
               <span className="font-bold text-primary">
-                {formatMoney(cycle === 'yearly' ? sliderPlanPrice.yearly : sliderPlanPrice.monthly, selectedCountry.currency)}
+                {formatMoney(amountFor(selectedPlan), selectedCountry.currency)}
                 <span className="font-normal text-muted-light dark:text-muted-dark"> / {cycle === 'yearly' ? 'سنة' : 'شهر'}</span>
               </span>
             </div>
@@ -499,6 +604,20 @@ interface ContactSalesModalProps {
   defaultCompany: string;
   defaultPhone: string;
   onSubmitted: () => void;
+}
+
+/** Full-width band that names a group of rows, the way the landing page splits its table. */
+function SectionRow({ title, span }: { title: string; span: number }): JSX.Element {
+  return (
+    <tr>
+      <td
+        colSpan={span}
+        className="p-2.5 px-4 bg-bg-light dark:bg-bg-dark text-[12px] font-bold border-y border-border-light dark:border-border-dark"
+      >
+        {title}
+      </td>
+    </tr>
+  );
 }
 
 function ContactSalesModal({
