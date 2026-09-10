@@ -173,6 +173,15 @@ interface DataState {
 
 const newId = (): string => Math.random().toString(36).slice(2, 10);
 
+/** Records an open/close boundary so the thread can be split into sessions later. */
+function markSession(c: Conversation, type: 'opened' | 'closed', by: string): Conversation {
+  return {
+    ...c,
+    sessionEvents: [...(c.sessionEvents ?? []), { type, timestamp: new Date().toISOString(), by }],
+    sessionCount: type === 'opened' ? (c.sessionCount ?? 0) + 1 : c.sessionCount,
+  };
+}
+
 export const useDataStore = create<DataState>((set, get) => ({
   currentUserId: 'a1',
   agents: initialAgents,
@@ -275,15 +284,22 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   setConversationStatus: (conversationId, status) =>
     set((state) => ({
-      conversations: state.conversations.map((c) =>
-        c.id === conversationId ? { ...c, status } : c
-      ),
+      conversations: state.conversations.map((c) => {
+        if (c.id !== conversationId) return c;
+        const wasClosed = c.status === 'closed';
+        const willClose = status === 'closed';
+        if (willClose && !wasClosed) return { ...markSession(c, 'closed', state.currentUserId), status };
+        if (!willClose && wasClosed) return { ...markSession(c, 'opened', state.currentUserId), status };
+        return { ...c, status };
+      }),
     })),
 
   reopenConversation: (conversationId) =>
     set((state) => ({
       conversations: state.conversations.map((c) =>
-        c.id === conversationId ? { ...c, status: 'open' as const } : c
+        c.id === conversationId
+          ? { ...(c.status === 'closed' ? markSession(c, 'opened', state.currentUserId) : c), status: 'open' as const }
+          : c
       ),
     })),
 
@@ -637,7 +653,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           const aiEnabledOnChannel =
             aiSettings.enabled && aiSettings.enabledChannels.includes(c.channelId);
           return {
-            ...c,
+            ...(wasClosed ? markSession(c, 'opened', 'contact') : c),
             messages: [...c.messages, message],
             lastMessage: content,
             lastMessageAt: message.timestamp,
@@ -674,7 +690,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           const aiEnabledOnChannel =
             aiSettings.enabled && aiSettings.enabledChannels.includes(c.channelId);
           return {
-            ...c,
+            ...(wasClosed ? markSession(c, 'opened', 'contact') : c),
             messages: [...c.messages, message],
             lastMessage: '🎤 رسالة صوتية',
             lastMessageAt: message.timestamp,

@@ -236,6 +236,8 @@ export interface Conversation {
   notes: string[];
   activityLog: ActivityEvent[];
   sessionCount: number;
+  /** Recorded open/close boundaries. Absent for history that predates session tracking. */
+  sessionEvents?: SessionEvent[];
   /** True when the AI assistant currently owns this conversation */
   aiActive?: boolean;
   /** True when conversation was handed off from AI to a human agent */
@@ -248,6 +250,25 @@ export interface ActivityEvent {
   description: string;
   by: string;
   timestamp: string;
+}
+
+export interface SessionEvent {
+  type: 'opened' | 'closed';
+  timestamp: string;
+  /** agent id, or 'contact' when the customer's own message reopened it */
+  by: string;
+}
+
+export interface ConversationSession {
+  /** 1-based position in the thread */
+  index: number;
+  startedAt: string;
+  /** null while the session is still open */
+  endedAt: string | null;
+  messageCount: number;
+  firstMessageId: string;
+  /** true when the boundary was guessed from a message gap rather than recorded */
+  inferred: boolean;
 }
 
 export interface Template {
