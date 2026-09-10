@@ -16,6 +16,9 @@ import type {
 const nowMinus = (min: number): string =>
   new Date(Date.now() - min * 60 * 1000).toISOString();
 
+/** N days expressed in minutes, for readable nowMinus() offsets. */
+const day = (n: number): number => n * 24 * 60;
+
 // ============================================================
 // Departments
 // ============================================================
@@ -350,12 +353,18 @@ export const conversations: Conversation[] = [
       { id: 'e1', type: 'assign', description: 'تم تحويل المحادثة من المساعد الذكي إلى فاطمة البلوشي', by: 'a1', timestamp: nowMinus(20) },
       { id: 'e2', type: 'status', description: 'تغيير الحالة إلى قيد المعالجة', by: 'a2', timestamp: nowMinus(18) },
     ],
+    // Spread over three reopen cycles so the thread index rail has something to show.
+    // The last cycle is a recorded event; the older boundaries are inferred from the gaps.
+    sessionEvents: [
+      { type: 'closed', timestamp: nowMinus(day(30) - 10), by: 'a2' },
+      { type: 'opened', timestamp: nowMinus(25), by: 'contact' },
+    ],
     messages: [
-      { id: 'm1', conversationId: 'conv1', direction: 'in', type: 'text', content: 'السلام عليكم', timestamp: nowMinus(25), read: true, delivered: true },
-      { id: 'm2', conversationId: 'conv1', direction: 'out', type: 'text', content: 'وعليكم السلام ورحمة الله، أهلاً وسهلاً بك في Qhub. كيف يمكنني مساعدتك؟', timestamp: nowMinus(24), read: true, delivered: true, sender: 'ai' },
-      { id: 'm3', conversationId: 'conv1', direction: 'in', type: 'text', content: 'أبحث عن شقة للإيجار في مسقط بميزانية 350 ر.ع', timestamp: nowMinus(22), read: true, delivered: true },
-      { id: 'm4', conversationId: 'conv1', direction: 'out', type: 'text', content: 'لدينا عدة خيارات متاحة في الخوض والسيب. هل تفضل غرفة واحدة أم غرفتين؟', timestamp: nowMinus(20), read: true, delivered: true, sender: 'ai' },
-      { id: 'm5', conversationId: 'conv1', direction: 'in', type: 'text', content: 'غرفتين من فضلك', timestamp: nowMinus(19), read: true, delivered: true },
+      { id: 'm1', conversationId: 'conv1', direction: 'in', type: 'text', content: 'السلام عليكم', timestamp: nowMinus(day(90)), read: true, delivered: true },
+      { id: 'm2', conversationId: 'conv1', direction: 'out', type: 'text', content: 'وعليكم السلام ورحمة الله، أهلاً وسهلاً بك في Qhub. كيف يمكنني مساعدتك؟', timestamp: nowMinus(day(90) - 3), read: true, delivered: true, sender: 'ai' },
+      { id: 'm3', conversationId: 'conv1', direction: 'in', type: 'text', content: 'أبحث عن شقة للإيجار في مسقط بميزانية 350 ر.ع', timestamp: nowMinus(day(30)), read: true, delivered: true },
+      { id: 'm4', conversationId: 'conv1', direction: 'out', type: 'text', content: 'لدينا عدة خيارات متاحة في الخوض والسيب. هل تفضل غرفة واحدة أم غرفتين؟', timestamp: nowMinus(day(30) - 4), read: true, delivered: true, sender: 'ai' },
+      { id: 'm5', conversationId: 'conv1', direction: 'in', type: 'text', content: 'غرفتين من فضلك', timestamp: nowMinus(day(30) - 7), read: true, delivered: true },
       { id: 'm5v', conversationId: 'conv1', direction: 'in', type: 'voice', content: '0:12', timestamp: nowMinus(17), read: true, delivered: true },
       { id: 'm6', conversationId: 'conv1', direction: 'in', type: 'text', content: 'هل الشقة في الخوض ما زالت متاحة؟', timestamp: nowMinus(15), read: false, delivered: true },
     ],

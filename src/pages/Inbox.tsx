@@ -71,7 +71,9 @@ import { transcribeAudio, getAIResponse } from '@/utils/ai';
 import { formatPhone, formatTime, timeAgo } from '@/utils/format';
 import { downloadCsv } from '@/utils/csv';
 import { cn } from '@/utils/cn';
-import type { Conversation, ConversationStatus, Channel, Department, Contact } from '@/types';
+import { deriveSessions } from '@/utils/sessions';
+import SessionRail from '@/components/inbox/SessionRail';
+import type { Conversation, ConversationSession, ConversationStatus, Channel, Department, Contact } from '@/types';
 import type { InboxView } from '@/store/useInboxStore';
 
 export default function Inbox(): JSX.Element {
@@ -125,6 +127,8 @@ export default function Inbox(): JSX.Element {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
+  const [activeSession, setActiveSession] = useState(1);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -200,11 +204,39 @@ export default function Inbox(): JSX.Element {
   const selectedContact = selected ? contacts.find((c) => c.id === selected.contactId) : null;
   const isBookmarked = selected ? bookmarkedConvIds.has(selected.id) : false;
 
+  const sessions = useMemo(() => (selected ? deriveSessions(selected) : []), [selected]);
+
+  const messageNode = (id: string): HTMLElement | null =>
+    messagesScrollRef.current?.querySelector<HTMLElement>(`[data-msg-id="${CSS.escape(id)}"]`) ?? null;
+
+  const jumpToSession = (session: ConversationSession): void => {
+    messageNode(session.firstMessageId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveSession(session.index);
+  };
+
+  const handleThreadScroll = (): void => {
+    const container = messagesScrollRef.current;
+    if (!container || sessions.length < 2) return;
+    // The active session is the last one whose opening message has scrolled past the top.
+    const threshold = container.scrollTop + 12;
+    let active = sessions[0].index;
+    for (const s of sessions) {
+      const node = messageNode(s.firstMessageId);
+      if (!node || node.offsetTop > threshold) break;
+      active = s.index;
+    }
+    setActiveSession(active);
+  };
+
   useEffect(() => {
     if (selectedId && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [selected?.messages.length, selectedId]);
+
+  useEffect(() => {
+    setActiveSession(sessions.length > 0 ? sessions[sessions.length - 1].index : 1);
+  }, [selectedId, sessions.length]);
 
   useEffect(() => {
     if (selectedId) markRead(selectedId);
@@ -797,8 +829,13 @@ export default function Inbox(): JSX.Element {
               </div>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-6 py-6 chat-scroll bg-white dark:bg-surface-dark">
+            {/* Messages + session index rail */}
+            <div className="flex-1 flex min-h-0 bg-white dark:bg-surface-dark">
+            <div
+              ref={messagesScrollRef}
+              onScroll={handleThreadScroll}
+              className="relative flex-1 overflow-y-auto px-6 py-6 chat-scroll"
+            >
               {selected.messages.map((m, i) => {
                 const showDate =
                   i === 0 ||
@@ -811,7 +848,7 @@ export default function Inbox(): JSX.Element {
                   : new Date(m.timestamp).toLocaleDateString('ar-OM-u-nu-latn', { day: 'numeric', month: 'long' });
                 const agentForMsg = m.direction === 'out' ? (agents.find((a) => a.id === (selected.assignedTo ?? currentUserId))?.name ?? 'الوكيل') : '';
                 return (
-                  <div key={m.id}>
+                  <div key={m.id} data-msg-id={m.id}>
                     {showDate && (
                       <div className="text-center my-4">
                         <span className="inline-block text-[11px] px-3 py-1 rounded-full bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark">
@@ -824,6 +861,8 @@ export default function Inbox(): JSX.Element {
                 );
               })}
               <div ref={messagesEndRef} />
+            </div>
+            <SessionRail sessions={sessions} activeIndex={activeSession} onJump={jumpToSession} />
             </div>
 
             {/* Input area */}
