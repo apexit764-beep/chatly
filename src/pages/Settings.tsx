@@ -34,6 +34,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { cn } from '@/utils/cn';
+import { DEMO_BACKUP_CODES, DEMO_TOTP_SECRET, verifyTotpCode } from '@/utils/twoFactor';
 import Billing from './Billing';
 
 const SETTINGS_TABS: { key: string; label: string; icon: ReactNode }[] = [
@@ -854,12 +855,9 @@ function TwoFactorRow(): JSX.Element {
   const [copiedCodes, setCopiedCodes] = useState(false);
   const tfaRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const secretKey = 'JBSW Y3DP EHPK 3PXP';
-
-  const backupCodes = useMemo(() => [
-    'A7K2-M9X4', 'B3P8-N5W2', 'C6R1-Q8Y7',
-    'D4T9-S2V6', 'E8L3-U7J5', 'F1H6-W4Z8',
-  ], []);
+  // Shared with the login challenge so the QR and the verification agree.
+  const secretKey = DEMO_TOTP_SECRET.replace(/(.{4})/g, '$1 ').trim();
+  const backupCodes = DEMO_BACKUP_CODES;
 
   const handleTfaChange = useCallback((index: number, value: string): void => {
     if (value && !/^\d$/.test(value)) return;
@@ -903,9 +901,17 @@ function TwoFactorRow(): JSX.Element {
     setCopiedCodes(false);
   };
 
-  const verifyCode = (): void => {
+  const verifyCode = async (): Promise<void> => {
     const code = tfaDigits.join('');
     if (code.length < 6) { setCodeError('أدخل الرمز كاملاً'); return; }
+    // Confirms the app really copied the secret before 2FA is switched on —
+    // enabling it on a bad scan would lock the user out of their own account.
+    if (!(await verifyTotpCode(code))) {
+      setCodeError('رمز غير صحيح — تأكد من مسح الرمز في التطبيق');
+      setTfaDigits(['', '', '', '', '', '']);
+      tfaRefs.current[0]?.focus();
+      return;
+    }
     setCodeError(null);
     setStep(3);
   };

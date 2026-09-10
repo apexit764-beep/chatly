@@ -15,11 +15,15 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { AuthHero } from '@components/auth/AuthHero';
+import TwoFactorChallenge from '@components/auth/TwoFactorChallenge';
 import { cn } from '@/utils/cn';
 
 export default function Login(): JSX.Element {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const login = useAuthStore((s) => s.login);
+  const pending = useAuthStore((s) => s.pending);
+  const verifySecondFactor = useAuthStore((s) => s.verifySecondFactor);
+  const cancelPending = useAuthStore((s) => s.cancelPending);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -66,8 +70,24 @@ export default function Login(): JSX.Element {
         setLoading(false);
         return;
       }
+      setLoading(false);
+      // A second factor is owed: stay on this route and swap the panel. Giving the
+      // challenge its own URL would let anyone open it without passing step one.
+      if (result.needs2FA) return;
       navigate(from, { replace: true });
     }, 400);
+  };
+
+  const handleVerify = async (code: string): Promise<{ ok: boolean; error?: string }> => {
+    const result = await verifySecondFactor(code);
+    if (result.ok) navigate(from, { replace: true });
+    return result;
+  };
+
+  const handleCancelPending = (): void => {
+    cancelPending();
+    setPassword('');
+    setError(null);
   };
 
   return (
@@ -100,6 +120,17 @@ export default function Login(): JSX.Element {
         <div className="h-9" />
 
         {/* Form */}
+        {pending ? (
+          <motion.div
+            key="challenge"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="my-auto max-w-md w-full mx-auto"
+          >
+            <TwoFactorChallenge email={pending.email} onVerify={handleVerify} onCancel={handleCancelPending} />
+          </motion.div>
+        ) : (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -222,6 +253,7 @@ export default function Login(): JSX.Element {
             </Link>
           </p>
         </motion.div>
+        )}
 
         {/* Footer */}
         <div className="flex items-center justify-between text-small text-muted-light dark:text-muted-dark">

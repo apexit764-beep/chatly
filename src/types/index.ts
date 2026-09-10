@@ -368,8 +368,6 @@ export interface AppSettings {
   notifySound: boolean;
   // Appearance
   theme: 'light' | 'dark';
-  // Security
-  twoFactorEnabled: boolean;
   // Language & region
   language: 'ar' | 'en';
   timezone: string;

@@ -220,7 +220,6 @@ export const useDataStore = create<DataState>((set, get) => ({
     notifyBrowser: true,
     notifySound: true,
     theme: 'light',
-    twoFactorEnabled: false,
     language: 'ar',
     timezone: 'Asia/Muscat',
     dateFormat: 'DD/MM/YYYY',
