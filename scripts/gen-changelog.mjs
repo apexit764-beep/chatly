@@ -21,7 +21,7 @@ const OUT = path.join(
 //         'pending' = مرفوع على الفرع ولم يُنشر بعد
 //         'wip'     = قيد التطوير، غير مرفوع
 
-const BUILD_LIVE = '06e4f0fa-ddab-4ae4-8ad8-f853c3466c95';
+const BUILD_LIVE = '8bb2487f-c80a-4577-a876-61061b147ecc';
 
 const ENTRIES = [
   {
@@ -31,8 +31,8 @@ const ENTRIES = [
     page: 'صندوق الوارد',
     route: '/inbox',
     file: 'src/components/inbox/SessionRail.tsx · src/pages/Inbox.tsx',
-    commit: '—',
-    status: 'pending',
+    commit: '4163939',
+    status: 'live',
     points: [
       'الشكل السابق كان كتلاً سميكة بينها فجوات، فكان يُقرأ كشريط تقدّم مكسور لا كأداة تنقّل. صار الآن مسطرة: خطّ شعري على حافة الثريد وعليه علامات رفيعة عند بدايات الدورات.',
       'العلامات مجمّعة في منتصف ارتفاع الحافة كمجموعة واحدة مرتّبة، لا موزّعة على كامل الطول.',
