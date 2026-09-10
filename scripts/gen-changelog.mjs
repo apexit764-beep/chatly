@@ -21,7 +21,7 @@ const OUT = path.join(
 //         'pending' = مرفوع على الفرع ولم يُنشر بعد
 //         'wip'     = قيد التطوير، غير مرفوع
 
-const BUILD_LIVE = '57ecc758-14ef-4540-9dfc-29bfe7050fa2';
+const BUILD_LIVE = 'a332b5cf-22f8-4cfb-afc1-07f093a9065f';
 
 const ENTRIES = [
   {
@@ -31,8 +31,8 @@ const ENTRIES = [
     page: 'تسجيل الدخول',
     route: '/login',
     file: 'src/utils/twoFactor.ts · src/components/auth/TwoFactorChallenge.tsx · src/store/useAuthStore.ts · src/pages/Login.tsx',
-    commit: '—',
-    status: 'pending',
+    commit: '743042c',
+    status: 'live',
     points: [
       '⚠️ هيكل واجهة لا أمان: التحقق يجري في المتصفح والمفتاح السري داخل حزمة الجافاسكربت، فيمكن تجاوزه. الغرض تجهيز الواجهة والعقد لحين وجود باكيند، وهذا مكتوب صراحةً في رأس ملف twoFactor.ts.',
       'كان الدخول يوثّق فوراً بعد كلمة المرور. صار مرحلتين: كلمة المرور تنتج حالة معلّقة في الذاكرة فقط، ولا يُكتب شيء في التخزين حتى يمرّ العامل الثاني — فإغلاق التبويب في منتصف العملية لا يترك جلسة مفتوحة.',
