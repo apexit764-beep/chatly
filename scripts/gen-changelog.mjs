@@ -21,7 +21,7 @@ const OUT = path.join(
 //         'pending' = مرفوع على الفرع ولم يُنشر بعد
 //         'wip'     = قيد التطوير، غير مرفوع
 
-const BUILD_LIVE = '2b5d5cb7-ae3d-4d19-88e3-dc3bc0218602';
+const BUILD_LIVE = '06e4f0fa-ddab-4ae4-8ad8-f853c3466c95';
 
 const ENTRIES = [
   {
@@ -31,8 +31,8 @@ const ENTRIES = [
     page: 'صندوق الوارد',
     route: '/inbox',
     file: 'src/components/inbox/SessionRail.tsx · src/pages/Inbox.tsx · src/store/mockData.ts',
-    commit: '—',
-    status: 'pending',
+    commit: 'e05e715',
+    status: 'live',
     points: [
       'شريط رأسي على حافة الثريد يقسّمه إلى دورات فتح وإغلاق، ليصل الموظف إلى بداية أي دورة في المحادثات الطويلة التي تُعاد فتحها مراراً.',
       'ارتفاع كل مقطع يتناسب مع عدد رسائله، فيعطي إحساساً بحجم كل دورة قبل الدخول إليها.',
@@ -52,8 +52,8 @@ const ENTRIES = [
     page: 'صندوق الوارد (طبقة البيانات)',
     route: '/inbox',
     file: 'src/utils/sessions.ts · src/store/useDataStore.ts · src/types/index.ts',
-    commit: '—',
-    status: 'pending',
+    commit: '5cf29e1',
+    status: 'live',
     points: [
       'المشكلة: المحادثة الواحدة تُعاد فتحها كلما راسل العميل بعد الإغلاق، فيصير الثريد بلا نهاية. ولرسم شريط فهرسة يقسّمه إلى دورات، لزم معرفة توقيت كل فتح وإغلاق — وهي بيانات لم تكن تُسجَّل إطلاقاً.',
       'كان الحقل sessionCount يُكتب مرة واحدة عند الإنشاء ولا يزيده أي سطر في المشروع، وقيمه في البيانات التجريبية مكتوبة يدوياً. كذلك activityLog على المحادثة كان مُعرَّفاً في الأنواع لكن لا دالة تكتب فيه وقت التشغيل.',
@@ -74,7 +74,7 @@ const ENTRIES = [
     route: '/rating',
     file: 'src/pages/CustomerRatings.tsx',
     commit: 'cc8bd4f',
-    status: 'pending',
+    status: 'live',
     points: [
       'حُذف كارت «نسبة الاستجابة» بالكامل من شريط الإحصائيات — صارت 3 كروت بدل 4.',
       'حُذف معه حساب responseRate لأنه لم يعد له مستهلك في الصفحة.',
