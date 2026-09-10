@@ -404,6 +404,10 @@ export const subscriptions: Subscription[] = clients
       currentPeriodStart: nowMinus(60 * 24 * 15),
       currentPeriodEnd: nowPlusDays(15),
       paymentMethod: { brand: 'visa', last4: String(1000 + ((c.id.charCodeAt(7) || 0) * 137) % 9000).padStart(4, '0').slice(-4), expMonth: 8, expYear: 28 },
+      // Demo client carries a pending downgrade so the مجدولة state is reviewable.
+      ...(c.id === 'client_1'
+        ? { scheduledChange: { planId: 'plan_pro', billingCycle: 'monthly' as const, effectiveAt: nowPlusDays(15) } }
+        : {}),
     };
   });
 

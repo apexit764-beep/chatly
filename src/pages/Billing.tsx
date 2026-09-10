@@ -35,6 +35,7 @@ const invStatusLabel: Record<InvoiceStatus, string> = {
   overdue: 'متأخرة',
   cancelled: 'ملغاة',
   draft: 'مسودة',
+  scheduled: 'مجدولة',
 };
 
 const invStatusColor: Record<InvoiceStatus, string> = {
@@ -45,6 +46,7 @@ const invStatusColor: Record<InvoiceStatus, string> = {
   overdue: 'bg-danger/15 text-danger',
   cancelled: 'bg-gray-500/15 text-gray-500',
   draft: 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark',
+  scheduled: 'bg-info/15 text-info',
 };
 
 export default function Billing(): JSX.Element {
@@ -73,11 +75,19 @@ export default function Billing(): JSX.Element {
   const plan = allPlans.find((p) => p.id === client?.planId);
   const country = countries.find((c) => c.code === client?.country) ?? countries[0];
   const activePlans = allPlans.filter((p) => p.active);
+  // A pending downgrade shows as مجدولة on the subscription's unsettled invoices.
+  // Derived rather than stored, so cancelling the schedule clears it everywhere at once.
+  const scheduledSubIds = new Set(subscriptions.filter((s) => s.scheduledChange).map((s) => s.id));
+  const effectiveStatus = (inv: Invoice): InvoiceStatus =>
+    inv.subscriptionId && scheduledSubIds.has(inv.subscriptionId) && (inv.status === 'pending' || inv.status === 'draft')
+      ? 'scheduled'
+      : inv.status;
+
   const clientInvoices = invoices
     .filter((i) => i.clientId === CURRENT_CLIENT_ID)
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   const filteredInvoices = clientInvoices
-    .filter((i) => statusFilter === 'all' || i.status === statusFilter)
+    .filter((i) => statusFilter === 'all' || effectiveStatus(i) === statusFilter)
     .filter((i) => {
       if (allPeriods || !dateFrom || !dateTo) return true;
       const t = Date.parse(i.createdAt);
@@ -165,6 +175,11 @@ export default function Billing(): JSX.Element {
                 <Calendar className="h-3 w-3" />
                 ينتهي في {formatDate(sub.currentPeriodEnd)}
               </span>
+              {sub.scheduledChange && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/25 backdrop-blur text-[11px] font-bold">
+                  <Calendar className="h-3 w-3" /> مجدولة
+                </span>
+              )}
             </div>
             <h2 className="text-h1 font-extrabold mb-1">{plan.nameAr}</h2>
             <p className="text-body opacity-90 mb-3">{plan.tagline}</p>
@@ -172,6 +187,13 @@ export default function Billing(): JSX.Element {
               <p className="text-display font-extrabold">{formatMoney(sub.amount, sub.currency)}</p>
               <span className="text-body opacity-90">/{sub.billingCycle === 'monthly' ? 'شهر' : 'سنة'}</span>
             </div>
+            {sub.scheduledChange && (
+              <p className="text-small opacity-90 mt-3 max-w-md">
+                تم جدولة التحويل إلى باقة{' '}
+                <strong>{allPlans.find((p) => p.id === sub.scheduledChange!.planId)?.nameAr ?? '—'}</strong>{' '}
+                اعتباراً من <strong>{formatDate(sub.scheduledChange.effectiveAt)}</strong>. باقتك الحالية ومزاياها مستمرة حتى ذلك التاريخ.
+              </p>
+            )}
           </div>
           <div className="flex flex-col gap-2">
             <Link to="/subscribe" className="h-10 px-5 rounded-full bg-white text-primary text-small font-semibold flex items-center gap-2 hover:bg-white/90 transition-colors">
@@ -333,8 +355,8 @@ export default function Billing(): JSX.Element {
               <FilterPill active={statusFilter === 'all'} onClick={() => setStatusFilter('all')}>
                 الكل ({clientInvoices.length})
               </FilterPill>
-              {(['paid', 'failed', 'pending', 'refunded', 'overdue', 'cancelled', 'draft'] as InvoiceStatus[]).map((s) => {
-                const n = clientInvoices.filter((i) => i.status === s).length;
+              {(['paid', 'failed', 'pending', 'scheduled', 'refunded', 'overdue', 'cancelled', 'draft'] as InvoiceStatus[]).map((s) => {
+                const n = clientInvoices.filter((i) => effectiveStatus(i) === s).length;
                 if (n === 0) return null;
                 return (
                   <FilterPill key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>
@@ -368,8 +390,8 @@ export default function Billing(): JSX.Element {
                     <td className="px-4 py-3 text-small text-muted-light dark:text-muted-dark whitespace-nowrap">{formatDate(inv.dueDate)}</td>
                     <td className="px-4 py-3 font-semibold text-end whitespace-nowrap">{formatMoney(inv.total, inv.currency)}</td>
                     <td className="px-4 py-3 text-center">
-                      <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold', invStatusColor[inv.status])}>
-                        {invStatusLabel[inv.status]}
+                      <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold', invStatusColor[effectiveStatus(inv)])}>
+                        {invStatusLabel[effectiveStatus(inv)]}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -431,8 +453,8 @@ export default function Billing(): JSX.Element {
               </div>
               <div className="text-end">
                 <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-1">الحالة</p>
-                <span className={cn('inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold', invStatusColor[previewInvoice.status])}>
-                  {invStatusLabel[previewInvoice.status]}
+                <span className={cn('inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold', invStatusColor[effectiveStatus(previewInvoice)])}>
+                  {invStatusLabel[effectiveStatus(previewInvoice)]}
                 </span>
               </div>
             </div>

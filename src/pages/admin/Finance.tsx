@@ -30,6 +30,7 @@ const invStatusLabel: Record<InvoiceStatus, string> = {
   refunded: 'مرتجعة',
   overdue: 'متأخرة',
   cancelled: 'ملغاة',
+  scheduled: 'مجدولة',
 };
 
 const invStatusColor: Record<InvoiceStatus, string> = {
@@ -40,6 +41,7 @@ const invStatusColor: Record<InvoiceStatus, string> = {
   refunded: 'bg-info/15 text-info',
   overdue: 'bg-danger/15 text-danger',
   cancelled: 'bg-gray-500/15 text-gray-500',
+  scheduled: 'bg-info/15 text-info',
 };
 
 const txnStatusLabel: Record<TransactionStatus, string> = {

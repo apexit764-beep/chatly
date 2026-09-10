@@ -481,6 +481,12 @@ export interface Subscription {
   currentPeriodStart: string;
   currentPeriodEnd: string;
   cancelAt?: string;
+  /** A downgrade agreed now but applied on effectiveAt. Cleared when it applies or is cancelled. */
+  scheduledChange?: {
+    planId: string;
+    billingCycle: 'monthly' | 'yearly';
+    effectiveAt: string;
+  };
   paymentMethod?: {
     brand: 'visa' | 'mastercard';
     last4: string;
@@ -489,7 +495,7 @@ export interface Subscription {
   };
 }
 
-export type InvoiceStatus = 'paid' | 'failed' | 'pending' | 'refunded' | 'overdue' | 'cancelled' | 'draft';
+export type InvoiceStatus = 'paid' | 'failed' | 'pending' | 'refunded' | 'overdue' | 'cancelled' | 'draft' | 'scheduled';
 
 export interface Invoice {
   id: string;
