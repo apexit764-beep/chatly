@@ -6,7 +6,6 @@ import {
   Frown,
   MessageSquare,
   Users,
-  TrendingUp,
   BarChart3,
   Search,
   Filter,
@@ -41,7 +40,6 @@ export default function CustomerRatings(): JSX.Element {
   const avgAgent = ratedAgent.length > 0
     ? ratedAgent.reduce((s, r) => s + (r.ratingAgent ?? 0), 0) / ratedAgent.length
     : 0;
-  const responseRate = ratings.length > 0 ? (submitted.length / ratings.length) * 100 : 0;
   const satCounts = {
     excellent: submitted.filter((r) => r.satisfaction === 'excellent').length,
     good: submitted.filter((r) => r.satisfaction === 'good').length,
@@ -83,7 +81,7 @@ export default function CustomerRatings(): JSX.Element {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
           label="متوسط تقييم المحادثة"
           value={`${avgConv.toFixed(1)} / 5`}
@@ -97,13 +95,6 @@ export default function CustomerRatings(): JSX.Element {
           icon={<Users className="h-5 w-5" />}
           iconBg="bg-info/10"
           iconColor="text-info"
-        />
-        <StatCard
-          label="نسبة الاستجابة"
-          value={`${responseRate.toFixed(0)}%`}
-          icon={<TrendingUp className="h-5 w-5" />}
-          iconBg="bg-success/10"
-          iconColor="text-success"
         />
         <StatCard
           label="إجمالي الروابط"
