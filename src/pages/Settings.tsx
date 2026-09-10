@@ -28,13 +28,14 @@ import {
 } from 'lucide-react';
 import { Avatar, Modal, useConfirm } from '@components/ui';
 import { PhoneField, PHONE_COUNTRIES } from '@components/ui/PhoneField';
+import { QrCode } from '@components/ui/QrCode';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useInboxStore } from '@/store/useInboxStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { cn } from '@/utils/cn';
-import { DEMO_BACKUP_CODES, DEMO_TOTP_SECRET, verifyTotpCode } from '@/utils/twoFactor';
+import { DEMO_BACKUP_CODES, DEMO_TOTP_SECRET, otpAuthUri, verifyTotpCode } from '@/utils/twoFactor';
 import Billing from './Billing';
 
 const SETTINGS_TABS: { key: string; label: string; icon: ReactNode }[] = [
@@ -876,6 +877,8 @@ function TwoFactorRow(): JSX.Element {
   const setSecurity = useSettingsStore((s) => s.setSecurity);
   const showToast = useUIStore((s) => s.showToast);
   const { confirm } = useConfirm();
+  // The account label the authenticator app will show next to the code.
+  const user = useAuthStore((s) => s.user);
 
   const [setupOpen, setSetupOpen] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -1022,62 +1025,10 @@ function TwoFactorRow(): JSX.Element {
               </p>
             </div>
 
-            {/* QR Code placeholder */}
+            {/* Real, scannable QR of the otpauth:// URI */}
             <div className="flex justify-center">
-              <div className="h-44 w-44 rounded-xl border-2 border-dashed border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark flex items-center justify-center">
-                <svg viewBox="0 0 140 140" className="h-36 w-36">
-                  {/* Simulated QR pattern */}
-                  <rect x="10" y="10" width="35" height="35" rx="4" fill="currentColor"/>
-                  <rect x="95" y="10" width="35" height="35" rx="4" fill="currentColor"/>
-                  <rect x="10" y="95" width="35" height="35" rx="4" fill="currentColor"/>
-                  <rect x="16" y="16" width="23" height="23" rx="2" fill="none" stroke="currentColor" strokeWidth="3"/>
-                  <rect x="101" y="16" width="23" height="23" rx="2" fill="none" stroke="currentColor" strokeWidth="3"/>
-                  <rect x="16" y="101" width="23" height="23" rx="2" fill="none" stroke="currentColor" strokeWidth="3"/>
-                  <rect x="24" y="24" width="8" height="8" rx="1" fill="currentColor"/>
-                  <rect x="109" y="24" width="8" height="8" rx="1" fill="currentColor"/>
-                  <rect x="24" y="109" width="8" height="8" rx="1" fill="currentColor"/>
-                  {/* Data modules */}
-                  <rect x="55" y="12" width="6" height="6" fill="currentColor"/>
-                  <rect x="67" y="12" width="6" height="6" fill="currentColor"/>
-                  <rect x="79" y="12" width="6" height="6" fill="currentColor"/>
-                  <rect x="55" y="24" width="6" height="6" fill="currentColor"/>
-                  <rect x="67" y="24" width="6" height="6" fill="currentColor"/>
-                  <rect x="55" y="36" width="6" height="6" fill="currentColor"/>
-                  <rect x="79" y="36" width="6" height="6" fill="currentColor"/>
-                  <rect x="12" y="55" width="6" height="6" fill="currentColor"/>
-                  <rect x="24" y="55" width="6" height="6" fill="currentColor"/>
-                  <rect x="36" y="55" width="6" height="6" fill="currentColor"/>
-                  <rect x="55" y="55" width="6" height="6" fill="currentColor"/>
-                  <rect x="67" y="55" width="6" height="6" fill="currentColor"/>
-                  <rect x="79" y="55" width="6" height="6" fill="currentColor"/>
-                  <rect x="95" y="55" width="6" height="6" fill="currentColor"/>
-                  <rect x="119" y="55" width="6" height="6" fill="currentColor"/>
-                  <rect x="12" y="67" width="6" height="6" fill="currentColor"/>
-                  <rect x="36" y="67" width="6" height="6" fill="currentColor"/>
-                  <rect x="55" y="67" width="6" height="6" fill="currentColor"/>
-                  <rect x="79" y="67" width="6" height="6" fill="currentColor"/>
-                  <rect x="107" y="67" width="6" height="6" fill="currentColor"/>
-                  <rect x="119" y="67" width="6" height="6" fill="currentColor"/>
-                  <rect x="12" y="79" width="6" height="6" fill="currentColor"/>
-                  <rect x="24" y="79" width="6" height="6" fill="currentColor"/>
-                  <rect x="36" y="79" width="6" height="6" fill="currentColor"/>
-                  <rect x="55" y="79" width="6" height="6" fill="currentColor"/>
-                  <rect x="67" y="79" width="6" height="6" fill="currentColor"/>
-                  <rect x="95" y="79" width="6" height="6" fill="currentColor"/>
-                  <rect x="107" y="79" width="6" height="6" fill="currentColor"/>
-                  <rect x="55" y="95" width="6" height="6" fill="currentColor"/>
-                  <rect x="67" y="95" width="6" height="6" fill="currentColor"/>
-                  <rect x="79" y="95" width="6" height="6" fill="currentColor"/>
-                  <rect x="95" y="95" width="6" height="6" fill="currentColor"/>
-                  <rect x="119" y="95" width="6" height="6" fill="currentColor"/>
-                  <rect x="55" y="107" width="6" height="6" fill="currentColor"/>
-                  <rect x="79" y="107" width="6" height="6" fill="currentColor"/>
-                  <rect x="107" y="107" width="6" height="6" fill="currentColor"/>
-                  <rect x="55" y="119" width="6" height="6" fill="currentColor"/>
-                  <rect x="67" y="119" width="6" height="6" fill="currentColor"/>
-                  <rect x="95" y="119" width="6" height="6" fill="currentColor"/>
-                  <rect x="119" y="119" width="6" height="6" fill="currentColor"/>
-                </svg>
+              <div className="p-3 rounded-xl bg-white border border-border-light dark:border-border-dark">
+                <QrCode value={otpAuthUri(user?.email ?? '')} size={176} />
               </div>
             </div>
 

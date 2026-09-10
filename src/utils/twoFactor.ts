@@ -31,6 +31,9 @@ const STEP_SECONDS = 30;
 /** يقبل الخطوة السابقة والتالية، لاستيعاب فروق الساعة بين الجهاز والخادم. */
 const DRIFT_STEPS = 1;
 
+/** عدد خانات الرمز — يُعلَن في رابط الـQR أيضاً حتى لا يختلف التطبيق عن التحقق. */
+const DIGITS = 6;
+
 function base32Decode(input: string): Uint8Array {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
   const clean = input.replace(/[\s=]/g, '').toUpperCase();
@@ -73,7 +76,7 @@ export async function generateTotp(secret: string, step: number): Promise<string
     (signature[offset + 2] << 8) |
     signature[offset + 3];
 
-  return String(binary % 1_000_000).padStart(6, '0');
+  return String(binary % 10 ** DIGITS).padStart(DIGITS, '0');
 }
 
 export function currentStep(): number {
@@ -102,7 +105,20 @@ export function verifyBackupCode(code: string): boolean {
   return DEMO_BACKUP_CODES.includes(cleaned);
 }
 
-/** الرابط الذي يُرمَّز في QR — منه يأخذ التطبيق اسم الحساب المعروض. */
+/**
+ * الرابط الذي يُرمَّز في QR — منه يأخذ التطبيق اسم الحساب المعروض.
+ * الخوارزمية وعدد الخانات وطول الخطوة مكتوبة صراحةً رغم أنها القيم الافتراضية،
+ * لأن بعض التطبيقات (مثل Authy و1Password) لا تفترض نفس الافتراضيات، فيولّد
+ * التطبيق رموزاً لا يقبلها التحقق عندنا.
+ */
 export function otpAuthUri(email: string, secret: string = DEMO_TOTP_SECRET): string {
-  return `otpauth://totp/${encodeURIComponent(`Qhub:${email}`)}?secret=${secret}&issuer=Qhub`;
+  const label = encodeURIComponent(`Qhub:${email}`);
+  const params = new URLSearchParams({
+    secret,
+    issuer: 'Qhub',
+    algorithm: 'SHA1',
+    digits: String(DIGITS),
+    period: String(STEP_SECONDS),
+  });
+  return `otpauth://totp/${label}?${params.toString()}`;
 }
