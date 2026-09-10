@@ -206,6 +206,12 @@ export default function Inbox(): JSX.Element {
 
   const sessions = useMemo(() => (selected ? deriveSessions(selected) : []), [selected]);
 
+  // Cycle 1 opens the thread, so only later cycles get a divider above their first message.
+  const sessionStarts = useMemo(
+    () => new Map(sessions.filter((s) => s.index > 1).map((s) => [s.firstMessageId, s])),
+    [sessions],
+  );
+
   const messageNode = (id: string): HTMLElement | null =>
     messagesScrollRef.current?.querySelector<HTMLElement>(`[data-msg-id="${CSS.escape(id)}"]`) ?? null;
 
@@ -847,9 +853,21 @@ export default function Inbox(): JSX.Element {
                   ? 'اليوم'
                   : new Date(m.timestamp).toLocaleDateString('ar-OM-u-nu-latn', { day: 'numeric', month: 'long' });
                 const agentForMsg = m.direction === 'out' ? (agents.find((a) => a.id === (selected.assignedTo ?? currentUserId))?.name ?? 'الوكيل') : '';
+                const cycleStart = sessionStarts.get(m.id);
                 return (
                   <div key={m.id} data-msg-id={m.id}>
-                    {showDate && (
+                    {cycleStart ? (
+                      // Carries the date itself, so it replaces the plain date chip rather than stacking with it.
+                      <div className="flex items-center gap-3 my-7">
+                        <span className="flex-1 h-px bg-primary/25" />
+                        <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-[11px] font-bold text-primary whitespace-nowrap">
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          الدورة {cycleStart.index} · إعادة فتح · {dateLabel}
+                          {cycleStart.inferred && ' (تقديري)'}
+                        </span>
+                        <span className="flex-1 h-px bg-primary/25" />
+                      </div>
+                    ) : showDate && (
                       <div className="text-center my-4">
                         <span className="inline-block text-[11px] px-3 py-1 rounded-full bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark">
                           {dateLabel}
