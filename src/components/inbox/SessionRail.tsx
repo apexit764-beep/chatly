@@ -15,27 +15,36 @@ export function formatSessionDate(iso: string): string {
 
 interface SessionRailProps {
   sessions: ConversationSession[];
+  /** Each session's start as a 0..1 fraction of the thread's scroll height. */
+  offsets: number[];
   activeIndex: number;
   onJump: (session: ConversationSession) => void;
 }
 
-export default function SessionRail({ sessions, activeIndex, onJump }: SessionRailProps): JSX.Element | null {
+export default function SessionRail({ sessions, offsets, activeIndex, onJump }: SessionRailProps): JSX.Element | null {
   const [hovered, setHovered] = useState<number | null>(null);
 
   // A single cycle is just the thread itself — nothing to index.
   if (sessions.length < 2) return null;
 
-  const total = sessions.reduce((sum, s) => sum + s.messageCount, 0);
+  // Before the first measurement, fall back to an even spread.
+  const positionOf = (i: number): number =>
+    offsets.length === sessions.length ? offsets[i] : i / (sessions.length - 1 || 1);
 
   return (
     <div
-      className="relative shrink-0 w-9 py-6 flex flex-col gap-1 items-center bg-white dark:bg-surface-dark"
+      className="absolute inset-y-0 end-2 w-8 z-20 opacity-30 hover:opacity-100 focus-within:opacity-100 transition-opacity duration-200"
       role="navigation"
       aria-label="فهرس دورات المحادثة"
     >
-      {sessions.map((s) => {
+      {/* the ruler's spine — ticks share its exact span so they map to real scroll positions */}
+      <span aria-hidden className="absolute inset-y-4 end-0 w-px bg-border-light dark:bg-border-dark" />
+
+      <div className="absolute inset-y-4 end-0 w-8">
+      {sessions.map((s, i) => {
         const isActive = s.index === activeIndex;
         const isHovered = hovered === s.index;
+        const lit = isActive || isHovered;
         return (
           <button
             key={s.index}
@@ -45,17 +54,22 @@ export default function SessionRail({ sessions, activeIndex, onJump }: SessionRa
             onMouseLeave={() => setHovered(null)}
             onFocus={() => setHovered(s.index)}
             onBlur={() => setHovered(null)}
-            style={{ flexGrow: Math.max(s.messageCount / total, 0.05) }}
-            className={cn(
-              'relative w-1.5 min-h-[20px] rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-              isActive ? 'bg-primary' : isHovered ? 'bg-primary/60' : 'bg-primary/25',
-              s.inferred && !isActive && 'bg-primary/15 outline-dashed outline-1 outline-offset-1 outline-primary/40',
-            )}
+            style={{ top: `${positionOf(i) * 100}%` }}
+            className="absolute end-0 h-5 w-8 -translate-y-1/2 flex items-center justify-end focus:outline-none"
             aria-label={`الدورة ${s.index} — ${formatSessionDate(s.startedAt)}`}
             aria-current={isActive ? 'true' : undefined}
           >
+            <span
+              className={cn(
+                'block transition-all duration-150',
+                lit ? 'w-5' : 'w-3',
+                s.inferred
+                  ? cn('border-t border-dashed', lit ? 'border-primary' : 'border-primary/70')
+                  : cn('rounded-full', lit ? 'h-0.5 bg-primary' : 'h-px bg-primary/70'),
+              )}
+            />
             {isHovered && (
-              <span className="absolute end-full top-1/2 -translate-y-1/2 me-2 z-30 pointer-events-none whitespace-nowrap rounded-card bg-surface-dark dark:bg-white px-3 py-2 text-start shadow-card-hover">
+              <span className="absolute end-full top-1/2 -translate-y-1/2 me-1 z-30 pointer-events-none whitespace-nowrap rounded-card bg-surface-dark dark:bg-white px-3 py-2 text-start shadow-card-hover">
                 <span className="block text-[11px] font-semibold text-white dark:text-surface-dark">
                   {formatSessionDate(s.startedAt)}
                 </span>
@@ -69,6 +83,7 @@ export default function SessionRail({ sessions, activeIndex, onJump }: SessionRa
           </button>
         );
       })}
+      </div>
     </div>
   );
 }

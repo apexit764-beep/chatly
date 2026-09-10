@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Search,
   Send,
@@ -129,6 +129,7 @@ export default function Inbox(): JSX.Element {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesScrollRef = useRef<HTMLDivElement>(null);
   const [activeSession, setActiveSession] = useState(1);
+  const [sessionOffsets, setSessionOffsets] = useState<number[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -237,6 +238,34 @@ export default function Inbox(): JSX.Element {
   useEffect(() => {
     setActiveSession(sessions.length > 0 ? sessions[sessions.length - 1].index : 1);
   }, [selectedId, sessions.length]);
+
+  // Ticks sit at each session's real position in the scroll range, so the rail maps the thread.
+  const measureSessions = useCallback(() => {
+    const container = messagesScrollRef.current;
+    if (!container || sessions.length < 2) {
+      setSessionOffsets([]);
+      return;
+    }
+    const height = container.scrollHeight || 1;
+    setSessionOffsets(
+      sessions.map((s) => {
+        const node = messageNode(s.firstMessageId);
+        return node ? Math.min(Math.max(node.offsetTop / height, 0), 1) : 0;
+      }),
+    );
+  }, [sessions]);
+
+  useEffect(() => {
+    measureSessions();
+  }, [measureSessions, selectedId, selected?.messages.length]);
+
+  useEffect(() => {
+    const container = messagesScrollRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver(measureSessions);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [measureSessions]);
 
   useEffect(() => {
     if (selectedId) markRead(selectedId);
@@ -830,7 +859,7 @@ export default function Inbox(): JSX.Element {
             </div>
 
             {/* Messages + session index rail */}
-            <div className="flex-1 flex min-h-0 bg-white dark:bg-surface-dark">
+            <div className="relative flex-1 flex min-h-0 bg-white dark:bg-surface-dark">
             <div
               ref={messagesScrollRef}
               onScroll={handleThreadScroll}
@@ -862,7 +891,7 @@ export default function Inbox(): JSX.Element {
               })}
               <div ref={messagesEndRef} />
             </div>
-            <SessionRail sessions={sessions} activeIndex={activeSession} onJump={jumpToSession} />
+            <SessionRail sessions={sessions} offsets={sessionOffsets} activeIndex={activeSession} onJump={jumpToSession} />
             </div>
 
             {/* Input area */}
