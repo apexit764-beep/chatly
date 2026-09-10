@@ -21,7 +21,7 @@ const OUT = path.join(
 //         'pending' = مرفوع على الفرع ولم يُنشر بعد
 //         'wip'     = قيد التطوير، غير مرفوع
 
-const BUILD_LIVE = '8bb2487f-c80a-4577-a876-61061b147ecc';
+const BUILD_LIVE = '57ecc758-14ef-4540-9dfc-29bfe7050fa2';
 
 const ENTRIES = [
   {
@@ -31,8 +31,8 @@ const ENTRIES = [
     page: 'فريق العمل',
     route: '/team',
     file: 'src/pages/Team.tsx · src/types/index.ts · src/store/useDataStore.ts',
-    commit: '—',
-    status: 'pending',
+    commit: 'a4d8398',
+    status: 'live',
     points: [
       'أُضيف حقل رقم الهاتف إلى نموذج دعوة الموظف وتعديله — لم يكن موجوداً من قبل أصلاً.',
       'الحقل اختياري: يحمل وسم «(اختياري)» بنفس أسلوب حقل الأقسام، وبلا النجمة الحمراء التي تعلّم الاسم والبريد والدور. إرسال الدعوة بدونه يمرّ دون اعتراض.',
@@ -51,8 +51,8 @@ const ENTRIES = [
     page: 'صندوق الوارد',
     route: '/inbox',
     file: 'src/pages/Inbox.tsx',
-    commit: '—',
-    status: 'pending',
+    commit: 'f9b43fd',
+    status: 'live',
     points: [
       'كل دورة جديدة صار يسبقها فاصل أفقي ظاهر داخل الثريد، فيُعرف أين انتهت دورة وبدأت التي تليها من غير رجوع إلى شريط الفهرسة.',
       'الفاصل يحمل رقم الدورة وكلمة «إعادة فتح» والتاريخ، فيجيب عن ثلاثة أسئلة في سطر: أي دورة، وماذا جرى، ومتى.',
@@ -71,8 +71,8 @@ const ENTRIES = [
     page: 'الباقات والاشتراك',
     route: '/billing',
     file: 'src/types/index.ts · src/pages/Billing.tsx · src/store/adminMockData.ts',
-    commit: '—',
-    status: 'pending',
+    commit: '5202dba',
+    status: 'live',
     points: [
       'الاشتراك الذي عليه تخفيض مؤجّل إلى تاريخ لاحق صارت حالته «مجدولة» ظاهرة للعميل، لا في بورتال الإدارة وحده.',
       'أُضيف الحقل scheduledChange إلى الاشتراك ويحمل الباقة المستهدفة ودورة الفوترة وتاريخ السريان، وأُضيفت «مجدولة» إلى حالات الفاتورة.',
