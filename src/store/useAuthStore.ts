@@ -8,6 +8,8 @@ interface AuthUser {
   email: string;
   name: string;
   role: 'admin' | 'client';
+  /** Full international number, dial code included. Absent until the user adds one. */
+  phone?: string;
 }
 
 interface AuthState {

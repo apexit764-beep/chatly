@@ -248,6 +248,21 @@ function ProfileTab(): JSX.Element {
   const logout = useAuthStore((s) => s.logout);
   const [name, setName] = useState(user?.name ?? '');
 
+  // Longest dial code wins, so +968 is not read as +96 or +9 and the rest of
+  // the number silently mangled.
+  const [phoneCode, setPhoneCode] = useState(() => {
+    const dial = user?.phone
+      ? [...PHONE_COUNTRIES].sort((x, y) => y.code.length - x.code.length).find((c) => user.phone!.startsWith(c.code))
+      : undefined;
+    return dial?.code ?? '+968';
+  });
+  const [phone, setPhone] = useState(() => {
+    const dial = user?.phone
+      ? [...PHONE_COUNTRIES].sort((x, y) => y.code.length - x.code.length).find((c) => user.phone!.startsWith(c.code))
+      : undefined;
+    return dial ? user!.phone!.slice(dial.code.length) : '';
+  });
+
   // Email change modal
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [emailStep, setEmailStep] = useState<'input' | 'otp'>('input');
@@ -336,7 +351,10 @@ function ProfileTab(): JSX.Element {
   const updateUser = useAuthStore((s) => s.updateUser);
   const saveProfile = (): void => {
     if (!name.trim()) { showToast('اسم العرض مطلوب', 'error'); return; }
-    updateUser({ name: name.trim() });
+    // Only store a number when one was actually typed, so clearing the field
+    // does not leave a bare dial code behind pretending to be a phone number.
+    const trimmed = phone.trim();
+    updateUser({ name: name.trim(), phone: trimmed ? `${phoneCode}${trimmed}` : undefined });
     showToast('تم حفظ الملف الشخصي', 'success');
   };
 
@@ -384,6 +402,18 @@ function ProfileTab(): JSX.Element {
             تعديل
           </button>
         </div>
+      </Row>
+
+      <Row
+        label={<>رقم الجوال<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>}
+        hint="للتواصل معك عند وجود مشكلة في الحساب"
+      >
+        <PhoneField
+          countryCode={phoneCode}
+          phone={phone}
+          onCountryCodeChange={setPhoneCode}
+          onPhoneChange={setPhone}
+        />
       </Row>
 
       <Modal open={emailModalOpen} onClose={closeEmailModal} title="تغيير البريد الإلكتروني" size="sm">
