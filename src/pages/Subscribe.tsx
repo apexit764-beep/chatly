@@ -190,7 +190,7 @@ export default function Subscribe(): JSX.Element {
             <ArrowLeft className="h-4 w-4" /> عودة
           </button>
 
-          <div className="text-center mb-8">
+          <div className="text-center mb-10">
             <h1 className="text-h1 font-extrabold mb-2">أربع باقات باشتراك شهري أو سنوي</h1>
             <p className="text-body text-muted-light dark:text-muted-dark max-w-2xl mx-auto">
               قارن الباقات جنباً إلى جنب — ويمكنك ترقية باقتك أو تخفيضها في أي وقت
@@ -198,7 +198,7 @@ export default function Subscribe(): JSX.Element {
           </div>
 
           {/* Cycle toggle — the saving is derived from the prices, not asserted */}
-          <div className="flex items-center justify-center mb-6">
+          <div className="flex items-center justify-center mb-10">
             <div className="flex items-center gap-1 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-full p-1">
               <button
                 onClick={() => setCycle('monthly')}
@@ -236,8 +236,8 @@ export default function Subscribe(): JSX.Element {
               which is what the range input was saying — wrong, because these are
               four discrete choices, not a quantity you accumulate. So the track
               stays neutral end to end and only the stops carry state. */}
-          <div className="max-w-2xl mx-auto mb-10">
-            <p className="text-small text-center text-muted-light dark:text-muted-dark mb-8">
+          <div className="max-w-2xl mx-auto mb-14">
+            <p className="text-small text-center text-muted-light dark:text-muted-dark mb-14">
               كم محادثة تتوقّعها شهرياً؟ اسحب المؤشّر —{' '}
               <span className="text-primary font-semibold">
                 الباقة المناسبة: {activePlanAtSlider?.nameAr ?? '—'}
