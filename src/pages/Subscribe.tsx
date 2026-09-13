@@ -165,6 +165,12 @@ export default function Subscribe(): JSX.Element {
   /** -1 is the sentinel for "no ceiling" across every limit. */
   const limitLabel = (n: number): string => (n === -1 ? 'غير محدود' : n.toLocaleString('en'));
 
+  /** What the bubble above the active stop says — a ceiling, not a bare number. */
+  const stopHint = (s: SliderStop | undefined): string =>
+    !s ? '' : s.conversations === -1
+      ? 'محادثات غير محدودة'
+      : `حتى ${s.conversations.toLocaleString('en')} محادثة / شهر`;
+
   /** Yearly is billed as ten months, so the discount is derived, never typed in. */
   const yearlySavingPct = useMemo(() => {
     const ref = rankedPlans.find((p) => p.tier === 'pro') ?? rankedPlans[0];
@@ -225,39 +231,96 @@ export default function Subscribe(): JSX.Element {
             </div>
           </div>
 
-          {/* Slider — now a recommendation, not the thing that picks your plan */}
-          <div className="max-w-2xl mx-auto mb-8">
-            <p className="text-small text-center text-muted-light dark:text-muted-dark mb-3">
-              كم محادثة تتوقّعها شهرياً؟ اسحب المؤشر —{' '}
+          {/* Stepped picker, not a progress bar.
+              A filled track reads as "you are 40% of the way through something",
+              which is what the range input was saying — wrong, because these are
+              four discrete choices, not a quantity you accumulate. So the track
+              stays neutral end to end and only the stops carry state. */}
+          <div className="max-w-2xl mx-auto mb-10">
+            <p className="text-small text-center text-muted-light dark:text-muted-dark mb-8">
+              كم محادثة تتوقّعها شهرياً؟ اسحب المؤشّر —{' '}
               <span className="text-primary font-semibold">
                 الباقة المناسبة: {activePlanAtSlider?.nameAr ?? '—'}
               </span>
             </p>
-            <div className="px-2">
-              <input
-                type="range"
-                min={0}
-                max={sliderStops.length - 1}
-                step={1}
-                value={sliderIdx}
-                onChange={(e) => setSliderIdx(Number(e.target.value))}
-                aria-label="عدد المحادثات الشهرية المتوقعة"
-                className="w-full h-2 rounded-full appearance-none cursor-pointer accent-primary bg-border-light dark:bg-border-dark [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-4 [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-4 [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:shadow-md"
-                style={{
-                  background: `linear-gradient(to left, #2563EB ${((sliderIdx / (sliderStops.length - 1)) * 100)}%, #e5e7eb ${((sliderIdx / (sliderStops.length - 1)) * 100)}%)`,
-                }}
-              />
-              <div className="flex justify-between mt-2 text-small text-muted-light dark:text-muted-dark">
-                {sliderStops.map((s, i) => (
+
+            <div
+              role="slider"
+              tabIndex={0}
+              aria-label="عدد المحادثات الشهرية المتوقعة"
+              aria-valuemin={0}
+              aria-valuemax={sliderStops.length - 1}
+              aria-valuenow={sliderIdx}
+              aria-valuetext={stopHint(sliderStops[sliderIdx])}
+              onKeyDown={(e) => {
+                // In RTL the arrow that points at the higher tier is the left one,
+                // so the keys are mapped to the visual direction, not the raw axis.
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setSliderIdx((i) => Math.min(i + 1, sliderStops.length - 1));
+                } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setSliderIdx((i) => Math.max(i - 1, 0));
+                } else if (e.key === 'Home') { e.preventDefault(); setSliderIdx(0); }
+                else if (e.key === 'End') { e.preventDefault(); setSliderIdx(sliderStops.length - 1); }
+              }}
+              className="relative h-5 mx-3 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+            >
+              {/* Track */}
+              <div className="absolute top-1/2 -translate-y-1/2 inset-x-0 h-1.5 rounded-full bg-border-light dark:bg-border-dark" />
+
+              {sliderStops.map((s, i) => {
+                const pct = sliderStops.length > 1 ? (i / (sliderStops.length - 1)) * 100 : 0;
+                const active = i === sliderIdx;
+                return (
                   <button
                     key={i}
+                    type="button"
+                    tabIndex={-1}
                     onClick={() => setSliderIdx(i)}
-                    className={cn('transition-colors', sliderIdx === i && 'text-primary font-bold')}
+                    aria-label={stopHint(s)}
+                    className="absolute top-1/2 grid place-items-center"
+                    style={{ insetInlineStart: `${pct}%`, transform: 'translate(50%, -50%)' }}
                   >
-                    {s.label}
+                    {active ? (
+                      <span className="h-5 w-5 rounded-full bg-white dark:bg-surface-dark border-[3px] border-primary shadow-sm grid place-items-center">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      </span>
+                    ) : (
+                      <span className="h-3 w-3 rounded-full bg-white dark:bg-surface-dark border-2 border-border-light dark:border-border-dark transition-colors hover:border-primary/60" />
+                    )}
+
+                    {/* The value rides above the active stop instead of sitting in a
+                        row of labels, so only the chosen one is ever asserted. */}
+                    {active && (
+                      // Centred on the thumb, except at the two ends where a centred
+                      // bubble runs off a narrow screen. There it hangs from the
+                      // thumb's inner side instead, and the arrow follows it so it
+                      // still points at the stop. left/right are used physically —
+                      // `start-*` resolves to right under RTL and would fight the
+                      // translate, which is what knocked the arrow off centre.
+                      <span
+                        className={cn(
+                          'absolute bottom-full mb-2.5 whitespace-nowrap rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-white shadow-sm',
+                          i === 0 && 'right-0 translate-x-2',
+                          i === sliderStops.length - 1 && 'left-0 -translate-x-2',
+                          i > 0 && i < sliderStops.length - 1 && 'left-1/2 -translate-x-1/2',
+                        )}
+                      >
+                        {stopHint(s)}
+                        <span
+                          className={cn(
+                            'absolute top-full -mt-1 h-2 w-2 rotate-45 bg-primary',
+                            i === 0 && 'right-3',
+                            i === sliderStops.length - 1 && 'left-3',
+                            i > 0 && i < sliderStops.length - 1 && 'left-1/2 -translate-x-1/2',
+                          )}
+                        />
+                      </span>
+                    )}
                   </button>
-                ))}
-              </div>
+                );
+              })}
             </div>
           </div>
 
