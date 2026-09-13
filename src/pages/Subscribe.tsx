@@ -184,7 +184,9 @@ export default function Subscribe(): JSX.Element {
 
   return (
     <div className="p-4 lg:p-8 page-fade max-w-6xl mx-auto">
-      {step === 'select' && (
+      {/* The downgrade confirmation is a dialog over this view, not a replacement for
+          it — the comparison table has to stay readable while the user confirms. */}
+      {(step === 'select' || step === 'confirm-downgrade') && (
         <>
           <button onClick={() => navigate(-1)} className="text-small text-muted-light dark:text-muted-dark hover:text-current flex items-center gap-1 mb-4">
             <ArrowLeft className="h-4 w-4" /> عودة
@@ -522,52 +524,6 @@ export default function Subscribe(): JSX.Element {
         </>
       )}
 
-      {step === 'confirm-downgrade' && selectedPlan && sub && (
-        <Card className="max-w-lg mx-auto p-8 text-center">
-          <div className="h-16 w-16 rounded-full bg-warning/15 text-warning flex items-center justify-center mx-auto mb-4">
-            <Calendar className="h-8 w-8" />
-          </div>
-          <h2 className="text-h1 font-bold mb-2">تأكيد تخفيض الباقة</h2>
-          <p className="text-body text-muted-light dark:text-muted-dark mb-6">
-            سيتم التحويل لباقة <strong>{selectedPlan.nameAr}</strong> تلقائياً عند انتهاء فترتك الحالية. لن يتم خصم أو إرجاع أي مبالغ الآن.
-          </p>
-          <div className="rounded-card border border-border-light dark:border-border-dark divide-y divide-border-light dark:divide-border-dark text-small mb-6">
-            <div className="flex justify-between p-4">
-              <span className="text-muted-light dark:text-muted-dark">الباقة الجديدة</span>
-              <span className="font-semibold">{selectedPlan.nameAr}</span>
-            </div>
-            <div className="flex justify-between p-4">
-              <span className="text-muted-light dark:text-muted-dark">تاريخ التفعيل المتوقع</span>
-              <span className="font-semibold">{formatDate(sub.currentPeriodEnd)}</span>
-            </div>
-            <div className="flex justify-between p-4">
-              <span className="text-muted-light dark:text-muted-dark">السعر الجديد</span>
-              <span className="font-bold text-primary">
-                {formatMoney(amountFor(selectedPlan), selectedCountry.currency)}
-                <span className="font-normal text-muted-light dark:text-muted-dark"> / {cycle === 'yearly' ? 'سنة' : 'شهر'}</span>
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 justify-center">
-            <button
-              onClick={() => { setStep('select'); setSelectedPlan(null); }}
-              className="h-11 px-6 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
-            >
-              إلغاء
-            </button>
-            <button
-              onClick={() => {
-                showToast(`سيتم التحول لباقة ${selectedPlan.nameAr} في ${formatDate(sub.currentPeriodEnd)}`, 'success');
-                navigate('/billing');
-              }}
-              className="h-11 px-6 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold transition-colors"
-            >
-              تأكيد التخفيض
-            </button>
-          </div>
-        </Card>
-      )}
-
       {step === 'checkout' && selectedPlan && (
         <CheckoutFlow
           plan={selectedPlan}
@@ -636,6 +592,63 @@ export default function Subscribe(): JSX.Element {
           </button>
         </Card>
       )}
+
+      <Modal
+        open={step === 'confirm-downgrade' && !!selectedPlan && !!sub}
+        onClose={() => { setStep('select'); setSelectedPlan(null); }}
+        title="تأكيد تخفيض الباقة"
+        size="md"
+        footer={
+          <>
+            <button
+              onClick={() => { setStep('select'); setSelectedPlan(null); }}
+              className="h-11 px-6 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
+            >
+              إلغاء
+            </button>
+            <button
+              onClick={() => {
+                if (!selectedPlan || !sub) return;
+                showToast(`سيتم التحول لباقة ${selectedPlan.nameAr} في ${formatDate(sub.currentPeriodEnd)}`, 'success');
+                navigate('/billing');
+              }}
+              className="h-11 px-6 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold transition-colors"
+            >
+              تأكيد التخفيض
+            </button>
+          </>
+        }
+      >
+        {selectedPlan && sub && (
+          <>
+            <div className="flex items-start gap-3 mb-5">
+              <div className="h-10 w-10 shrink-0 rounded-full bg-warning/15 text-warning flex items-center justify-center">
+                <Calendar className="h-5 w-5" />
+              </div>
+              <p className="text-body text-muted-light dark:text-muted-dark">
+                سيتم التحويل لباقة <strong className="text-current">{selectedPlan.nameAr}</strong> تلقائياً عند انتهاء فترتك الحالية. لن يتم خصم أو إرجاع أي مبالغ الآن.
+              </p>
+            </div>
+            <div className="rounded-card border border-border-light dark:border-border-dark divide-y divide-border-light dark:divide-border-dark text-small">
+              <div className="flex justify-between p-4">
+                <span className="text-muted-light dark:text-muted-dark">الباقة الجديدة</span>
+                <span className="font-semibold">{selectedPlan.nameAr}</span>
+              </div>
+              <div className="flex justify-between p-4">
+                <span className="text-muted-light dark:text-muted-dark">تاريخ التفعيل المتوقع</span>
+                <span className="font-semibold">{formatDate(sub.currentPeriodEnd)}</span>
+              </div>
+              <div className="flex justify-between p-4">
+                <span className="text-muted-light dark:text-muted-dark">السعر الجديد</span>
+                <span className="font-bold text-primary">
+                  {formatMoney(amountFor(selectedPlan), selectedCountry.currency)}
+                  <span className="font-normal text-muted-light dark:text-muted-dark"> / {cycle === 'yearly' ? 'سنة' : 'شهر'}</span>
+                </span>
+              </div>
+            </div>
+          </>
+        )}
+      </Modal>
 
       <ContactSalesModal
         open={contactOpen}
