@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -85,6 +85,24 @@ export function TopHeader(): JSX.Element {
   const [profileOpen, setProfileOpen] = useState(false);
   const pageLabel = currentPageLabel(location.pathname);
 
+  // Availability is read from — and written to — the signed-in user's own row in
+  // the team list, so flipping it here shows up on /team and in assignment.
+  const agents = useDataStore((s) => s.agents);
+  const updateAgent = useDataStore((s) => s.updateAgent);
+  const showToast = useUIStore((s) => s.showToast);
+  const selfAgent = useMemo(() => {
+    if (!user) return null;
+    const email = user.email.trim().toLowerCase();
+    return agents.find((a) => a.email.trim().toLowerCase() === email)
+      ?? agents.find((a) => a.name === user.name)
+      ?? null;
+  }, [agents, user]);
+  const setAvailable = (next: boolean): void => {
+    if (!selfAgent) return;
+    updateAgent(selfAgent.id, { status: next ? 'online' : 'busy' });
+    showToast(next ? t('تم تعيين الحالة: متاح') : t('تم تعيين الحالة: مشغول'), 'success');
+  };
+
   return (
     <header className="h-14 bg-white dark:bg-surface-dark border-b border-border-light dark:border-border-dark flex items-center gap-3 px-5 sticky top-0 z-20 flex-shrink-0">
       {/* Mobile menu toggle */}
@@ -165,6 +183,8 @@ export function TopHeader(): JSX.Element {
           onToggle={() => setProfileOpen((v) => !v)}
           onClose={() => setProfileOpen(false)}
           onLogout={handleLogout}
+          available={selfAgent ? selfAgent.status !== 'busy' : null}
+          onAvailableChange={setAvailable}
         />
       )}
 
@@ -178,15 +198,21 @@ function ProfileChip({
   onToggle,
   onClose,
   onLogout,
+  available,
+  onAvailableChange,
 }: {
   user: { name: string; email: string; role: 'admin' | 'client' };
   open: boolean;
   onToggle: () => void;
   onClose: () => void;
   onLogout: () => void;
+  /** null when the signed-in user has no row in the team list — then no switch is shown. */
+  available: boolean | null;
+  onAvailableChange: (next: boolean) => void;
 }): JSX.Element {
   const { t } = useTranslation();
   const roleLabel = user.role === 'admin' ? t('مدير الحساب') : t('موظف');
+  const dotColor = available === false ? 'bg-warning' : 'bg-success';
   return (
     <div className="relative">
       <button
@@ -196,7 +222,7 @@ function ProfileChip({
       >
         <div className="relative">
           <Avatar name={user.name} size="sm" />
-          <span className="absolute -bottom-0.5 -end-0.5 h-2.5 w-2.5 rounded-full bg-success ring-2 ring-white dark:ring-surface-dark" />
+          <span className={cn('absolute -bottom-0.5 -end-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-white dark:ring-surface-dark', dotColor)} />
         </div>
         <div className="hidden sm:block text-right leading-tight">
           <p className="text-small font-semibold">{user.name}</p>
@@ -214,6 +240,31 @@ function ProfileChip({
                 <p className="text-[11px] text-muted-light dark:text-muted-dark truncate">{user.email}</p>
               </div>
             </div>
+            {available !== null && (
+              <div className="px-3 py-2.5 border-b border-border-light dark:border-border-dark flex items-center gap-2.5">
+                <span className={cn('h-2.5 w-2.5 rounded-full flex-shrink-0', dotColor)} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-body font-medium leading-tight">{available ? t('متاح') : t('مشغول')}</p>
+                  <p className="text-[11px] text-muted-light dark:text-muted-dark leading-tight mt-0.5">
+                    {available ? t('تصلك محادثات جديدة') : t('لن تصلك محادثات جديدة')}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onAvailableChange(!available)}
+                  role="switch"
+                  aria-checked={available}
+                  aria-label={t('الحالة')}
+                  title={available ? t('متاح — اضغط للتحويل إلى مشغول') : t('مشغول — اضغط للتحويل إلى متاح')}
+                  className={cn(
+                    'relative h-5 w-9 rounded-full transition-colors flex-shrink-0',
+                    available ? 'bg-success' : 'bg-warning',
+                  )}
+                >
+                  <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all', available ? 'end-0.5' : 'start-0.5')} />
+                </button>
+              </div>
+            )}
             <NavLink to="/settings?tab=profile" onClick={onClose} className="flex items-center gap-2.5 px-3 py-2 text-body hover:bg-bg-light dark:hover:bg-bg-dark">
               <UserIcon className="h-4 w-4 text-muted-light dark:text-muted-dark" />
               <span>{t('الملف الشخصي')}</span>
