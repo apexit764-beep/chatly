@@ -81,6 +81,9 @@ interface AdminState {
   // Plan request actions
   createPlanRequest: (r: Omit<PlanRequest, 'id' | 'status' | 'createdAt'>) => PlanRequest;
   updatePlanRequestStatus: (id: string, status: PlanRequestStatus) => void;
+  /** Client-side edit. Re-queues an already-contacted request so sales re-read it. */
+  editPlanRequest: (id: string, patch: Pick<PlanRequest, 'planId' | 'message'>) => void;
+  cancelPlanRequest: (id: string) => void;
   deletePlanRequest: (id: string) => void;
 
   // Paymob
@@ -168,8 +171,17 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       currentPeriodStart: new Date().toISOString(),
       currentPeriodEnd: new Date(Date.now() + (billingCycle === 'yearly' ? 365 : 30) * 86400000).toISOString(),
     };
+    // Subscribing to a plan settles any open enquiry about it — nobody should have to
+    // close the request by hand once the thing it asked for has happened.
+    const settledRequests = get().planRequests.map((r) =>
+      r.clientId === clientId && r.planId === planId && (r.status === 'new' || r.status === 'contacted')
+        ? { ...r, status: 'converted' as const }
+        : r,
+    );
+    persistRequests(settledRequests);
     set((s) => ({
       subscriptions: [...s.subscriptions, sub],
+      planRequests: settledRequests,
       clients: s.clients.map((c) =>
         c.id === clientId
           ? { ...c, planId, subscriptionId: sub.id, status: 'active', mrr: billingCycle === 'monthly' ? amount : amount / 12, currency: client.currency }
@@ -253,6 +265,22 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   },
   updatePlanRequestStatus: (id, status) => {
     const next = get().planRequests.map((r) => (r.id === id ? { ...r, status } : r));
+    persistRequests(next);
+    set({ planRequests: next });
+  },
+  editPlanRequest: (id, patch) => {
+    const next = get().planRequests.map((r) => {
+      if (r.id !== id) return r;
+      // Sales may already have called about the old wording — send it back to the
+      // top of the queue rather than let them act on content that has since changed.
+      const status: PlanRequestStatus = r.status === 'contacted' ? 'new' : r.status;
+      return { ...r, ...patch, status };
+    });
+    persistRequests(next);
+    set({ planRequests: next });
+  },
+  cancelPlanRequest: (id) => {
+    const next = get().planRequests.map((r) => (r.id === id ? { ...r, status: 'cancelled' as const } : r));
     persistRequests(next);
     set({ planRequests: next });
   },

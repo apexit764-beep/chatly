@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Download,
@@ -9,21 +9,32 @@ import {
   Check,
   Star,
   Calendar,
+  ClipboardList,
+  Pencil,
   Receipt,
   Users,
   Users2,
   MessageSquare,
   Radio,
+  XCircle,
 } from 'lucide-react';
-import { Card, Modal, useConfirm } from '@components/ui';
+import { Card, Modal, Textarea, useConfirm } from '@components/ui';
 import { DateRangePicker } from '@components/ui/DateRangePicker';
 import { useAdminStore } from '@/store/useAdminStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
-import { formatDate } from '@/utils/format';
+import { formatDate, timeAgo } from '@/utils/format';
 import { printAsPdf } from '@/utils/csv';
+import {
+  CLIENT_STATUSES,
+  clientStatusClass,
+  clientStatusLabel,
+  clientStatusOf,
+  isEditable,
+  type ClientRequestStatus,
+} from '@/utils/planRequest';
 import { cn } from '@/utils/cn';
-import type { Invoice, InvoiceStatus, Plan } from '@/types';
+import type { Invoice, InvoiceStatus, Plan, PlanRequest } from '@/types';
 
 const CURRENT_CLIENT_ID = 'client_1';
 
@@ -65,6 +76,13 @@ export default function Billing(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'all'>('all');
   const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
   const [invSearch, setInvSearch] = useState('');
+  const [mainTab, setMainTab] = useState<'invoices' | 'requests'>('invoices');
+  const allRequests = useAdminStore((s) => s.planRequests);
+  const myRequests = useMemo(
+    () => allRequests.filter((r) => r.clientId === CURRENT_CLIENT_ID),
+    [allRequests],
+  );
+  const pendingCount = myRequests.filter((r) => clientStatusOf(r.status) === 'pending').length;
   const [dateFrom, setDateFrom] = useState<Date | null>(null);
   const [dateTo, setDateTo] = useState<Date | null>(null);
   const [allPeriods, setAllPeriods] = useState(true);
@@ -318,7 +336,26 @@ export default function Billing(): JSX.Element {
         </Modal>
       )}
 
-      {/* Invoices */}
+      {/* Invoices / Requests */}
+      <div className="flex items-center gap-1.5 border-b border-border-light dark:border-border-dark">
+        <TabButton active={mainTab === 'invoices'} onClick={() => setMainTab('invoices')} icon={<Receipt className="h-4 w-4" />}>
+          الفواتير ({clientInvoices.length})
+        </TabButton>
+        <TabButton active={mainTab === 'requests'} onClick={() => setMainTab('requests')} icon={<ClipboardList className="h-4 w-4" />}>
+          الطلبات ({myRequests.length})
+          {pendingCount > 0 && (
+            <span className="ms-1 min-w-[18px] h-[18px] px-1 rounded-full bg-warning/20 text-warning text-[10px] font-bold inline-flex items-center justify-center">
+              {pendingCount}
+            </span>
+          )}
+        </TabButton>
+      </div>
+
+      {mainTab === 'requests' && (
+        <RequestsPanel clientId={CURRENT_CLIENT_ID} />
+      )}
+
+      {mainTab === 'invoices' && (
       <Card>
         <div className="px-5 py-4 border-b border-border-light dark:border-border-dark">
           <h3 className="text-h2 font-bold flex items-center gap-2">
@@ -417,6 +454,7 @@ export default function Billing(): JSX.Element {
           </table>
         </div>
       </Card>
+      )}
 
       {/* Invoice preview — opens a PDF-like view that the user can download */}
       <Modal
@@ -547,5 +585,246 @@ function FilterPill({
     >
       {children}
     </button>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: ReactNode;
+  children: ReactNode;
+}): JSX.Element {
+  return (
+    <button
+      onClick={onClick}
+      aria-current={active ? 'page' : undefined}
+      className={cn(
+        'h-11 px-4 inline-flex items-center gap-2 text-body font-semibold border-b-2 -mb-px transition-colors',
+        active
+          ? 'border-primary text-primary'
+          : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current',
+      )}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+/** -1 is the sentinel for "no ceiling" on every plan limit. */
+const planLimit = (n: number | undefined): string =>
+  n === undefined ? '—' : n === -1 ? 'غير محدود' : n.toLocaleString('en');
+
+/**
+ * The customer's own view of the enquiries they sent. They may correct or withdraw
+ * one only while it is still unanswered — once sales has acted on it, it is history.
+ */
+function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
+  const allRequests = useAdminStore((s) => s.planRequests);
+  const plans = useAdminStore((s) => s.plans);
+  const editRequest = useAdminStore((s) => s.editPlanRequest);
+  const cancelRequest = useAdminStore((s) => s.cancelPlanRequest);
+  const showToast = useUIStore((s) => s.showToast);
+  const { confirm } = useConfirm();
+
+  const [filter, setFilter] = useState<'all' | ClientRequestStatus>('all');
+  const [editing, setEditing] = useState<PlanRequest | null>(null);
+  const [editPlanId, setEditPlanId] = useState('');
+  const [editMessage, setEditMessage] = useState('');
+
+  const mine = useMemo(
+    () => allRequests.filter((r) => r.clientId === clientId),
+    [allRequests, clientId],
+  );
+  const shown = filter === 'all' ? mine : mine.filter((r) => clientStatusOf(r.status) === filter);
+  const planOf = (id: string): Plan | undefined => plans.find((p) => p.id === id);
+
+  const openEdit = (r: PlanRequest): void => {
+    setEditing(r);
+    setEditPlanId(r.planId);
+    setEditMessage(r.message);
+  };
+
+  const saveEdit = (): void => {
+    if (!editing) return;
+    editRequest(editing.id, { planId: editPlanId, message: editMessage.trim() });
+    setEditing(null);
+    showToast('تم تعديل الطلب', 'success');
+  };
+
+  const handleCancel = async (r: PlanRequest): Promise<void> => {
+    const ok = await confirm({
+      title: 'إلغاء الطلب؟',
+      message: `سيتم إلغاء طلبك لباقة ${planOf(r.planId)?.nameAr ?? '—'}. يمكنك تقديم طلب جديد في أي وقت.`,
+      variant: 'warning',
+      confirmText: 'إلغاء الطلب',
+      cancelText: 'تراجع',
+    });
+    if (!ok) return;
+    cancelRequest(r.id);
+    showToast('تم إلغاء الطلب', 'success');
+  };
+
+  return (
+    <Card>
+      <div className="px-5 py-4 border-b border-border-light dark:border-border-dark">
+        <h3 className="text-h2 font-bold flex items-center gap-2">
+          <ClipboardList className="h-5 w-5 text-primary" />
+          طلبات الاشتراك
+        </h3>
+        <p className="text-small text-muted-light dark:text-muted-dark mt-1">
+          الطلبات التي أرسلتها لفريق المبيعات وحالة كل منها
+        </p>
+        <div className="mt-3 flex items-center gap-1.5 overflow-x-auto">
+          <FilterPill active={filter === 'all'} onClick={() => setFilter('all')}>
+            الكل ({mine.length})
+          </FilterPill>
+          {CLIENT_STATUSES.map((s) => {
+            const n = mine.filter((r) => clientStatusOf(r.status) === s).length;
+            return (
+              <FilterPill key={s} active={filter === s} onClick={() => setFilter(s)}>
+                {clientStatusLabel[s]} ({n})
+              </FilterPill>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-body">
+          <thead className="bg-bg-light dark:bg-bg-dark text-small text-muted-light dark:text-muted-dark">
+            <tr>
+              <th className="text-start font-medium px-4 py-3">الباقة المطلوبة</th>
+              <th className="text-center font-medium px-4 py-3 hidden md:table-cell">حد المحادثات</th>
+              <th className="text-center font-medium px-4 py-3 hidden md:table-cell">حد الموظفين</th>
+              <th className="text-center font-medium px-4 py-3 hidden md:table-cell">حد القنوات</th>
+              <th className="text-start font-medium px-4 py-3 hidden lg:table-cell">الاستفسار</th>
+              <th className="text-start font-medium px-4 py-3">الحالة</th>
+              <th className="text-end font-medium px-4 py-3" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border-light dark:divide-border-dark">
+            {shown.map((r) => {
+              const plan = planOf(r.planId);
+              const cs = clientStatusOf(r.status);
+              return (
+                <tr key={r.id} className="hover:bg-bg-light/60 dark:hover:bg-bg-dark/60">
+                  <td className="px-4 py-3">
+                    <p className="font-semibold">{plan?.nameAr ?? '—'}</p>
+                    <p className="text-[11px] text-muted-light dark:text-muted-dark">
+                      أُرسل {timeAgo(r.createdAt)} · {formatDate(r.createdAt)}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3 text-center hidden md:table-cell">{planLimit(plan?.limits.conversations)}</td>
+                  <td className="px-4 py-3 text-center hidden md:table-cell">{planLimit(plan?.limits.agents)}</td>
+                  <td className="px-4 py-3 text-center hidden md:table-cell">{planLimit(plan?.limits.channels)}</td>
+                  <td className="px-4 py-3 hidden lg:table-cell text-small text-muted-light dark:text-muted-dark max-w-[280px]">
+                    {r.message ? <span className="line-clamp-2">{r.message}</span> : '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={cn('inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap', clientStatusClass[cs])}>
+                      {clientStatusLabel[cs]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1 justify-end">
+                      {isEditable(r.status) ? (
+                        <>
+                          <button
+                            onClick={() => openEdit(r)}
+                            className="h-9 px-3 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark inline-flex items-center gap-1.5"
+                          >
+                            <Pencil className="h-3.5 w-3.5" /> تعديل
+                          </button>
+                          <button
+                            onClick={() => handleCancel(r)}
+                            className="h-9 px-3 rounded-full border border-danger/30 text-danger text-small font-medium hover:bg-danger/10 inline-flex items-center gap-1.5"
+                          >
+                            <XCircle className="h-3.5 w-3.5" /> إلغاء
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-small text-muted-light dark:text-muted-dark">—</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {shown.length === 0 && (
+              <tr>
+                <td colSpan={7} className="text-center py-12 text-muted-light dark:text-muted-dark">
+                  {mine.length === 0
+                    ? 'لم ترسل أي طلب اشتراك بعد'
+                    : `لا توجد طلبات ${clientStatusLabel[filter as ClientRequestStatus]}`}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <Modal
+        open={!!editing}
+        onClose={() => setEditing(null)}
+        title="تعديل الطلب"
+        size="md"
+        footer={
+          <>
+            <button
+              onClick={() => setEditing(null)}
+              className="h-11 px-6 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark"
+            >
+              إلغاء
+            </button>
+            <button
+              onClick={saveEdit}
+              className="h-11 px-6 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold"
+            >
+              حفظ التعديل
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-small font-medium mb-1.5 block">الباقة المطلوبة</label>
+            <select
+              value={editPlanId}
+              onChange={(e) => setEditPlanId(e.target.value)}
+              className="w-full h-11 px-3 rounded-card bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
+            >
+              {plans.filter((p) => p.active).map((p) => (
+                <option key={p.id} value={p.id}>{p.nameAr}</option>
+              ))}
+            </select>
+            {editPlanId && (
+              <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1.5">
+                حد المحادثات {planLimit(planOf(editPlanId)?.limits.conversations)} ·
+                {' '}الموظفين {planLimit(planOf(editPlanId)?.limits.agents)} ·
+                {' '}القنوات {planLimit(planOf(editPlanId)?.limits.channels)}
+              </p>
+            )}
+          </div>
+          <div>
+            <label className="text-small font-medium mb-1.5 block">الاستفسار</label>
+            <Textarea
+              value={editMessage}
+              onChange={(e) => setEditMessage(e.target.value)}
+              rows={4}
+              placeholder="اكتب ما تحتاج توضيحه لفريق المبيعات..."
+            />
+          </div>
+          <p className="text-[11px] text-muted-light dark:text-muted-dark">
+            سيعود طلبك إلى أول الطابور ليراجعه فريق المبيعات من جديد.
+          </p>
+        </div>
+      </Modal>
+    </Card>
   );
 }

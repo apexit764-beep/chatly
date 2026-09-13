@@ -15,12 +15,14 @@ import {
   Plus,
   MessageCircle,
   Calendar,
+  Clock,
 } from 'lucide-react';
 import { Card, Input, Modal, Textarea, useConfirm } from '@components/ui';
 import { useAdminStore } from '@/store/useAdminStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
 import { formatDate } from '@/utils/format';
+import { isEditable } from '@/utils/planRequest';
 import { cn } from '@/utils/cn';
 import type { Plan } from '@/types';
 
@@ -43,6 +45,10 @@ export default function Subscribe(): JSX.Element {
   const createSubscription = useAdminStore((s) => s.createSubscription);
   const recordPayment = useAdminStore((s) => s.recordPayment);
   const createPlanRequest = useAdminStore((s) => s.createPlanRequest);
+  const planRequests = useAdminStore((s) => s.planRequests);
+  /** An unanswered enquiry for this plan — the button offers the tab instead of a duplicate. */
+  const pendingRequestFor = (planId: string): boolean =>
+    planRequests.some((r) => r.clientId === CURRENT_CLIENT_ID && r.planId === planId && isEditable(r.status));
   const showToast = useUIStore((s) => s.showToast);
   const navigate = useNavigate();
 
@@ -391,12 +397,22 @@ export default function Subscribe(): JSX.Element {
                           </p>
 
                           {isEnt ? (
+                            pendingRequestFor(plan.id) ? (
+                              <button
+                                onClick={() => navigate('/billing')}
+                                title="لديك طلب قيد المعالجة لهذه الباقة — اعرضه في تبويب الطلبات"
+                                className="w-full h-9 rounded-full bg-warning/15 text-warning text-[12px] font-semibold hover:bg-warning/25 transition-colors inline-flex items-center justify-center gap-1.5"
+                              >
+                                <Clock className="h-3.5 w-3.5" /> طلبك قيد المعالجة
+                              </button>
+                            ) : (
                             <button
                               onClick={() => { setContactPlan(plan); setContactOpen(true); }}
                               className="w-full h-9 rounded-full border border-primary/40 text-primary text-[12px] font-semibold hover:bg-primary/5 transition-colors inline-flex items-center justify-center gap-1.5"
                             >
                               <MessageCircle className="h-3.5 w-3.5" /> تواصل معنا
                             </button>
+                            )
                           ) : isThisCurrent ? (
                             <button
                               disabled
@@ -664,6 +680,7 @@ export default function Subscribe(): JSX.Element {
         defaultPhone={client?.phone ?? ''}
         onSubmitted={(data) => {
           createPlanRequest({
+            clientId: CURRENT_CLIENT_ID,
             planId: (contactPlan ?? activePlanAtSlider)?.id ?? '',
             ...data,
             countryCode: country,

@@ -552,6 +552,8 @@ export type PlanRequestStatus = 'new' | 'contacted' | 'converted' | 'rejected' |
 
 export interface PlanRequest {
   id: string;
+  /** Who submitted it — scopes the client portal's own list. */
+  clientId: string;
   /** The plan the enquiry came from. */
   planId: string;
   name: string;
