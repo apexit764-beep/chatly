@@ -7,12 +7,14 @@ import {
   Package,
   Banknote,
   BarChart3,
+  ClipboardList,
   Settings,
   LogOut,
   HelpCircle,
   ExternalLink,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useAdminStore } from '@/store/useAdminStore';
 import { clientDashboardUrl } from '@/utils/mode';
 import { Avatar } from '@components/ui';
 import { HelpDrawer } from '@components/layout/HelpDrawer';
@@ -22,6 +24,7 @@ const items = [
   { to: '/dashboard', label: 'نظرة عامة', icon: LayoutDashboard },
   { to: '/clients', label: 'العملاء', icon: Users },
   { to: '/plans', label: 'الباقات', icon: Package },
+  { to: '/plan-requests', label: 'طلبات الاشتراك', icon: ClipboardList },
   { to: '/finance', label: 'المالية', icon: Banknote },
   { to: '/payments', label: 'بوابة الدفع', icon: CreditCard },
   { to: '/reports', label: 'التقارير', icon: BarChart3 },
@@ -30,6 +33,7 @@ const items = [
 export function AdminSidebar(): JSX.Element {
   const logout = useAuthStore((s) => s.logout);
   const user = useAuthStore((s) => s.user);
+  const newRequests = useAdminStore((s) => s.planRequests.filter((r) => r.status === 'new').length);
   const [helpOpen, setHelpOpen] = useState(false);
 
   return (
@@ -56,6 +60,11 @@ export function AdminSidebar(): JSX.Element {
               }
             >
               <Icon className="h-[18px] w-[18px]" />
+              {item.to === '/plan-requests' && newRequests > 0 && (
+                <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-4 px-1 rounded-full bg-danger text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-surface-dark">
+                  {newRequests}
+                </span>
+              )}
               <span className="absolute start-full ms-2 px-2 py-1 bg-[#111827] text-white text-small rounded-md opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap transition-opacity z-50">
                 {item.label}
               </span>

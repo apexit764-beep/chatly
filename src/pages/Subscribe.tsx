@@ -42,6 +42,7 @@ export default function Subscribe(): JSX.Element {
   const paymob = useAdminStore((s) => s.paymob);
   const createSubscription = useAdminStore((s) => s.createSubscription);
   const recordPayment = useAdminStore((s) => s.recordPayment);
+  const createPlanRequest = useAdminStore((s) => s.createPlanRequest);
   const showToast = useUIStore((s) => s.showToast);
   const navigate = useNavigate();
 
@@ -57,6 +58,9 @@ export default function Subscribe(): JSX.Element {
   const [step, setStep] = useState<Step>('select');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
+  // Which plan the enquiry is about. A plan column names its own plan; the generic
+  // "not sure which plan?" prompt has none, so it falls back to the slider's pick.
+  const [contactPlan, setContactPlan] = useState<Plan | null>(null);
 
   const sliderStops: SliderStop[] = useMemo(() => {
     const stops: SliderStop[] = [];
@@ -388,7 +392,7 @@ export default function Subscribe(): JSX.Element {
 
                           {isEnt ? (
                             <button
-                              onClick={() => setContactOpen(true)}
+                              onClick={() => { setContactPlan(plan); setContactOpen(true); }}
                               className="w-full h-9 rounded-full border border-primary/40 text-primary text-[12px] font-semibold hover:bg-primary/5 transition-colors inline-flex items-center justify-center gap-1.5"
                             >
                               <MessageCircle className="h-3.5 w-3.5" /> تواصل معنا
@@ -494,7 +498,7 @@ export default function Subscribe(): JSX.Element {
               </p>
             </div>
             <button
-              onClick={() => setContactOpen(true)}
+              onClick={() => { setContactPlan(null); setContactOpen(true); }}
               className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex-shrink-0"
             >
               تواصل معنا
@@ -653,12 +657,17 @@ export default function Subscribe(): JSX.Element {
       <ContactSalesModal
         open={contactOpen}
         onClose={() => setContactOpen(false)}
-        plan={activePlanAtSlider}
+        plan={contactPlan ?? activePlanAtSlider}
         defaultName={client?.contactName ?? ''}
         defaultEmail={client?.email ?? ''}
         defaultCompany={client?.companyName ?? ''}
         defaultPhone={client?.phone ?? ''}
-        onSubmitted={() => {
+        onSubmitted={(data) => {
+          createPlanRequest({
+            planId: (contactPlan ?? activePlanAtSlider)?.id ?? '',
+            ...data,
+            countryCode: country,
+          });
           setContactOpen(false);
           showToast('تم إرسال طلبك بنجاح — سيتواصل معك فريق المبيعات خلال 24 ساعة', 'success');
         }}
@@ -679,7 +688,15 @@ interface ContactSalesModalProps {
   defaultEmail: string;
   defaultCompany: string;
   defaultPhone: string;
-  onSubmitted: () => void;
+  /** Where the enquiry is filed. Receives what the user actually typed. */
+  onSubmitted: (data: {
+    name: string;
+    company: string;
+    email: string;
+    phone: string;
+    teamSize: string;
+    message: string;
+  }) => void;
 }
 
 /** Full-width band that names a group of rows, the way the landing page splits its table. */
@@ -731,9 +748,17 @@ function ContactSalesModal({
     e.preventDefault();
     if (!isValid) return;
     setSubmitting(true);
+    // The delay stands in for the network round-trip a real endpoint would cost.
     setTimeout(() => {
       setSubmitting(false);
-      onSubmitted();
+      onSubmitted({
+        name: name.trim(),
+        company: company.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        teamSize: teamSize.trim(),
+        message: message.trim(),
+      });
     }, 900);
   };
 

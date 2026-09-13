@@ -544,6 +544,30 @@ export interface PaymobConfig {
   integrationsByCountry: Record<string, string>;
 }
 
+/**
+ * Lifecycle of an enterprise/plan enquiry. `converted` means it became a real
+ * subscription; `rejected` is a decision we made, `cancelled` one the requester made.
+ */
+export type PlanRequestStatus = 'new' | 'contacted' | 'converted' | 'rejected' | 'cancelled';
+
+export interface PlanRequest {
+  id: string;
+  /** The plan the enquiry came from. */
+  planId: string;
+  name: string;
+  company: string;
+  email: string;
+  /** Full international number, dial code included. */
+  phone: string;
+  /** ISO-3166 alpha-2 of the dial code, for the badge next to the number. */
+  countryCode: string;
+  /** Free text — the requester types a range, not a number. */
+  teamSize: string;
+  message: string;
+  status: PlanRequestStatus;
+  createdAt: string;
+}
+
 export type AdminRole = 'super_admin' | 'admin' | 'support' | 'finance';
 
 export interface AdminUser {

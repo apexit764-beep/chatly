@@ -6,6 +6,8 @@ import type {
   Invoice,
   PaymobConfig,
   Plan,
+  PlanRequest,
+  PlanRequestStatus,
   Subscription,
   Transaction,
 } from '@/types';
@@ -15,10 +17,35 @@ import {
   countries as initialCountries,
   invoices as initialInvoices,
   paymobConfig as initialPaymobConfig,
+  planRequests as initialPlanRequests,
   plans as initialPlans,
   subscriptions as initialSubscriptions,
   transactions as initialTransactions,
 } from './adminMockData';
+
+/**
+ * Plan requests are the one slice a *client* writes and an *admin* reads, so unlike
+ * the rest of the mock data they have to outlive a page reload. Kept in localStorage
+ * until there is a backend — that also means they do not cross between the client and
+ * admin portals, which are separate origins.
+ */
+const REQUESTS_KEY = 'qhub_plan_requests';
+
+function readRequests(): PlanRequest[] {
+  if (typeof window === 'undefined') return initialPlanRequests;
+  try {
+    const raw = localStorage.getItem(REQUESTS_KEY);
+    if (!raw) return initialPlanRequests;
+    const parsed = JSON.parse(raw) as PlanRequest[];
+    return Array.isArray(parsed) ? parsed : initialPlanRequests;
+  } catch {
+    return initialPlanRequests;
+  }
+}
+
+function persistRequests(list: PlanRequest[]): void {
+  try { localStorage.setItem(REQUESTS_KEY, JSON.stringify(list)); } catch {/*ignore*/}
+}
 
 interface AdminState {
   countries: Country[];
@@ -29,6 +56,7 @@ interface AdminState {
   transactions: Transaction[];
   paymob: PaymobConfig;
   adminUsers: AdminUser[];
+  planRequests: PlanRequest[];
 
   // Client actions
   addClient: (c: Omit<Client, 'id' | 'joinedAt' | 'lastActiveAt' | 'subscriptionId' | 'mrr' | 'agentCount' | 'channelCount' | 'conversationCount'>) => Client;
@@ -50,6 +78,11 @@ interface AdminState {
   recordPayment: (clientId: string, planId: string, amount: number, currency: string, last4: string) => { invoice: Invoice; transaction: Transaction };
   refundInvoice: (invoiceId: string) => void;
 
+  // Plan request actions
+  createPlanRequest: (r: Omit<PlanRequest, 'id' | 'status' | 'createdAt'>) => PlanRequest;
+  updatePlanRequestStatus: (id: string, status: PlanRequestStatus) => void;
+  deletePlanRequest: (id: string) => void;
+
   // Paymob
   updatePaymob: (patch: Partial<PaymobConfig>) => void;
 
@@ -70,6 +103,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   transactions: initialTransactions,
   paymob: initialPaymobConfig,
   adminUsers: initialAdminUsers,
+  planRequests: readRequests(),
 
   addClient: (c) => {
     const client: Client = {
@@ -199,6 +233,33 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       invoices: s.invoices.map((inv) => (inv.id === invoiceId ? { ...inv, status: 'refunded' } : inv)),
       transactions: s.transactions.map((t) => (t.invoiceId === invoiceId ? { ...t, status: 'refunded' } : t)),
     }));
+  },
+
+  createPlanRequest: (r) => {
+    const request: PlanRequest = {
+      ...r,
+      // Stored bare so the table and the tel: link can add the + themselves —
+      // the client form submits it with one, the seeded rows without.
+      phone: r.phone.replace(/[^\d]/g, ''),
+      id: `preq_${Date.now()}`,
+      status: 'new',
+      createdAt: new Date().toISOString(),
+    };
+    // Newest first — the admin list is read top-down and new enquiries are the work.
+    const next = [request, ...get().planRequests];
+    persistRequests(next);
+    set({ planRequests: next });
+    return request;
+  },
+  updatePlanRequestStatus: (id, status) => {
+    const next = get().planRequests.map((r) => (r.id === id ? { ...r, status } : r));
+    persistRequests(next);
+    set({ planRequests: next });
+  },
+  deletePlanRequest: (id) => {
+    const next = get().planRequests.filter((r) => r.id !== id);
+    persistRequests(next);
+    set({ planRequests: next });
   },
 
   updatePaymob: (patch) => set((s) => ({ paymob: { ...s.paymob, ...patch } })),
