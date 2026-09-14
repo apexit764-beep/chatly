@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Check,
   Star,
@@ -93,6 +93,21 @@ export default function Subscribe(): JSX.Element {
   }, [currentStopIdx]);
 
   const activePlanAtSlider = activePlans.find((p) => p.id === sliderStops[sliderIdx]?.planId) ?? null;
+
+  // Arriving from an approved request: go straight to paying for the plan it named.
+  // Enterprise is allowed here even though its column has no buy button — the whole
+  // point of the request was to agree a price, and by now sales has.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedPlanId = searchParams.get('plan');
+  useEffect(() => {
+    if (!requestedPlanId) return;
+    const target = activePlans.find((p) => p.id === requestedPlanId);
+    // Consume the param either way, so a reload or a Back does not reopen checkout.
+    setSearchParams({}, { replace: true });
+    if (!target || target.id === currentPlanId) return;
+    setSelectedPlan(target);
+    setStep('checkout');
+  }, [requestedPlanId, activePlans, currentPlanId, setSearchParams]);
 
   const currentPlanPrice = currentPlan ? (currentPlan.pricesPerCountry[country] ?? { monthly: 0, yearly: 0 }) : { monthly: 0, yearly: 0 };
 

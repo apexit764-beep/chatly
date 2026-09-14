@@ -10,6 +10,7 @@ import {
   Star,
   Calendar,
   ClipboardList,
+  CreditCard,
   Pencil,
   Receipt,
   Users,
@@ -625,6 +626,7 @@ const planLimit = (n: number | undefined): string =>
  * one only while it is still unanswered — once sales has acted on it, it is history.
  */
 function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
+  const navigate = useNavigate();
   const allRequests = useAdminStore((s) => s.planRequests);
   const plans = useAdminStore((s) => s.plans);
   const editRequest = useAdminStore((s) => s.editPlanRequest);
@@ -761,6 +763,13 @@ function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
                             <XCircle className="h-3.5 w-3.5" /> إلغاء
                           </button>
                         </>
+                      ) : cs === 'subscribed' ? (
+                        <button
+                          onClick={() => navigate(`/subscribe?plan=${r.planId}`)}
+                          className="h-9 px-3.5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold inline-flex items-center gap-1.5"
+                        >
+                          <CreditCard className="h-3.5 w-3.5" /> الانتقال للدفع
+                        </button>
                       ) : (
                         <span className="text-small text-muted-light dark:text-muted-dark">—</span>
                       )}
