@@ -162,3 +162,44 @@ input[inputmode='tel'] {
 .heat-3 { @apply bg-primary/45; }
 .heat-4 { @apply bg-primary/70; }
 .heat-5 { @apply bg-primary; }
+
+/* ---------------------------------------------------------------
+   AI assistant avatar
+   Three loops on deliberately unrelated periods so they drift apart
+   instead of locking into one visible beat.
+   --------------------------------------------------------------- */
+.qh-ai-halo {
+  animation: qhAiHalo 2.8s ease-in-out infinite;
+}
+.qh-ai-halo--fast { animation-duration: 1.1s; }
+@keyframes qhAiHalo {
+  0%, 100% { transform: scale(1); opacity: 0; }
+  50%      { transform: scale(1.45); opacity: 0.45; }
+}
+
+.qh-ai-bob {
+  animation: qhAiBob 3.4s ease-in-out infinite;
+}
+.qh-ai-bob--fast { animation-duration: 1.3s; }
+@keyframes qhAiBob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6%); }
+}
+
+/* Mostly open: the blink is a brief pinch at the end of each cycle. */
+.qh-ai-eye {
+  animation: qhAiBlink 4.6s ease-in-out infinite;
+}
+@keyframes qhAiBlink {
+  0%, 90%, 100% { transform: scaleY(1); }
+  94%           { transform: scaleY(0.1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qh-ai-halo,
+  .qh-ai-bob,
+  .qh-ai-eye {
+    animation: none;
+  }
+  .qh-ai-halo { opacity: 0.25; }
+}

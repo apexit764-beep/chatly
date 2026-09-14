@@ -5,6 +5,7 @@ export type { CountryOption, PhoneFieldProps } from './PhoneField';
 export { Select } from './Select';
 export { Badge } from './Badge';
 export { Avatar } from './Avatar';
+export { AiAvatar } from './AiAvatar';
 export { Modal } from './Modal';
 export { Drawer } from './Drawer';
 export { Toast } from './Toast';

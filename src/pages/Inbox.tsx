@@ -7,6 +7,7 @@ import {
   Paperclip,
   Image as ImageIcon,
   Sparkles,
+  Bot,
   Check,
   CheckCheck,
   ArrowRight,
@@ -49,6 +50,7 @@ import {
   Pause,
 } from 'lucide-react';
 import {
+  AiAvatar,
   Avatar,
   ChannelIcon,
   channelLabel,
@@ -646,7 +648,7 @@ export default function Inbox(): JSX.Element {
                           className="inline-flex items-center gap-0.5 px-1.5 h-4 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-[9px] font-bold flex-shrink-0"
                           title="المساعد الذكي يتعامل مع هذه المحادثة"
                         >
-                          <Sparkles className="h-2.5 w-2.5" />
+                          <Bot className="h-2.5 w-2.5" />
                           AI
                         </span>
                       )}
@@ -655,7 +657,7 @@ export default function Inbox(): JSX.Element {
                           className="inline-flex items-center gap-0.5 px-1.5 h-4 rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-300 text-[9px] font-bold flex-shrink-0 border border-violet-200 dark:border-violet-700"
                           title="تم تحويلها من المساعد الذكي"
                         >
-                          <Sparkles className="h-2.5 w-2.5" />
+                          <Bot className="h-2.5 w-2.5" />
                           محوّلة
                         </span>
                       )}
@@ -1944,9 +1946,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
           onChange={(id) => { assign(conversation.id, id === '__ai__' ? null : id); showToast(id ? 'تم الإسناد' : 'تم إلغاء الإسناد', 'success'); }}
           renderIndicator={(opt) => opt ? (
             opt.id === '__ai__' ? (
-              <div className="h-5 w-5 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white">
-                <Sparkles className="h-3 w-3" />
-              </div>
+              <AiAvatar size="xs" />
             ) : <Avatar name={opt.name} size="xs" />
           ) : <span className="h-5 w-5 rounded-full bg-bg-light dark:bg-bg-dark border border-dashed border-border-light dark:border-border-dark" />}
         />
@@ -2746,9 +2746,7 @@ function MessageBubble({
     <div className={cn('group flex gap-3 mb-5', isOut && 'flex-row-reverse')}>
       <div className="flex-shrink-0 pt-1">
         {isAI ? (
-          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white ring-2 ring-white dark:ring-surface-dark shadow-sm">
-            <Sparkles className="h-4 w-4" />
-          </div>
+          <AiAvatar size="sm" className="ring-2 ring-white dark:ring-surface-dark" />
         ) : (
           <Avatar name={name} size="sm" />
         )}
@@ -2782,7 +2780,7 @@ function MessageBubble({
                 <>
                   <span className="tabular-nums">{dateLabel}</span>
                   {isEdited && <span title="عُدّلت الرسالة">· معدّلة</span>}
-                  {isAI && <Sparkles className="h-2.5 w-2.5" />}
+                  {isAI && <Bot className="h-3 w-3" />}
                   <span>· {name}</span>
                 </>
               ) : (

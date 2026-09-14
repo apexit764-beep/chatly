@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { X, Send, Sparkles, BookOpen, UserCheck, Clock, RefreshCw, Bot } from 'lucide-react';
 import { useSupportStore, BUSINESS_HOURS_TEXT } from '@/store/useSupportStore';
-import { Avatar } from '@components/ui';
+import { AiAvatar, Avatar } from '@components/ui';
 import { cn } from '@/utils/cn';
 
 function formatTime(iso: string): string {
@@ -114,7 +114,10 @@ export function SupportChat(): JSX.Element {
             {/* Header */}
             <div className="bg-gradient-to-br from-primary to-primary-dark text-white px-4 py-3 flex items-start gap-3 flex-shrink-0">
               <div className="relative">
-                <Avatar name="فريق الدعم" size="md" />
+                {/* A human face only once a human is actually on the other end. */}
+                {transferState === 'transferred'
+                  ? <Avatar name="فريق الدعم" size="md" />
+                  : <AiAvatar size="md" />}
                 <span className="absolute -bottom-0.5 -end-0.5 h-3 w-3 rounded-full bg-success ring-2 ring-primary" />
               </div>
               <div className="flex-1 min-w-0">
