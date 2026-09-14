@@ -678,11 +678,18 @@ export default function Subscribe(): JSX.Element {
         defaultEmail={client?.email ?? ''}
         defaultCompany={client?.companyName ?? ''}
         defaultPhone={client?.phone ?? ''}
+        defaultCountry={selectedCountry ? `${selectedCountry.flag} ${selectedCountry.nameAr}` : ''}
+        onEditAccount={() => { setContactOpen(false); navigate('/settings?tab=profile'); }}
         onSubmitted={(data) => {
           createPlanRequest({
             clientId: CURRENT_CLIENT_ID,
             planId: (contactPlan ?? activePlanAtSlider)?.id ?? '',
             ...data,
+            // Taken from the account, never retyped — the form only shows them back.
+            name: client?.contactName ?? '',
+            company: client?.companyName ?? '',
+            email: client?.email ?? '',
+            phone: client?.phone ?? '',
             countryCode: country,
           });
           setContactOpen(false);
@@ -705,13 +712,13 @@ interface ContactSalesModalProps {
   defaultEmail: string;
   defaultCompany: string;
   defaultPhone: string;
-  /** Where the enquiry is filed. Receives what the user actually typed. */
+  defaultCountry: string;
+  /** Takes the user to where the account details can actually be corrected. */
+  onEditAccount: () => void;
+  /** Where the enquiry is filed. Receives only what the account does not already know. */
   onSubmitted: (data: {
-    name: string;
-    company: string;
-    email: string;
-    phone: string;
-    teamSize: string;
+    requestedAgents: number | null;
+    requestedChannels: number | null;
     message: string;
   }) => void;
 }
@@ -738,28 +745,29 @@ function ContactSalesModal({
   defaultEmail,
   defaultCompany,
   defaultPhone,
+  defaultCountry,
+  onEditAccount,
   onSubmitted,
 }: ContactSalesModalProps): JSX.Element {
-  const [name, setName] = useState('');
-  const [company, setCompany] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [teamSize, setTeamSize] = useState('');
+  const [agents, setAgents] = useState('');
+  const [channels, setChannels] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Enterprise is a set of packages rather than one plan, so the ceilings the customer
+  // needs are what sales matches a package against. Every other plan already states
+  // its own limits — asking would be a question with a printed answer.
+  const needsLimits = plan?.tier === 'enterprise';
+
   useEffect(() => {
     if (open) {
-      setName(defaultName);
-      setCompany(defaultCompany);
-      setEmail(defaultEmail);
-      setPhone(defaultPhone);
-      setTeamSize('');
+      setAgents('');
+      setChannels('');
       setMessage('');
     }
-  }, [open, defaultName, defaultCompany, defaultEmail, defaultPhone]);
+  }, [open]);
 
-  const isValid = name.trim().length > 1 && email.trim().length > 3 && company.trim().length > 1;
+  const isValid = !needsLimits || agents.trim() !== '' || channels.trim() !== '' || message.trim() !== '';
 
   const handleSubmit = (e: FormEvent): void => {
     e.preventDefault();
@@ -769,11 +777,8 @@ function ContactSalesModal({
     setTimeout(() => {
       setSubmitting(false);
       onSubmitted({
-        name: name.trim(),
-        company: company.trim(),
-        email: email.trim(),
-        phone: phone.trim(),
-        teamSize: teamSize.trim(),
+        requestedAgents: agents.trim() === '' ? null : Number(agents),
+        requestedChannels: channels.trim() === '' ? null : Number(channels),
         message: message.trim(),
       });
     }, 900);
@@ -790,50 +795,60 @@ function ContactSalesModal({
         <div className="p-3 rounded-card bg-primary/5 border border-primary/20 text-small">
           <p className="font-semibold mb-1">فريق المبيعات جاهز لخدمتك</p>
           <p className="text-muted-light dark:text-muted-dark">
-            املأ النموذج وسنتواصل معك خلال 24 ساعة عمل بعرض سعر مخصّص يناسب حجم مؤسستك.
+            سنتواصل معك خلال 24 ساعة عمل بعرض سعر مخصّص يناسب حجم مؤسستك.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="text-small font-medium mb-1 block">الاسم الكامل <span className="text-danger ms-0.5">*</span></label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="أحمد الحارثي" required />
-          </div>
-          <div>
-            <label className="text-small font-medium mb-1 block">اسم الشركة <span className="text-danger ms-0.5">*</span></label>
-            <Input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="شركة الأنوار" required />
-          </div>
+        {/* Read, don't retype: the account already holds all of this. */}
+        <div className="rounded-card border border-border-light dark:border-border-dark divide-y divide-border-light dark:divide-border-dark text-small">
+          <AccountRow label="الشركة" value={defaultCompany || '—'} />
+          <AccountRow label="مسؤول التواصل" value={defaultName || '—'} />
+          <AccountRow label="البريد الإلكتروني" value={defaultEmail || '—'} ltr />
+          <AccountRow label="رقم الجوال" value={defaultPhone || '—'} ltr />
+          <AccountRow label="الدولة" value={defaultCountry || '—'} />
         </div>
+        <p className="text-[11px] text-muted-light dark:text-muted-dark -mt-2">
+          سترسل هذه البيانات مع طلبك.{' '}
+          <button type="button" onClick={onEditAccount} className="text-primary font-medium hover:underline">
+            تحتاج تعديلها؟
+          </button>
+        </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="text-small font-medium mb-1 block">البريد الإلكتروني <span className="text-danger ms-0.5">*</span></label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" required dir="ltr" />
+        {needsLimits && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-small font-medium mb-1 block">حد الموظفين المطلوب</label>
+              <Input
+                type="number"
+                min={1}
+                value={agents}
+                onChange={(e) => setAgents(e.target.value)}
+                placeholder="مثال: 120"
+                dir="ltr"
+              />
+            </div>
+            <div>
+              <label className="text-small font-medium mb-1 block">حد القنوات المطلوب</label>
+              <Input
+                type="number"
+                min={1}
+                value={channels}
+                onChange={(e) => setChannels(e.target.value)}
+                placeholder="مثال: 15"
+                dir="ltr"
+              />
+            </div>
+            <p className="md:col-span-2 text-[11px] text-muted-light dark:text-muted-dark -mt-1">
+              نرشّح لك الباقة المناسبة من باقات المؤسسات بناءً على هذين الرقمين.
+            </p>
           </div>
-          <div>
-            <label className="text-small font-medium mb-1 block">رقم الجوال <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
-            <Input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+968 9XXX XXXX" dir="ltr" />
-          </div>
-        </div>
+        )}
 
         <div>
-          <label className="text-small font-medium mb-1 block">حجم الفريق المتوقّع <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
-          <select
-            value={teamSize}
-            onChange={(e) => setTeamSize(e.target.value)}
-            className="w-full h-10 px-3 rounded-full bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary"
-          >
-            <option value="">اختر…</option>
-            <option value="1-10">1-10 موظفين</option>
-            <option value="11-50">11-50 موظف</option>
-            <option value="51-200">51-200 موظف</option>
-            <option value="201-500">201-500 موظف</option>
-            <option value="500+">أكثر من 500 موظف</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="text-small font-medium mb-1 block">احتياجاتك أو استفسارك <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
+          <label className="text-small font-medium mb-1 block">
+            احتياجاتك أو استفسارك
+            {needsLimits && <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span>}
+          </label>
           <Textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="أخبرنا باحتياجاتك الخاصة، الميزات المطلوبة، أو أي متطلبات أمنية…" rows={4} />
         </div>
 
@@ -853,6 +868,15 @@ function ContactSalesModal({
         </div>
       </form>
     </Modal>
+  );
+}
+
+function AccountRow({ label, value, ltr }: { label: string; value: string; ltr?: boolean }): JSX.Element {
+  return (
+    <div className="flex items-center justify-between gap-3 px-3 py-2">
+      <span className="text-muted-light dark:text-muted-dark flex-shrink-0">{label}</span>
+      <span className="font-semibold text-end break-all" dir={ltr ? 'ltr' : undefined}>{value}</span>
+    </div>
   );
 }
 

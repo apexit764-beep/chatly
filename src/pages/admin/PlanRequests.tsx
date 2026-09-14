@@ -39,6 +39,14 @@ const statusClass: Record<PlanRequestStatus, string> = {
 const limitLabel = (n: number | undefined): string =>
   n === undefined ? '—' : n === -1 ? '∞' : n.toLocaleString('en');
 
+/**
+ * What sales needs in these two columns is the ceiling the customer asked for, not
+ * the plan's. On an enterprise request the plan says "unlimited", which settles
+ * nothing — the request is precisely the question of which package to give them.
+ */
+const askedLabel = (asked: number | null, planLimit: number | undefined): string =>
+  asked !== null ? asked.toLocaleString('en') : limitLabel(planLimit);
+
 export default function AdminPlanRequests(): JSX.Element {
   const requests = useAdminStore((s) => s.planRequests);
   const plans = useAdminStore((s) => s.plans);
@@ -160,13 +168,21 @@ export default function AdminPlanRequests(): JSX.Element {
     },
     {
       key: 'agents', header: 'الموظفين', align: 'center', hideOn: 'xl',
-      accessor: (r) => planOf(r.planId)?.limits.agents,
-      cell: (r) => <span className="font-semibold">{limitLabel(planOf(r.planId)?.limits.agents)}</span>,
+      accessor: (r) => r.requestedAgents ?? planOf(r.planId)?.limits.agents,
+      cell: (r) => (
+        <span className={cn('font-semibold', r.requestedAgents !== null && 'text-primary')}>
+          {askedLabel(r.requestedAgents, planOf(r.planId)?.limits.agents)}
+        </span>
+      ),
     },
     {
       key: 'channels', header: 'القنوات', align: 'center', hideOn: 'xl',
-      accessor: (r) => planOf(r.planId)?.limits.channels,
-      cell: (r) => <span className="font-semibold">{limitLabel(planOf(r.planId)?.limits.channels)}</span>,
+      accessor: (r) => r.requestedChannels ?? planOf(r.planId)?.limits.channels,
+      cell: (r) => (
+        <span className={cn('font-semibold', r.requestedChannels !== null && 'text-primary')}>
+          {askedLabel(r.requestedChannels, planOf(r.planId)?.limits.channels)}
+        </span>
+      ),
     },
     {
       key: 'status', header: 'الحالة', accessor: (r) => r.status, width: '130px',
@@ -316,9 +332,15 @@ export default function AdminPlanRequests(): JSX.Element {
               <DetailRow label="البريد الإلكتروني" value={drawer.email} ltr />
               <DetailRow label="رقم الهاتف" value={`+${drawer.phone}`} ltr />
               <DetailRow label="الدولة" value={countryOf(drawer.countryCode)?.nameAr ?? drawer.countryCode} />
-              <DetailRow label="حجم الفريق" value={drawer.teamSize || '—'} />
-              <DetailRow label="حد الموظفين في الباقة" value={limitLabel(planOf(drawer.planId)?.limits.agents)} />
-              <DetailRow label="حد القنوات في الباقة" value={limitLabel(planOf(drawer.planId)?.limits.channels)} />
+              <DetailRow
+                label="حد الموظفين المطلوب"
+                value={drawer.requestedAgents !== null ? drawer.requestedAgents.toLocaleString('en') : 'لم يُحدَّد'}
+              />
+              <DetailRow
+                label="حد القنوات المطلوب"
+                value={drawer.requestedChannels !== null ? drawer.requestedChannels.toLocaleString('en') : 'لم يُحدَّد'}
+              />
+              <DetailRow label="حدود الباقة الحالية" value={`الموظفين ${limitLabel(planOf(drawer.planId)?.limits.agents)} · القنوات ${limitLabel(planOf(drawer.planId)?.limits.channels)}`} />
               <DetailRow label="تاريخ الطلب" value={`${formatDate(drawer.createdAt)} · ${timeAgo(drawer.createdAt)}`} />
             </div>
 

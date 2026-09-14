@@ -636,6 +636,8 @@ function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
   const [editing, setEditing] = useState<PlanRequest | null>(null);
   const [editPlanId, setEditPlanId] = useState('');
   const [editMessage, setEditMessage] = useState('');
+  const [editAgents, setEditAgents] = useState('');
+  const [editChannels, setEditChannels] = useState('');
 
   const mine = useMemo(
     () => allRequests.filter((r) => r.clientId === clientId),
@@ -648,11 +650,18 @@ function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
     setEditing(r);
     setEditPlanId(r.planId);
     setEditMessage(r.message);
+    setEditAgents(r.requestedAgents !== null ? String(r.requestedAgents) : '');
+    setEditChannels(r.requestedChannels !== null ? String(r.requestedChannels) : '');
   };
 
   const saveEdit = (): void => {
     if (!editing) return;
-    editRequest(editing.id, { planId: editPlanId, message: editMessage.trim() });
+    editRequest(editing.id, {
+      planId: editPlanId,
+      message: editMessage.trim(),
+      requestedAgents: editAgents.trim() === '' ? null : Number(editAgents),
+      requestedChannels: editChannels.trim() === '' ? null : Number(editChannels),
+    });
     setEditing(null);
     showToast('تم تعديل الطلب', 'success');
   };
@@ -701,8 +710,8 @@ function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
             <tr>
               <th className="text-start font-medium px-4 py-3">الباقة المطلوبة</th>
               <th className="text-center font-medium px-4 py-3 hidden md:table-cell">حد المحادثات</th>
-              <th className="text-center font-medium px-4 py-3 hidden md:table-cell">حد الموظفين</th>
-              <th className="text-center font-medium px-4 py-3 hidden md:table-cell">حد القنوات</th>
+              <th className="text-center font-medium px-4 py-3 hidden md:table-cell">حد الموظفين المطلوب</th>
+              <th className="text-center font-medium px-4 py-3 hidden md:table-cell">حد القنوات المطلوب</th>
               <th className="text-start font-medium px-4 py-3 hidden lg:table-cell">الاستفسار</th>
               <th className="text-start font-medium px-4 py-3">الحالة</th>
               <th className="text-end font-medium px-4 py-3" />
@@ -721,8 +730,12 @@ function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
                     </p>
                   </td>
                   <td className="px-4 py-3 text-center hidden md:table-cell">{planLimit(plan?.limits.conversations)}</td>
-                  <td className="px-4 py-3 text-center hidden md:table-cell">{planLimit(plan?.limits.agents)}</td>
-                  <td className="px-4 py-3 text-center hidden md:table-cell">{planLimit(plan?.limits.channels)}</td>
+                  <td className="px-4 py-3 text-center hidden md:table-cell">
+                    {r.requestedAgents !== null ? r.requestedAgents.toLocaleString('en') : planLimit(plan?.limits.agents)}
+                  </td>
+                  <td className="px-4 py-3 text-center hidden md:table-cell">
+                    {r.requestedChannels !== null ? r.requestedChannels.toLocaleString('en') : planLimit(plan?.limits.channels)}
+                  </td>
                   <td className="px-4 py-3 hidden lg:table-cell text-small text-muted-light dark:text-muted-dark max-w-[280px]">
                     {r.message ? <span className="line-clamp-2">{r.message}</span> : '—'}
                   </td>
@@ -811,6 +824,34 @@ function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
               </p>
             )}
           </div>
+          {planOf(editPlanId)?.tier === 'enterprise' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-small font-medium mb-1.5 block">حد الموظفين المطلوب</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={editAgents}
+                  onChange={(e) => setEditAgents(e.target.value)}
+                  dir="ltr"
+                  placeholder="مثال: 120"
+                  className="w-full h-11 px-3 rounded-card bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
+                />
+              </div>
+              <div>
+                <label className="text-small font-medium mb-1.5 block">حد القنوات المطلوب</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={editChannels}
+                  onChange={(e) => setEditChannels(e.target.value)}
+                  dir="ltr"
+                  placeholder="مثال: 15"
+                  className="w-full h-11 px-3 rounded-card bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+          )}
           <div>
             <label className="text-small font-medium mb-1.5 block">الاستفسار</label>
             <Textarea

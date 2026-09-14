@@ -563,8 +563,13 @@ export interface PlanRequest {
   phone: string;
   /** ISO-3166 alpha-2 of the dial code, for the badge next to the number. */
   countryCode: string;
-  /** Free text — the requester types a range, not a number. */
-  teamSize: string;
+  /**
+   * The ceilings the customer actually needs. Enterprise is not one plan but a set
+   * of packages, so these are what sales matches a package against — the plan's own
+   * limits say "unlimited" and settle nothing. Null on requests for a fixed-limit plan.
+   */
+  requestedAgents: number | null;
+  requestedChannels: number | null;
   message: string;
   status: PlanRequestStatus;
   createdAt: string;

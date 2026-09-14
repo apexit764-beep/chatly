@@ -82,7 +82,7 @@ interface AdminState {
   createPlanRequest: (r: Omit<PlanRequest, 'id' | 'status' | 'createdAt'>) => PlanRequest;
   updatePlanRequestStatus: (id: string, status: PlanRequestStatus) => void;
   /** Client-side edit. Re-queues an already-contacted request so sales re-read it. */
-  editPlanRequest: (id: string, patch: Pick<PlanRequest, 'planId' | 'message'>) => void;
+  editPlanRequest: (id: string, patch: Pick<PlanRequest, 'planId' | 'message' | 'requestedAgents' | 'requestedChannels'>) => void;
   cancelPlanRequest: (id: string) => void;
   deletePlanRequest: (id: string) => void;
 
