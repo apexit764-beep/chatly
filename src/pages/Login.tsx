@@ -17,6 +17,7 @@ import { useThemeStore } from '@/store/useThemeStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { AuthHero } from '@components/auth/AuthHero';
 import { SocialAuthButtons } from '@components/auth/SocialAuthButtons';
+import { ProviderAuthDialog } from '@components/auth/ProviderAuthDialog';
 import TwoFactorChallenge from '@components/auth/TwoFactorChallenge';
 import { cn } from '@/utils/cn';
 
@@ -40,6 +41,7 @@ export default function Login(): JSX.Element {
   const [pwdError, setPwdError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [remember, setRemember] = useState(true);
+  const [pickingProvider, setPickingProvider] = useState<AuthProvider | null>(null);
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggle);
   const language = useLanguageStore((s) => s.language);
@@ -88,14 +90,13 @@ export default function Login(): JSX.Element {
     return result;
   };
 
-  const onProvider = (provider: AuthProvider): void => {
+  const onProviderConfirmed = (profile: { email: string; name?: string }): void => {
+    if (!pickingProvider) return;
     // The provider has verified the address already, so this path owes no email
     // code. A matching address links the provider onto the existing account rather
     // than opening a second one; Apple's name arrives once and is kept from then on.
-    const profile = provider === 'google'
-      ? { email: email.trim() || 'user@gmail.com', name: 'مستخدم Google' }
-      : { email: email.trim() || 'user@privaterelay.appleid.com' };
-    const { account } = signInWithProvider(provider, profile);
+    const { account } = signInWithProvider(pickingProvider, profile);
+    setPickingProvider(null);
     setError(null);
     // No password is ever seen on this path — the provider is the first factor.
     const result = signInAs({ email: account.email, name: account.name });
@@ -268,7 +269,7 @@ export default function Login(): JSX.Element {
           </form>
 
           <div className="mt-6">
-            <SocialAuthButtons onPick={onProvider} disabled={loading} verb="تسجيل الدخول" />
+            <SocialAuthButtons onPick={setPickingProvider} disabled={loading} verb="تسجيل الدخول" />
           </div>
 
           {/* Sign up link */}
@@ -296,6 +297,13 @@ export default function Login(): JSX.Element {
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         <AuthHero />
       </div>
+
+      <ProviderAuthDialog
+        provider={pickingProvider}
+        onClose={() => setPickingProvider(null)}
+        onConfirm={onProviderConfirmed}
+        defaultEmail={email}
+      />
     </div>
   );
 }

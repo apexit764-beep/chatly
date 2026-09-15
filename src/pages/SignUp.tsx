@@ -19,6 +19,7 @@ import { useLanguageStore } from '@/store/useLanguageStore';
 import { AuthHero } from '@components/auth/AuthHero';
 import { OtpStep } from '@components/auth/OtpStep';
 import { SocialAuthButtons } from '@components/auth/SocialAuthButtons';
+import { ProviderAuthDialog } from '@components/auth/ProviderAuthDialog';
 import { PhoneField } from '@components/ui/PhoneField';
 import { cn } from '@/utils/cn';
 
@@ -34,6 +35,7 @@ export default function SignUp(): JSX.Element {
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'form' | 'verify'>('form');
+  const [pickingProvider, setPickingProvider] = useState<AuthProvider | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -48,6 +50,7 @@ export default function SignUp(): JSX.Element {
   const startOtp = useAccountStore((s) => s.startOtp);
   const verifyOtp = useAccountStore((s) => s.verifyOtp);
   const signInWithProvider = useAccountStore((s) => s.signInWithProvider);
+  const signInAs = useAuthStore((s) => s.signInAs);
   const demoCode = useAccountStore((s) => s.lastIssuedCode);
 
   if (isAuthenticated) {
@@ -92,16 +95,17 @@ export default function SignUp(): JSX.Element {
     return result;
   };
 
-  const onProvider = (provider: AuthProvider): void => {
+  const onProviderConfirmed = (profile: { email: string; name?: string }): void => {
+    if (!pickingProvider) return;
     // A provider has already proved the address, so no email code is owed and the
     // signup OTP is skipped outright.
-    const profile = provider === 'google'
-      ? { email: email.trim() || 'user@gmail.com', name: name.trim() || 'مستخدم Google' }
-      // Apple returns the display name on the first authorization only; afterwards
-      // it sends none, and the stored one must survive.
-      : { email: email.trim() || 'user@privaterelay.appleid.com', name: name.trim() || undefined };
-    signInWithProvider(provider, profile);
-    navigate('/login', { state: { registered: true, provider } });
+    const { account } = signInWithProvider(pickingProvider, profile);
+    setPickingProvider(null);
+    // Signing up through a provider signs you in. Sending the user to the login
+    // form here is what made the buttons look like they did nothing.
+    const result = signInAs({ email: account.email, name: account.name });
+    if (result.needs2FA) { navigate('/login'); return; }
+    navigate('/overview', { replace: true });
   };
 
   return (
@@ -295,7 +299,7 @@ export default function SignUp(): JSX.Element {
           </form>
 
           <div className="mt-6">
-            <SocialAuthButtons onPick={onProvider} disabled={loading} verb="المتابعة" />
+            <SocialAuthButtons onPick={setPickingProvider} disabled={loading} verb="المتابعة" />
           </div>
 
           {/* Login link */}
@@ -324,6 +328,14 @@ export default function SignUp(): JSX.Element {
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         <AuthHero />
       </div>
+
+      <ProviderAuthDialog
+        provider={pickingProvider}
+        onClose={() => setPickingProvider(null)}
+        onConfirm={onProviderConfirmed}
+        defaultEmail={email}
+        defaultName={name}
+      />
     </div>
   );
 }
