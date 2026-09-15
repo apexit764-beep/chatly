@@ -21,7 +21,7 @@ const OUT = path.join(
 //         'pending' = مرفوع على الفرع ولم يُنشر بعد
 //         'wip'     = قيد التطوير، غير مرفوع
 
-const BUILD_LIVE = '3151e23b-7aa6-4dd7-a48e-7717656ca7be';
+const BUILD_LIVE = 'f8852c9b-66c2-4627-aeba-71a72e57cb90';
 
 const ENTRIES = [
   {
