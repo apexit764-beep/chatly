@@ -15,13 +15,14 @@ Three deployment targets:
 1. **VPS (primary)**: `qhub-client.apexes.click`
    - Path: `/var/www/apexes.click/qhub-client/`
    - Assets are served from `/assets-v2/` (set by `build.assetsDir` in `vite.config.ts`)
-   - SPA routing: each route has its own `index.html` copy — **114 total**, and the
+   - SPA routing: each route has its own `index.html` copy — **115 total**, and the
      tree is **nested**, not flat. Do not work from a remembered count; enumerate the
      tree with `list_dir` every deploy, because routes get added to the server over time.
      A route added in the app has no directory on the server until a deploy creates
      one — `deploy_from_url` makes missing parents, so publish the new path explicitly
-     rather than leaving it to the `404.html` fallback. As of build `f8852c9b`
-     (`reset-password` added; top-level count corrected from the 41 at `793b4e4b`):
+     rather than leaving it to the `404.html` fallback. As of build `d2ee20ce`
+     (`dashboard/` corrected from 23 to 24 — it has its own `index.html` on top of its
+     23 subroutes, which the 114 total had been dropping):
      - root `index.html` + `404.html` (2)
      - 41 top-level client routes
      - `settings/` × 6 (`api`, `appearance`, `general`, `languages`, `notifications`, `security`)
@@ -29,7 +30,8 @@ Three deployment targets:
        `salla`, `shopify`, `smtp`, `telegram`, `whatsapp`, `widget`, `woocommerce`,
        `x`, `yahoo`, `zid`)
      - `reports/` × 2 (`overview`, `ratings`), `team/roles`, `campaigns/templates`
-     - `dashboard/` × 23 — a full nested copy of the route set from an older router layout
+     - `dashboard/index.html` + 23 subroutes (24) — a full nested copy of the route set
+       from an older router layout
      - `admin/` + 21 admin subroutes (22)
    - All route HTML files must be updated together on deploy to avoid version mismatch.
      **A missed nested copy does not fail loudly**: it still loads, from whatever old
