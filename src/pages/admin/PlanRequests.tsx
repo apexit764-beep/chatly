@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   ClipboardList,
+  CreditCard,
   Eye,
   Mail,
   MoreHorizontal,
@@ -17,19 +18,31 @@ import { formatDate, timeAgo } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import type { PlanRequest, PlanRequestStatus } from '@/types';
 
-const STATUS_ORDER: PlanRequestStatus[] = ['new', 'contacted', 'converted', 'rejected', 'cancelled'];
+const STATUS_ORDER: PlanRequestStatus[] = ['new', 'contacted', 'approved', 'converted', 'rejected', 'cancelled'];
 
 const statusLabel: Record<PlanRequestStatus, string> = {
   new: 'جديد',
   contacted: 'تم التواصل',
-  converted: 'تم التحويل',
+  approved: 'تمت الموافقة',
+  converted: 'تم الاشتراك',
   rejected: 'مرفوض',
   cancelled: 'ملغى',
+};
+
+/** Shown under the status picker, so the next step is obvious without training. */
+const statusHint: Record<PlanRequestStatus, string> = {
+  new: 'لم يتواصل معه أحد بعد.',
+  contacted: 'جارٍ الاتفاق على الباقة المناسبة.',
+  approved: 'يظهر للعميل «بانتظار الدفع» مع زر الانتقال للدفع.',
+  converted: 'تم الدفع وأصبح اشتراكاً فعلياً — يُضبط تلقائياً عند إتمام الدفع.',
+  rejected: 'رُفض الطلب من طرفنا.',
+  cancelled: 'سحب العميل الطلب.',
 };
 
 const statusClass: Record<PlanRequestStatus, string> = {
   new: 'bg-primary/15 text-primary',
   contacted: 'bg-info/15 text-info',
+  approved: 'bg-warning/15 text-warning',
   converted: 'bg-success/15 text-success',
   rejected: 'bg-danger/15 text-danger',
   cancelled: 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark',
@@ -69,6 +82,7 @@ export default function AdminPlanRequests(): JSX.Element {
     total: requests.length,
     isNew: requests.filter((r) => r.status === 'new').length,
     contacted: requests.filter((r) => r.status === 'contacted').length,
+    approved: requests.filter((r) => r.status === 'approved').length,
   }), [requests]);
 
   const filtered = useMemo(() => {
@@ -87,7 +101,12 @@ export default function AdminPlanRequests(): JSX.Element {
   const changeStatus = (r: PlanRequest, status: PlanRequestStatus): void => {
     updateStatus(r.id, status);
     setOpenStatus(null);
-    showToast(`تم تحديث حالة طلب ${r.company} إلى «${statusLabel[status]}»`, 'success');
+    showToast(
+      status === 'approved'
+        ? `تمت الموافقة على طلب ${r.company} — يظهر له الآن زر الدفع`
+        : `تم تحديث حالة طلب ${r.company} إلى «${statusLabel[status]}»`,
+      'success',
+    );
   };
 
   const remove = async (r: PlanRequest): Promise<void> => {
@@ -273,10 +292,11 @@ export default function AdminPlanRequests(): JSX.Element {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatTile label="إجمالي الطلبات" value={stats.total} icon={<ClipboardList className="h-5 w-5" />} tone="primary" />
         <StatTile label="طلبات جديدة" value={stats.isNew} icon={<Eye className="h-5 w-5" />} tone="primary" />
         <StatTile label="تم التواصل" value={stats.contacted} icon={<CheckCircle2 className="h-5 w-5" />} tone="success" />
+        <StatTile label="بانتظار الدفع" value={stats.approved} icon={<CreditCard className="h-5 w-5" />} tone="warning" />
       </div>
 
       <Card className="p-3 flex flex-wrap items-center gap-2">
@@ -371,6 +391,9 @@ export default function AdminPlanRequests(): JSX.Element {
                   </button>
                 ))}
               </div>
+              <p className="text-[11px] text-muted-light dark:text-muted-dark mt-2">
+                {statusHint[drawer.status]}
+              </p>
             </div>
 
             <div className="flex items-center gap-2 pt-1">
@@ -397,13 +420,15 @@ function StatTile({
   label: string;
   value: number;
   icon: JSX.Element;
-  tone: 'primary' | 'success';
+  tone: 'primary' | 'success' | 'warning';
 }): JSX.Element {
   return (
     <Card className="p-5">
       <div className={cn(
         'h-11 w-11 rounded-card flex items-center justify-center mb-3',
-        tone === 'success' ? 'bg-success/15 text-success' : 'bg-primary/15 text-primary',
+        tone === 'success' ? 'bg-success/15 text-success'
+          : tone === 'warning' ? 'bg-warning/15 text-warning'
+            : 'bg-primary/15 text-primary',
       )}>
         {icon}
       </div>

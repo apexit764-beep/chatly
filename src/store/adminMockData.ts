@@ -597,4 +597,11 @@ export const planRequests: PlanRequest[] = [
     requestedAgents: 450, requestedChannels: 25, status: 'contacted', createdAt: nowMinus(60 * 96),
     message: 'طلبوا نسخة من اتفاقية معالجة البيانات قبل التوقيع.',
   },
+  {
+    id: 'preq_9', clientId: 'client_1', planId: 'plan_enterprise',
+    name: 'محمد الكندي', company: 'Qhub',
+    email: 'admin@qhub.com', phone: '96891234567', countryCode: 'OM',
+    requestedAgents: 60, requestedChannels: 10, status: 'approved', createdAt: nowMinus(60 * 26),
+    message: 'اتفقنا على باقة المؤسسات بحد 60 موظف و10 قنوات، بالسعر السنوي.',
+  },
 ];

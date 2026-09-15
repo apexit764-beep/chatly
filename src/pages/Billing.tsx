@@ -31,7 +31,9 @@ import {
   clientStatusClass,
   clientStatusLabel,
   clientStatusOf,
+  isCancellable,
   isEditable,
+  isOpen,
   type ClientRequestStatus,
 } from '@/utils/planRequest';
 import { cn } from '@/utils/cn';
@@ -83,7 +85,9 @@ export default function Billing(): JSX.Element {
     () => allRequests.filter((r) => r.clientId === CURRENT_CLIENT_ID),
     [allRequests],
   );
-  const pendingCount = myRequests.filter((r) => clientStatusOf(r.status) === 'pending').length;
+  // Counts everything still in play, not just the unanswered ones — a request sitting
+  // at «بانتظار الدفع» is the one most in need of the customer's attention.
+  const pendingCount = myRequests.filter((r) => isOpen(r.status)).length;
   const [dateFrom, setDateFrom] = useState<Date | null>(null);
   const [dateTo, setDateTo] = useState<Date | null>(null);
   const [allPeriods, setAllPeriods] = useState(true);
@@ -669,9 +673,12 @@ function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
   };
 
   const handleCancel = async (r: PlanRequest): Promise<void> => {
+    const approved = clientStatusOf(r.status) === 'awaiting_payment';
     const ok = await confirm({
       title: 'إلغاء الطلب؟',
-      message: `سيتم إلغاء طلبك لباقة ${planOf(r.planId)?.nameAr ?? '—'}. يمكنك تقديم طلب جديد في أي وقت.`,
+      message: approved
+        ? `تمت الموافقة على طلبك لباقة ${planOf(r.planId)?.nameAr ?? '—'} وهو بانتظار الدفع. إلغاؤه يلغي العرض المتفق عليه، ويمكنك تقديم طلب جديد في أي وقت.`
+        : `سيتم إلغاء طلبك لباقة ${planOf(r.planId)?.nameAr ?? '—'}. يمكنك تقديم طلب جديد في أي وقت.`,
       variant: 'warning',
       confirmText: 'إلغاء الطلب',
       cancelText: 'تراجع',
@@ -748,29 +755,36 @@ function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
-                      {isEditable(r.status) ? (
-                        <>
-                          <button
-                            onClick={() => openEdit(r)}
-                            className="h-9 px-3 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark inline-flex items-center gap-1.5"
-                          >
-                            <Pencil className="h-3.5 w-3.5" /> تعديل
-                          </button>
-                          <button
-                            onClick={() => handleCancel(r)}
-                            className="h-9 px-3 rounded-full border border-danger/30 text-danger text-small font-medium hover:bg-danger/10 inline-flex items-center gap-1.5"
-                          >
-                            <XCircle className="h-3.5 w-3.5" /> إلغاء
-                          </button>
-                        </>
-                      ) : cs === 'subscribed' ? (
+                      {/*
+                        Payment belongs to «بانتظار الدفع», not to «تم الاشتراك» —
+                        by the time a request reads "subscribed" the money has
+                        already arrived, and offering to pay again would be wrong.
+                      */}
+                      {cs === 'awaiting_payment' && (
                         <button
                           onClick={() => navigate(`/subscribe?plan=${r.planId}`)}
-                          className="h-9 px-3.5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold inline-flex items-center gap-1.5"
+                          className="h-9 px-3.5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold inline-flex items-center gap-1.5 whitespace-nowrap"
                         >
-                          <CreditCard className="h-3.5 w-3.5" /> الانتقال للدفع
+                          <CreditCard className="h-3.5 w-3.5 flex-shrink-0" /> الانتقال للدفع
                         </button>
-                      ) : (
+                      )}
+                      {isEditable(r.status) && (
+                        <button
+                          onClick={() => openEdit(r)}
+                          className="h-9 px-3 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark inline-flex items-center gap-1.5 whitespace-nowrap"
+                        >
+                          <Pencil className="h-3.5 w-3.5" /> تعديل
+                        </button>
+                      )}
+                      {isCancellable(r.status) && (
+                        <button
+                          onClick={() => handleCancel(r)}
+                          className="h-9 px-3 rounded-full border border-danger/30 text-danger text-small font-medium hover:bg-danger/10 inline-flex items-center gap-1.5 whitespace-nowrap"
+                        >
+                          <XCircle className="h-3.5 w-3.5" /> إلغاء
+                        </button>
+                      )}
+                      {!isCancellable(r.status) && (
                         <span className="text-small text-muted-light dark:text-muted-dark">—</span>
                       )}
                     </div>

@@ -172,9 +172,11 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       currentPeriodEnd: new Date(Date.now() + (billingCycle === 'yearly' ? 365 : 30) * 86400000).toISOString(),
     };
     // Subscribing to a plan settles any open enquiry about it — nobody should have to
-    // close the request by hand once the thing it asked for has happened.
+    // close the request by hand once the thing it asked for has happened. `approved`
+    // is the usual one to settle here: it is the request the customer just paid.
+    const OPEN: PlanRequestStatus[] = ['new', 'contacted', 'approved'];
     const settledRequests = get().planRequests.map((r) =>
-      r.clientId === clientId && r.planId === planId && (r.status === 'new' || r.status === 'contacted')
+      r.clientId === clientId && r.planId === planId && OPEN.includes(r.status)
         ? { ...r, status: 'converted' as const }
         : r,
     );

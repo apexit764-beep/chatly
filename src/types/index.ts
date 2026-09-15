@@ -545,10 +545,12 @@ export interface PaymobConfig {
 }
 
 /**
- * Lifecycle of an enterprise/plan enquiry. `converted` means it became a real
- * subscription; `rejected` is a decision we made, `cancelled` one the requester made.
+ * Lifecycle of an enterprise/plan enquiry. `approved` means sales settled on a
+ * package and the ball is now in the customer's court to pay; `converted` means the
+ * payment landed and it became a real subscription. `rejected` is a decision we made,
+ * `cancelled` one the requester made.
  */
-export type PlanRequestStatus = 'new' | 'contacted' | 'converted' | 'rejected' | 'cancelled';
+export type PlanRequestStatus = 'new' | 'contacted' | 'approved' | 'converted' | 'rejected' | 'cancelled';
 
 export interface PlanRequest {
   id: string;
