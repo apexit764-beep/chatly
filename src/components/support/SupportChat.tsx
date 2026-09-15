@@ -178,13 +178,13 @@ export function SupportChat(): JSX.Element {
                   <div key={m.id} className={cn('flex flex-col', isOut ? 'items-start' : 'items-end')}>
                     <div
                       className={cn(
-                        'max-w-[85%] px-3 py-2 text-small leading-relaxed',
+                        'max-w-[85%] min-w-0 px-3 py-2 text-small leading-relaxed',
                         isOut
                           ? 'bg-primary/15 dark:bg-primary/20 border border-primary/20 dark:border-primary/30 rounded-2xl rounded-tl-sm'
                           : 'bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-2xl rounded-tr-sm'
                       )}
                     >
-                      <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                      <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{m.text}</p>
                       {m.articleRef && (
                         <Link
                           to="/knowledge-base"

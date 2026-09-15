@@ -146,7 +146,6 @@ export default function Inbox(): JSX.Element {
   const [callTimer, setCallTimer] = useState(0);
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesScrollRef = useRef<HTMLDivElement>(null);
   const [activeSession, setActiveSession] = useState(1);
@@ -447,9 +446,13 @@ export default function Inbox(): JSX.Element {
     setMenuOpen(false);
   };
 
-  const handlePickFile = (e: React.ChangeEvent<HTMLInputElement>, kind: 'image' | 'document'): void => {
+  // One attachment button for everything. The kind is the file's own business, not a
+  // choice to put to the user before they have even opened the picker — an image still
+  // arrives as an image message, it just no longer needs its own icon in the toolbar.
+  const handlePickFile = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0];
     if (!file || !selected) return;
+    const kind: 'image' | 'document' = file.type.startsWith('image/') ? 'image' : 'document';
     sendAttachment(selected.id, kind, file.name);
     showToast(`تم إرفاق: ${file.name}`, 'success');
     e.target.value = '';
@@ -547,8 +550,7 @@ export default function Inbox(): JSX.Element {
         </button>
       </div>
       {/* Hidden file inputs */}
-      <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt" onChange={(e) => handlePickFile(e, 'document')} />
-      <input ref={imageInputRef} type="file" className="hidden" accept="image/*" onChange={(e) => handlePickFile(e, 'image')} />
+      <input ref={fileInputRef} type="file" className="hidden" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" onChange={handlePickFile} />
 
       {/* Conversations list */}
       <aside
@@ -1080,18 +1082,15 @@ export default function Inbox(): JSX.Element {
                     onClick={() => setShowTemplates((v) => !v)}
                   />
                   <ToolBtn
-                    icon={<ImageIcon className="h-[18px] w-[18px]" />}
-                    label="صورة"
-                    onClick={() => imageInputRef.current?.click()}
-                  />
-                  <ToolBtn
                     icon={<Smile className="h-[18px] w-[18px]" />}
                     label="رمز تعبيري"
                     onClick={() => setShowEmoji((v) => !v)}
                   />
+                  {/* Images go through here too — the picker accepts them, so a second
+                      icon only asked the user to classify the file before choosing it. */}
                   <ToolBtn
                     icon={<Paperclip className="h-[18px] w-[18px]" />}
-                    label="مرفق"
+                    label="إرفاق صورة أو ملف"
                     onClick={() => fileInputRef.current?.click()}
                   />
                   <ToolBtn
@@ -2743,13 +2742,27 @@ function ModeBtn({
       aria-label={label}
       title={label}
       className={cn(
-        'h-7 rounded-full text-small font-semibold transition-all inline-flex items-center gap-1.5',
+        'h-7 rounded-full text-small font-semibold inline-flex items-center',
+        'transition-[background-color,color,padding] duration-300 ease-out',
         active ? `px-2.5 ${activeClass}` : 'px-3 text-muted-light dark:text-muted-dark hover:text-current',
         disabled && 'opacity-40 cursor-not-allowed hover:text-muted-light dark:hover:text-muted-dark',
       )}
     >
       {icon}
-      {!active && <span>{label}</span>}
+      {/*
+        The label stays mounted and collapses instead of unmounting. A width of `auto`
+        is not animatable, so mounting it made both pills jump; a 1fr→0fr grid track is,
+        and it takes the label's own width with it.
+      */}
+      <span
+        aria-hidden={active}
+        className={cn(
+          'grid transition-[grid-template-columns,opacity] duration-300 ease-out',
+          active ? 'grid-cols-[0fr] opacity-0' : 'grid-cols-[1fr] opacity-100',
+        )}
+      >
+        <span className="overflow-hidden whitespace-nowrap ps-1.5">{label}</span>
+      </span>
     </button>
   );
 }
@@ -2807,10 +2820,16 @@ function MessageBubble({
         )}
       </div>
       <div className={cn('flex-1 min-w-0 flex flex-col', isOut ? 'items-end' : 'items-start')}>
-        <div className={cn('flex items-center gap-1.5', isOut && 'flex-row-reverse')}>
+        {/*
+          The 85% cap lives on this row, not on the bubble: the bubble's own parent
+          shrinks to fit its content, so a percentage there resolves against a width
+          the content itself decided and constrains nothing. A single unbroken run of
+          characters then stretched the row past the column and clipped.
+        */}
+        <div className={cn('flex items-center gap-1.5 max-w-[85%] min-w-0', isOut && 'flex-row-reverse')}>
           <div
             className={cn(
-              'max-w-[85%] px-3 py-1.5 text-body transition-all',
+              'min-w-0 px-3 py-1.5 text-body transition-all',
               isNote
                 ? 'bg-warning/15 text-current border border-warning/30 rounded-2xl rounded-tl-sm'
                 : isAI
@@ -2824,11 +2843,14 @@ function MessageBubble({
             {msg.type === 'voice' ? (
               <VoicePlayer src={msg.mediaUrl} duration={msg.content} transcription={msg.transcription} transcribing={msg.transcribing} />
             ) : msg.type === 'image' ? (
-              <div className="flex items-center gap-2"><ImageIcon className="h-4 w-4" /><span>{msg.content}</span></div>
+              <div className="flex items-center gap-2 min-w-0"><ImageIcon className="h-4 w-4 flex-shrink-0" /><span className="min-w-0 [overflow-wrap:anywhere]">{msg.content}</span></div>
             ) : msg.type === 'document' ? (
-              <div className="flex items-center gap-2"><FileText className="h-4 w-4" /><span>{msg.content}</span></div>
+              <div className="flex items-center gap-2 min-w-0"><FileText className="h-4 w-4 flex-shrink-0" /><span className="min-w-0 [overflow-wrap:anywhere]">{msg.content}</span></div>
             ) : (
-              <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+              // `anywhere` rather than `break-word`: only the former lowers the
+              // element's min-content width, which is what lets the bubble shrink
+              // instead of the long word pushing it wide and overflowing.
+              <p className="whitespace-pre-wrap [overflow-wrap:anywhere] leading-relaxed">{msg.content}</p>
             )}
             <div className={cn('flex items-center gap-1.5 text-[10px] mt-1', headerMutedClass)}>
               {isOut ? (
