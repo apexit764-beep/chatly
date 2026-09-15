@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Search,
   Send,
@@ -78,6 +78,9 @@ import SessionRail from '@/components/inbox/SessionRail';
 import type { Conversation, ConversationSession, ConversationStatus, Channel, Department, Contact } from '@/types';
 import type { InboxView } from '@/store/useInboxStore';
 
+/** About five lines of text — past this the composer scrolls rather than grow on. */
+const COMPOSER_MAX_HEIGHT = 120;
+
 export default function Inbox(): JSX.Element {
   const conversations = useDataStore((s) => s.conversations);
   const contacts = useDataStore((s) => s.contacts);
@@ -115,6 +118,21 @@ export default function Inbox(): JSX.Element {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const editMessage = useDataStore((s) => s.editMessage);
   const composeTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  /**
+   * The composer sits at one row when empty and grows only as far as the text
+   * needs, up to this ceiling — past which it scrolls instead of eating the
+   * message list. A fixed three-row box spent that height whether or not anything
+   * was written in it.
+   */
+  useLayoutEffect(() => {
+    const el = composeTextareaRef.current;
+    if (!el) return;
+    // Collapse first: scrollHeight only shrinks back if the element is not already
+    // holding the taller size open.
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, COMPOSER_MAX_HEIGHT)}px`;
+  }, [draft, inputMode]);
   const [showTemplates, setShowTemplates] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
@@ -921,36 +939,6 @@ export default function Inbox(): JSX.Element {
                 inputMode === 'note' ? 'bg-warning/5' : 'bg-white dark:bg-surface-dark'
               )}
             >
-              {/* Tabs */}
-              <div className="flex items-center px-4 border-b border-border-light dark:border-border-dark">
-                <button
-                  onClick={() => !editingMessageId && setInputMode('message')}
-                  disabled={editingMsg?.type === 'note'}
-                  className={cn(
-                    'px-4 py-2.5 text-body font-semibold border-b-2 -mb-px transition-colors',
-                    inputMode === 'message'
-                      ? 'border-primary text-current'
-                      : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current',
-                    editingMsg?.type === 'note' && 'opacity-40 cursor-not-allowed hover:text-muted-light dark:hover:text-muted-dark'
-                  )}
-                >
-                  رسالة
-                </button>
-                <button
-                  onClick={() => !editingMessageId && setInputMode('note')}
-                  disabled={editingMsg?.type === 'text'}
-                  className={cn(
-                    'px-4 py-2.5 text-body font-semibold border-b-2 -mb-px transition-colors',
-                    inputMode === 'note'
-                      ? 'border-warning text-current'
-                      : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current',
-                    editingMsg?.type === 'text' && 'opacity-40 cursor-not-allowed hover:text-muted-light dark:hover:text-muted-dark'
-                  )}
-                >
-                  ملاحظة
-                </button>
-              </div>
-
               {editingMessageId && (
                 <div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-primary/5 dark:bg-primary/10 border border-primary/20 flex items-center gap-2">
                   <Edit2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
@@ -1039,8 +1027,8 @@ export default function Inbox(): JSX.Element {
                 </div>
               ) : (
               <>
-              {/* Textarea */}
-              <div className="px-4 pt-3">
+              {/* Textarea — one row at rest, grown to fit as you type */}
+              <div className="px-4 pt-2.5">
                 <textarea
                   ref={composeTextareaRef}
                   value={draft}
@@ -1055,14 +1043,36 @@ export default function Inbox(): JSX.Element {
                     }
                   }}
                   placeholder={inputMode === 'note' ? 'اكتب ملاحظة داخلية...' : 'اكتب ردك هنا...'}
-                  rows={3}
-                  className="w-full resize-none bg-transparent border-0 text-body focus:outline-none placeholder:text-muted-light dark:placeholder:text-muted-dark"
+                  rows={1}
+                  style={{ maxHeight: COMPOSER_MAX_HEIGHT }}
+                  className="w-full resize-none bg-transparent border-0 text-body focus:outline-none placeholder:text-muted-light dark:placeholder:text-muted-dark overflow-y-auto"
                 />
               </div>
 
               {/* Bottom toolbar */}
               <div className="flex items-center justify-between px-3 py-2 relative">
                 <div className="flex items-center gap-0.5 relative">
+                  {/* Message vs note. Folded in here rather than given a row of its
+                      own: it was 43px of height for two words, and the note tint
+                      already colours the whole composer when it is active. */}
+                  <div className="flex items-center p-0.5 rounded-full bg-bg-light dark:bg-bg-dark me-1.5">
+                    <ModeBtn
+                      active={inputMode === 'message'}
+                      disabled={editingMsg?.type === 'note'}
+                      activeClass="bg-primary text-white"
+                      onClick={() => !editingMessageId && setInputMode('message')}
+                    >
+                      رسالة
+                    </ModeBtn>
+                    <ModeBtn
+                      active={inputMode === 'note'}
+                      disabled={editingMsg?.type === 'text'}
+                      activeClass="bg-warning text-white"
+                      onClick={() => !editingMessageId && setInputMode('note')}
+                    >
+                      ملاحظة
+                    </ModeBtn>
+                  </div>
                   <ToolBtn
                     icon={<Sparkles className="h-[18px] w-[18px]" />}
                     label="قوالب"
@@ -2695,6 +2705,37 @@ function ViewOption({ item, active, onClick }: { item: { label: string; count: n
       )}
       <span className="flex-1" />
       {active && <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
+    </button>
+  );
+}
+
+/** One half of the message/note switch that now rides in the composer toolbar. */
+function ModeBtn({
+  active,
+  disabled,
+  activeClass,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  disabled?: boolean;
+  activeClass: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}): JSX.Element {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-pressed={active}
+      className={cn(
+        'h-7 px-3 rounded-full text-small font-semibold transition-colors',
+        active ? activeClass : 'text-muted-light dark:text-muted-dark hover:text-current',
+        disabled && 'opacity-40 cursor-not-allowed hover:text-muted-light dark:hover:text-muted-dark',
+      )}
+    >
+      {children}
     </button>
   );
 }
