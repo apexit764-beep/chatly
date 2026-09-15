@@ -9,6 +9,7 @@ import { getAppMode } from '@/utils/mode';
 const Login = lazy(() => import('@pages/Login'));
 const SignUp = lazy(() => import('@pages/SignUp'));
 const ForgotPassword = lazy(() => import('@pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('@pages/ResetPassword'));
 const Overview = lazy(() => import('@pages/Overview'));
 const Inbox = lazy(() => import('@pages/Inbox'));
 const Contacts = lazy(() => import('@pages/Contacts'));
@@ -60,6 +61,7 @@ export default function App(): JSX.Element {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route
             element={
               <ProtectedRoute>
@@ -90,6 +92,7 @@ export default function App(): JSX.Element {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/feedback/:token" element={<RatingPublic />} />
         <Route path="/rate" element={<RatingPublic />} />
         <Route

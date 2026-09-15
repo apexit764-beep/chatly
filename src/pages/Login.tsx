@@ -12,15 +12,18 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useAccountStore, type AuthProvider } from '@/store/useAccountStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { AuthHero } from '@components/auth/AuthHero';
+import { SocialAuthButtons } from '@components/auth/SocialAuthButtons';
 import TwoFactorChallenge from '@components/auth/TwoFactorChallenge';
 import { cn } from '@/utils/cn';
 
 export default function Login(): JSX.Element {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const login = useAuthStore((s) => s.login);
+  const signInAs = useAuthStore((s) => s.signInAs);
   const pending = useAuthStore((s) => s.pending);
   const verifySecondFactor = useAuthStore((s) => s.verifySecondFactor);
   const cancelPending = useAuthStore((s) => s.cancelPending);
@@ -41,6 +44,7 @@ export default function Login(): JSX.Element {
   const toggleTheme = useThemeStore((s) => s.toggle);
   const language = useLanguageStore((s) => s.language);
   const toggleLanguage = useLanguageStore((s) => s.toggle);
+  const signInWithProvider = useAccountStore((s) => s.signInWithProvider);
 
   if (isAuthenticated) {
     return <Navigate to={from} replace />;
@@ -82,6 +86,24 @@ export default function Login(): JSX.Element {
     const result = await verifySecondFactor(code);
     if (result.ok) navigate(from, { replace: true });
     return result;
+  };
+
+  const onProvider = (provider: AuthProvider): void => {
+    // The provider has verified the address already, so this path owes no email
+    // code. A matching address links the provider onto the existing account rather
+    // than opening a second one; Apple's name arrives once and is kept from then on.
+    const profile = provider === 'google'
+      ? { email: email.trim() || 'user@gmail.com', name: 'مستخدم Google' }
+      : { email: email.trim() || 'user@privaterelay.appleid.com' };
+    const { account } = signInWithProvider(provider, profile);
+    setError(null);
+    // No password is ever seen on this path — the provider is the first factor.
+    const result = signInAs({ email: account.email, name: account.name });
+    // An account with 2FA on still owes its second factor: the provider proved the
+    // identity, not that this is the right person at this keyboard. Staying put lets
+    // the challenge panel take over, exactly as the password path does.
+    if (result.needs2FA) return;
+    navigate(from, { replace: true });
   };
 
   const handleCancelPending = (): void => {
@@ -244,6 +266,10 @@ export default function Login(): JSX.Element {
               )}
             </button>
           </form>
+
+          <div className="mt-6">
+            <SocialAuthButtons onPick={onProvider} disabled={loading} verb="تسجيل الدخول" />
+          </div>
 
           {/* Sign up link */}
           <p className="text-center text-small text-muted-light dark:text-muted-dark mt-6">

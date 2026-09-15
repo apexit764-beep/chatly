@@ -13,9 +13,12 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useAccountStore, type AuthProvider } from '@/store/useAccountStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { AuthHero } from '@components/auth/AuthHero';
+import { OtpStep } from '@components/auth/OtpStep';
+import { SocialAuthButtons } from '@components/auth/SocialAuthButtons';
 import { PhoneField } from '@components/ui/PhoneField';
 import { cn } from '@/utils/cn';
 
@@ -29,8 +32,9 @@ export default function SignUp(): JSX.Element {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
-  const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<'form' | 'verify'>('form');
+  const [cooldownUntil, setCooldownUntil] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -40,6 +44,11 @@ export default function SignUp(): JSX.Element {
   const toggleTheme = useThemeStore((s) => s.toggle);
   const language = useLanguageStore((s) => s.language);
   const toggleLanguage = useLanguageStore((s) => s.toggle);
+  const upsertAccount = useAccountStore((s) => s.upsertAccount);
+  const startOtp = useAccountStore((s) => s.startOtp);
+  const verifyOtp = useAccountStore((s) => s.verifyOtp);
+  const signInWithProvider = useAccountStore((s) => s.signInWithProvider);
+  const demoCode = useAccountStore((s) => s.lastIssuedCode);
 
   if (isAuthenticated) {
     return <Navigate to="/overview" replace />;
@@ -60,7 +69,6 @@ export default function SignUp(): JSX.Element {
     if (!phone.trim()) { setPhoneError('رقم الجوال مطلوب'); ok = false; }
     if (!password) { setPwdError('كلمة المرور مطلوبة'); ok = false; }
     else if (password.length < 6) { setPwdError('كلمة المرور 6 أحرف على الأقل'); ok = false; }
-    if (!agreed) { setError('يرجى الموافقة على الشروط والأحكام'); ok = false; }
     return ok;
   };
 
@@ -70,8 +78,30 @@ export default function SignUp(): JSX.Element {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      navigate('/login', { state: { registered: true } });
-    }, 1200);
+      // Pressing the button is the acceptance, so the moment is stamped here —
+      // implicit consent still has to be provable.
+      upsertAccount(email, { name: name.trim(), termsAcceptedAt: new Date().toISOString() });
+      setCooldownUntil(startOtp(email, 'signup'));
+      setStep('verify');
+    }, 900);
+  };
+
+  const onVerified = (code: string): { ok: boolean; error?: string } => {
+    const result = verifyOtp(code);
+    if (result.ok) navigate('/login', { state: { registered: true } });
+    return result;
+  };
+
+  const onProvider = (provider: AuthProvider): void => {
+    // A provider has already proved the address, so no email code is owed and the
+    // signup OTP is skipped outright.
+    const profile = provider === 'google'
+      ? { email: email.trim() || 'user@gmail.com', name: name.trim() || 'مستخدم Google' }
+      // Apple returns the display name on the first authorization only; afterwards
+      // it sends none, and the stored one must survive.
+      : { email: email.trim() || 'user@privaterelay.appleid.com', name: name.trim() || undefined };
+    signInWithProvider(provider, profile);
+    navigate('/login', { state: { registered: true, provider } });
   };
 
   return (
@@ -108,8 +138,24 @@ export default function SignUp(): JSX.Element {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
+          key={step}
           className="my-auto max-w-md w-full mx-auto"
         >
+          {step === 'verify' ? (
+            <OtpStep
+              email={email}
+              title="أكّد بريدك الإلكتروني"
+              description={<>أرسلنا رمزاً من 6 أرقام إلى <strong className="text-current" dir="ltr">{email}</strong>. أدخله لتفعيل حسابك.</>}
+              submitLabel="تأكيد وإنشاء الحساب"
+              cooldownUntil={cooldownUntil}
+              onResend={() => setCooldownUntil(startOtp(email, 'signup'))}
+              onVerify={onVerified}
+              onBack={() => setStep('form')}
+              backLabel="تعديل البيانات"
+              demoCode={demoCode}
+            />
+          ) : (
+          <>
           <h1 className="text-display font-extrabold mb-2">إنشاء حساب جديد</h1>
           <p className="text-body text-muted-light dark:text-muted-dark mb-8">
             ابدأ تجربتك المجانية في Qhub — لا حاجة لبطاقة ائتمان
@@ -207,22 +253,6 @@ export default function SignUp(): JSX.Element {
               {pwdError && <p className="text-small text-danger flex items-center gap-1.5"><Shield className="h-3 w-3" />{pwdError}</p>}
             </div>
 
-            {/* Terms */}
-            <label className="flex items-start gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={(e) => { setAgreed(e.target.checked); if (e.target.checked) setError(null); }}
-                className="h-4 w-4 accent-primary rounded mt-0.5"
-              />
-              <span className="text-small text-muted-light dark:text-muted-dark">
-                أوافق على{' '}
-                <a href="#" className="text-primary hover:underline">الشروط والأحكام</a>
-                {' '}و{' '}
-                <a href="#" className="text-primary hover:underline">سياسة الخصوصية</a>
-              </span>
-            </label>
-
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -8 }}
@@ -254,7 +284,19 @@ export default function SignUp(): JSX.Element {
                 </>
               )}
             </button>
+
+            {/* Consent is the click itself — stated next to the control that gives it. */}
+            <p className="text-center text-[12px] leading-relaxed text-muted-light dark:text-muted-dark">
+              بضغطك على «ابدأ مجاناً» فأنت توافق على{' '}
+              <a href="#" className="text-primary hover:underline">الشروط والأحكام</a>
+              {' '}و{' '}
+              <a href="#" className="text-primary hover:underline">سياسة الخصوصية</a>.
+            </p>
           </form>
+
+          <div className="mt-6">
+            <SocialAuthButtons onPick={onProvider} disabled={loading} verb="المتابعة" />
+          </div>
 
           {/* Login link */}
           <p className="text-center text-small text-muted-light dark:text-muted-dark mt-6">
@@ -263,6 +305,8 @@ export default function SignUp(): JSX.Element {
               سجّل دخول
             </Link>
           </p>
+          </>
+          )}
         </motion.div>
 
         {/* Footer */}

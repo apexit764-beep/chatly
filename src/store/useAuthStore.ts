@@ -22,6 +22,12 @@ interface AuthState {
   /** Epoch ms until which further attempts are refused, or null. */
   lockedUntil: number | null;
   login: (email: string, password: string) => { ok: boolean; needs2FA?: boolean; error?: string };
+  /**
+   * Start a session for an identity some other factor already proved — an OAuth
+   * callback, where no password is ever seen. A second factor, if the account has
+   * one, is still owed: the provider proved who they are, not that it is them here.
+   */
+  signInAs: (user: Omit<AuthUser, 'role'> & { role?: AuthUser['role'] }) => { ok: boolean; needs2FA?: boolean };
   verifySecondFactor: (code: string) => Promise<{ ok: boolean; error?: string }>;
   /** Re-check the signed-in user's password, for actions that must not ride on an open session. */
   verifyPassword: (password: string) => boolean;
@@ -82,6 +88,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { ok: true, needs2FA: true };
     }
 
+    persist(user);
+    set({ isAuthenticated: true, user, pending: null });
+    return { ok: true };
+  },
+  signInAs: (profile) => {
+    const mode = getAppMode();
+    const user: AuthUser = {
+      ...profile,
+      email: profile.email.trim().toLowerCase(),
+      role: profile.role ?? (mode === 'admin' ? 'admin' : 'client'),
+    };
+    if (useSettingsStore.getState().security.twoFactor) {
+      set({ pending: user, attempts: 0, lockedUntil: null });
+      return { ok: true, needs2FA: true };
+    }
     persist(user);
     set({ isAuthenticated: true, user, pending: null });
     return { ok: true };

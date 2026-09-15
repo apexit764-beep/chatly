@@ -1,35 +1,25 @@
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  Mail,
-  Shield,
-  ArrowRight,
-  ArrowLeft,
-  CheckCircle2,
-  KeyRound,
-} from 'lucide-react';
+import { Mail, Shield, ArrowRight, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AuthHero } from '@components/auth/AuthHero';
+import { OtpStep } from '@components/auth/OtpStep';
+import { useAccountStore } from '@/store/useAccountStore';
 import { cn } from '@/utils/cn';
 
-type Step = 'email' | 'verify' | 'success';
+type Step = 'email' | 'verify';
 
 export default function ForgotPassword(): JSX.Element {
   const navigate = useNavigate();
+  const startOtp = useAccountStore((s) => s.startOtp);
+  const verifyOtp = useAccountStore((s) => s.verifyOtp);
+  const demoCode = useAccountStore((s) => s.lastIssuedCode);
+
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [code, setCode] = useState<string[]>(['', '', '', '', '', '']);
-  const [codeError, setCodeError] = useState<string | null>(null);
-  const [resendCountdown, setResendCountdown] = useState(0);
-  const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
-
-  useEffect(() => {
-    if (resendCountdown <= 0) return;
-    const id = setInterval(() => setResendCountdown((c) => Math.max(0, c - 1)), 1000);
-    return () => clearInterval(id);
-  }, [resendCountdown]);
+  const [cooldownUntil, setCooldownUntil] = useState(0);
 
   const submitEmail = (e: FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
@@ -40,54 +30,19 @@ export default function ForgotPassword(): JSX.Element {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
+      setCooldownUntil(startOtp(email, 'reset'));
       setStep('verify');
-      setResendCountdown(60);
-      setTimeout(() => inputsRef.current[0]?.focus(), 100);
     }, 600);
   };
 
-  const handleCodeChange = (idx: number, value: string): void => {
-    const digit = value.replace(/\D/g, '').slice(-1);
-    const next = [...code];
-    next[idx] = digit;
-    setCode(next);
-    setCodeError(null);
-    if (digit && idx < 5) inputsRef.current[idx + 1]?.focus();
-  };
-
-  const handleCodeKeyDown = (idx: number, e: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (e.key === 'Backspace' && !code[idx] && idx > 0) {
-      inputsRef.current[idx - 1]?.focus();
+  const onVerified = (code: string): { ok: boolean; error?: string } => {
+    const result = verifyOtp(code);
+    if (result.ok && result.resetToken) {
+      // The token rides in router state, never the URL. A reset link in an address
+      // bar ends up in history, in referrers and in shared screenshots; this cannot.
+      navigate('/reset-password', { replace: true, state: { token: result.resetToken } });
     }
-  };
-
-  const handleCodePaste = (e: React.ClipboardEvent<HTMLInputElement>): void => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (!pasted) return;
-    const next = ['', '', '', '', '', ''];
-    pasted.split('').forEach((d, i) => { next[i] = d; });
-    setCode(next);
-    inputsRef.current[Math.min(pasted.length, 5)]?.focus();
-  };
-
-  const submitCode = (e: FormEvent<HTMLFormElement>): void => {
-    e.preventDefault();
-    const full = code.join('');
-    if (full.length !== 6) { setCodeError('أدخل الرمز كاملاً (6 أرقام)'); return; }
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      // Demo: accept any 6-digit code
-      setStep('success');
-    }, 600);
-  };
-
-  const resendCode = (): void => {
-    if (resendCountdown > 0) return;
-    setCode(['', '', '', '', '', '']);
-    setResendCountdown(60);
-    inputsRef.current[0]?.focus();
+    return result;
   };
 
   return (
@@ -103,7 +58,7 @@ export default function ForgotPassword(): JSX.Element {
           transition={{ duration: 0.3 }}
           className="my-auto max-w-md w-full mx-auto"
         >
-          {step === 'email' && (
+          {step === 'email' ? (
             <>
               <h1 className="text-display font-extrabold mb-2">نسيت كلمة المرور؟</h1>
               <p className="text-body text-muted-light dark:text-muted-dark mb-8">
@@ -157,104 +112,19 @@ export default function ForgotPassword(): JSX.Element {
                 </Link>
               </div>
             </>
-          )}
-
-          {step === 'verify' && (
-            <>
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-5">
-                <KeyRound className="h-6 w-6" />
-              </div>
-              <h1 className="text-display font-extrabold mb-2">أدخل رمز التحقق</h1>
-              <p className="text-body text-muted-light dark:text-muted-dark mb-8 leading-relaxed">
-                أرسلنا رمزاً مكوّناً من 6 أرقام إلى <strong className="text-current">{email}</strong>. تحقّق من بريدك وأدخل الرمز.
-              </p>
-
-              <form onSubmit={submitCode} className="space-y-5">
-                <div className="space-y-2">
-                  <label className="text-small font-semibold text-[#374151] dark:text-[#D1D5DB]">
-                    رمز التحقق
-                  </label>
-                  <div className="flex items-center justify-between gap-2" dir="ltr">
-                    {code.map((d, i) => (
-                      <input
-                        key={i}
-                        ref={(el) => { inputsRef.current[i] = el; }}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={d}
-                        onChange={(e) => handleCodeChange(i, e.target.value)}
-                        onKeyDown={(e) => handleCodeKeyDown(i, e)}
-                        onPaste={handleCodePaste}
-                        className={cn(
-                          'h-14 w-12 rounded-xl bg-bg-light dark:bg-bg-dark border text-center text-h2 font-extrabold focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all',
-                          codeError ? 'border-danger focus:border-danger focus:ring-danger/10' : 'border-border-light dark:border-border-dark focus:border-primary'
-                        )}
-                      />
-                    ))}
-                  </div>
-                  {codeError && <p className="text-small text-danger flex items-center gap-1.5"><Shield className="h-3 w-3" />{codeError}</p>}
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{ color: '#fff' }}
-                  className="w-full h-12 rounded-xl bg-primary hover:bg-primary-dark text-white text-body font-semibold flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? (
-                    <span className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  ) : (
-                    <>
-                      تحقّق ومتابعة
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </button>
-
-                <div className="text-center text-small text-muted-light dark:text-muted-dark">
-                  لم يصلك الرمز؟{' '}
-                  {resendCountdown > 0 ? (
-                    <span>إعادة الإرسال خلال <strong>{resendCountdown}s</strong></span>
-                  ) : (
-                    <button type="button" onClick={resendCode} className="text-primary font-semibold hover:underline">
-                      إعادة الإرسال
-                    </button>
-                  )}
-                </div>
-              </form>
-
-              <div className="mt-6 text-center">
-                <button
-                  type="button"
-                  onClick={() => { setStep('email'); setCode(['', '', '', '', '', '']); setCodeError(null); }}
-                  className="inline-flex items-center gap-1.5 text-small text-primary font-medium hover:underline"
-                >
-                  <ArrowLeft className="h-3.5 w-3.5" />
-                  استخدام بريد آخر
-                </button>
-              </div>
-            </>
-          )}
-
-          {step === 'success' && (
-            <div className="text-center">
-              <div className="h-16 w-16 mx-auto rounded-full bg-success/15 text-success flex items-center justify-center mb-5">
-                <CheckCircle2 className="h-8 w-8" />
-              </div>
-              <h1 className="text-display font-extrabold mb-3">تم التحقق بنجاح</h1>
-              <p className="text-body text-muted-light dark:text-muted-dark mb-8 leading-relaxed">
-                أرسلنا لك رابطاً لإعادة تعيين كلمة المرور على بريدك. اتبع الرابط لإكمال العملية.
-              </p>
-              <button
-                onClick={() => navigate('/login')}
-                style={{ color: '#fff' }}
-                className="w-full h-12 rounded-xl bg-primary hover:bg-primary-dark text-white text-body font-semibold flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                العودة لتسجيل الدخول
-              </button>
-            </div>
+          ) : (
+            <OtpStep
+              email={email}
+              title="أدخل رمز التحقق"
+              description={<>أرسلنا رمزاً من 6 أرقام إلى <strong className="text-current" dir="ltr">{email}</strong>. أدخله للمتابعة إلى تغيير كلمة المرور.</>}
+              submitLabel="تحقّق ومتابعة"
+              cooldownUntil={cooldownUntil}
+              onResend={() => setCooldownUntil(startOtp(email, 'reset'))}
+              onVerify={onVerified}
+              onBack={() => setStep('email')}
+              backLabel="استخدام بريد آخر"
+              demoCode={demoCode}
+            />
           )}
         </motion.div>
 
