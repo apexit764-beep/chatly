@@ -16,6 +16,7 @@ import {
   Download,
   SquarePen,
   MessageSquarePlus,
+  MessageSquare,
   Edit2,
   UserCog,
   LayoutGrid,
@@ -1060,18 +1061,18 @@ export default function Inbox(): JSX.Element {
                       active={inputMode === 'message'}
                       disabled={editingMsg?.type === 'note'}
                       activeClass="bg-primary text-white"
+                      icon={<MessageSquare className="h-3.5 w-3.5" />}
+                      label="رسالة"
                       onClick={() => !editingMessageId && setInputMode('message')}
-                    >
-                      رسالة
-                    </ModeBtn>
+                    />
                     <ModeBtn
                       active={inputMode === 'note'}
                       disabled={editingMsg?.type === 'text'}
                       activeClass="bg-warning text-white"
+                      icon={<StickyNote className="h-3.5 w-3.5" />}
+                      label="ملاحظة"
                       onClick={() => !editingMessageId && setInputMode('note')}
-                    >
-                      ملاحظة
-                    </ModeBtn>
+                    />
                   </div>
                   <ToolBtn
                     icon={<Sparkles className="h-[18px] w-[18px]" />}
@@ -2709,19 +2710,29 @@ function ViewOption({ item, active, onClick }: { item: { label: string; count: n
   );
 }
 
-/** One half of the message/note switch that now rides in the composer toolbar. */
+/**
+ * One half of the message/note switch in the composer toolbar.
+ *
+ * The active side keeps its icon and drops its word: which mode you are in is
+ * already said by the highlight and by the tint across the whole composer, so the
+ * label worth the width is the other one — the mode you can switch to. The word
+ * stays in `aria-label` either way, since a screen reader gets neither the colour
+ * nor the tint.
+ */
 function ModeBtn({
   active,
   disabled,
   activeClass,
+  icon,
+  label,
   onClick,
-  children,
 }: {
   active: boolean;
   disabled?: boolean;
   activeClass: string;
+  icon: React.ReactNode;
+  label: string;
   onClick: () => void;
-  children: React.ReactNode;
 }): JSX.Element {
   return (
     <button
@@ -2729,13 +2740,16 @@ function ModeBtn({
       onClick={onClick}
       disabled={disabled}
       aria-pressed={active}
+      aria-label={label}
+      title={label}
       className={cn(
-        'h-7 px-3 rounded-full text-small font-semibold transition-colors',
-        active ? activeClass : 'text-muted-light dark:text-muted-dark hover:text-current',
+        'h-7 rounded-full text-small font-semibold transition-all inline-flex items-center gap-1.5',
+        active ? `px-2.5 ${activeClass}` : 'px-3 text-muted-light dark:text-muted-dark hover:text-current',
         disabled && 'opacity-40 cursor-not-allowed hover:text-muted-light dark:hover:text-muted-dark',
       )}
     >
-      {children}
+      {icon}
+      {!active && <span>{label}</span>}
     </button>
   );
 }
