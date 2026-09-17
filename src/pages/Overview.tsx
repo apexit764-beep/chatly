@@ -276,22 +276,13 @@ export default function Overview(): JSX.Element {
                       <span>{a.fresh} {t('جديدة')}</span>
                     </div>
                   </div>
-                  <div className="text-end flex-shrink-0">
-                    <p className="text-h2 font-bold tabular-nums leading-none">
-                      {a.pct === null ? '—' : `${a.pct}%`}
-                    </p>
-                    <p className="text-[10px] text-muted-light dark:text-muted-dark mt-1">{t('نسبة الإنجاز')}</p>
+                  <div className="flex items-center gap-2.5 flex-shrink-0">
+                    <span className="text-[10px] text-muted-light dark:text-muted-dark hidden sm:block">
+                      {t('نسبة الإنجاز')}
+                    </span>
+                    <StatusRing closed={a.closed} inProgress={a.inProgress} fresh={a.fresh} pct={a.pct} />
                   </div>
                 </div>
-
-                {/* شريط التوزيع — ما كان مخطّطاً دائرياً للحساب كله، لكل موظف الآن */}
-                {a.assigned > 0 && (
-                  <div className="mt-2.5 h-2 rounded-full overflow-hidden flex bg-bg-light dark:bg-bg-dark">
-                    <span className="bg-success" style={{ width: `${(a.closed / a.assigned) * 100}%` }} />
-                    <span className="bg-warning" style={{ width: `${(a.inProgress / a.assigned) * 100}%` }} />
-                    <span className="bg-info" style={{ width: `${(a.fresh / a.assigned) * 100}%` }} />
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -303,6 +294,80 @@ export default function Overview(): JSX.Element {
           </div>
         </Card>
       </div>
+    </div>
+  );
+}
+
+/** ألوان الحالات — نفس ألوان السلاسل في مخطّط الأسبوع أعلى الصفحة. */
+const RING_COLORS = { closed: '#10B981', inProgress: '#F59E0B', fresh: '#3B82F6' };
+
+/**
+ * حلقة واحدة تحمل الشيئين: محيطها توزيع حالات محادثات الموظف، ومركزها نسبة
+ * إنجازه. حلّت محلّ شريط بعرض البطاقة كان يمنح صاحب المحادثة الواحدة نفس
+ * المساحة التي يمنحها لصاحب الخمسين، فيضخّم الصغير ويقرأ كخطّ فاصل لا كبيانات.
+ */
+function StatusRing({
+  closed,
+  inProgress,
+  fresh,
+  pct,
+  size = 54,
+}: {
+  closed: number;
+  inProgress: number;
+  fresh: number;
+  pct: number | null;
+  size?: number;
+}): JSX.Element {
+  const total = closed + inProgress + fresh;
+  const stroke = 6;
+  const r = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * r;
+
+  // تتراكم الإزاحة حتى يبدأ كل قوس حيث انتهى سابقه.
+  let offset = 0;
+  const arcs = ([
+    ['closed', closed],
+    ['inProgress', inProgress],
+    ['fresh', fresh],
+  ] as const)
+    .filter(([, n]) => n > 0)
+    .map(([key, n]) => {
+      const len = (n / total) * circumference;
+      const arc = { key, len, offset };
+      offset += len;
+      return arc;
+    });
+
+  return (
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          strokeWidth={stroke}
+          className="stroke-bg-light dark:stroke-bg-dark"
+        />
+        {arcs.map((arc) => (
+          <circle
+            key={arc.key}
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            strokeWidth={stroke}
+            stroke={RING_COLORS[arc.key]}
+            strokeDasharray={`${arc.len} ${circumference - arc.len}`}
+            strokeDashoffset={-arc.offset}
+            strokeLinecap="butt"
+          />
+        ))}
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-small font-bold tabular-nums">
+        {pct === null ? '—' : `${pct}%`}
+      </span>
     </div>
   );
 }
