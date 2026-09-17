@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import { MessageCircle, Clock, Zap, UserPlus, Activity, Sparkles, Bot, ArrowLeftRight, ChevronLeft, Users, FolderOpen, FolderClosed } from 'lucide-react';
-import { Card, StatCard } from '@components/ui';
+import { MessageCircle, Clock, Zap, UserPlus, ArrowLeft, Activity, Sparkles, Bot, ArrowLeftRight, ChevronLeft, Users, FolderOpen, FolderClosed } from 'lucide-react';
+import { Card, StatCard, Avatar } from '@components/ui';
 import { LineChart } from '@components/charts/LineChart';
 import { useDataStore } from '@/store/useDataStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -52,6 +52,30 @@ export default function Overview(): JSX.Element {
   const aiActiveConvs = conversations.filter((c) => c.aiActive).length;
   const aiHandoffs = conversations.filter((c) => c.aiHandedOff).length;
   const aiResolved = conversations.filter((c) => c.aiActive && c.status === 'closed').length;
+
+  /**
+   * أداء الموظفين وتوزيع الحالات مدموجان: التوزيع الذي كان مخطّطاً دائرياً واحداً
+   * للحساب كله صار مقسوماً على كل موظف، ومنه تُشتقّ نسبة إنجازه. الأعلى إنجازاً
+   * أولاً، ومن لا محادثات لديه في الذيل لأن نسبته لا معنى لها.
+   */
+  const agentStats = agents
+    .map((agent) => {
+      const mine = conversations.filter((c) => c.assignedTo === agent.id);
+      const closed = mine.filter((c) => c.status === 'closed').length;
+      const inProgress = mine.filter((c) => c.status === 'in_progress').length;
+      const fresh = mine.filter((c) => c.status === 'open' || c.status === 'new').length;
+      return {
+        id: agent.id,
+        name: agent.name,
+        assigned: mine.length,
+        closed,
+        inProgress,
+        fresh,
+        // بلا محادثات لا توجد نسبة — null لا صفر، حتى لا يُقرأ كأداء ضعيف
+        pct: mine.length > 0 ? Math.round((closed / mine.length) * 100) : null,
+      };
+    })
+    .sort((a, b) => (b.pct ?? -1) - (a.pct ?? -1));
 
   return (
     <div className="p-4 lg:p-6 space-y-6 page-fade">
@@ -201,8 +225,8 @@ export default function Overview(): JSX.Element {
       </Card>
 
       {/* Charts row */}
-      {/* «توزيع الحالات» كان الثلث الأيمن من هذا الصف؛ حُذف، فصار المخطّط وحده
-          بعرض كامل بدل ثلثين. */}
+      {/* «توزيع الحالات» كان الثلث الأيمن هنا؛ انتقل إلى بطاقة أداء الموظفين
+          موزّعاً على كل موظف، فصار المخطّط وحده بعرض كامل. */}
       <div>
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
@@ -227,6 +251,58 @@ export default function Overview(): JSX.Element {
         </Card>
       </div>
 
+      <div>
+        <Card className="overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border-light dark:border-border-dark">
+            <h2 className="text-h2 font-bold">{t('أداء الموظفين')}</h2>
+            <Link to="/team" className="text-small text-primary font-medium hover:underline flex items-center gap-1">
+              {t('التفاصيل')} <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </div>
+          <div className="divide-y divide-border-light dark:divide-border-dark">
+            {agentStats.map((a) => (
+              <div key={a.id} className="px-5 py-3.5">
+                <div className="flex items-center gap-3">
+                  <Avatar name={a.name} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-body font-semibold truncate">{a.name}</p>
+                    <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark flex-wrap">
+                      <span>{a.assigned} {t('مسندة')}</span>
+                      <span>·</span>
+                      <span>{a.closed} {t('مغلقة')}</span>
+                      <span>·</span>
+                      <span>{a.inProgress} {t('قيد المعالجة')}</span>
+                      <span>·</span>
+                      <span>{a.fresh} {t('جديدة')}</span>
+                    </div>
+                  </div>
+                  <div className="text-end flex-shrink-0">
+                    <p className="text-h2 font-bold tabular-nums leading-none">
+                      {a.pct === null ? '—' : `${a.pct}%`}
+                    </p>
+                    <p className="text-[10px] text-muted-light dark:text-muted-dark mt-1">{t('نسبة الإنجاز')}</p>
+                  </div>
+                </div>
+
+                {/* شريط التوزيع — ما كان مخطّطاً دائرياً للحساب كله، لكل موظف الآن */}
+                {a.assigned > 0 && (
+                  <div className="mt-2.5 h-2 rounded-full overflow-hidden flex bg-bg-light dark:bg-bg-dark">
+                    <span className="bg-success" style={{ width: `${(a.closed / a.assigned) * 100}%` }} />
+                    <span className="bg-warning" style={{ width: `${(a.inProgress / a.assigned) * 100}%` }} />
+                    <span className="bg-info" style={{ width: `${(a.fresh / a.assigned) * 100}%` }} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-center gap-4 px-5 py-3 border-t border-border-light dark:border-border-dark text-[11px] text-muted-light dark:text-muted-dark">
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-success" />{t('مغلقة')}</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-warning" />{t('قيد المعالجة')}</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-info" />{t('جديدة')}</span>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
