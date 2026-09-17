@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { MessageCircle, Clock, Zap, UserPlus, ArrowLeft, Activity, Sparkles, Bot, ArrowLeftRight, ChevronLeft, Users, FolderOpen, FolderClosed } from 'lucide-react';
-import { Card, StatCard, Avatar, Badge } from '@components/ui';
+import { Card, StatCard, Avatar } from '@components/ui';
 import { LineChart } from '@components/charts/LineChart';
 import { DoughnutChart } from '@components/charts/DoughnutChart';
 import { useDataStore } from '@/store/useDataStore';
@@ -8,13 +8,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useAIStore } from '@/store/useAIStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { Building, Smartphone, UsersRound } from 'lucide-react';
-import {
-  agentStatusColor,
-  agentStatusLabel,
-  conversationStatusColor,
-  conversationStatusLabel,
-} from '@/utils/labels';
-import { timeAgo } from '@/utils/format';
+import { agentStatusColor, agentStatusLabel } from '@/utils/labels';
 import { cn } from '@/utils/cn';
 import { useTranslation } from '@/i18n/useTranslation';
 
@@ -67,10 +61,6 @@ export default function Overview(): JSX.Element {
     in_progress: conversations.filter((c) => c.status === 'in_progress').length,
     closed: conversations.filter((c) => c.status === 'closed').length,
   };
-
-  const recentConvs = [...conversations]
-    .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime())
-    .slice(0, 5);
 
   return (
     <div className="p-4 lg:p-6 space-y-6 page-fade">
@@ -257,52 +247,9 @@ export default function Overview(): JSX.Element {
         </Card>
       </div>
 
-      {/* Tables row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border-light dark:border-border-dark">
-            <h2 className="text-h2 font-bold">{t('آخر المحادثات')}</h2>
-            <Link to="/inbox" className="text-small text-primary font-medium hover:underline flex items-center gap-1">
-              {t('عرض الكل')} <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="divide-y divide-border-light dark:divide-border-dark">
-            {recentConvs.map((conv) => {
-              const contact = contacts.find((c) => c.id === conv.contactId);
-              const agent = agents.find((a) => a.id === conv.assignedTo);
-              if (!contact) return null;
-              return (
-                <Link
-                  key={conv.id}
-                  to="/inbox"
-                  className="flex items-center gap-3 px-5 py-3 hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
-                >
-                  <Avatar name={contact.name} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-body font-semibold truncate">{contact.name}</p>
-                      {conv.aiActive && (
-                        <span className="inline-flex items-center gap-0.5 px-1.5 h-4 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-[9px] font-bold flex-shrink-0">
-                          <Sparkles className="h-2.5 w-2.5" /> AI
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-small text-muted-light dark:text-muted-dark truncate">
-                      {conv.aiActive ? t('المساعد الذكي') : agent ? agent.name : t('غير مُسند')}
-                    </p>
-                  </div>
-                  <Badge className={cn('text-[10px]', conversationStatusColor[conv.status])}>
-                    {conversationStatusLabel[conv.status]}
-                  </Badge>
-                  <span className="text-small text-muted-light dark:text-muted-dark whitespace-nowrap">
-                    {timeAgo(conv.lastMessageAt)}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </Card>
-
+      {/* Tables row — «آخر المحادثات» كان يشغل النصف الثاني هنا؛ حُذف، فبقيت
+          بطاقة أداء الموظفين وحدها بعرض كامل. */}
+      <div>
         <Card className="overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-border-light dark:border-border-dark">
             <h2 className="text-h2 font-bold">{t('أداء الموظفين')}</h2>
