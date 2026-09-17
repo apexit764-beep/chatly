@@ -280,17 +280,11 @@ export default function Overview(): JSX.Element {
                     <span className="text-[10px] text-muted-light dark:text-muted-dark hidden sm:block">
                       {t('نسبة الإنجاز')}
                     </span>
-                    <StatusRing closed={a.closed} inProgress={a.inProgress} fresh={a.fresh} pct={a.pct} />
+                    <CompletionRing pct={a.pct} />
                   </div>
                 </div>
               </div>
             ))}
-          </div>
-
-          <div className="flex items-center justify-center gap-4 px-5 py-3 border-t border-border-light dark:border-border-dark text-[11px] text-muted-light dark:text-muted-dark">
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-success" />{t('مغلقة')}</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-warning" />{t('قيد المعالجة')}</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-info" />{t('جديدة')}</span>
           </div>
         </Card>
       </div>
@@ -298,46 +292,22 @@ export default function Overview(): JSX.Element {
   );
 }
 
-/** ألوان الحالات — نفس ألوان السلاسل في مخطّط الأسبوع أعلى الصفحة. */
-const RING_COLORS = { closed: '#10B981', inProgress: '#F59E0B', fresh: '#3B82F6' };
-
 /**
- * حلقة واحدة تحمل الشيئين: محيطها توزيع حالات محادثات الموظف، ومركزها نسبة
- * إنجازه. حلّت محلّ شريط بعرض البطاقة كان يمنح صاحب المحادثة الواحدة نفس
- * المساحة التي يمنحها لصاحب الخمسين، فيضخّم الصغير ويقرأ كخطّ فاصل لا كبيانات.
+ * حلقة نسبة الإنجاز: المغلقة من إجمالي المسنَد إليه. لون واحد لأن المقياس واحد —
+ * كم أنجز من مجموع ما عنده. تفصيل الحالات يبقى نصّاً في الصف، فلا حاجة لتلوين
+ * القوس بثلاثة ألوان تقيس شيئاً آخر.
  */
-function StatusRing({
-  closed,
-  inProgress,
-  fresh,
+function CompletionRing({
   pct,
   size = 54,
 }: {
-  closed: number;
-  inProgress: number;
-  fresh: number;
   pct: number | null;
   size?: number;
 }): JSX.Element {
-  const total = closed + inProgress + fresh;
   const stroke = 6;
   const r = (size - stroke) / 2;
   const circumference = 2 * Math.PI * r;
-
-  // تتراكم الإزاحة حتى يبدأ كل قوس حيث انتهى سابقه.
-  let offset = 0;
-  const arcs = ([
-    ['closed', closed],
-    ['inProgress', inProgress],
-    ['fresh', fresh],
-  ] as const)
-    .filter(([, n]) => n > 0)
-    .map(([key, n]) => {
-      const len = (n / total) * circumference;
-      const arc = { key, len, offset };
-      offset += len;
-      return arc;
-    });
+  const filled = ((pct ?? 0) / 100) * circumference;
 
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
@@ -350,20 +320,18 @@ function StatusRing({
           strokeWidth={stroke}
           className="stroke-bg-light dark:stroke-bg-dark"
         />
-        {arcs.map((arc) => (
+        {pct !== null && pct > 0 && (
           <circle
-            key={arc.key}
             cx={size / 2}
             cy={size / 2}
             r={r}
             fill="none"
             strokeWidth={stroke}
-            stroke={RING_COLORS[arc.key]}
-            strokeDasharray={`${arc.len} ${circumference - arc.len}`}
-            strokeDashoffset={-arc.offset}
-            strokeLinecap="butt"
+            stroke="#10B981"
+            strokeDasharray={`${filled} ${circumference - filled}`}
+            strokeLinecap="round"
           />
-        ))}
+        )}
       </svg>
       <span className="absolute inset-0 flex items-center justify-center text-small font-bold tabular-nums">
         {pct === null ? '—' : `${pct}%`}
