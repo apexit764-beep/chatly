@@ -77,6 +77,14 @@ export default function Overview(): JSX.Element {
     })
     .sort((a, b) => (b.pct ?? -1) - (a.pct ?? -1));
 
+  /** إجمالي الحساب — يتصدّر البطاقة قبل النزول للأفراد، كما في تطبيق الموظفين. */
+  const statusTotals = {
+    fresh: conversations.filter((c) => c.status === 'open' || c.status === 'new').length,
+    inProgress: conversations.filter((c) => c.status === 'in_progress').length,
+    closed: conversations.filter((c) => c.status === 'closed').length,
+  };
+  const statusTotal = statusTotals.fresh + statusTotals.inProgress + statusTotals.closed;
+
   return (
     <div className="p-4 lg:p-6 space-y-6 page-fade">
       {/* Banner */}
@@ -259,6 +267,33 @@ export default function Overview(): JSX.Element {
               {t('التفاصيل')} <ArrowLeft className="h-4 w-4" />
             </Link>
           </div>
+
+          {/* توزيع الحالات للحساب كله — ما كان مخطّطاً دائرياً منفصلاً، وهو نفس
+              الشريط الذي يتصدّر البطاقة في تطبيق الموظفين. */}
+          {statusTotal > 0 && (
+            <div className="px-5 py-4 border-b border-border-light dark:border-border-dark">
+              <div className="h-2.5 rounded-full overflow-hidden flex bg-bg-light dark:bg-bg-dark">
+                <span style={{ width: `${(statusTotals.fresh / statusTotal) * 100}%`, background: STATUS_COLORS.fresh }} />
+                <span style={{ width: `${(statusTotals.inProgress / statusTotal) * 100}%`, background: STATUS_COLORS.inProgress }} />
+                <span style={{ width: `${(statusTotals.closed / statusTotal) * 100}%`, background: STATUS_COLORS.closed }} />
+              </div>
+              <div className="flex items-center justify-center gap-4 flex-wrap mt-3 text-[11px] text-muted-light dark:text-muted-dark">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full" style={{ background: STATUS_COLORS.fresh }} />
+                  {t('جديدة')} <strong className="text-current tabular-nums">{statusTotals.fresh}</strong>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full" style={{ background: STATUS_COLORS.inProgress }} />
+                  {t('قيد المعالجة')} <strong className="text-current tabular-nums">{statusTotals.inProgress}</strong>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full" style={{ background: STATUS_COLORS.closed }} />
+                  {t('مغلقة')} <strong className="text-current tabular-nums">{statusTotals.closed}</strong>
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="divide-y divide-border-light dark:divide-border-dark">
             {agentStats.map((a) => (
               <div key={a.id} className="px-5 py-3.5">
@@ -286,6 +321,9 @@ export default function Overview(): JSX.Element {
     </div>
   );
 }
+
+/** ألوان الحالات — مطابقة لتطبيق الموظفين. */
+const STATUS_COLORS = { fresh: '#3B82F6', inProgress: '#F59E0B', closed: '#6B7280' };
 
 /**
  * حلقة نسبة الإنجاز: المغلقة من إجمالي المسنَد إليه. لون واحد لأن المقياس واحد —
