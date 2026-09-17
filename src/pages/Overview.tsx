@@ -276,12 +276,7 @@ export default function Overview(): JSX.Element {
                       <span>{a.fresh} {t('جديدة')}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2.5 flex-shrink-0">
-                    <span className="text-[10px] text-muted-light dark:text-muted-dark hidden sm:block">
-                      {t('نسبة الإنجاز')}
-                    </span>
-                    <CompletionRing pct={a.pct} />
-                  </div>
+                  <CompletionRing pct={a.pct} />
                 </div>
               </div>
             ))}
