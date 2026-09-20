@@ -7,6 +7,7 @@ import {
   Paperclip,
   Image as ImageIcon,
   Sparkles,
+  Zap,
   Bot,
   Check,
   CheckCheck,
@@ -1076,9 +1077,11 @@ export default function Inbox(): JSX.Element {
                       onClick={() => !editingMessageId && setInputMode('note')}
                     />
                   </div>
+                  {/* Zap, not Sparkles: every other Sparkles on this page means the AI
+                      assistant, so quick replies read as an AI button. */}
                   <ToolBtn
-                    icon={<Sparkles className="h-[18px] w-[18px]" />}
-                    label="قوالب"
+                    icon={<Zap className="h-[18px] w-[18px]" />}
+                    label="الردود السريعة"
                     onClick={() => setShowTemplates((v) => !v)}
                   />
                   <ToolBtn
