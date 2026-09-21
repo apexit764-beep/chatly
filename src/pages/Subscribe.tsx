@@ -1073,37 +1073,43 @@ function SavedCardPicker({
 }): JSX.Element {
   return (
     <div className="space-y-2">
-      {cards.map((c) => {
-        const active = selectedId === c.id;
-        return (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => onSelect(c.id)}
-            className={cn(
-              'w-full p-3 rounded-card border-2 text-start flex items-center gap-3 transition-all',
-              active ? 'border-primary bg-primary/5' : 'border-border-light dark:border-border-dark hover:border-primary/40',
-            )}
-          >
-            <span className={cn(
-              'h-4 w-4 rounded-full border-2 flex items-center justify-center flex-shrink-0',
-              active ? 'border-primary' : 'border-border-light dark:border-border-dark',
-            )}>
-              {active && <span className="h-2 w-2 rounded-full bg-primary" />}
-            </span>
-            <span className={cn(
-              'h-8 px-2 rounded text-white text-[10px] font-extrabold italic flex items-center',
-              c.brand === 'visa' ? 'bg-gradient-to-r from-[#1a1f71] to-[#0f1c5e]' : 'bg-gradient-to-r from-[#eb001b] to-[#f79e1b]',
-            )}>
-              {c.brand === 'visa' ? 'VISA' : 'MC'}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-small font-semibold tabular-nums">•••• {c.last4}</p>
-              <p className="text-[10px] text-muted-light dark:text-muted-dark">صلاحية {c.expiry}</p>
-            </div>
-          </button>
-        );
-      })}
+      {/* البطاقات جنب بعضها: خياران متكافئان يُقارَنان بنظرة واحدة، لا قائمة
+          يُمشى فيها. عمود واحد تحت sm لأن صفّ البطاقة لا يضيق أكثر. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {cards.map((c) => {
+          const active = selectedId === c.id;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => onSelect(c.id)}
+              className={cn(
+                'w-full p-3 rounded-card border-2 text-start flex items-center gap-3 transition-all',
+                active ? 'border-primary bg-primary/5' : 'border-border-light dark:border-border-dark hover:border-primary/40',
+              )}
+            >
+              <span className={cn(
+                'h-4 w-4 rounded-full border-2 flex items-center justify-center flex-shrink-0',
+                active ? 'border-primary' : 'border-border-light dark:border-border-dark',
+              )}>
+                {active && <span className="h-2 w-2 rounded-full bg-primary" />}
+              </span>
+              <span className={cn(
+                'h-8 px-2 rounded text-white text-[10px] font-extrabold italic flex items-center flex-shrink-0',
+                c.brand === 'visa' ? 'bg-gradient-to-r from-[#1a1f71] to-[#0f1c5e]' : 'bg-gradient-to-r from-[#eb001b] to-[#f79e1b]',
+              )}>
+                {c.brand === 'visa' ? 'VISA' : 'MC'}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-small font-semibold tabular-nums">•••• {c.last4}</p>
+                <p className="text-[10px] text-muted-light dark:text-muted-dark">صلاحية {c.expiry}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      {/* «إضافة بطاقة جديدة» بعرض كامل تحتهما: فعلٌ من نوع آخر، لا خيار ثالث
+          مكافئ لهما، ولو دخل الشبكة لصار صفّاً أعرج كلما كان عدد البطاقات فردياً. */}
       <button
         type="button"
         onClick={() => onSelect('new')}
