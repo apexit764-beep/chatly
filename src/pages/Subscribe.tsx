@@ -978,15 +978,20 @@ function CheckoutFlow({ plan, country, cycle, proratedAmount, isUpgrade, current
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       <button onClick={onBack} className="text-small text-muted-light dark:text-muted-dark hover:text-current flex items-center gap-1 mb-5">
         <ArrowLeft className="h-4 w-4" /> العودة
       </button>
 
       <h2 className="text-h1 font-bold text-center mb-6">إتمام الدفع</h2>
 
+      {/* الملخّص وطريقة الدفع عمودان من lg وفوق: كتلتان متقاربتان في الارتفاع
+          تُقرآن معاً — ما أدفعه وبِمَ أدفعه — فلا داعي للتمرير بينهما. والحاوية
+          وُسّعت من 2xl إلى 4xl لأن عمودين داخل 672px يخنقان صفّ البطاقة.
+          items-start يمنع شدّ الأقصر منهما لطول الآخر. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
       {/* Order summary */}
-      <Card className="p-5 mb-5">
+      <Card className="p-5">
         <p className="text-small font-semibold text-muted-light dark:text-muted-dark mb-3">ملخص الطلب</p>
         <div className="space-y-2 text-small mb-3 pb-3 border-b border-border-light dark:border-border-dark">
           <div className="flex justify-between">
@@ -1015,7 +1020,7 @@ function CheckoutFlow({ plan, country, cycle, proratedAmount, isUpgrade, current
       </Card>
 
       {/* Payment method */}
-      <Card className="p-5 mb-5">
+      <Card className="p-5">
         <p className="text-small font-semibold text-muted-light dark:text-muted-dark mb-3">طريقة الدفع</p>
         <SavedCardPicker cards={SAVED_CARDS} selectedId={selectedCardId} onSelect={setSelectedCardId} />
 
@@ -1051,11 +1056,13 @@ function CheckoutFlow({ plan, country, cycle, proratedAmount, isUpgrade, current
           </label>
         </div>
       </Card>
+      </div>
 
-      {/* Pay button */}
+      {/* زرّ الدفع بعرض الصفحة تحت العمودين: الفعل الختامي للشاشة كلها لا لأحد
+          العمودين، ونصفُ عرضٍ يجعله قصيراً بلا سبب. */}
       <button
         onClick={handlePay}
-        className="w-full h-14 rounded-full bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 text-white text-body font-bold flex items-center justify-center gap-2 transition-colors"
+        className="w-full h-14 mt-5 rounded-full bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 text-white text-body font-bold flex items-center justify-center gap-2 transition-colors"
       >
         ادفع {formatMoney(total, country.currency)}
       </button>
