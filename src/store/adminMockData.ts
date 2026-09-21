@@ -150,12 +150,15 @@ export const clients: Client[] = [
     country: 'OM',
     industry: 'عقارات وتأجير',
     status: 'active',
-    planId: 'plan_business',
+    // العميل التجريبي على «الاحترافي» عمداً لا «الأعمال»: فمن لوحته تظهر الأعمال
+    // والمؤسسات كترقية، وهو المسار الذي نعرضه. الاستخدام تحت حدود الباقة
+    // (3 قنوات · 10 موظفين · 10,000 محادثة) حتى لا يبدو متجاوزاً لها.
+    planId: 'plan_pro',
     subscriptionId: 'sub_1',
     agentCount: 5,
-    channelCount: 8,
+    channelCount: 3,
     conversationCount: 312,
-    mrr: 38,
+    mrr: 19,
     currency: 'OMR',
     dashboardUrl: 'https://chat-client.apexes.click',
     joinedAt: nowMinus(60 * 24 * 90),
@@ -563,7 +566,10 @@ export const planRequests: PlanRequest[] = [
     message: 'مهتمين بعرض سعر سنوي وتدريب للفريق.',
   },
   {
-    id: 'preq_4', clientId: 'client_1', planId: 'plan_business',
+    // ليس client_1: طلب معلّق على «الأعمال» يحجب زرّ الترقية في عمودها بشارة
+    // «طلبك قيد المعالجة»، والعميل التجريبي على «الاحترافي» ليُرى مسار الترقية.
+    // ومحتوى الطلب (متجر لمسة، رقم إماراتي) لم يكن يطابق client_1 أصلاً.
+    id: 'preq_4', clientId: 'client_5', planId: 'plan_business',
     name: 'نورة الحارثي', company: 'متجر لمسة',
     email: 'noura@lamsa.store', phone: '971501234567', countryCode: 'AE',
     requestedAgents: null, requestedChannels: null, status: 'new', createdAt: nowMinus(60 * 22),

@@ -342,6 +342,21 @@ export const contacts: Contact[] = [
 // ============================================================
 // Conversations
 // ============================================================
+/**
+ * توزيع الطوابع الزمنية على الأسبوع
+ *
+ * النشاط كان مكدّساً على «اليوم» فكان مخطّط «محادثات آخر 7 أيام» يطلع خطاً مسطّحاً
+ * بقفزة واحدة في آخره. صار موزّعاً على الأيام السبعة، بقيدين:
+ *
+ * 1. `SESSION_GAP_MS` في utils/sessions.ts يساوي 24 ساعة — أي فجوة أطول بين رسالتين
+ *    متتاليتين تُنشئ جلسة مستنتَجة. فالمحادثة ذات `sessionCount: 1` لا يجوز أن
+ *    تتباعد رسائلها أكثر من يوم، والمحادثة متعددة الجلسات تحتاج الفجوة فعلاً.
+ * 2. متوسّط زمن أول ردّ في Overview يحتسب فجوات الوارد←الصادر الأقصر من 60 دقيقة
+ *    فقط، فالردّ الأول داخل الجلسة يبقى على بُعد دقائق من سؤاله.
+ *
+ * الإزاحات داخل اليوم ≤ 30 دقيقة عمداً: `nowMinus(day(n) - k)` نسبي للحظة التشغيل،
+ * فإزاحة كبيرة تنزلق لليوم التالي إذا شُغّل التطبيق قرب منتصف الليل.
+ */
 export const conversations: Conversation[] = [
   {
     id: 'conv1', contactId: 'c1', assignedTo: 'a2', status: 'in_progress', sessionCount: 3,
@@ -353,41 +368,42 @@ export const conversations: Conversation[] = [
       { id: 'e1', type: 'assign', description: 'تم تحويل المحادثة من المساعد الذكي إلى فاطمة البلوشي', by: 'a1', timestamp: nowMinus(20) },
       { id: 'e2', type: 'status', description: 'تغيير الحالة إلى قيد المعالجة', by: 'a2', timestamp: nowMinus(18) },
     ],
-    // Spread over three reopen cycles so the thread index rail has something to show.
-    // The last cycle is a recorded event; the older boundaries are inferred from the gaps.
+    // ثلاث جلسات: قبل 6 أيام، ثم قبل 3، ثم اليوم. الحدّ الأول مستنتَج من فجوة
+    // الأيام الثلاثة، والأخير حدث مسجَّل.
     sessionEvents: [
-      { type: 'closed', timestamp: nowMinus(day(30) - 10), by: 'a2' },
+      { type: 'closed', timestamp: nowMinus(day(3) - 10), by: 'a2' },
       { type: 'opened', timestamp: nowMinus(25), by: 'contact' },
     ],
     messages: [
-      { id: 'm1', conversationId: 'conv1', direction: 'in', type: 'text', content: 'السلام عليكم', timestamp: nowMinus(day(90)), read: true, delivered: true },
-      { id: 'm2', conversationId: 'conv1', direction: 'out', type: 'text', content: 'وعليكم السلام ورحمة الله، أهلاً وسهلاً بك في Qhub. كيف يمكنني مساعدتك؟', timestamp: nowMinus(day(90) - 3), read: true, delivered: true, sender: 'ai' },
-      { id: 'm3', conversationId: 'conv1', direction: 'in', type: 'text', content: 'أبحث عن شقة للإيجار في مسقط بميزانية 350 ر.ع', timestamp: nowMinus(day(30)), read: true, delivered: true },
-      { id: 'm4', conversationId: 'conv1', direction: 'out', type: 'text', content: 'لدينا عدة خيارات متاحة في الخوض والسيب. هل تفضل غرفة واحدة أم غرفتين؟', timestamp: nowMinus(day(30) - 4), read: true, delivered: true, sender: 'ai' },
-      { id: 'm5', conversationId: 'conv1', direction: 'in', type: 'text', content: 'غرفتين من فضلك', timestamp: nowMinus(day(30) - 7), read: true, delivered: true },
+      { id: 'm1', conversationId: 'conv1', direction: 'in', type: 'text', content: 'السلام عليكم', timestamp: nowMinus(day(6)), read: true, delivered: true },
+      { id: 'm2', conversationId: 'conv1', direction: 'out', type: 'text', content: 'وعليكم السلام ورحمة الله، أهلاً وسهلاً بك في Qhub. كيف يمكنني مساعدتك؟', timestamp: nowMinus(day(6) - 3), read: true, delivered: true, sender: 'ai' },
+      { id: 'm3', conversationId: 'conv1', direction: 'in', type: 'text', content: 'أبحث عن شقة للإيجار في مسقط بميزانية 350 ر.ع', timestamp: nowMinus(day(3)), read: true, delivered: true },
+      { id: 'm4', conversationId: 'conv1', direction: 'out', type: 'text', content: 'لدينا عدة خيارات متاحة في الخوض والسيب. هل تفضل غرفة واحدة أم غرفتين؟', timestamp: nowMinus(day(3) - 4), read: true, delivered: true, sender: 'ai' },
+      { id: 'm5', conversationId: 'conv1', direction: 'in', type: 'text', content: 'غرفتين من فضلك', timestamp: nowMinus(day(3) - 7), read: true, delivered: true },
       { id: 'm5v', conversationId: 'conv1', direction: 'in', type: 'voice', content: '0:12', timestamp: nowMinus(17), read: true, delivered: true },
       { id: 'm6', conversationId: 'conv1', direction: 'in', type: 'text', content: 'هل الشقة في الخوض ما زالت متاحة؟', timestamp: nowMinus(15), read: false, delivered: true },
     ],
   },
   {
-    id: 'conv2', contactId: 'c5', assignedTo: 'a1', status: 'open', sessionCount: 1,
+    // جلستان: سلام قبل 5 أيام، ثم عاد أمس بالطلب. الفجوة تتجاوز اليوم فتُستنتج.
+    id: 'conv2', contactId: 'c5', assignedTo: 'a1', status: 'open', sessionCount: 2,
     channelId: 'ch1', departmentId: 'd4',
     lastMessage: 'أريد عرض الفيلا مع معاينة هذا الأسبوع',
-    lastMessageAt: nowMinus(8), unreadCount: 1, notes: [], activityLog: [],
+    lastMessageAt: nowMinus(day(1) - 10), unreadCount: 1, notes: [], activityLog: [],
     messages: [
-      { id: 'm10', conversationId: 'conv2', direction: 'in', type: 'text', content: 'مرحباً سالم', timestamp: nowMinus(10), read: true, delivered: true },
-      { id: 'm11', conversationId: 'conv2', direction: 'in', type: 'voice', content: '0:23', timestamp: nowMinus(9), read: false, delivered: true },
-      { id: 'm12', conversationId: 'conv2', direction: 'in', type: 'text', content: 'أريد عرض الفيلا مع معاينة هذا الأسبوع', timestamp: nowMinus(8), read: false, delivered: true },
+      { id: 'm10', conversationId: 'conv2', direction: 'in', type: 'text', content: 'مرحباً سالم', timestamp: nowMinus(day(5)), read: true, delivered: true },
+      { id: 'm11', conversationId: 'conv2', direction: 'in', type: 'voice', content: '0:23', timestamp: nowMinus(day(1) - 8), read: false, delivered: true },
+      { id: 'm12', conversationId: 'conv2', direction: 'in', type: 'text', content: 'أريد عرض الفيلا مع معاينة هذا الأسبوع', timestamp: nowMinus(day(1) - 10), read: false, delivered: true },
     ],
   },
   {
     id: 'conv3', contactId: 'c3', assignedTo: 'a3', status: 'in_progress', sessionCount: 1,
     channelId: 'ch3', departmentId: 'd2', aiHandedOff: true,
-    lastMessage: 'سنرسل العقد المعدل قريباً', lastMessageAt: nowMinus(120),
+    lastMessage: 'سنرسل العقد المعدل قريباً', lastMessageAt: nowMinus(day(2) - 5),
     unreadCount: 0, notes: ['مراجعة العقد من القانوني'], activityLog: [],
     messages: [
-      { id: 'm20', conversationId: 'conv3', direction: 'in', type: 'text', content: 'صباح الخير، نريد متابعة العقد', timestamp: nowMinus(125), read: true, delivered: true },
-      { id: 'm21', conversationId: 'conv3', direction: 'out', type: 'text', content: 'صباح النور، سنرسل العقد المعدل قريباً', timestamp: nowMinus(120), read: true, delivered: true, sender: 'ai' },
+      { id: 'm20', conversationId: 'conv3', direction: 'in', type: 'text', content: 'صباح الخير، نريد متابعة العقد', timestamp: nowMinus(day(2)), read: true, delivered: true },
+      { id: 'm21', conversationId: 'conv3', direction: 'out', type: 'text', content: 'صباح النور، سنرسل العقد المعدل قريباً', timestamp: nowMinus(day(2) - 5), read: true, delivered: true, sender: 'ai' },
     ],
   },
   {
@@ -404,39 +420,40 @@ export const conversations: Conversation[] = [
   {
     id: 'conv5', contactId: 'c2', assignedTo: 'a2', status: 'closed', sessionCount: 2,
     channelId: 'ch2', departmentId: 'd1',
-    lastMessage: 'شكراً لتعاونكم، تم استلام العقد', lastMessageAt: nowMinus(60 * 24),
+    // جلستان: أُرسل العقد قبل 5 أيام، وأكّد الاستلام قبل يومين ثم أُغلقت.
+    lastMessage: 'شكراً لتعاونكم، تم استلام العقد', lastMessageAt: nowMinus(day(2) - 12),
     unreadCount: 0, notes: ['تم توقيع العقد بنجاح'],
-    activityLog: [{ id: 'e10', type: 'status', description: 'إغلاق المحادثة', by: 'a2', timestamp: nowMinus(60 * 24) }],
+    activityLog: [{ id: 'e10', type: 'status', description: 'إغلاق المحادثة', by: 'a2', timestamp: nowMinus(day(2) - 15) }],
     messages: [
-      { id: 'm40', conversationId: 'conv5', direction: 'out', type: 'text', content: 'تم إرسال العقد على البريد', timestamp: nowMinus(60 * 25), read: true, delivered: true },
-      { id: 'm41', conversationId: 'conv5', direction: 'in', type: 'text', content: 'شكراً لتعاونكم، تم استلام العقد', timestamp: nowMinus(60 * 24), read: true, delivered: true },
+      { id: 'm40', conversationId: 'conv5', direction: 'out', type: 'text', content: 'تم إرسال العقد على البريد', timestamp: nowMinus(day(5) - 10), read: true, delivered: true },
+      { id: 'm41', conversationId: 'conv5', direction: 'in', type: 'text', content: 'شكراً لتعاونكم، تم استلام العقد', timestamp: nowMinus(day(2) - 12), read: true, delivered: true },
     ],
   },
   {
     id: 'conv6', contactId: 'c6', assignedTo: 'a5', status: 'open', sessionCount: 1,
     channelId: 'ch2', departmentId: 'd1',
-    lastMessage: 'متى يمكنني المعاينة في نزوى؟', lastMessageAt: nowMinus(60),
+    lastMessage: 'متى يمكنني المعاينة في نزوى؟', lastMessageAt: nowMinus(day(4) - 20),
     unreadCount: 1, notes: [], activityLog: [],
     messages: [
-      { id: 'm50', conversationId: 'conv6', direction: 'in', type: 'text', content: 'متى يمكنني المعاينة في نزوى؟', timestamp: nowMinus(60), read: false, delivered: true },
+      { id: 'm50', conversationId: 'conv6', direction: 'in', type: 'text', content: 'متى يمكنني المعاينة في نزوى؟', timestamp: nowMinus(day(4) - 20), read: false, delivered: true },
     ],
   },
   {
     id: 'conv7', contactId: 'c7', assignedTo: 'a3', status: 'closed', sessionCount: 1,
     channelId: 'ch7', departmentId: 'd2',
-    lastMessage: 'شكراً جزيلاً', lastMessageAt: nowMinus(60 * 5),
+    lastMessage: 'شكراً جزيلاً', lastMessageAt: nowMinus(day(5) - 25),
     unreadCount: 0, notes: [], activityLog: [],
-    messages: [{ id: 'm60', conversationId: 'conv7', direction: 'in', type: 'text', content: 'شكراً جزيلاً', timestamp: nowMinus(60 * 5), read: true, delivered: true }],
+    messages: [{ id: 'm60', conversationId: 'conv7', direction: 'in', type: 'text', content: 'شكراً جزيلاً', timestamp: nowMinus(day(5) - 25), read: true, delivered: true }],
   },
   {
     id: 'conv8', contactId: 'c8', assignedTo: null, status: 'open', sessionCount: 1,
     channelId: 'ch6', departmentId: 'd2',
-    lastMessage: 'أبحث عن تويوتا لاند كروزر', lastMessageAt: nowMinus(35),
+    lastMessage: 'أبحث عن تويوتا لاند كروزر', lastMessageAt: nowMinus(day(1) - 8),
     unreadCount: 2, notes: [], activityLog: [],
     messages: [
-      { id: 'm70', conversationId: 'conv8', direction: 'in', type: 'text', content: 'مساء الخير', timestamp: nowMinus(38), read: false, delivered: true },
-      { id: 'm70v', conversationId: 'conv8', direction: 'in', type: 'voice', content: '0:18', timestamp: nowMinus(36), read: false, delivered: true },
-      { id: 'm71', conversationId: 'conv8', direction: 'in', type: 'text', content: 'أبحث عن تويوتا لاند كروزر', timestamp: nowMinus(35), read: false, delivered: true },
+      { id: 'm70', conversationId: 'conv8', direction: 'in', type: 'text', content: 'مساء الخير', timestamp: nowMinus(day(1) - 5), read: false, delivered: true },
+      { id: 'm70v', conversationId: 'conv8', direction: 'in', type: 'voice', content: '0:18', timestamp: nowMinus(day(1) - 7), read: false, delivered: true },
+      { id: 'm71', conversationId: 'conv8', direction: 'in', type: 'text', content: 'أبحث عن تويوتا لاند كروزر', timestamp: nowMinus(day(1) - 8), read: false, delivered: true },
     ],
   },
   {
@@ -445,7 +462,8 @@ export const conversations: Conversation[] = [
     lastMessage: 'نعم، هذا السعر مناسب', lastMessageAt: nowMinus(90),
     unreadCount: 0, notes: [], activityLog: [],
     messages: [
-      { id: 'm80', conversationId: 'conv9', direction: 'out', type: 'text', content: 'سعر الفيلا 1200 ر.ع شهرياً', timestamp: nowMinus(95), read: true, delivered: true },
+      // جلستان: عُرض السعر قبل 4 أيام، ووافق العميل اليوم.
+      { id: 'm80', conversationId: 'conv9', direction: 'out', type: 'text', content: 'سعر الفيلا 1200 ر.ع شهرياً', timestamp: nowMinus(day(4) - 6), read: true, delivered: true },
       { id: 'm81', conversationId: 'conv9', direction: 'in', type: 'text', content: 'نعم، هذا السعر مناسب', timestamp: nowMinus(90), read: true, delivered: true },
     ],
   },
@@ -461,11 +479,11 @@ export const conversations: Conversation[] = [
   {
     id: 'conv11', contactId: 'c10', assignedTo: 'a4', status: 'in_progress', sessionCount: 1,
     channelId: 'ch4', departmentId: 'd3', aiHandedOff: true,
-    lastMessage: 'سيتم التحقق من الطلب وإبلاغك خلال 24 ساعة', lastMessageAt: nowMinus(135),
+    lastMessage: 'سيتم التحقق من الطلب وإبلاغك خلال 24 ساعة', lastMessageAt: nowMinus(day(3) - 25),
     unreadCount: 0, notes: [], activityLog: [],
     messages: [
-      { id: 'm100', conversationId: 'conv11', direction: 'in', type: 'text', content: 'هل يمكن تأجيل الدفعة الشهرية؟', timestamp: nowMinus(140), read: true, delivered: true },
-      { id: 'm101', conversationId: 'conv11', direction: 'out', type: 'text', content: 'سيتم التحقق من الطلب وإبلاغك خلال 24 ساعة', timestamp: nowMinus(135), read: true, delivered: true, sender: 'ai' },
+      { id: 'm100', conversationId: 'conv11', direction: 'in', type: 'text', content: 'هل يمكن تأجيل الدفعة الشهرية؟', timestamp: nowMinus(day(3) - 20), read: true, delivered: true },
+      { id: 'm101', conversationId: 'conv11', direction: 'out', type: 'text', content: 'سيتم التحقق من الطلب وإبلاغك خلال 24 ساعة', timestamp: nowMinus(day(3) - 25), read: true, delivered: true, sender: 'ai' },
     ],
   },
   {
@@ -498,15 +516,15 @@ export const conversations: Conversation[] = [
   {
     id: 'conv14', contactId: 'c8', assignedTo: null, status: 'closed', sessionCount: 1,
     channelId: 'ch7', departmentId: 'd2', aiActive: true,
-    lastMessage: 'تمام، شكراً لك!', lastMessageAt: nowMinus(60 * 3),
+    lastMessage: 'تمام، شكراً لك!', lastMessageAt: nowMinus(day(2) - 28),
     unreadCount: 0, notes: [],
     activityLog: [
-      { id: 'e40', type: 'status', description: 'تم إغلاق المحادثة تلقائياً بواسطة المساعد الذكي', by: 'system', timestamp: nowMinus(60 * 3) },
+      { id: 'e40', type: 'status', description: 'تم إغلاق المحادثة تلقائياً بواسطة المساعد الذكي', by: 'system', timestamp: nowMinus(day(2) - 28) },
     ],
     messages: [
-      { id: 'm140', conversationId: 'conv14', direction: 'in', type: 'text', content: 'ما هي ساعات العمل؟', timestamp: nowMinus(60 * 3 + 10), read: true, delivered: true },
-      { id: 'm141', conversationId: 'conv14', direction: 'out', type: 'text', content: 'ساعات عملنا من الأحد إلى الخميس، من 9 صباحاً حتى 5 مساءً. وللطوارئ يمكنك التواصل في أي وقت عبر هذه القناة.', timestamp: nowMinus(60 * 3 + 9), read: true, delivered: true, sender: 'ai' },
-      { id: 'm142', conversationId: 'conv14', direction: 'in', type: 'text', content: 'تمام، شكراً لك!', timestamp: nowMinus(60 * 3), read: true, delivered: true },
+      { id: 'm140', conversationId: 'conv14', direction: 'in', type: 'text', content: 'ما هي ساعات العمل؟', timestamp: nowMinus(day(2) - 20), read: true, delivered: true },
+      { id: 'm141', conversationId: 'conv14', direction: 'out', type: 'text', content: 'ساعات عملنا من الأحد إلى الخميس، من 9 صباحاً حتى 5 مساءً. وللطوارئ يمكنك التواصل في أي وقت عبر هذه القناة.', timestamp: nowMinus(day(2) - 21), read: true, delivered: true, sender: 'ai' },
+      { id: 'm142', conversationId: 'conv14', direction: 'in', type: 'text', content: 'تمام، شكراً لك!', timestamp: nowMinus(day(2) - 28), read: true, delivered: true },
     ],
   },
   {
