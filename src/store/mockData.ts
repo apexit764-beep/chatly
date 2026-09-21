@@ -266,7 +266,7 @@ export const contacts: Contact[] = [
     { id: 'al4', action: 'type_changed', details: 'عميل محتمل → عميل', by: 'a1', timestamp: nowMinus(60 * 24 * 10) },
     { id: 'al5', action: 'edited', details: 'إضافة تصنيف "شقة"', by: 'a2', timestamp: nowMinus(60 * 24 * 5) },
   ] },
-  { id: 'c2', name: 'سارة المعمري', phone: '+96892345678', type: 'company', notes: 'تملك 3 شقق في الخوض، تريد عرضها للإيجار', tags: ['الخوض', 'مالك ذهبي'], blocked: false, conversationCount: 14, lastContact: nowMinus(45), createdAt: nowMinus(60 * 24 * 90), channels: ['whatsapp', 'messenger'], activityLog: [
+  { id: 'c2', name: 'سارة المعمري', phone: '+96892345678', type: 'company', notes: 'تملك 3 شقق في الخوض، تريد عرضها للإيجار', tags: ['الخوض', 'مالك ذهبي'], blocked: false, conversationCount: 14, lastContact: nowMinus(20), createdAt: nowMinus(60 * 24 * 90), channels: ['whatsapp', 'messenger'], activityLog: [
     { id: 'al6', action: 'created', by: 'a1', timestamp: nowMinus(60 * 24 * 90) },
     { id: 'al7', action: 'edited', details: 'إضافة ملاحظات عن الشقق المتاحة', by: 'a1', timestamp: nowMinus(60 * 24 * 85) },
     { id: 'al8', action: 'type_changed', details: 'عميل → شركة', by: 'a1', timestamp: nowMinus(60 * 24 * 60) },
@@ -280,7 +280,7 @@ export const contacts: Contact[] = [
     { id: 'al14', action: 'activated', by: 'a1', timestamp: nowMinus(60 * 24 * 90) },
     { id: 'al15', action: 'edited', details: 'تحديث بيانات التواصل', by: 'a2', timestamp: nowMinus(60 * 24 * 15) },
   ] },
-  { id: 'c4', name: 'عبدالله الهنائي', phone: '+96894567890', type: 'lead', tags: ['صلالة'], blocked: false, conversationCount: 3, lastContact: nowMinus(240), createdAt: nowMinus(60 * 24 * 7), channels: ['widget'], activityLog: [
+  { id: 'c4', name: 'عبدالله الهنائي', phone: '+96894567890', type: 'lead', tags: ['صلالة'], blocked: false, conversationCount: 3, lastContact: nowMinus(45), createdAt: nowMinus(60 * 24 * 7), channels: ['widget'], activityLog: [
     { id: 'al16', action: 'created', by: 'system', timestamp: nowMinus(60 * 24 * 7) },
     { id: 'al17', action: 'type_changed', details: 'زائر → عميل محتمل', by: 'a2', timestamp: nowMinus(60 * 24 * 5) },
     { id: 'al18', action: 'edited', details: 'إضافة رقم الجوال', by: 'a2', timestamp: nowMinus(60 * 24 * 5) },
@@ -292,7 +292,7 @@ export const contacts: Contact[] = [
     { id: 'al22', action: 'edited', details: 'ربط حساب انستقرام', by: 'a3', timestamp: nowMinus(60 * 24 * 200) },
     { id: 'al23', action: 'edited', details: 'تحديث الملاحظات والتصنيفات', by: 'a2', timestamp: nowMinus(60 * 24 * 50) },
   ] },
-  { id: 'c6', name: 'يوسف البوسعيدي', phone: '+96896789012', type: 'customer', tags: ['نزوى'], blocked: false, conversationCount: 5, lastContact: nowMinus(60), createdAt: nowMinus(60 * 24 * 15), channels: ['whatsapp'], activityLog: [
+  { id: 'c6', name: 'يوسف البوسعيدي', phone: '+96896789012', type: 'customer', tags: ['نزوى'], blocked: false, conversationCount: 5, lastContact: nowMinus(5), createdAt: nowMinus(60 * 24 * 15), channels: ['whatsapp'], activityLog: [
     { id: 'al24', action: 'created', by: 'system', timestamp: nowMinus(60 * 24 * 15) },
     { id: 'al25', action: 'type_changed', details: 'زائر → عميل', by: 'a5', timestamp: nowMinus(60 * 24 * 12) },
     { id: 'al26', action: 'edited', details: 'إضافة الاسم الكامل والتصنيف', by: 'a5', timestamp: nowMinus(60 * 24 * 12) },

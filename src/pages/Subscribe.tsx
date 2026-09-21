@@ -429,20 +429,28 @@ export default function Subscribe(): JSX.Element {
                             </button>
                             )
                           ) : isThisCurrent ? (
+                            // حدّ متقطّع لا تعبئة رمادية: التعبئة الرمادية كانت نفسها
+                            // لون hover الأزرار الفاعلة، فيأخذ الزرّ القابل للضغط شكل
+                            // المعطّل لحظة المرور عليه.
                             <button
                               disabled
-                              className="w-full h-9 rounded-full bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark text-[12px] font-semibold cursor-default"
+                              className="w-full h-9 rounded-full border border-dashed border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark text-[12px] font-semibold cursor-default"
                             >
                               باقتك الحالية
                             </button>
                           ) : (
+                            // النمط يتبع وظيفة الزرّ لا شارة «الأكثر اختياراً»: الترقية
+                            // هي الفعل المقصود فتكون أزرق مصمتاً، والتخفيض مفرَّغ ينقلب
+                            // أزرق عند المرور — وهو نمط بطاقات الباقات قبل تحويلها جدولاً.
+                            // الشرط السابق (popular || recommended) كان يؤشّر على الباقة
+                            // نفسها التي صارت الحالية، فلم يعد يُطبَّق على أي عمود.
                             <button
                               onClick={() => handleSubscribeClick(plan)}
                               className={cn(
                                 'w-full h-9 rounded-full text-[12px] font-semibold transition-colors',
-                                plan.popular || plan.id === recommendedPlanId
+                                isUpgradeTo(plan)
                                   ? 'bg-primary hover:bg-primary-dark text-white'
-                                  : 'border border-border-light dark:border-border-dark hover:bg-bg-light dark:hover:bg-bg-dark',
+                                  : 'border-2 border-primary/40 text-primary hover:bg-primary hover:border-primary hover:text-white',
                               )}
                             >
                               {isUpgradeTo(plan) ? 'ترقية' : 'تخفيض'}
