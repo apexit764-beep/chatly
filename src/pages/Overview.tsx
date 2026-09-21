@@ -137,7 +137,13 @@ export default function Overview(): JSX.Element {
       .slice(0, CHART_SERIES_COLORS.length)
       .map((s, i) => ({ name: s.name, color: CHART_SERIES_COLORS[i], data: s.data }));
 
-    return { labels: days.map((d) => t(WEEK_DAYS[d.getDay()])), series };
+    // سقف المحور: أصغر مضاعف لأربعة يسع أكبر قيمة، بحدّ أدنى 4. خطوط الشبكة
+    // أرباعٌ من السقف، فمضاعف الأربعة يوقعها كلها على أعداد صحيحة — ولا تلتصق
+    // الخطوط بالأسفل كما يفعل سقف LineChart الافتراضي (10) مع أعداد صغيرة.
+    const peak = Math.max(0, ...series.flatMap((s) => s.data));
+    const minY = Math.max(4, Math.ceil(peak / 4) * 4);
+
+    return { labels: days.map((d) => t(WEEK_DAYS[d.getDay()])), series, minY };
   }, [conversations, agents, t]);
 
   return (
@@ -304,7 +310,7 @@ export default function Overview(): JSX.Element {
             </div>
           </div>
           {weekChart.series.length > 0 ? (
-            <LineChart labels={weekChart.labels} series={weekChart.series} />
+            <LineChart labels={weekChart.labels} series={weekChart.series} minY={weekChart.minY} />
           ) : (
             <p className="h-[240px] flex items-center justify-center text-small text-muted-light dark:text-muted-dark">
               {t('لا نشاط على محادثات مُسندة في آخر 7 أيام')}

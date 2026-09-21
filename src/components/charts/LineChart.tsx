@@ -11,17 +11,23 @@ interface LineChartProps {
   series: Series[];
   height?: number;
   areaFill?: boolean;
+  /**
+   * أدنى سقف للمحور الرأسي. الافتراضي 10 يناسب سلاسل الإيرادات الكبيرة، لكنه
+   * يسحق سلسلة قيمتها العظمى 2 أو 3 في الخُمس السفلي من الرسمة — فتمرّره
+   * الصفحات ذات الأعداد الصغيرة أقلّ من ذلك.
+   */
+  minY?: number;
 }
 
-export function LineChart({ labels, series, height = 240, areaFill = true }: LineChartProps): JSX.Element {
+export function LineChart({ labels, series, height = 240, areaFill = true, minY = 10 }: LineChartProps): JSX.Element {
   const [hoveredCol, setHoveredCol] = useState<number | null>(null);
   const width = 600;
   const padding = { top: 20, right: 20, bottom: 32, left: 32 };
   const innerW = width - padding.left - padding.right;
   const innerH = height - padding.top - padding.bottom;
   const maxY = useMemo(
-    () => Math.max(...series.flatMap((s) => s.data), 10),
-    [series]
+    () => Math.max(...series.flatMap((s) => s.data), minY),
+    [series, minY]
   );
   const stepX = innerW / Math.max(labels.length - 1, 1);
   const yGrid = [0, 0.25, 0.5, 0.75, 1];
