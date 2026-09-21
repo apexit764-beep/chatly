@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircle, Clock, Zap, UserPlus, ArrowLeft, Activity, Sparkles, Bot, ArrowLeftRight, ChevronLeft, Users, FolderOpen, FolderClosed } from 'lucide-react';
 import { Card, StatCard, Avatar } from '@components/ui';
@@ -84,6 +85,60 @@ export default function Overview(): JSX.Element {
     closed: conversations.filter((c) => c.status === 'closed').length,
   };
   const statusTotal = statusTotals.fresh + statusTotals.inProgress + statusTotals.closed;
+
+  /**
+   * محادثات آخر 7 أيام، سلسلة لكل موظف.
+   *
+   * النافذة سبعة أيام متتالية تنتهي باليوم، لا أسبوع ثابت من الأحد للسبت — فاليوم
+   * الأخير في المخطّط هو اليوم دائماً. المحادثة تُحسب في يوم ما إن جرت فيها رسالة
+   * واحدة على الأقل فيه، وتُحسب مرة واحدة مهما كثرت رسائلها (Set لا عدّاد)، لأن
+   * المقياس محادثات لا رسائل. وتُنسب للموظف المسنَد إليها الآن — لا سجلّ إسناد
+   * تاريخي في البيانات، فمحادثة حُوّلت أمس تظهر كلها على الموظف الحالي.
+   *
+   * غير المسنَدة خارج المخطّط لأن عنوانه «حسب الموظف»، ونكتفي بأنشط أربعة حتى
+   * تبقى الخطوط مقروءة في نصف العرض.
+   */
+  const weekChart = useMemo(() => {
+    const dayKey = (d: Date): string => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(d.getDate() - (6 - i));
+      return d;
+    });
+    const slotOf = new Map(days.map((d, i) => [dayKey(d), i]));
+
+    // موظف → سبع مجموعات من معرّفات المحادثات، واحدة لكل يوم
+    const perAgent = new Map<string, Set<string>[]>();
+    conversations.forEach((c) => {
+      const agentId = c.assignedTo;
+      if (!agentId) return;
+      c.messages.forEach((m) => {
+        const slot = slotOf.get(dayKey(new Date(m.timestamp)));
+        if (slot === undefined) return;
+        let buckets = perAgent.get(agentId);
+        if (!buckets) {
+          buckets = days.map(() => new Set<string>());
+          perAgent.set(agentId, buckets);
+        }
+        buckets[slot].add(c.id);
+      });
+    });
+
+    const series = agents
+      .map((a) => {
+        const data = (perAgent.get(a.id) ?? days.map(() => null)).map((b) => b?.size ?? 0);
+        return { name: a.name, data, total: data.reduce((s, n) => s + n, 0) };
+      })
+      .filter((s) => s.total > 0)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, CHART_SERIES_COLORS.length)
+      .map((s, i) => ({ name: s.name, color: CHART_SERIES_COLORS[i], data: s.data }));
+
+    return { labels: days.map((d) => t(WEEK_DAYS[d.getDay()])), series };
+  }, [conversations, agents, t]);
 
   return (
     <div className="p-4 lg:p-6 space-y-6 page-fade">
@@ -248,15 +303,13 @@ export default function Overview(): JSX.Element {
               <span>{t('تحديث مباشر')}</span>
             </div>
           </div>
-          <LineChart
-            labels={[t('الأحد'), t('الإثنين'), t('الثلاثاء'), t('الأربعاء'), t('الخميس'), t('الجمعة'), t('السبت')]}
-            series={[
-              { name: t('سالم'), color: '#6C63FF', data: [12, 18, 15, 22, 20, 16, 14] },
-              { name: t('فاطمة'), color: '#10B981', data: [8, 14, 18, 17, 22, 14, 11] },
-              { name: t('محمد'), color: '#F59E0B', data: [6, 10, 12, 14, 18, 12, 8] },
-              { name: t('خالد'), color: '#3B82F6', data: [4, 8, 10, 9, 13, 10, 6] },
-            ]}
-          />
+          {weekChart.series.length > 0 ? (
+            <LineChart labels={weekChart.labels} series={weekChart.series} />
+          ) : (
+            <p className="h-[240px] flex items-center justify-center text-small text-muted-light dark:text-muted-dark">
+              {t('لا نشاط على محادثات مُسندة في آخر 7 أيام')}
+            </p>
+          )}
         </Card>
 
         <Card className="overflow-hidden">
@@ -324,6 +377,12 @@ export default function Overview(): JSX.Element {
 
 /** ألوان الحالات — مطابقة لتطبيق الموظفين. */
 const STATUS_COLORS = { fresh: '#3B82F6', inProgress: '#F59E0B', closed: '#6B7280' };
+
+/** أسماء الأيام مرتّبة حسب getDay()‎ — الأحد صفر. */
+const WEEK_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+
+/** لون لكل سلسلة في مخطّط الأسبوع، وطولها يحدّ عدد الموظفين المعروضين. */
+const CHART_SERIES_COLORS = ['#6C63FF', '#10B981', '#F59E0B', '#3B82F6'];
 
 /**
  * حلقة نسبة الإنجاز: المغلقة من إجمالي المسنَد إليه. لون واحد لأن المقياس واحد —
