@@ -233,9 +233,10 @@ export default function Overview(): JSX.Element {
       </Card>
 
       {/* Charts row */}
-      {/* «توزيع الحالات» كان الثلث الأيمن هنا؛ انتقل إلى بطاقة أداء الموظفين
-          موزّعاً على كل موظف، فصار المخطّط وحده بعرض كامل. */}
-      <div>
+      {/* عمودان من xl وفوق — نفس نقطة توقّف بطاقات الإحصاء، لأن مخطّطاً بأربع
+          سلاسل وقائمة موظفين لا يتّسعان جنب بعض قبلها مع وجود القائمة الجانبية.
+          items-start يمنع شدّ المخطّط لطول قائمة الموظفين. */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -257,9 +258,7 @@ export default function Overview(): JSX.Element {
             ]}
           />
         </Card>
-      </div>
 
-      <div>
         <Card className="overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-border-light dark:border-border-dark">
             <h2 className="text-h2 font-bold">{t('أداء الموظفين')}</h2>
@@ -321,6 +320,7 @@ export default function Overview(): JSX.Element {
     </div>
   );
 }
+
 
 /** ألوان الحالات — مطابقة لتطبيق الموظفين. */
 const STATUS_COLORS = { fresh: '#3B82F6', inProgress: '#F59E0B', closed: '#6B7280' };
