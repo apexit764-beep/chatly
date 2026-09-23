@@ -13,6 +13,7 @@ import {
   CreditCard,
   Pencil,
   Receipt,
+  RotateCcw,
   Users,
   Users2,
   MessageSquare,
@@ -23,6 +24,7 @@ import { Card, Modal, Textarea, useConfirm } from '@components/ui';
 import { DateRangePicker } from '@components/ui/DateRangePicker';
 import { useAdminStore } from '@/store/useAdminStore';
 import { useUIStore } from '@/store/useUIStore';
+import { usePermission } from '@/hooks/usePermission';
 import { formatMoney } from '@/utils/money';
 import { formatDate, timeAgo } from '@/utils/format';
 import { printAsPdf } from '@/utils/csv';
@@ -70,6 +72,8 @@ export default function Billing(): JSX.Element {
   const invoices = useAdminStore((s) => s.invoices);
   const countries = useAdminStore((s) => s.countries);
   const cancelSubscription = useAdminStore((s) => s.cancelSubscription);
+  const renewSubscription = useAdminStore((s) => s.renewSubscription);
+  const { has } = usePermission();
   const showToast = useUIStore((s) => s.showToast);
   const navigate = useNavigate();
   const { confirm } = useConfirm();
@@ -158,6 +162,20 @@ export default function Billing(): JSX.Element {
     }
   };
 
+  const handleRenew = async (): Promise<void> => {
+    if (!sub) return;
+    const ok = await confirm({
+      title: 'هل تريد تجديد الاشتراك؟',
+      message: `ستبدأ فترة جديدة من باقة ${plan?.nameAr ?? ''} فوراً، وتنتهي الفترة الحالية بكل حدودها في الحال.`,
+      variant: 'info',
+      confirmText: 'تأكيد',
+      cancelText: 'إلغاء',
+    });
+    if (!ok) return;
+    renewSubscription(sub.id);
+    showToast('تم تجديد الاشتراك', 'success');
+  };
+
   const goToCheckout = (p: Plan): void => {
     if (p.id === client?.planId) return;
     navigate('/subscribe');
@@ -222,6 +240,15 @@ export default function Billing(): JSX.Element {
             <Link to="/subscribe" className="h-10 px-5 rounded-full bg-white text-primary text-small font-semibold flex items-center gap-2 hover:bg-white/90 transition-colors">
               <ArrowUpRight className="h-4 w-4" /> تغيير الباقة
             </Link>
+            {/* Renewing is a billing change, so it follows إدارة الفوترة. */}
+            {has('billing.manage') && (
+              <button
+                onClick={() => void handleRenew()}
+                className="h-10 px-5 rounded-full bg-success hover:bg-success/90 text-white text-small font-semibold flex items-center gap-2 transition-colors"
+              >
+                <RotateCcw className="h-4 w-4" /> تجديد
+              </button>
+            )}
             <button onClick={() => setShowSubDetails(true)} className="h-10 px-5 rounded-full bg-white/15 backdrop-blur text-white text-small font-semibold hover:bg-white/25 transition-colors flex items-center gap-2">
               <Eye className="h-4 w-4" /> تفاصيل الاشتراك
             </button>

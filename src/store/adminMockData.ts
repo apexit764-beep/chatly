@@ -410,7 +410,9 @@ export const subscriptions: Subscription[] = clients
       paymentMethod: { brand: 'visa', last4: String(1000 + ((c.id.charCodeAt(7) || 0) * 137) % 9000).padStart(4, '0').slice(-4), expMonth: 8, expYear: 28 },
       // Demo client carries a pending downgrade so the مجدولة state is reviewable.
       ...(c.id === 'client_1'
-        ? { scheduledChange: { planId: 'plan_pro', billingCycle: 'monthly' as const, effectiveAt: nowPlusDays(15) } }
+        // plan_starter, not plan_pro: the demo client is on الاحترافي now, so a
+        // downgrade scheduled to the same plan read as "switching to itself".
+        ? { scheduledChange: { planId: 'plan_starter', billingCycle: 'monthly' as const, effectiveAt: nowPlusDays(15) } }
         : {}),
     };
   });

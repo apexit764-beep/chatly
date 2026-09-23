@@ -73,6 +73,11 @@ interface AdminState {
   // Subscription actions
   createSubscription: (clientId: string, planId: string, billingCycle: 'monthly' | 'yearly') => Subscription;
   cancelSubscription: (id: string) => void;
+  /**
+   * تجديد فوري: تنتهي الفترة الحالية بحدودها في الحال وتبدأ فترة جديدة من
+   * نفس الباقة اعتباراً من الآن، فيرجع الاشتراك نشطاً ويسقط أي إلغاء مجدول.
+   */
+  renewSubscription: (id: string) => void;
 
   // Invoice / payment actions
   recordPayment: (clientId: string, planId: string, amount: number, currency: string, last4: string) => { invoice: Invoice; transaction: Transaction };
@@ -198,6 +203,30 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       subscriptions: s.subscriptions.map((sub) =>
         sub.id === id ? { ...sub, status: 'cancelled', cancelAt: new Date().toISOString() } : sub
       ),
+    })),
+
+  renewSubscription: (id) =>
+    set((s) => ({
+      subscriptions: s.subscriptions.map((sub) => {
+        if (sub.id !== id) return sub;
+        const start = new Date();
+        const end = new Date(start);
+        if (sub.billingCycle === 'yearly') end.setFullYear(end.getFullYear() + 1);
+        else end.setMonth(end.getMonth() + 1);
+        // cancelAt is dropped: renewing is the opposite of cancelling.
+        const { cancelAt: _dropped, ...rest } = sub;
+        return {
+          ...rest,
+          status: 'active' as const,
+          currentPeriodStart: start.toISOString(),
+          currentPeriodEnd: end.toISOString(),
+          // A scheduled change means "switch at the end of the current period",
+          // so it moves with the period rather than firing on the old date.
+          ...(sub.scheduledChange
+            ? { scheduledChange: { ...sub.scheduledChange, effectiveAt: end.toISOString() } }
+            : {}),
+        };
+      }),
     })),
 
   recordPayment: (clientId, planId, amount, currency, last4) => {
