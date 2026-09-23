@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowUpRight, CalendarX } from 'lucide-react';
@@ -20,16 +21,38 @@ export function SubscriptionExpiredModal(): JSX.Element | null {
   const { pathname } = useLocation();
 
   const onRenewalRoute = RENEWAL_ROUTES.some((r) => pathname.startsWith(r));
-  if (!expired || onRenewalRoute) return null;
+  const blocking = expired && !onRenewalRoute;
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  // The overlay stops the mouse but not the keyboard: without this, Tab walks
+  // straight into the app behind it. Only the renewal button stays reachable.
+  useEffect(() => {
+    if (!blocking) return;
+    btnRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (e.key !== 'Tab') return;
+      e.preventDefault();
+      btnRef.current?.focus();
+    };
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
+  }, [blocking]);
+
+  if (!blocking) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sub-expired-title"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+    >
       <div className="bg-white dark:bg-surface-dark rounded-card shadow-card-hover w-full max-w-md overflow-hidden">
         <div className="px-6 pt-6 pb-5 bg-gradient-to-br from-primary to-primary-dark text-white">
           <div className="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-3">
             <CalendarX className="h-6 w-6" />
           </div>
-          <h2 className="text-h2 font-extrabold">انتهت مدة اشتراكك</h2>
+          <h2 id="sub-expired-title" className="text-h2 font-extrabold">انتهت مدة اشتراكك</h2>
           <p className="text-body opacity-90 mt-1 leading-relaxed">
             توقّف الوصول إلى النظام حتى تجديد الاشتراك.
           </p>
@@ -40,6 +63,7 @@ export function SubscriptionExpiredModal(): JSX.Element | null {
             أو تتواصل مع الإدارة مباشرة.
           </p>
           <button
+            ref={btnRef}
             onClick={() => navigate('/billing')}
             className="w-full h-11 rounded-full bg-primary hover:bg-primary-dark text-white text-body font-semibold flex items-center justify-center gap-2 transition-colors"
           >
