@@ -606,10 +606,30 @@ export const planRequests: PlanRequest[] = [
     message: 'طلبوا نسخة من اتفاقية معالجة البيانات قبل التوقيع.',
   },
   {
-    id: 'preq_9', clientId: 'client_1', planId: 'plan_enterprise',
+    // «الأعمال» لا «المؤسسات»: الاشتراك في باقة يُنهي كل طلب مفتوح عنها، فلو
+    // كان هذا الطلب على المؤسسات لأغلق الدفعُ الطلبين المعلّقين معه ولما بقي
+    // ما يُجرَّب عليه التعديل والإلغاء. وهي كذلك ليست باقة العميل الحالية،
+    // فزرّ «ادفع» يفتح الدفع فعلاً بدل أن يُهمَل.
+    id: 'preq_9', clientId: 'client_1', planId: 'plan_business',
     name: 'محمد الكندي', company: 'Qhub',
     email: 'admin@qhub.com', phone: '96891234567', countryCode: 'OM',
-    requestedAgents: 60, requestedChannels: 10, status: 'approved', createdAt: nowMinus(60 * 26),
-    message: 'اتفقنا على باقة المؤسسات بحد 60 موظف و10 قنوات، بالسعر السنوي.',
+    requestedAgents: 25, requestedChannels: 10, status: 'approved', createdAt: nowMinus(60 * 26),
+    message: 'اتفقنا على باقة الأعمال بحد 25 موظف و10 قنوات، بالسعر السنوي.',
+  },
+  // طلبان مغلقان ليكتمل عرض الحالات الأربع في تبويب الطلبات: لا إجراء على
+  // أيٍّ منهما، وهو ما تتحقق منه شرطة «—».
+  {
+    id: 'preq_10', clientId: 'client_1', planId: 'plan_business',
+    name: 'محمد الكندي', company: 'Qhub',
+    email: 'admin@qhub.com', phone: '96891234567', countryCode: 'OM',
+    requestedAgents: 15, requestedChannels: 6, status: 'cancelled', createdAt: nowMinus(60 * 120),
+    message: 'سحبنا الطلب مؤقتاً لحين اعتماد الميزانية.',
+  },
+  {
+    id: 'preq_11', clientId: 'client_1', planId: 'plan_enterprise',
+    name: 'محمد الكندي', company: 'Qhub',
+    email: 'admin@qhub.com', phone: '96891234567', countryCode: 'OM',
+    requestedAgents: 400, requestedChannels: 30, status: 'rejected', createdAt: nowMinus(60 * 200),
+    message: 'طلبنا استضافة خاصة داخل عُمان مع نسخ احتياطي يومي.',
   },
 ];
