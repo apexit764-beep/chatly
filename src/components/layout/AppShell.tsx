@@ -7,6 +7,7 @@ import { OnboardingModal } from '@components/onboarding/OnboardingModal';
 import { Toast } from '@components/ui';
 import { SupportChat } from '@components/support/SupportChat';
 import { SubscriptionExpiredModal } from '@components/billing/SubscriptionExpiredModal';
+import { TrialExpiredModal } from '@components/billing/TrialExpiredModal';
 import { useUIStore } from '@/store/useUIStore';
 import { useLiveSimulator } from '@/hooks/useLiveSimulator';
 import { useAutoClose } from '@/hooks/useAutoClose';
@@ -49,6 +50,7 @@ export function AppShell(): JSX.Element {
       <Toast />
       {getAppMode() === 'client' && !isInbox && <SupportChat />}
       {getAppMode() === 'client' && <SubscriptionExpiredModal />}
+      {getAppMode() === 'client' && <TrialExpiredModal />}
     </div>
   );
 }
