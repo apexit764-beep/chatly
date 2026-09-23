@@ -17,13 +17,19 @@ export const clientStatusOf = (s: PlanRequestStatus): ClientRequestStatus => {
   }
 };
 
+/**
+ * ما يظهر للعميل في تبويب الطلبات. «تم الاشتراك» ليس منها: الطلب المدفوع
+ * ينتقل إلى تبويب الفواتير بفاتورته المدفوعة، فلا يبقى طلباً معلّقاً.
+ */
 export const CLIENT_STATUSES: ClientRequestStatus[] = [
   'pending',
   'awaiting_payment',
-  'subscribed',
   'cancelled',
   'rejected',
 ];
+
+/** الطلب الذي دُفع خرج من تبويب الطلبات إلى الفواتير. */
+export const isSettled = (s: PlanRequestStatus): boolean => clientStatusOf(s) === 'subscribed';
 
 export const clientStatusLabel: Record<ClientRequestStatus, string> = {
   pending: 'بانتظار الرد',
@@ -49,13 +55,10 @@ export const clientStatusClass: Record<ClientRequestStatus, string> = {
 export const isEditable = (s: PlanRequestStatus): boolean => clientStatusOf(s) === 'pending';
 
 /**
- * Withdrawing stays open one step longer than editing: an approved request is a quote
- * the customer has not paid, and they must be able to walk away from it.
+ * الإلغاء كالتعديل: على الطلب الذي لم يُرَد عليه بعد فقط. الطلب الذي سُعِّر
+ * وصار بانتظار الدفع لم يعد طلباً يُسحب، بل عرضاً يُدفع أو يُترك.
  */
-export const isCancellable = (s: PlanRequestStatus): boolean => {
-  const cs = clientStatusOf(s);
-  return cs === 'pending' || cs === 'awaiting_payment';
-};
+export const isCancellable = (s: PlanRequestStatus): boolean => clientStatusOf(s) === 'pending';
 
 /** The states that are still waiting on somebody — what the tab badge counts. */
 export const isOpen = (s: PlanRequestStatus): boolean => isCancellable(s);

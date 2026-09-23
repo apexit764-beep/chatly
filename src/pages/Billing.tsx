@@ -37,6 +37,7 @@ import {
   isCancellable,
   isEditable,
   isOpen,
+  isSettled,
   type ClientRequestStatus,
 } from '@/utils/planRequest';
 import { cn } from '@/utils/cn';
@@ -694,8 +695,9 @@ function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
   const [editAgents, setEditAgents] = useState('');
   const [editChannels, setEditChannels] = useState('');
 
+  // Settled requests are excluded: once paid, the record lives in الفواتير.
   const mine = useMemo(
-    () => allRequests.filter((r) => r.clientId === clientId),
+    () => allRequests.filter((r) => r.clientId === clientId && !isSettled(r.status)),
     [allRequests, clientId],
   );
   const shown = filter === 'all' ? mine : mine.filter((r) => clientStatusOf(r.status) === filter);
@@ -768,8 +770,8 @@ function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
             <tr>
               <th className="text-start font-medium px-4 py-3">الباقة المطلوبة</th>
               <th className="text-center font-medium px-4 py-3 hidden md:table-cell">حد المحادثات</th>
-              <th className="text-center font-medium px-4 py-3 hidden md:table-cell">حد الموظفين المطلوب</th>
-              <th className="text-center font-medium px-4 py-3 hidden md:table-cell">حد القنوات المطلوب</th>
+              <th className="text-center font-medium px-4 py-3 hidden md:table-cell">حد الموظفين</th>
+              <th className="text-center font-medium px-4 py-3 hidden md:table-cell">حد القنوات</th>
               <th className="text-start font-medium px-4 py-3 hidden lg:table-cell">الاستفسار</th>
               <th className="text-start font-medium px-4 py-3">الحالة</th>
               <th className="text-end font-medium px-4 py-3" />
@@ -814,7 +816,7 @@ function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
                           onClick={() => navigate(`/subscribe?plan=${r.planId}`)}
                           className="h-9 px-3.5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold inline-flex items-center gap-1.5 whitespace-nowrap"
                         >
-                          <CreditCard className="h-3.5 w-3.5 flex-shrink-0" /> الانتقال للدفع
+                          <CreditCard className="h-3.5 w-3.5 flex-shrink-0" /> ادفع
                         </button>
                       )}
                       {isEditable(r.status) && (
@@ -833,7 +835,9 @@ function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
                           <XCircle className="h-3.5 w-3.5" /> إلغاء
                         </button>
                       )}
-                      {!isCancellable(r.status) && (
+                      {/* Only when the row offers nothing at all — «ادفع» is an
+                          action too, so it must not sit next to a dash. */}
+                      {cs !== 'awaiting_payment' && !isEditable(r.status) && !isCancellable(r.status) && (
                         <span className="text-small text-muted-light dark:text-muted-dark">—</span>
                       )}
                     </div>
