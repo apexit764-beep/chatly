@@ -1,0 +1,1 @@
+import{aj as n,ac as s}from"./index-CQkNcJb6.js";function r({className:e,...a}){return n.jsx("span",{className:s("inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-small font-medium border",e),...a})}export{r as B};
