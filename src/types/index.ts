@@ -14,13 +14,10 @@ export type AgentRole = 'manager' | 'agent';
 
 export type PermissionKey =
   // Conversations
-  | 'conversations.view_all'
-  | 'conversations.view_department'
-  | 'conversations.view_assigned'
-  | 'conversations.reply'
-  | 'conversations.transfer'
-  | 'conversations.close'
-  | 'conversations.delete'
+  /** العرض وبدء محادثة جديدة والرد وإضافة ملاحظة وتغيير الحالة — صلاحية واحدة */
+  | 'conversations.view'
+  | 'conversations.assign_department'
+  | 'conversations.assign_agent'
   | 'conversations.export'
   // Overview
   | 'overview.view'

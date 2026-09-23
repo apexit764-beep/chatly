@@ -7,7 +7,7 @@ import type { PermissionKey } from '@/types';
  *
  * Usage:
  *   const { has, hasAny, hasAll, role } = usePermission();
- *   if (has('conversations.delete')) { ... }
+ *   if (has('conversations.export')) { ... }
  *   {has('contacts.export') && <ExportButton />}
  */
 export function usePermission(): {
@@ -49,7 +49,7 @@ export function usePermission(): {
  *
  * Usage:
  *   <Can permission="contacts.export"><ExportButton /></Can>
- *   <Can permission="conversations.delete" fallback={<span>—</span>}><DeleteBtn /></Can>
+ *   <Can permission="conversations.export" fallback={<span>—</span>}><ExportBtn /></Can>
  */
 export function Can({
   permission,
