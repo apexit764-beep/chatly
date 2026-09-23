@@ -230,21 +230,25 @@ export default function Billing(): JSX.Element {
               <span className="text-body opacity-90">/{sub.billingCycle === 'monthly' ? 'شهر' : 'سنة'}</span>
             </div>
           </div>
-          <div className="flex flex-col gap-2">
-            <Link to="/subscribe" className="h-10 px-5 rounded-full bg-white text-primary text-small font-semibold flex items-center gap-2 hover:bg-white/90 transition-colors">
-              <ArrowUpRight className="h-4 w-4" /> تغيير الباقة
-            </Link>
-            {/* Renewing is a billing change, so it follows إدارة الفوترة. */}
-            {has('billing.manage') && (
-              <button
-                onClick={() => void handleRenew()}
-                className="h-10 px-5 rounded-full bg-success hover:bg-success/90 text-white text-small font-semibold flex items-center gap-2 transition-colors"
-              >
-                <RotateCcw className="h-4 w-4" /> تجديد
-              </button>
-            )}
-            <button onClick={() => setShowSubDetails(true)} className="h-10 px-5 rounded-full bg-white/15 backdrop-blur text-white text-small font-semibold hover:bg-white/25 transition-colors flex items-center gap-2">
-              <Eye className="h-4 w-4" /> تفاصيل الاشتراك
+          {/* The two actions share a row; viewing the details is secondary, so it
+              sits under them full width instead of stretching the stack to three. */}
+          <div className="flex flex-col gap-2 w-full sm:w-auto sm:min-w-[17rem]">
+            <div className="flex items-center gap-2">
+              <Link to="/subscribe" className="flex-1 h-10 px-3 rounded-full bg-white text-primary text-small font-semibold flex items-center justify-center gap-1.5 hover:bg-white/90 transition-colors whitespace-nowrap">
+                <ArrowUpRight className="h-4 w-4 flex-shrink-0" /> تغيير الباقة
+              </Link>
+              {/* Renewing is a billing change, so it follows إدارة الفوترة. */}
+              {has('billing.manage') && (
+                <button
+                  onClick={() => void handleRenew()}
+                  className="flex-1 h-10 px-3 rounded-full bg-success hover:bg-success/90 text-white text-small font-semibold flex items-center justify-center gap-1.5 transition-colors whitespace-nowrap"
+                >
+                  <RotateCcw className="h-4 w-4 flex-shrink-0" /> تجديد
+                </button>
+              )}
+            </div>
+            <button onClick={() => setShowSubDetails(true)} className="w-full h-10 px-3 rounded-full bg-white/15 backdrop-blur text-white text-small font-semibold hover:bg-white/25 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap">
+              <Eye className="h-4 w-4 flex-shrink-0" /> تفاصيل الاشتراك
             </button>
           </div>
         </div>
