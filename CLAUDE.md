@@ -15,14 +15,19 @@ Three deployment targets:
 1. **VPS (primary)**: `qhub-client.apexes.click`
    - Path: `/var/www/apexes.click/qhub-client/`
    - Assets are served from `/assets-v2/` (set by `build.assetsDir` in `vite.config.ts`)
-   - SPA routing: each route has its own `index.html` copy — **115 total**, and the
-     tree is **nested**, not flat. Do not work from a remembered count; enumerate the
+   - SPA routing: each route has its own `index.html` copy — **119 HTML files as of
+     build `4af6be53`** (118 `index.html` + `404.html`), and the tree is **nested**, not
+     flat. Do not work from a remembered count; enumerate the
      tree with `list_dir` every deploy, because routes get added to the server over time.
+     This count has now moved twice (114 → 115 → 119), which is the point: treat every
+     number written here as stale and re-enumerate. Publish every copy you find rather
+     than guessing which ones changed — republishing is idempotent.
      A route added in the app has no directory on the server until a deploy creates
      one — `deploy_from_url` makes missing parents, so publish the new path explicitly
-     rather than leaving it to the `404.html` fallback. As of build `d2ee20ce`
-     (`dashboard/` corrected from 23 to 24 — it has its own `index.html` on top of its
-     23 subroutes, which the 114 total had been dropping):
+     rather than leaving it to the `404.html` fallback. The breakdown below was accurate
+     at build `d2ee20ce` and no longer sums to the live total — it is a map of the
+     tree's shape, not a checklist (`dashboard/` was corrected from 23 to 24 there — it
+     has its own `index.html` on top of its 23 subroutes, which the 114 total dropped):
      - root `index.html` + `404.html` (2)
      - 41 top-level client routes
      - `settings/` × 6 (`api`, `appearance`, `general`, `languages`, `notifications`, `security`)
