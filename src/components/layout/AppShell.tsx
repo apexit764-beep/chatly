@@ -6,6 +6,7 @@ import { TopHeader } from './TopHeader';
 import { OnboardingModal } from '@components/onboarding/OnboardingModal';
 import { Toast } from '@components/ui';
 import { SupportChat } from '@components/support/SupportChat';
+import { SubscriptionExpiredModal } from '@components/billing/SubscriptionExpiredModal';
 import { useUIStore } from '@/store/useUIStore';
 import { useLiveSimulator } from '@/hooks/useLiveSimulator';
 import { useAutoClose } from '@/hooks/useAutoClose';
@@ -47,6 +48,7 @@ export function AppShell(): JSX.Element {
       <OnboardingModal />
       <Toast />
       {getAppMode() === 'client' && !isInbox && <SupportChat />}
+      {getAppMode() === 'client' && <SubscriptionExpiredModal />}
     </div>
   );
 }
