@@ -249,6 +249,12 @@ export default function AISettings(): JSX.Element {
   const customCount = channels.filter((c) => channelBehaviors[c.id]).length;
 
   const save = async (): Promise<void> => {
+    // The switch is what turns auto-close off, so an enabled card with no hours
+    // is an unfinished entry rather than a way of disabling it.
+    if (form.autoCloseEnabled && form.autoCloseHours < 1) {
+      showToast('مدة الإغلاق التلقائي مطلوبة — أدخل ساعة واحدة على الأقل أو أطفئ الإغلاق التلقائي', 'error');
+      return;
+    }
     const modelLabel = (currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '');
     const summary: { label: string; value: string }[] = scopedAccount
       ? [
@@ -257,7 +263,7 @@ export default function AISettings(): JSX.Element {
           { label: 'ساعات العمل', value: form.alwaysOn ? 'على مدار الساعة' : 'حسب الجدول' },
           {
             label: 'الإغلاق التلقائي',
-            value: form.autoCloseHours > 0 ? `بعد ${form.autoCloseHours} ساعة` : 'معطّل',
+            value: form.autoCloseEnabled ? `بعد ${form.autoCloseHours} ساعة` : 'معطّل',
           },
         ]
       : [
@@ -1309,8 +1315,14 @@ export default function AISettings(): JSX.Element {
             icon={<Timer className="h-5 w-5" />}
             title="الإغلاق التلقائي للمحادثات"
             description="يحدّد عدد الساعات التي يجب أن تمر بدون رد من العميل قبل إغلاق محادثته تلقائياً. يعمل سواء كان المساعد الذكي مُشغّلاً أو موقوفاً."
+            headerExtra={
+              <Toggle
+                checked={form.autoCloseEnabled}
+                onChange={(v) => update('autoCloseEnabled', v)}
+              />
+            }
           >
-            <div>
+            <div className={cn('transition-opacity', !form.autoCloseEnabled && 'opacity-50')}>
               <label htmlFor="auto-close-hours" className="text-small font-semibold block mb-1.5">
                 إغلاق المحادثة تلقائياً بعد (بالساعات)
               </label>
@@ -1318,6 +1330,7 @@ export default function AISettings(): JSX.Element {
                 id="auto-close-hours"
                 type="text"
                 inputMode="numeric"
+                disabled={!form.autoCloseEnabled}
                 value={autoCloseText}
                 onChange={(e) => {
                   // Integers only: strips a leading '-', decimal points and the
@@ -1327,11 +1340,11 @@ export default function AISettings(): JSX.Element {
                   update('autoCloseHours', digits === '' ? 0 : Number(digits));
                 }}
                 placeholder="ساعة"
-                className="w-full h-11 px-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small font-bold focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                className="w-full h-11 px-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small font-bold focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all disabled:cursor-not-allowed"
               />
               <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1.5 leading-relaxed">
                 حقل رقمي — أرقام صحيحة فقط (مثال: 12، 24، 48). المدة تُحتسب من آخر رسالة أرسلها موظف،
-                ولا تُغلق المحادثة إذا رد العميل بعدها. اكتب 0 لتعطيل الإغلاق التلقائي لهذا الحساب.
+                ولا تُغلق المحادثة إذا رد العميل بعدها.
               </p>
             </div>
           </SectionCard>

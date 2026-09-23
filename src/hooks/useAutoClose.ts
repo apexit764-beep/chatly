@@ -31,8 +31,8 @@ export function useAutoClose(): void {
       conversations.forEach((conv) => {
         if (conv.status === 'closed') return;
 
-        const hours = behaviorFor(conv.channelId).autoCloseHours;
-        if (!hours || hours <= 0) return;
+        const { autoCloseEnabled, autoCloseHours } = behaviorFor(conv.channelId);
+        if (!autoCloseEnabled || autoCloseHours < 1) return;
 
         let lastAgentIdx = -1;
         for (let i = conv.messages.length - 1; i >= 0; i -= 1) {
@@ -46,7 +46,7 @@ export function useAutoClose(): void {
         if (customerRepliedSince) return;
 
         const idleMs = now - new Date(conv.messages[lastAgentIdx].timestamp).getTime();
-        if (idleMs < hours * HOUR_MS) return;
+        if (idleMs < autoCloseHours * HOUR_MS) return;
 
         closeConversationWithRating(conv.id);
       });
