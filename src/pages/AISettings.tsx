@@ -1475,13 +1475,13 @@ function SectionCard({
         <span className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
           {icon}
         </span>
+        {/* headerExtra sits beside the whole title+description block, not only
+            beside the title — otherwise the description wraps underneath it. */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="text-body font-bold">{title}</h3>
-            {headerExtra}
-          </div>
+          <h3 className="text-body font-bold">{title}</h3>
           <p className="text-small text-muted-light dark:text-muted-dark leading-relaxed mt-0.5">{description}</p>
         </div>
+        {headerExtra && <div className="flex-shrink-0">{headerExtra}</div>}
       </div>
       <div className="ps-12">{children}</div>
     </Card>
