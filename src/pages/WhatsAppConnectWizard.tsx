@@ -20,6 +20,8 @@ import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { cn } from '@/utils/cn';
 import { WhatsAppIcon } from '@components/ui/BrandIcons';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
+import { PlanLimitModal } from '@components/billing/PlanLimitModal';
 import type { Channel } from '@/types';
 
 type ConnectionMethod = 'cloud' | 'qr' | 'pairing';
@@ -69,6 +71,8 @@ export default function WhatsAppConnectWizard({
   const departments = useDataStore((s) => s.departments);
   const agents = useDataStore((s) => s.agents);
   const addChannel = useDataStore((s) => s.addChannel);
+  const { channelsReached } = usePlanLimits();
+  const [planLimitOpen, setPlanLimitOpen] = useState(false);
   const updateChannel = useDataStore((s) => s.updateChannel);
   const showToast = useUIStore((s) => s.showToast);
 
@@ -175,6 +179,11 @@ export default function WhatsAppConnectWizard({
       });
       showToast('تم تحديث القناة', 'success');
     } else {
+      // Every step is filled in normally; the limit only bites on confirm.
+      if (channelsReached) {
+        setPlanLimitOpen(true);
+        return;
+      }
       addChannel({
         type: 'whatsapp',
         name: state.channelName || `${state.countryCode} ${state.phone}`,
@@ -274,6 +283,7 @@ export default function WhatsAppConnectWizard({
           </div>
         )}
       </div>
+      <PlanLimitModal open={planLimitOpen} onClose={() => setPlanLimitOpen(false)} />
     </div>,
     document.body,
   );

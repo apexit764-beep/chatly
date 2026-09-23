@@ -39,6 +39,8 @@ import type { Channel, ChannelType, RatingConfig } from '@/types';
 import { CHANNEL_TYPES } from './channelTypes';
 import WhatsAppConnectWizard from './WhatsAppConnectWizard';
 import { WidgetSettings, type WidgetSubTab } from './channelSettings/WidgetSettings';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
+import { PlanLimitModal } from '@components/billing/PlanLimitModal';
 
 interface ChannelTab {
   key: string;
@@ -57,6 +59,8 @@ export default function ChannelDetail(): JSX.Element {
   const agents = useDataStore((s) => s.agents);
   const conversations = useDataStore((s) => s.conversations);
   const addChannel = useDataStore((s) => s.addChannel);
+  const { channelsReached } = usePlanLimits();
+  const [planLimitOpen, setPlanLimitOpen] = useState(false);
   const updateChannel = useDataStore((s) => s.updateChannel);
   const deleteChannel = useDataStore((s) => s.deleteChannel);
   const setChannelRatingConfig = useDataStore((s) => s.setChannelRatingConfig);
@@ -157,6 +161,11 @@ export default function ChannelDetail(): JSX.Element {
       });
       showToast(t('تم تحديث القناة'), 'success');
     } else {
+      // Data is entered normally; the plan limit only bites at the moment of linking.
+      if (channelsReached) {
+        setPlanLimitOpen(true);
+        return;
+      }
       addChannel({
         type: meta.type,
         name: form.name,
@@ -748,6 +757,8 @@ export default function ChannelDetail(): JSX.Element {
           onClose={() => setRatingFor(null)}
         />
       )}
+
+      <PlanLimitModal open={planLimitOpen} onClose={() => setPlanLimitOpen(false)} />
     </div>
   );
 }

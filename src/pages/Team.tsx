@@ -40,6 +40,8 @@ import { agentStatusColor, agentStatusLabel } from '@/utils/labels';
 import { timeAgo } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import type { Agent, InvitationStatus } from '@/types';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
+import { PlanLimitModal } from '@components/billing/PlanLimitModal';
 
 export default function Team(): JSX.Element {
   const agents = useDataStore((s) => s.agents);
@@ -50,6 +52,8 @@ export default function Team(): JSX.Element {
   const updateAgent = useDataStore((s) => s.updateAgent);
   const deleteAgent = useDataStore((s) => s.deleteAgent);
   const inviteAgent = useDataStore((s) => s.inviteAgent);
+  const { agentsReached } = usePlanLimits();
+  const [planLimitOpen, setPlanLimitOpen] = useState(false);
   const resendInvitation = useDataStore((s) => s.resendInvitation);
   const cancelInvitation = useDataStore((s) => s.cancelInvitation);
   const showToast = useUIStore((s) => s.showToast);
@@ -237,6 +241,11 @@ export default function Team(): JSX.Element {
       });
       showToast(t('تم تحديث الموظف'), 'success');
     } else {
+      // The form fills in normally; the limit only bites when the invite is sent.
+      if (agentsReached) {
+        setPlanLimitOpen(true);
+        return;
+      }
       inviteAgent({
         name: form.name,
         email: form.email,
@@ -1151,6 +1160,8 @@ export default function Team(): JSX.Element {
           </div>
         )}
       </Drawer>
+
+      <PlanLimitModal open={planLimitOpen} onClose={() => setPlanLimitOpen(false)} />
     </div>
   );
 }

@@ -68,6 +68,8 @@ import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useInboxStore } from '@/store/useInboxStore';
 import { closeConversationWithRating } from '@/utils/closeConversation';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
+import { PlanLimitModal } from '@components/billing/PlanLimitModal';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAIStore } from '@/store/useAIStore';
 import { contactTypeLabel } from '@/utils/labels';
@@ -140,6 +142,8 @@ export default function Inbox(): JSX.Element {
   const [showEmoji, setShowEmoji] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showChatMobile, setShowChatMobile] = useState(false);
+  const { lockedConversationIds } = usePlanLimits();
+  const [planLimitOpen, setPlanLimitOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [newConvOpen, setNewConvOpen] = useState(false);
   const [callModalOpen, setCallModalOpen] = useState(false);
@@ -621,16 +625,28 @@ export default function Inbox(): JSX.Element {
             const convChannel = channels.find((c) => c.id === conv.channelId);
             const isSelected = selectedId === conv.id;
             const isConvBookmarked = bookmarkedConvIds.has(conv.id);
+            // Over the plan's conversation quota: shown blurred, and opening it
+            // raises the limit notice instead.
+            const locked = lockedConversationIds.has(conv.id);
             return (
               <button
                 key={conv.id}
                 onClick={() => {
+                  if (locked) {
+                    setPlanLimitOpen(true);
+                    return;
+                  }
                   setSelectedId(conv.id);
                   setShowChatMobile(true);
                 }}
+                // Not aria-disabled: the row is still actionable, it just
+                // explains the lock instead of opening the conversation.
+                title={locked ? 'انتهت حدود الباقة' : undefined}
                 className={cn(
                   'w-full text-start flex gap-3 p-3 transition-colors hover:bg-bg-light dark:hover:bg-bg-dark',
-                  isSelected && 'bg-primary/5'
+                  isSelected && 'bg-primary/5',
+                  // Children blur so the row itself keeps receiving the click.
+                  locked && 'select-none [&>*]:blur-[3px] [&>*]:pointer-events-none'
                 )}
               >
                 <div className="relative flex-shrink-0">
@@ -1206,6 +1222,8 @@ export default function Inbox(): JSX.Element {
 
       {/* New conv modal */}
       <NewConversationModal open={newConvOpen} onClose={() => setNewConvOpen(false)} preselectedContact={selectedContact} />
+
+      <PlanLimitModal open={planLimitOpen} onClose={() => setPlanLimitOpen(false)} />
     </div>
   );
 }
