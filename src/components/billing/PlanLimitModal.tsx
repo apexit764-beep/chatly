@@ -37,22 +37,27 @@ export function PlanLimitModal({
         <h2 id="plan-limit-title" className="text-h2 font-extrabold mb-2">
           انتهت حدود الباقة
         </h2>
-        <p className="text-body text-muted-light dark:text-muted-dark leading-relaxed mb-6">
+        <p className="text-body text-muted-light dark:text-muted-dark leading-relaxed mb-4">
           انتهت حدود الباقة، يرجى الانتقال لتجديد أو ترقية الباقة
         </p>
+        <p className="text-small text-muted-light dark:text-muted-dark leading-relaxed bg-bg-light dark:bg-bg-dark rounded-card p-3 mb-6 text-start">
+          محادثاتك الحالية تبقى كما هي — تطّلع عليها وترد عليها بشكل طبيعي. والمحادثات
+          الجديدة تصلك ومحفوظة، لكنها لا تُعرض حتى تجدّد أو ترقّي الباقة.
+        </p>
+        {/* Primary action first: in RTL that puts «الانتقال للباقات» on the right. */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 h-11 rounded-full border border-border-light dark:border-border-dark text-body font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
-          >
-            إلغاء
-          </button>
           <button
             onClick={() => navigate('/billing')}
             className="flex-1 h-11 rounded-full bg-primary hover:bg-primary-dark text-white text-body font-semibold flex items-center justify-center gap-2 transition-colors"
           >
             الانتقال للباقات
             <ArrowUpRight className="h-4 w-4" />
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 h-11 rounded-full border border-border-light dark:border-border-dark text-body font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
+          >
+            إلغاء
           </button>
         </div>
       </div>

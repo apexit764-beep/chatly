@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Download,
   Eye,
+  Info,
   Search,
   ArrowUpRight,
   Sparkles,
@@ -228,13 +229,6 @@ export default function Billing(): JSX.Element {
               <p className="text-display font-extrabold">{formatMoney(sub.amount, sub.currency)}</p>
               <span className="text-body opacity-90">/{sub.billingCycle === 'monthly' ? 'شهر' : 'سنة'}</span>
             </div>
-            {sub.scheduledChange && (
-              <p className="text-small opacity-90 mt-3 max-w-md">
-                تم جدولة التحويل إلى باقة{' '}
-                <strong>{allPlans.find((p) => p.id === sub.scheduledChange!.planId)?.nameAr ?? '—'}</strong>{' '}
-                اعتباراً من <strong>{formatDate(sub.scheduledChange.effectiveAt)}</strong>. باقتك الحالية ومزاياها مستمرة حتى ذلك التاريخ.
-              </p>
-            )}
           </div>
           <div className="flex flex-col gap-2">
             <Link to="/subscribe" className="h-10 px-5 rounded-full bg-white text-primary text-small font-semibold flex items-center gap-2 hover:bg-white/90 transition-colors">
@@ -269,6 +263,26 @@ export default function Billing(): JSX.Element {
           <ArrowUpRight className="h-4 w-4" />
         </Link>
       </Card>
+      )}
+
+      {/* Scheduled change — its own note strip under the card, not inside it.
+          The card states what the plan IS; this is a future event about it, so
+          it reads after the plan is known rather than pushing it down. */}
+      {sub?.scheduledChange && (
+        <div className="flex items-start gap-3 p-4 rounded-card border border-info/30 bg-info/10">
+          <span className="h-8 w-8 rounded-lg bg-info/15 text-info flex items-center justify-center flex-shrink-0">
+            <Info className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-small font-bold text-info mb-0.5">تحويل مجدول</p>
+            <p className="text-small text-muted-light dark:text-muted-dark leading-relaxed">
+              تم جدولة التحويل إلى باقة{' '}
+              <strong className="text-current">{allPlans.find((p) => p.id === sub.scheduledChange!.planId)?.nameAr ?? '—'}</strong>{' '}
+              اعتباراً من <strong className="text-current">{formatDate(sub.scheduledChange.effectiveAt)}</strong>.
+              باقتك الحالية ومزاياها مستمرة حتى ذلك التاريخ.
+            </p>
+          </div>
+        </div>
       )}
 
       {/* Subscription details modal */}
