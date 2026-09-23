@@ -1322,7 +1322,9 @@ export default function AISettings(): JSX.Element {
               />
             }
           >
-            <div className={cn('transition-opacity', !form.autoCloseEnabled && 'opacity-50')}>
+            {/* Off: nothing but the icon, title, description and the switch. */}
+            {form.autoCloseEnabled && (
+            <div>
               <label htmlFor="auto-close-hours" className="text-small font-semibold block mb-1.5">
                 إغلاق المحادثة تلقائياً بعد (بالساعات)
               </label>
@@ -1330,7 +1332,6 @@ export default function AISettings(): JSX.Element {
                 id="auto-close-hours"
                 type="text"
                 inputMode="numeric"
-                disabled={!form.autoCloseEnabled}
                 value={autoCloseText}
                 onChange={(e) => {
                   // Integers only: strips a leading '-', decimal points and the
@@ -1340,13 +1341,14 @@ export default function AISettings(): JSX.Element {
                   update('autoCloseHours', digits === '' ? 0 : Number(digits));
                 }}
                 placeholder="ساعة"
-                className="w-full h-11 px-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small font-bold focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all disabled:cursor-not-allowed"
+                className="w-full h-11 px-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small font-bold focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
               />
               <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1.5 leading-relaxed">
                 حقل رقمي — أرقام صحيحة فقط (مثال: 12، 24، 48). المدة تُحتسب من آخر رسالة أرسلها موظف،
                 ولا تُغلق المحادثة إذا رد العميل بعدها.
               </p>
             </div>
+            )}
           </SectionCard>
           </div>
         </div>
@@ -1471,7 +1473,8 @@ function SectionCard({
 }): JSX.Element {
   return (
     <Card className="p-5">
-      <div className="flex items-start gap-3 mb-4">
+      {/* A card whose body is hidden keeps no trailing gap under its header. */}
+      <div className={cn('flex items-start gap-3', children && 'mb-4')}>
         <span className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
           {icon}
         </span>
@@ -1483,7 +1486,7 @@ function SectionCard({
         </div>
         {headerExtra && <div className="flex-shrink-0">{headerExtra}</div>}
       </div>
-      <div className="ps-12">{children}</div>
+      {children && <div className="ps-12">{children}</div>}
     </Card>
   );
 }
