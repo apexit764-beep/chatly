@@ -73,6 +73,13 @@ export interface AISettings {
   /** 7 entries — index 0 = Sunday, 6 = Saturday */
   schedule: DaySchedule[];
   offHoursMessage: string;
+  /**
+   * ساعات السكون قبل إغلاق المحادثة تلقائياً. العدّاد يبدأ من آخر رسالة
+   * أرسلها موظف، ولا تُغلق المحادثة إن وصل رد من العميل بعدها. صفر = معطّل.
+   *
+   * مقصود أن يكون خارج `AI_SHARED_KEYS` — الإعداد لكل حساب على حدة.
+   */
+  autoCloseHours: number;
 }
 
 /**
@@ -209,6 +216,7 @@ const DEFAULT_SETTINGS: AISettings = {
     { ...WEEKEND },
   ],
   offHoursMessage: 'أهلاً! خارج ساعات الدوام حالياً، لكن سجّلت طلبك وسيتواصل معك أحد الموظفين أول الدوام. لأي استفسار سريع تقدر تعتمد عليّ.',
+  autoCloseHours: 24,
 };
 
 const STORAGE_KEY = 'qhub_ai_settings';

@@ -8,6 +8,7 @@ import {
   BookOpen,
   Ban,
   Clock,
+  Timer,
   Save,
   Check,
   Zap,
@@ -164,11 +165,16 @@ export default function AISettings(): JSX.Element {
     { id: '3', name: 'الأسئلة الشائعة.txt', size: '120 KB', date: '2025-06-15' },
   ]);
 
+  /** Raw text of the auto-close field, so it can be cleared while typing. */
+  const [autoCloseText, setAutoCloseText] = useState(String(saved.autoCloseHours));
+
   // The form always shows the shared connection; the behavior half comes from
   // whichever scope is selected.
   useEffect(() => {
     const behavior = scope ? channelBehaviors[scope] ?? pickBehavior(saved) : pickBehavior(saved);
-    setForm({ ...saved, ...behavior });
+    const next = { ...saved, ...behavior };
+    setForm(next);
+    setAutoCloseText(String(next.autoCloseHours));
     setDirty(false);
   }, [saved, scope, channelBehaviors]);
 
@@ -249,6 +255,10 @@ export default function AISettings(): JSX.Element {
           { label: 'الحساب', value: scopedAccount.name },
           { label: 'النبرة واللهجة', value: `${TONES.find((t) => t.value === form.tone)?.label ?? form.tone}` },
           { label: 'ساعات العمل', value: form.alwaysOn ? 'على مدار الساعة' : 'حسب الجدول' },
+          {
+            label: 'الإغلاق التلقائي',
+            value: form.autoCloseHours > 0 ? `بعد ${form.autoCloseHours} ساعة` : 'معطّل',
+          },
         ]
       : [
           { label: 'المزوّد', value: currentProvider.name },
@@ -288,6 +298,13 @@ export default function AISettings(): JSX.Element {
   };
 
   const arSelected = form.languages.includes('ar');
+
+  /**
+   * Stopping the assistant disables its own settings. Auto-close is not one of
+   * them — it runs whether the assistant is on or off — so that card is the one
+   * section this class is deliberately not applied to.
+   */
+  const mutedIfOff = cn('transition-opacity', !form.enabled && 'opacity-50 pointer-events-none');
 
   type BehaviorTab = 'knowledge' | 'transfer';
   const [tab, setTab] = useState<'connection' | 'personality' | 'features' | 'accounts'>('connection');
@@ -464,18 +481,15 @@ export default function AISettings(): JSX.Element {
 
 
 
-      {/* Sections below get muted when AI is disabled */}
-      <div
-        className={cn(
-          'space-y-5 transition-opacity',
-          !form.enabled && 'opacity-50 pointer-events-none'
-        )}
-        aria-disabled={!form.enabled}
-      >
+      {/* Muting is applied per section, not on this wrapper: opacity can't be
+          undone on a child (it multiplies with the parent's), so a section that
+          must stay usable while the assistant is off has to sit outside the
+          muted element — not be excepted from inside it. */}
+      <div className="space-y-5">
 
       {/* ═══ Tab 1: الربط والنموذج ═══ */}
       {tab === 'connection' && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+        <div className={cn('grid grid-cols-1 xl:grid-cols-2 gap-5 items-start', mutedIfOff)} aria-disabled={!form.enabled}>
           {/* AI provider connection */}
           <SectionCard
             icon={<KeyRound className="h-5 w-5" />}
@@ -680,7 +694,7 @@ export default function AISettings(): JSX.Element {
 
       {/* ═══ Tab 2: الميزات والرصيد ═══ */}
       {tab === 'features' && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+        <div className={cn('grid grid-cols-1 xl:grid-cols-2 gap-5 items-start', mutedIfOff)} aria-disabled={!form.enabled}>
           {/* AI Features */}
           <SectionCard
             icon={<Sparkles className="h-5 w-5" />}
@@ -869,7 +883,7 @@ export default function AISettings(): JSX.Element {
 
       {/* ═══ Tab 3: اللغة والأسلوب ═══ */}
       {tab === 'personality' && (
-        <div className="space-y-5">
+        <div className={cn('space-y-5', mutedIfOff)} aria-disabled={!form.enabled}>
           {/* Languages */}
           <SectionCard
             icon={<Languages className="h-5 w-5" />}
@@ -1016,7 +1030,7 @@ export default function AISettings(): JSX.Element {
 
       {/* ═══ Tab 3: المعرفة والقيود ═══ */}
       {behaviorTab === 'knowledge' && (
-        <div className="space-y-5">
+        <div className={cn('space-y-5', mutedIfOff)} aria-disabled={!form.enabled}>
           {/* Prompt / Knowledge — أهم قسم أولاً */}
           <SectionCard
             icon={<BookOpen className="h-5 w-5" />}
@@ -1108,6 +1122,7 @@ export default function AISettings(): JSX.Element {
       {behaviorTab === 'transfer' && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
           {/* Transfer to staff */}
+          <div className={mutedIfOff} aria-disabled={!form.enabled}>
           <SectionCard
             icon={<UserCog className="h-5 w-5" />}
             title="التحويل لموظف بشري"
@@ -1188,8 +1203,12 @@ export default function AISettings(): JSX.Element {
               </div>
             </div>
           </SectionCard>
+          </div>
 
-          {/* Working hours */}
+          {/* Second column: working hours, then auto-close directly under it.
+              Only the working-hours card is muted with the assistant. */}
+          <div className="space-y-5">
+          <div className={mutedIfOff} aria-disabled={!form.enabled}>
           <SectionCard
             icon={<Clock className="h-5 w-5" />}
             title="ساعات عمل المساعد"
@@ -1282,6 +1301,41 @@ export default function AISettings(): JSX.Element {
               )}
             </div>
           </SectionCard>
+          </div>
+
+          {/* Auto-close — deliberately outside `mutedIfOff`: it closes idle
+              conversations whether or not the assistant is running. */}
+          <SectionCard
+            icon={<Timer className="h-5 w-5" />}
+            title="الإغلاق التلقائي للمحادثات"
+            description="يحدّد عدد الساعات التي يجب أن تمر بدون رد من العميل قبل إغلاق محادثته تلقائياً. يعمل سواء كان المساعد الذكي مُشغّلاً أو موقوفاً."
+          >
+            <div>
+              <label htmlFor="auto-close-hours" className="text-small font-semibold block mb-1.5">
+                إغلاق المحادثة تلقائياً بعد (بالساعات)
+              </label>
+              <input
+                id="auto-close-hours"
+                type="text"
+                inputMode="numeric"
+                value={autoCloseText}
+                onChange={(e) => {
+                  // Integers only: strips a leading '-', decimal points and the
+                  // 'e' that a number input would otherwise accept.
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  setAutoCloseText(digits);
+                  update('autoCloseHours', digits === '' ? 0 : Number(digits));
+                }}
+                placeholder="ساعة"
+                className="w-full h-11 px-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small font-bold focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+              />
+              <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1.5 leading-relaxed">
+                حقل رقمي — أرقام صحيحة فقط (مثال: 12، 24، 48). المدة تُحتسب من آخر رسالة أرسلها موظف،
+                ولا تُغلق المحادثة إذا رد العميل بعدها. اكتب 0 لتعطيل الإغلاق التلقائي لهذا الحساب.
+              </p>
+            </div>
+          </SectionCard>
+          </div>
         </div>
       )}
 
@@ -1300,7 +1354,10 @@ export default function AISettings(): JSX.Element {
             </div>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setForm(saved)}
+                onClick={() => {
+                  setForm(saved);
+                  setAutoCloseText(String(saved.autoCloseHours));
+                }}
                 className="h-10 px-4 rounded-xl text-small font-medium border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
               >
                 تجاهل

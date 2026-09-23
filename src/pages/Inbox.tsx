@@ -67,7 +67,7 @@ import {
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useInboxStore } from '@/store/useInboxStore';
-import { useRatingStore } from '@/store/useRatingStore';
+import { closeConversationWithRating } from '@/utils/closeConversation';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAIStore } from '@/store/useAIStore';
 import { contactTypeLabel } from '@/utils/labels';
@@ -397,27 +397,8 @@ export default function Inbox(): JSX.Element {
       confirmText: 'تأكيد',
     });
     if (!ok) return;
-    setStatus(selected.id, 'closed');
-
-    if (ratingPrefs.enabled) {
-      const agentId = selected.assignedTo ?? currentUserId;
-      const agent = agents.find((a) => a.id === agentId);
-      const token = useRatingStore.getState().generateToken(
-        {
-          conversationId: selected.id,
-          contactId: selectedContact.id,
-          contactName: selectedContact.name,
-          agentId: agentId ?? '',
-          agentName: agent?.name ?? 'فريق الدعم',
-          channelType: convChannel?.type ?? 'whatsapp',
-          channelName: convChannel?.name ?? '',
-          askAgentRating: ratingPrefs.askAgentRating,
-        },
-        ratingPrefs.expireDays,
-      );
-      const url = `${window.location.origin}/rate/?t=${token}`;
-      sendMessage(selected.id, `${ratingPrefs.message}\n${url}`);
-    }
+    // Same path the auto-close uses, so both closes behave identically.
+    closeConversationWithRating(selected.id);
     showToast('تم إغلاق المحادثة', 'success');
   };
 

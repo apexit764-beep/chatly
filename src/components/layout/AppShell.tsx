@@ -8,6 +8,7 @@ import { Toast } from '@components/ui';
 import { SupportChat } from '@components/support/SupportChat';
 import { useUIStore } from '@/store/useUIStore';
 import { useLiveSimulator } from '@/hooks/useLiveSimulator';
+import { useAutoClose } from '@/hooks/useAutoClose';
 import { getAppMode } from '@/utils/mode';
 import { Footer } from './Footer';
 
@@ -19,6 +20,8 @@ export function AppShell(): JSX.Element {
   const focused = isInbox && inboxFocus;
   // Drives live activity (new messages, notifications, AI replies)
   useLiveSimulator();
+  // Closes idle conversations on each account's own auto-close period
+  useAutoClose();
   return (
     <div className="flex h-screen overflow-hidden bg-bg-light dark:bg-bg-dark text-[14px] text-[#111827] dark:text-[#F1F5F9]">
       {!focused && <IconSidebar />}
