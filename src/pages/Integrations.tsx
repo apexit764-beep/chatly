@@ -3,7 +3,6 @@ import {
   Facebook,
   Instagram,
   Send as TelegramIcon,
-  Twitter,
   Zap,
   MessageSquare,
   Webhook,
@@ -18,6 +17,7 @@ import {
   Database,
 } from 'lucide-react';
 import { Card, Input, Modal, StatCard } from '@components/ui';
+import { TikTokIcon } from '@components/ui/BrandIcons';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { cn } from '@/utils/cn';
@@ -39,7 +39,7 @@ const allIntegrations: IntegrationMeta[] = [
   { type: 'messenger', name: 'Facebook Messenger', description: 'استقبل رسائل صفحتك على فيسبوك في صندوق Qhub', icon: <Facebook className="h-6 w-6" />, color: 'text-[#0084FF]', bg: 'bg-[#0084FF]/10', category: 'messaging', featured: true },
   { type: 'instagram', name: 'Instagram Direct', description: 'الرد على الـ DMs والتعليقات في انستجرام', icon: <Instagram className="h-6 w-6" />, color: 'text-[#E4405F]', bg: 'bg-[#E4405F]/10', category: 'messaging', featured: true },
   { type: 'telegram', name: 'Telegram', description: 'بوت تيليجرام لاستقبال الاستفسارات', icon: <TelegramIcon className="h-6 w-6" />, color: 'text-[#0088CC]', bg: 'bg-[#0088CC]/10', category: 'messaging', featured: true },
-  { type: 'x', name: 'X (Twitter)', description: 'Direct messages ومنشن من X', icon: <Twitter className="h-6 w-6" />, color: 'text-[#111]', bg: 'bg-[#111]/10', category: 'messaging', featured: true },
+  { type: 'tiktok', name: 'TikTok', description: 'الرسائل المباشرة والتعليقات من TikTok', icon: <TikTokIcon className="h-6 w-6" />, color: 'text-[#FE2C55]', bg: 'bg-[#FE2C55]/10', category: 'messaging', featured: true },
   { type: 'slack', name: 'Slack', description: 'إشعارات داخلية على قناة Slack', icon: <MessageSquare className="h-6 w-6" />, color: 'text-[#4A154B]', bg: 'bg-[#4A154B]/10', category: 'productivity' },
   { type: 'zapier', name: 'Zapier', description: 'اربط بآلاف التطبيقات الأخرى بدون كود', icon: <Zap className="h-6 w-6" />, color: 'text-[#FF4A00]', bg: 'bg-[#FF4A00]/10', category: 'automation' },
   { type: 'webhook', name: 'Custom Webhook', description: 'استقبل أحداث المحادثات على خادمك', icon: <Webhook className="h-6 w-6" />, color: 'text-primary', bg: 'bg-primary/10', category: 'automation' },

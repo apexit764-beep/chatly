@@ -121,7 +121,7 @@ export function YahooIcon({ className, style }: IconProps): JSX.Element {
   );
 }
 
-export function XIcon({ className, style }: IconProps): JSX.Element {
+export function TikTokIcon({ className, style }: IconProps): JSX.Element {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -130,7 +130,7 @@ export function XIcon({ className, style }: IconProps): JSX.Element {
       style={style}
       aria-hidden="true"
     >
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+      <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5 2.59 2.59 0 0 1 0-5.18c.27 0 .52.04.76.12v-3.2a5.8 5.8 0 0 0-.76-.05 5.77 5.77 0 1 0 5.77 5.77V9.01a7.35 7.35 0 0 0 4.29 1.38V7.3a4.29 4.29 0 0 1-3.32-1.48z" />
     </svg>
   );
 }

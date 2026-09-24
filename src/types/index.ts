@@ -94,7 +94,7 @@ export interface TemplateCategoryItem {
 }
 export type ChannelType =
   // Communication
-  | 'whatsapp' | 'messenger' | 'instagram' | 'telegram' | 'x' | 'widget'
+  | 'whatsapp' | 'messenger' | 'instagram' | 'telegram' | 'tiktok' | 'widget'
   // Email providers
   | 'email' | 'gmail' | 'outlook' | 'yahoo' | 'smtp'
   // E-commerce
@@ -338,7 +338,7 @@ export interface Notification {
 
 export interface Integration {
   id: string;
-  type: 'messenger' | 'instagram' | 'telegram' | 'x' | 'zapier' | 'slack' | 'webhook';
+  type: 'messenger' | 'instagram' | 'telegram' | 'tiktok' | 'zapier' | 'slack' | 'webhook';
   name: string;
   description: string;
   connected: boolean;

@@ -43,7 +43,7 @@ import { cn } from '@/utils/cn';
 import type { ChannelType, Contact, ContactActivityAction, ContactType } from '@/types';
 
 /** Channels that identify people by handle instead of phone number. */
-const HANDLE_CHANNELS: ChannelType[] = ['instagram', 'messenger', 'telegram', 'x'];
+const HANDLE_CHANNELS: ChannelType[] = ['instagram', 'messenger', 'telegram', 'tiktok'];
 
 /** Channel types available when adding/editing a contact. */
 const CONTACT_CHANNEL_OPTIONS: { type: ChannelType; label: string }[] = [
@@ -51,7 +51,7 @@ const CONTACT_CHANNEL_OPTIONS: { type: ChannelType; label: string }[] = [
   { type: 'instagram', label: 'Instagram' },
   { type: 'messenger', label: 'Messenger' },
   { type: 'telegram', label: 'Telegram' },
-  { type: 'x', label: 'X (Twitter)' },
+  { type: 'tiktok', label: 'TikTok' },
   { type: 'widget', label: 'Live Chat' },
 ];
 

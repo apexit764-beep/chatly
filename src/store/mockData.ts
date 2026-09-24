@@ -686,7 +686,7 @@ export const integrations: Integration[] = [
   { id: 'i1', type: 'messenger', name: 'Facebook Messenger', description: 'استقبل رسائل صفحتك على فيسبوك', connected: true, accountName: 'qhub.page', lastSync: nowMinus(5) },
   { id: 'i2', type: 'instagram', name: 'Instagram Direct', description: 'استقبل رسائل انستجرام المباشرة', connected: true, accountName: '@qhub_official', lastSync: nowMinus(12) },
   { id: 'i3', type: 'telegram', name: 'Telegram Bot', description: 'بوت تيليجرام لاستقبال الاستفسارات', connected: false },
-  { id: 'i4', type: 'x', name: 'X (Twitter)', description: 'استقبل الـ Direct Messages والمنشن من X', connected: false },
+  { id: 'i4', type: 'tiktok', name: 'TikTok', description: 'استقبل الرسائل المباشرة والتعليقات من TikTok', connected: false },
   { id: 'i5', type: 'slack', name: 'Slack', description: 'إشعارات داخلية على قناة Slack', connected: false },
   { id: 'i6', type: 'zapier', name: 'Zapier', description: 'اربط Qhub بآلاف التطبيقات الأخرى', connected: false },
   { id: 'i7', type: 'webhook', name: 'Custom Webhook', description: 'استقبل أحداث المحادثات على خادمك الخاص', connected: false },
