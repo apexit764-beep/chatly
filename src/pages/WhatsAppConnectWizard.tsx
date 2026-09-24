@@ -210,7 +210,9 @@ export default function WhatsAppConnectWizard({
                 <ArrowRight className="h-4 w-4" />
               </button>
             )}
-            <div className="h-10 w-10 rounded-lg flex items-center justify-center text-white" style={{ background: brandColor }}>
+            {/* خلفية باهتة لا مصمتة: الشعار صار ملوّناً بذاته، فأخضره على
+                أخضر يختفي. */}
+            <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{ background: `${brandColor}1A` }}>
               <WhatsAppIcon className="h-6 w-6" />
             </div>
             <div>
@@ -641,8 +643,7 @@ function QrStep({ brandColor, onClose }: { brandColor: string; onClose: () => vo
         />
         {/* WhatsApp logo overlay in center */}
         <div
-          className="absolute inset-0 m-auto h-10 w-10 rounded-lg flex items-center justify-center text-white"
-          style={{ background: brandColor }}
+          className="absolute inset-0 m-auto h-10 w-10 rounded-lg flex items-center justify-center bg-white dark:bg-surface-dark shadow-sm"
         >
           <WhatsAppIcon className="h-6 w-6" />
         </div>
