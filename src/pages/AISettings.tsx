@@ -37,6 +37,8 @@ import {
   Mail,
   CreditCard,
   TrendingUp,
+  Loader2,
+  RefreshCw,
 } from 'lucide-react';
 import { Card, ChannelIcon, Select, useConfirm, Drawer } from '@components/ui';
 import { OpenAIIcon, ClaudeIcon, GeminiIcon } from '@components/ui/BrandIcons';
@@ -44,6 +46,7 @@ import { useAIStore, pickBehavior, type AISettings as AISettingsType, type AILan
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { cn } from '@/utils/cn';
+import { timeAgo } from '@/utils/format';
 
 const LANGUAGES: { code: AILanguage; label: string; flag: string }[] = [
   { code: 'ar', label: 'العربية', flag: 'AR' },
@@ -82,6 +85,11 @@ interface ProviderInfo {
   brandColor: string;
   Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   apiKeyPlaceholder: string;
+  /**
+   * صيغة مفتاح المزوّد. لاحظ استثناء `ant-` في OpenAI: مفتاح Claude يبدأ
+   * بـ`sk-` أيضاً، فبدونه يقبل OpenAI مفتاح Claude على أنه مفتاحه.
+   */
+  apiKeyPattern: RegExp;
   apiKeyDocsUrl: string;
   apiKeyDocsLabel: string;
   defaultModel: AIModel;
@@ -96,6 +104,7 @@ const PROVIDERS: ProviderInfo[] = [
     brandColor: '#10A37F',
     Icon: OpenAIIcon,
     apiKeyPlaceholder: 'sk-...',
+    apiKeyPattern: /^sk-(?!ant-)[A-Za-z0-9_-]{16,}$/,
     apiKeyDocsUrl: 'https://platform.openai.com/api-keys',
     apiKeyDocsLabel: 'احصل على مفتاح API',
     defaultModel: 'gpt-4o-mini',
@@ -113,6 +122,7 @@ const PROVIDERS: ProviderInfo[] = [
     brandColor: '#D97757',
     Icon: ClaudeIcon,
     apiKeyPlaceholder: 'sk-ant-...',
+    apiKeyPattern: /^sk-ant-[A-Za-z0-9_-]{16,}$/,
     apiKeyDocsUrl: 'https://console.anthropic.com/settings/keys',
     apiKeyDocsLabel: 'احصل على مفتاح API',
     defaultModel: 'claude-haiku-4-5',
@@ -129,6 +139,7 @@ const PROVIDERS: ProviderInfo[] = [
     brandColor: '#4285F4',
     Icon: GeminiIcon,
     apiKeyPlaceholder: 'AIza...',
+    apiKeyPattern: /^AIza[A-Za-z0-9_-]{16,}$/,
     apiKeyDocsUrl: 'https://aistudio.google.com/app/apikey',
     apiKeyDocsLabel: 'احصل على مفتاح API',
     defaultModel: 'gemini-2.0-flash',
@@ -167,6 +178,8 @@ export default function AISettings(): JSX.Element {
 
   /** Raw text of the auto-close field, so it can be cleared while typing. */
   const [autoCloseText, setAutoCloseText] = useState(String(saved.autoCloseHours));
+  const [testing, setTesting] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
 
   // The form always shows the shared connection; the behavior half comes from
   // whichever scope is selected.
@@ -178,12 +191,55 @@ export default function AISettings(): JSX.Element {
     setDirty(false);
   }, [saved, scope, channelBehaviors]);
 
+  /** تغيير أي من هذه يُبطل نتيجة الفحص السابق — فُحص شيء آخر. */
+  const CONNECTION_FIELDS: (keyof AISettingsType)[] = ['provider', 'apiKey', 'model'];
+
   const update = <K extends keyof AISettingsType>(key: K, value: AISettingsType[K]): void => {
-    setForm((f) => ({ ...f, [key]: value }));
+    setForm((f) => ({
+      ...f,
+      [key]: value,
+      ...(CONNECTION_FIELDS.includes(key) ? { connectionStatus: 'untested' as const } : {}),
+    }));
+    if (CONNECTION_FIELDS.includes(key)) setTestError(null);
     setDirty(true);
   };
 
   const currentProvider = PROVIDERS.find((p) => p.value === form.provider) ?? PROVIDERS[0];
+
+  /**
+   * فحص الاتصال بالمزوّد.
+   *
+   * لا يوجد نداء شبكة حقيقي في هذه النسخة: الفحص يتحقق من أن المفتاح مُدخَل
+   * وأن صيغته تطابق المزوّد المختار، ثم يحاكي زمن الرحلة. وهذا وحده يمسك
+   * أكثر الأخطاء شيوعاً — لصق مفتاح مزوّد في خانة مزوّد آخر.
+   */
+  const testConnection = async (): Promise<void> => {
+    const key = form.apiKey.trim();
+    setTesting(true);
+    setTestError(null);
+    await new Promise((r) => setTimeout(r, 1200));
+
+    let error: string | null = null;
+    if (!key) {
+      error = 'أدخل مفتاح API أولاً';
+    } else if (!currentProvider.apiKeyPattern.test(key)) {
+      const other = PROVIDERS.find((p) => p !== currentProvider && p.apiKeyPattern.test(key));
+      error = other
+        ? `هذا مفتاح ${other.name} لا ${currentProvider.name} — بدّل المزوّد أو المفتاح`
+        : `صيغة المفتاح لا تطابق ${currentProvider.name} (المتوقّع ${currentProvider.apiKeyPlaceholder})`;
+    }
+
+    const at = new Date().toISOString();
+    setForm((f) => ({
+      ...f,
+      connectionStatus: error ? 'failed' : 'ok',
+      connectionTestedAt: at,
+    }));
+    setDirty(true);
+    setTestError(error);
+    setTesting(false);
+    showToast(error ?? `الاتصال بـ${currentProvider.name} يعمل ✓`, error ? 'error' : 'success');
+  };
 
   const toggleLanguage = (code: AILanguage): void => {
     const next = form.languages.includes(code)
@@ -501,19 +557,7 @@ export default function AISettings(): JSX.Element {
             icon={<KeyRound className="h-5 w-5" />}
             title="ربط مزوّد الذكاء الاصطناعي"
             description="اختر مزوّد الـ AI (Claude / OpenAI / Gemini) ثم أدخل مفتاح الـ API. المفتاح محفوظ عندك ولا يُشارك مع أي طرف ثالث."
-            headerExtra={
-              form.apiKey ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/15 text-success text-[11px] font-semibold">
-                  <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                  متصل
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning/15 text-warning text-[11px] font-semibold">
-                  <AlertCircle className="h-3 w-3" />
-                  غير متصل
-                </span>
-              )
-            }
+            headerExtra={<ConnectionBadge status={form.connectionStatus} hasKey={Boolean(form.apiKey.trim())} />}
           >
             <div className="space-y-4">
               {/* Provider picker */}
@@ -581,15 +625,35 @@ export default function AISettings(): JSX.Element {
                     {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <a
-                  href={currentProvider.apiKeyDocsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 mt-1.5 text-[11px] text-primary font-medium hover:underline"
-                >
-                  {currentProvider.apiKeyDocsLabel}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
+                <div className="flex items-center justify-between gap-3 mt-2 flex-wrap">
+                  <a
+                    href={currentProvider.apiKeyDocsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] text-primary font-medium hover:underline"
+                  >
+                    {currentProvider.apiKeyDocsLabel}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => { void testConnection(); }}
+                    disabled={testing || !form.apiKey.trim()}
+                    className="h-9 px-3.5 rounded-full border border-border-light dark:border-border-dark text-small font-semibold inline-flex items-center gap-1.5 hover:bg-bg-light dark:hover:bg-bg-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {testing
+                      ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> جارٍ الفحص…</>
+                      : <><RefreshCw className="h-3.5 w-3.5" /> فحص الاتصال</>}
+                  </button>
+                </div>
+                {testError && (
+                  <p className="text-[11px] text-danger mt-1.5 leading-relaxed">{testError}</p>
+                )}
+                {!testError && form.connectionStatus === 'ok' && form.connectionTestedAt && (
+                  <p className="text-[11px] text-success mt-1.5">
+                    آخر فحص ناجح {timeAgo(form.connectionTestedAt)}
+                  </p>
+                )}
               </div>
 
               {/* Model + Max response length */}
@@ -1644,6 +1708,39 @@ function TargetCard({
       </div>
       <p className="text-[11px] text-muted-light dark:text-muted-dark leading-relaxed ps-6">{desc}</p>
     </button>
+  );
+}
+
+/**
+ * حالة الاتصال بالمزوّد. «متصل» تعني أن فحصاً نجح، لا أن الحقل غير فارغ —
+ * كانت الشارة تُشتق من وجود نص في المفتاح، فحرف واحد يقول «متصل».
+ */
+function ConnectionBadge({ status, hasKey }: { status: AISettingsType['connectionStatus']; hasKey: boolean }): JSX.Element {
+  if (!hasKey) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-warning/15 text-warning text-[11px] font-semibold whitespace-nowrap">
+        <AlertCircle className="h-3 w-3" /> غير متصل
+      </span>
+    );
+  }
+  if (status === 'ok') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/15 text-success text-[11px] font-semibold whitespace-nowrap">
+        <span className="h-1.5 w-1.5 rounded-full bg-success" /> متصل
+      </span>
+    );
+  }
+  if (status === 'failed') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-danger/15 text-danger text-[11px] font-semibold whitespace-nowrap">
+        <AlertCircle className="h-3 w-3" /> فشل الفحص
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark text-[11px] font-semibold whitespace-nowrap">
+      <AlertCircle className="h-3 w-3" /> لم يُفحص
+    </span>
   );
 }
 

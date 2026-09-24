@@ -25,6 +25,14 @@ export interface AISettings {
   provider: AIProvider;
   apiKey: string;
   model: AIModel;
+  /**
+   * نتيجة آخر فحص اتصال بالمزوّد. شارة الحالة تقرأ منها لا من مجرّد وجود
+   * مفتاح، فحرف واحد في الحقل لم يعد يعني «متصل». يعود `untested` كلّما
+   * تغيّر المزوّد أو المفتاح أو النموذج.
+   */
+  connectionStatus: 'untested' | 'ok' | 'failed';
+  /** ISO — وقت آخر فحص، ناجحاً كان أو فاشلاً. */
+  connectionTestedAt?: string;
   /** Max tokens in the assistant's reply */
   maxResponseTokens: number;
   /** Channel IDs where the AI bot is active */
@@ -98,6 +106,8 @@ export const AI_SHARED_KEYS = [
   'provider',
   'apiKey',
   'model',
+  'connectionStatus',
+  'connectionTestedAt',
   'maxResponseTokens',
   'enabledChannels',
   'imageAnalysis',
@@ -176,6 +186,7 @@ const DEFAULT_SETTINGS: AISettings = {
   provider: 'openai',
   apiKey: '',
   model: 'gpt-4o-mini',
+  connectionStatus: 'untested',
   maxResponseTokens: 600,
   enabledChannels: [],
   imageAnalysis: true,
