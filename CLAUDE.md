@@ -15,30 +15,33 @@ Three deployment targets:
 1. **VPS (primary)**: `qhub-client.apexes.click`
    - Path: `/var/www/apexes.click/qhub-client/`
    - Assets are served from `/assets-v2/` (set by `build.assetsDir` in `vite.config.ts`)
-   - SPA routing: each route has its own `index.html` copy — **115 HTML files as of
-     build `de44ef01`** (114 `index.html` + `404.html`), and the tree is **nested**, not
+   - SPA routing: each route has its own `index.html` copy — **120 HTML files as of
+     build `bc08952a`** (119 `index.html` + `404.html`), and the tree is **nested**, not
      flat. Do not work from a remembered count; enumerate the
      tree with `list_dir` every deploy, because routes get added to the server over time.
-     This count has moved several times (114 → 115 → 119 → 115), which is the point:
-     treat every number written here as stale and re-enumerate. The 119 was one
-     session's own count; enumerating every directory gives 115. Publish every copy you find rather
-     than guessing which ones changed — republishing is idempotent.
+     The count has moved repeatedly (114 → 115 → 119 → 115 → 120), which is the point:
+     treat every number written here as stale and re-enumerate. Two of those swings were
+     undercounts, not server changes — a session recorded 115 after missing the four
+     copies under `dashboard/finance/`, so **recursing only one level is not enough**:
+     any directory in the tree may itself hold subdirectories. Publish every copy you
+     find rather than guessing which ones changed — republishing is idempotent.
      A route added in the app has no directory on the server until a deploy creates
      one — `deploy_from_url` makes missing parents, so publish the new path explicitly
-     rather than leaving it to the `404.html` fallback. The breakdown below was accurate
-     at build `d2ee20ce` and no longer sums to the live total — it is a map of the
-     tree's shape, not a checklist (`dashboard/` was corrected from 23 to 24 there — it
-     has its own `index.html` on top of its 23 subroutes, which the 114 total dropped):
+     rather than leaving it to the `404.html` fallback (`channels/tiktok` was created
+     this way at `bc08952a`). The breakdown below was fully enumerated at `bc08952a`
+     and sums to the live total, but it is a map of the tree's shape, not a checklist:
      - root `index.html` + `404.html` (2)
-     - 41 top-level client routes
+     - 43 top-level client routes
      - `settings/` × 6 (`api`, `appearance`, `general`, `languages`, `notifications`, `security`)
-     - `channels/` × 16 (`email`, `gmail`, `instagram`, `messenger`, `new`, `outlook`,
-       `salla`, `shopify`, `smtp`, `telegram`, `whatsapp`, `widget`, `woocommerce`,
-       `x`, `yahoo`, `zid`)
+     - `channels/` × 17 (`email`, `gmail`, `instagram`, `messenger`, `new`, `outlook`,
+       `salla`, `shopify`, `smtp`, `telegram`, `tiktok`, `whatsapp`, `widget`,
+       `woocommerce`, `x`, `yahoo`, `zid`) — `x` is a dead route kept in sync; the app
+       now ships TikTok in its place
      - `reports/` × 2 (`overview`, `ratings`), `team/roles`, `campaigns/templates`
-     - `dashboard/index.html` + 23 subroutes (24) — a full nested copy of the route set
+     - `dashboard/` × 23 subroutes, of which `dashboard/finance/` holds a further 4
+       (`billing`, `clients`, `payments`, `plans`) — a nested copy of the route set
        from an older router layout
-     - `admin/` + 21 admin subroutes (22)
+     - 21 admin subroutes (`admin/index.html` is counted among the 43 top-level)
    - All route HTML files must be updated together on deploy to avoid version mismatch.
      **A missed nested copy does not fail loudly**: it still loads, from whatever old
      `/assets/` bundle it points at, so that one route silently serves a months-old app
