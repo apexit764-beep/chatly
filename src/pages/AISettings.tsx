@@ -207,6 +207,28 @@ export default function AISettings(): JSX.Element {
   const currentProvider = PROVIDERS.find((p) => p.value === form.provider) ?? PROVIDERS[0];
 
   /**
+   * تبديل المزوّد يُسقط مفتاحه — مفتاح مزوّد لا يعمل عند غيره. وهذا إتلاف
+   * لا رجعة فيه لقيمة أدخلها المستخدم، فيُستأذَن عليه كبقية الإجراءات
+   * الخطرة في الصفحة. بلا مفتاح مُدخَل لا شيء يُفقَد فلا سؤال.
+   */
+  const switchProvider = async (p: ProviderInfo): Promise<void> => {
+    if (form.provider === p.value) return;
+    if (form.apiKey.trim()) {
+      const ok = await confirm({
+        title: `التبديل إلى ${p.name}؟`,
+        message: `مفتاح ${currentProvider.name} الحالي سيُحذف لأنه لا يعمل مع ${p.name}، وستحتاج إدخال مفتاح ${p.name} من جديد.`,
+        variant: 'warning',
+        confirmText: 'تبديل وحذف المفتاح',
+        cancelText: 'تراجع',
+      });
+      if (!ok) return;
+    }
+    update('provider', p.value);
+    update('model', p.defaultModel);
+    update('apiKey', '');
+  };
+
+  /**
    * فحص الاتصال بالمزوّد.
    *
    * لا يوجد نداء شبكة حقيقي في هذه النسخة: الفحص يتحقق من أن المفتاح مُدخَل
@@ -309,6 +331,13 @@ export default function AISettings(): JSX.Element {
     // is an unfinished entry rather than a way of disabling it.
     if (form.autoCloseEnabled && form.autoCloseHours < 1) {
       showToast('مدة الإغلاق التلقائي مطلوبة — أدخل ساعة واحدة على الأقل أو أطفئ الإغلاق التلقائي', 'error');
+      return;
+    }
+    // مساعد «مُفعّل» بلا مفتاح حالة مكسورة: يَعِد العميل بالرد ولا يستطيع.
+    // الفحص على الحفظ العام وحده — في نطاق حساب لا تُكتب حقول الاتصال أصلاً،
+    // ولا يملك المستخدم إصلاح المفتاح من هناك.
+    if (!scopedAccount && form.enabled && !form.apiKey.trim()) {
+      showToast('أدخل مفتاح API أو أوقف المساعد الذكي — لا يمكن تفعيله بلا مفتاح', 'error');
       return;
     }
     const modelLabel = (currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '');
@@ -571,13 +600,7 @@ export default function AISettings(): JSX.Element {
                       <button
                         key={p.value}
                         type="button"
-                        onClick={() => {
-                          if (form.provider === p.value) return;
-                          // Switching provider invalidates the key + chooses the provider's default model
-                          update('provider', p.value);
-                          update('model', p.defaultModel);
-                          update('apiKey', '');
-                        }}
+                        onClick={() => { void switchProvider(p); }}
                         className={cn(
                           'p-3 rounded-card text-start border-2 transition-all flex items-start gap-3',
                           selected
