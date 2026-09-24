@@ -347,13 +347,17 @@ export default function Subscribe(): JSX.Element {
           </div>
 
           {/* Comparison table — every plan side by side, the way the landing page reads */}
-          <Card className="p-0 overflow-hidden mb-8">
-            <div className="overflow-x-auto">
+          {/* `overflow-hidden` on the card and `overflow-x-auto` on the wrapper each
+              make a scroll container, and a sticky header inside one sticks to that
+              container — not the page — so it never moves. Both are dropped from `lg`
+              up, where the table already fits and needs no horizontal scrolling. */}
+          <Card className="p-0 overflow-hidden lg:overflow-visible mb-8">
+            <div className="overflow-x-auto lg:overflow-visible">
               <table className="w-full min-w-[720px] border-collapse text-small">
                 <thead>
                   <tr>
                     <th
-                      className="text-start align-bottom p-4 bg-white dark:bg-surface-dark sticky z-10 w-[190px]"
+                      className="text-start align-bottom p-4 bg-white dark:bg-surface-dark sticky top-0 z-30 w-[190px]"
                       style={{ insetInlineStart: 0 }}
                     >
                       <span className="text-body font-bold">قارن المزايا</span>
@@ -368,10 +372,19 @@ export default function Subscribe(): JSX.Element {
                         <th
                           key={plan.id}
                           className={cn(
-                            'p-4 align-top text-center font-normal border-b border-border-light dark:border-border-dark relative',
-                            plan.id === recommendedPlanId && 'bg-primary/[0.04]',
+                            'p-4 align-top text-center font-normal relative sticky top-0 z-20',
+                            // Opaque, so the feature rows scroll under it rather than
+                            // showing through. `border-collapse` drops a sticky cell's
+                            // border while stuck, so the bottom edge is a shadow.
+                            'bg-white dark:bg-surface-dark shadow-[0_1px_0_0_theme(colors.border.light)] dark:shadow-[0_1px_0_0_theme(colors.border.dark)]',
                           )}
                         >
+                          {/* The recommended column's tint rides as an overlay: it and
+                              the opaque base are both background-color, so one would
+                              simply replace the other. */}
+                          {plan.id === recommendedPlanId && (
+                            <span className="absolute inset-0 bg-primary/[0.04] pointer-events-none" />
+                          )}
                           {/* Every slot is reserved whether or not it is filled, so the
                               names, the prices and the buttons each sit on one line
                               across all four columns instead of drifting. */}
