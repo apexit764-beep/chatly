@@ -78,6 +78,11 @@ interface AdminState {
    * نفس الباقة اعتباراً من الآن، فيرجع الاشتراك نشطاً ويسقط أي إلغاء مجدول.
    */
   renewSubscription: (id: string) => void;
+  /**
+   * جدولة تخفيض: الباقة الجديدة تبدأ عند انتهاء الفترة الحالية، ويُصدَر لها
+   * فاتورة مجدولة تُسحب في ذلك التاريخ. الاشتراك الحالي يكمل طبيعياً حتى ثَمّ.
+   */
+  schedulePlanChange: (clientId: string, planId: string, billingCycle: 'monthly' | 'yearly') => void;
 
   // Invoice / payment actions
   recordPayment: (clientId: string, planId: string, amount: number, currency: string, last4: string) => { invoice: Invoice; transaction: Transaction };
@@ -187,7 +192,16 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     );
     persistRequests(settledRequests);
     set((s) => ({
-      subscriptions: [...s.subscriptions, sub],
+      // الاشتراك السابق يُنهى، لا يُترك نشطاً بجانب الجديد: العميل يحمل
+      // اشتراكاً واحداً، وحساب MRR يجمع كل اشتراك نشط فكان يعدّه مرتين.
+      subscriptions: [
+        ...s.subscriptions.map((old) =>
+          old.clientId === clientId && old.status !== 'cancelled'
+            ? { ...old, status: 'cancelled' as const, cancelAt: new Date().toISOString() }
+            : old
+        ),
+        sub,
+      ],
       planRequests: settledRequests,
       clients: s.clients.map((c) =>
         c.id === clientId
@@ -228,6 +242,47 @@ export const useAdminStore = create<AdminState>((set, get) => ({
         };
       }),
     })),
+
+  schedulePlanChange: (clientId, planId, billingCycle) => {
+    const client = get().clients.find((c) => c.id === clientId);
+    const plan = get().plans.find((p) => p.id === planId);
+    const current = get().subscriptions.find((s) => s.clientId === clientId && s.status === 'active');
+    if (!client || !plan || !current) return;
+
+    const effectiveAt = current.currentPeriodEnd;
+    const price = plan.pricesPerCountry[client.country];
+    const amount = billingCycle === 'yearly' ? price.yearly : price.monthly;
+    const tax = Math.round(amount * 0.05);
+    const number = `INV-2026-${String(get().invoices.length + 1).padStart(5, '0')}`;
+    // مستحقّة في تاريخ الجدولة لا الآن: العميل لا يُخصم منه شيء اليوم.
+    const invoice: Invoice = {
+      id: newId('inv'),
+      number,
+      clientId,
+      subscriptionId: current.id,
+      amount,
+      tax,
+      total: amount + tax,
+      currency: client.currency,
+      status: 'scheduled',
+      dueDate: effectiveAt,
+      items: [{
+        description: `اشتراك ${plan.nameAr} — ${billingCycle === 'yearly' ? 'سنوي' : 'شهري'}`,
+        quantity: 1,
+        unitPrice: amount,
+        total: amount,
+      }],
+      notes: `مجدولة — تبدأ عند انتهاء الباقة الحالية في ${new Date(effectiveAt).toLocaleDateString('ar-OM-u-nu-latn')}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    set((s) => ({
+      subscriptions: s.subscriptions.map((sub) =>
+        sub.id === current.id ? { ...sub, scheduledChange: { planId, billingCycle, effectiveAt } } : sub
+      ),
+      invoices: [invoice, ...s.invoices],
+    }));
+  },
 
   recordPayment: (clientId, planId, amount, currency, last4) => {
     const client = get().clients.find((c) => c.id === clientId);

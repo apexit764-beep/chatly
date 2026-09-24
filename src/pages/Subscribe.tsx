@@ -16,6 +16,7 @@ import {
   MessageCircle,
   Calendar,
   Clock,
+  ArrowUpRight,
 } from 'lucide-react';
 import { Card, Input, Modal, Textarea, useConfirm } from '@components/ui';
 import { useAdminStore } from '@/store/useAdminStore';
@@ -28,7 +29,7 @@ import type { Plan } from '@/types';
 
 const CURRENT_CLIENT_ID = 'client_1';
 
-type Step = 'select' | 'confirm-downgrade' | 'checkout' | 'processing' | 'success' | 'failed';
+type Step = 'select' | 'confirm-upgrade' | 'confirm-downgrade' | 'checkout' | 'processing' | 'success' | 'failed';
 
 interface SliderStop {
   conversations: number;
@@ -43,6 +44,7 @@ export default function Subscribe(): JSX.Element {
   const subscriptions = useAdminStore((s) => s.subscriptions);
   const paymob = useAdminStore((s) => s.paymob);
   const createSubscription = useAdminStore((s) => s.createSubscription);
+  const schedulePlanChange = useAdminStore((s) => s.schedulePlanChange);
   const recordPayment = useAdminStore((s) => s.recordPayment);
   const createPlanRequest = useAdminStore((s) => s.createPlanRequest);
   const planRequests = useAdminStore((s) => s.planRequests);
@@ -127,22 +129,15 @@ export default function Subscribe(): JSX.Element {
     return amountFor(plan) > amountFor(currentPlan);
   };
 
-  const proratedFor = (plan: Plan | null): number => {
-    if (!isUpgradeTo(plan) || !sub || !plan) return 0;
-    const periodMs = new Date(sub.currentPeriodEnd).getTime() - new Date(sub.currentPeriodStart).getTime();
-    const remainMs = Math.max(0, new Date(sub.currentPeriodEnd).getTime() - Date.now());
-    const remainFraction = periodMs > 0 ? remainMs / periodMs : 0;
-    const diff = amountFor(plan) - amountFor(currentPlan);
-    return Math.max(0, Math.round(diff * remainFraction * 100) / 100);
-  };
-
   const isUpgrade = isUpgradeTo(selectedPlan);
-  const proratedAmount = proratedFor(selectedPlan);
+
+  // لا مقاصة بين الباقتين: الترقية تُنهي الحالية بالكامل وتُفوتَر الجديدة
+  // بسعرها كاملاً، فالمبلغ هو سعر الباقة لا الفرق × ما تبقّى من الفترة.
 
   const handleSubscribeClick = (plan: Plan | null): void => {
     if (!plan || plan.id === currentPlanId || plan.tier === 'enterprise') return;
     setSelectedPlan(plan);
-    setStep(isUpgradeTo(plan) ? 'checkout' : 'confirm-downgrade');
+    setStep(isUpgradeTo(plan) ? 'confirm-upgrade' : 'confirm-downgrade');
   };
 
   const TIER_RANK: Record<string, number> = { starter: 0, pro: 1, business: 2, enterprise: 3 };
@@ -211,7 +206,7 @@ export default function Subscribe(): JSX.Element {
     <div className="p-4 lg:p-8 page-fade max-w-6xl mx-auto">
       {/* The downgrade confirmation is a dialog over this view, not a replacement for
           it — the comparison table has to stay readable while the user confirms. */}
-      {(step === 'select' || step === 'confirm-downgrade') && (
+      {(step === 'select' || step === 'confirm-upgrade' || step === 'confirm-downgrade') && (
         <>
           <button onClick={() => navigate(-1)} className="text-small text-muted-light dark:text-muted-dark hover:text-current flex items-center gap-1 mb-4">
             <ArrowLeft className="h-4 w-4" /> عودة
@@ -572,7 +567,6 @@ export default function Subscribe(): JSX.Element {
           plan={selectedPlan}
           country={selectedCountry}
           cycle={cycle}
-          proratedAmount={proratedAmount}
           isUpgrade={isUpgrade}
           currentPlan={currentPlan}
           onBack={() => { setStep('select'); setSelectedPlan(null); }}
@@ -580,7 +574,7 @@ export default function Subscribe(): JSX.Element {
           onSuccess={() => {
             createSubscription(CURRENT_CLIENT_ID, selectedPlan.id, cycle);
             const price = selectedPlan.pricesPerCountry[country];
-            const amount = proratedAmount > 0 ? proratedAmount : (cycle === 'monthly' ? price.monthly : price.yearly);
+            const amount = cycle === 'monthly' ? price.monthly : price.yearly;
             recordPayment(CURRENT_CLIENT_ID, selectedPlan.id, amount, selectedCountry.currency, '4242');
             setStep('success');
           }}
@@ -636,6 +630,63 @@ export default function Subscribe(): JSX.Element {
         </Card>
       )}
 
+      {/* الترقية تُنهي الباقة الحالية بالكامل وتُفوتَر الجديدة بسعرها كاملاً،
+          فهي قرار مالي يُستأذَن عليه قبل صفحة الدفع لا بعدها. */}
+      <Modal
+        open={step === 'confirm-upgrade' && !!selectedPlan}
+        onClose={() => { setStep('select'); setSelectedPlan(null); }}
+        title="تأكيد ترقية الباقة"
+        size="md"
+        footer={
+          <>
+            <button
+              onClick={() => { setStep('select'); setSelectedPlan(null); }}
+              className="h-11 px-6 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
+            >
+              إلغاء
+            </button>
+            <button
+              onClick={() => setStep('checkout')}
+              className="h-11 px-6 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold transition-colors"
+            >
+              انتقل للدفع
+            </button>
+          </>
+        }
+      >
+        {selectedPlan && (
+          <>
+            <div className="flex items-start gap-3 mb-5">
+              <div className="h-10 w-10 shrink-0 rounded-full bg-primary/15 text-primary flex items-center justify-center">
+                <ArrowUpRight className="h-5 w-5" />
+              </div>
+              <p className="text-body text-muted-light dark:text-muted-dark leading-relaxed">
+                سيتم ترقية باقتك الحالية إلى <strong className="text-current">{selectedPlan.nameAr}</strong> وإنهاء باقتك الحالية بشكل كامل.
+              </p>
+            </div>
+            <div className="rounded-card border border-border-light dark:border-border-dark divide-y divide-border-light dark:divide-border-dark text-small">
+              {currentPlan && (
+                <div className="flex justify-between p-4">
+                  <span className="text-muted-light dark:text-muted-dark">الباقة الحالية</span>
+                  <span className="font-semibold">{currentPlan.nameAr} — تنتهي فوراً</span>
+                </div>
+              )}
+              <div className="flex justify-between p-4">
+                <span className="text-muted-light dark:text-muted-dark">الباقة الجديدة</span>
+                <span className="font-semibold">{selectedPlan.nameAr}</span>
+              </div>
+              <div className="flex justify-between p-4">
+                <span className="text-muted-light dark:text-muted-dark">المبلغ المستحق</span>
+                <span className="font-bold text-primary">
+                  {formatMoney(amountFor(selectedPlan), selectedCountry.currency)}
+                  <span className="font-normal text-muted-light dark:text-muted-dark"> / {cycle === 'yearly' ? 'سنة' : 'شهر'}</span>
+                </span>
+              </div>
+            </div>
+          </>
+        )}
+      </Modal>
+
       <Modal
         open={step === 'confirm-downgrade' && !!selectedPlan && !!sub}
         onClose={() => { setStep('select'); setSelectedPlan(null); }}
@@ -652,12 +703,13 @@ export default function Subscribe(): JSX.Element {
             <button
               onClick={() => {
                 if (!selectedPlan || !sub) return;
-                showToast(`سيتم التحول لباقة ${selectedPlan.nameAr} في ${formatDate(sub.currentPeriodEnd)}`, 'success');
+                schedulePlanChange(CURRENT_CLIENT_ID, selectedPlan.id, cycle);
+                showToast(`تمت جدولة باقة ${selectedPlan.nameAr} في ${formatDate(sub.currentPeriodEnd)}`, 'success');
                 navigate('/billing');
               }}
               className="h-11 px-6 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold transition-colors"
             >
-              تأكيد التخفيض
+              تأكيد
             </button>
           </>
         }
@@ -668,8 +720,10 @@ export default function Subscribe(): JSX.Element {
               <div className="h-10 w-10 shrink-0 rounded-full bg-warning/15 text-warning flex items-center justify-center">
                 <Calendar className="h-5 w-5" />
               </div>
-              <p className="text-body text-muted-light dark:text-muted-dark">
-                سيتم التحويل لباقة <strong className="text-current">{selectedPlan.nameAr}</strong> تلقائياً عند انتهاء فترتك الحالية. لن يتم خصم أو إرجاع أي مبالغ الآن.
+              <p className="text-body text-muted-light dark:text-muted-dark leading-relaxed">
+                سيتم جدولة الاشتراك لحين انتهاء الباقة الحالية بتاريخ{' '}
+                <strong className="text-current">{formatDate(sub.currentPeriodEnd)}</strong>.
+                تكمل باقتك الحالية طبيعياً حتى ذلك التاريخ، ويُسحب المستحق عندها.
               </p>
             </div>
             <div className="rounded-card border border-border-light dark:border-border-dark divide-y divide-border-light dark:divide-border-dark text-small">
@@ -944,7 +998,6 @@ interface CheckoutFlowProps {
   plan: Plan;
   country: { code: string; name: string; nameAr: string; flag: string; currency: string; symbol: string };
   cycle: 'monthly' | 'yearly';
-  proratedAmount: number;
   isUpgrade: boolean;
   currentPlan: Plan | null;
   onBack: () => void;
@@ -954,9 +1007,10 @@ interface CheckoutFlowProps {
   testMode: boolean;
 }
 
-function CheckoutFlow({ plan, country, cycle, proratedAmount, isUpgrade, currentPlan, onBack, onProcessing, onSuccess, onFailure, testMode }: CheckoutFlowProps): JSX.Element {
+function CheckoutFlow({ plan, country, cycle, isUpgrade, currentPlan, onBack, onProcessing, onSuccess, onFailure, testMode }: CheckoutFlowProps): JSX.Element {
   const price = plan.pricesPerCountry[country.code];
-  const baseAmount = isUpgrade && proratedAmount > 0 ? proratedAmount : (cycle === 'monthly' ? price.monthly : price.yearly);
+  // السعر الكامل دائماً — لا مقاصة مع الباقة المنتهية.
+  const baseAmount = cycle === 'monthly' ? price.monthly : price.yearly;
   const tax = Math.round(baseAmount * 5) / 100;
   const total = Math.round((baseAmount + tax) * 100) / 100;
 
@@ -1002,12 +1056,6 @@ function CheckoutFlow({ plan, country, cycle, proratedAmount, isUpgrade, current
             <span className="text-muted-light dark:text-muted-dark">دورة الفوترة</span>
             <span className="font-semibold">{cycle === 'monthly' ? 'شهري' : 'سنوي'}</span>
           </div>
-          {isUpgrade && proratedAmount > 0 && (
-            <div className="flex justify-between">
-              <span className="text-muted-light dark:text-muted-dark">الفرق (Proration)</span>
-              <span className="font-semibold">{formatMoney(proratedAmount, country.currency)}</span>
-            </div>
-          )}
           <div className="flex justify-between">
             <span className="text-muted-light dark:text-muted-dark">ضريبة القيمة المضافة 5%</span>
             <span className="font-semibold">{formatMoney(tax, country.currency)}</span>
