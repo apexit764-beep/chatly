@@ -15,12 +15,13 @@ Three deployment targets:
 1. **VPS (primary)**: `qhub-client.apexes.click`
    - Path: `/var/www/apexes.click/qhub-client/`
    - Assets are served from `/assets-v2/` (set by `build.assetsDir` in `vite.config.ts`)
-   - SPA routing: each route has its own `index.html` copy — **119 HTML files as of
-     build `4af6be53`** (118 `index.html` + `404.html`), and the tree is **nested**, not
+   - SPA routing: each route has its own `index.html` copy — **115 HTML files as of
+     build `de44ef01`** (114 `index.html` + `404.html`), and the tree is **nested**, not
      flat. Do not work from a remembered count; enumerate the
      tree with `list_dir` every deploy, because routes get added to the server over time.
-     This count has now moved twice (114 → 115 → 119), which is the point: treat every
-     number written here as stale and re-enumerate. Publish every copy you find rather
+     This count has moved several times (114 → 115 → 119 → 115), which is the point:
+     treat every number written here as stale and re-enumerate. The 119 was one
+     session's own count; enumerating every directory gives 115. Publish every copy you find rather
      than guessing which ones changed — republishing is idempotent.
      A route added in the app has no directory on the server until a deploy creates
      one — `deploy_from_url` makes missing parents, so publish the new path explicitly
