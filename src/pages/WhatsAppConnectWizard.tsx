@@ -75,6 +75,8 @@ export default function WhatsAppConnectWizard({
   const departments = useDataStore((s) => s.departments);
   const agents = useDataStore((s) => s.agents);
   const addChannel = useDataStore((s) => s.addChannel);
+  // ⚠️ مؤقّت — وضع تصوير الفيديو
+  const addIncomingConversation = useDataStore((s) => s.addIncomingConversation);
   const { channelsReached } = usePlanLimits();
   const [planLimitOpen, setPlanLimitOpen] = useState(false);
   const updateChannel = useDataStore((s) => s.updateChannel);
@@ -316,13 +318,21 @@ export default function WhatsAppConnectWizard({
             const digits = account.detail.replace(/[^\d+]/g, '');
             // الربط يقع هنا مباشرةً: submit يقرأ من state الذي لم يُحدَّث بعد،
             // فتُنشأ القناة صراحةً بما عاد به تسجيل الدخول.
-            addChannel({
+            const channelId = addChannel({
               type: 'whatsapp',
               name: account.name,
               identifier: digits || account.name,
               status: 'connected',
               departmentId: null,
               credentials,
+            });
+            // أول رسالة تصل على الرقم المربوط للتوّ، لا على قناة أخرى.
+            const fm = DEMO_OAUTH.whatsapp.firstMessage;
+            addIncomingConversation({
+              channelId,
+              phone: fm.handle,
+              name: fm.name,
+              initialMessage: fm.text,
             });
             showToast(`تم ربط ${account.name} عبر Meta`, 'success');
             onClose();

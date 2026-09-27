@@ -67,6 +67,8 @@ interface DataState {
     initialMessage: string;
     assignedTo?: string | null;
     departmentId?: string | null;
+    /** 'in' لرسالة واردة من العميل. الافتراضي 'out' لمحادثة نبدأها نحن. */
+    direction?: 'in' | 'out';
   }) => string;
   /** Simulates an incoming conversation from a client.
    *  If no contact with `phone` exists, one is auto-created as a visitor. */
@@ -112,7 +114,8 @@ interface DataState {
   incrementCampaignTemplateUsage: (id: string) => void;
 
   // Channel actions
-  addChannel: (c: Omit<Channel, 'id' | 'createdAt' | 'unreadCount'>) => void;
+  /** يعيد معرّف القناة المُنشأة، ليُربط بها ما يلي الإنشاء مباشرةً. */
+  addChannel: (c: Omit<Channel, 'id' | 'createdAt' | 'unreadCount'>) => string;
   updateChannel: (id: string, patch: Partial<Channel>) => void;
   deleteChannel: (id: string) => void;
 
@@ -321,14 +324,15 @@ export const useDataStore = create<DataState>((set, get) => ({
   addConversation: (data) => {
     const id = 'conv_' + newId();
     const now = new Date().toISOString();
+    const incoming = data.direction === 'in';
     const message: Message = {
       id: newId(),
       conversationId: id,
-      direction: 'out',
+      direction: incoming ? 'in' : 'out',
       type: 'text',
       content: data.initialMessage,
       timestamp: now,
-      read: true,
+      read: !incoming,
       delivered: true,
     };
     set((state) => ({
@@ -342,7 +346,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           status: 'new',
           lastMessage: data.initialMessage,
           lastMessageAt: now,
-          unreadCount: 0,
+          unreadCount: incoming ? 1 : 0,
           messages: [message],
           notes: [],
           activityLog: [],
@@ -387,10 +391,12 @@ export const useDataStore = create<DataState>((set, get) => ({
       }));
       contactId = cId;
     }
+    // واردة من العميل: لولا ذلك ظهرت الرسالة كأننا من بعثها، والعدّاد صفراً.
     return state.addConversation({
       contactId,
       channelId: data.channelId,
       initialMessage: data.initialMessage,
+      direction: 'in',
     });
   },
 
@@ -527,19 +533,22 @@ export const useDataStore = create<DataState>((set, get) => ({
       ),
     })),
 
-  addChannel: (c) =>
+  addChannel: (c) => {
+    const id = newId();
     set((state) => ({
       channels: [
         ...state.channels,
         {
           ...c,
-          id: newId(),
+          id,
           unreadCount: 0,
           createdAt: new Date().toISOString(),
           ...(c.type === 'widget' && !c.widgetConfig ? { widgetConfig: { ...state.widgetConfig } } : {}),
         },
       ],
-    })),
+    }));
+    return id;
+  },
 
   updateChannel: (id, patch) =>
     set((state) => ({ channels: state.channels.map((c) => (c.id === id ? { ...c, ...patch } : c)) })),

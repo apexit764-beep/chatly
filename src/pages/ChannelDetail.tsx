@@ -62,6 +62,8 @@ export default function ChannelDetail(): JSX.Element {
   const agents = useDataStore((s) => s.agents);
   const conversations = useDataStore((s) => s.conversations);
   const addChannel = useDataStore((s) => s.addChannel);
+  // ⚠️ مؤقّت — وضع تصوير الفيديو
+  const addIncomingConversation = useDataStore((s) => s.addIncomingConversation);
   const { channelsReached } = usePlanLimits();
   const [planLimitOpen, setPlanLimitOpen] = useState(false);
   const updateChannel = useDataStore((s) => s.updateChannel);
@@ -864,7 +866,7 @@ export default function ChannelDetail(): JSX.Element {
               showToast(t('تم تحديث الاتصال'), 'success');
               return;
             }
-            addChannel({
+            const channelId = addChannel({
               type: meta.type,
               name: account.name,
               identifier: account.name,
@@ -872,6 +874,17 @@ export default function ChannelDetail(): JSX.Element {
               departmentId: null,
               credentials,
             });
+            // أول رسالة تصل على القناة المربوطة للتوّ، لا على قناة أخرى.
+            if (channelId) {
+              const fm = demoProvider.firstMessage;
+              addIncomingConversation({
+                channelId,
+                phone: fm.handle.startsWith('+') ? fm.handle : '',
+                username: fm.handle.startsWith('@') ? fm.handle : undefined,
+                name: fm.name,
+                initialMessage: fm.text,
+              });
+            }
             showToast(`${t('تم ربط')} ${account.name}`, 'success');
           }}
         />

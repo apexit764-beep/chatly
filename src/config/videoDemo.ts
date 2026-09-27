@@ -34,6 +34,13 @@ export interface DemoOAuthProvider {
   accounts: { id: string; name: string; detail: string }[];
   /** مفاتيح الاعتماد التي يملؤها التدفّق بعد نجاحه. */
   fills: Record<string, string>;
+  /**
+   * أول محادثة تصل على القناة فور ربطها.
+   *
+   * بدونها يفتح صندوق الوارد على محادثة قديمة من قناة أخرى، فلا يُرى أثر
+   * الربط: من يربط تيك توك ينتظر رسالة تيك توك لا رسالة واتساب.
+   */
+  firstMessage: { name: string; handle: string; text: string };
 }
 
 /** أي أنواع القنوات تستخدم تسجيل الدخول المحاكى بدل الحقول اليدوية. */
@@ -52,6 +59,7 @@ export const DEMO_OAUTH: Record<string, DemoOAuthProvider> = {
       { id: 'waba_2', name: 'Apex Support', detail: '+968 2411 1111 · WABA' },
     ],
     fills: { phoneNumberId: '1166901623167708', wabaId: '402938471029384', graphApiVersion: 'v21.0' },
+    firstMessage: { name: 'خالد المعمري', handle: '+968 9155 4023', text: 'مرحباً، شفت رقمكم الجديد — بكم سعر الشحنة إلى صلالة؟' },
   },
   instagram: {
     name: 'Instagram',
@@ -67,6 +75,7 @@ export const DEMO_OAUTH: Record<string, DemoOAuthProvider> = {
       { id: 'ig_2', name: '@apex.support', detail: 'حساب أعمال · 3.1K متابع' },
     ],
     fills: { accessToken: 'IGQVJYdemo0000000000000000000000000000' },
+    firstMessage: { name: 'ريم الكندية', handle: '@reem.k', text: 'حبيت المنتج في آخر ستوري — متوفّر بلون آخر؟' },
   },
   messenger: {
     name: 'Facebook',
@@ -82,6 +91,7 @@ export const DEMO_OAUTH: Record<string, DemoOAuthProvider> = {
       { id: 'pg_2', name: 'Apex Support', detail: 'صفحة · 9.7K متابع' },
     ],
     fills: { pageAccessToken: 'EAAGdemo0000000000000000000000000000' },
+    firstMessage: { name: 'سعيد البلوشي', handle: 'saeed.albalushi', text: 'السلام عليكم، وصلتني رسالتكم على الصفحة — كيف أكمل الطلب؟' },
   },
   tiktok: {
     name: 'TikTok',
@@ -100,6 +110,7 @@ export const DEMO_OAUTH: Record<string, DemoOAuthProvider> = {
       clientSecret: 'demo0000000000000000000000000000',
       accessToken: 'act.demo0000000000000000000000000000',
     },
+    firstMessage: { name: 'مروان الحارثي', handle: '@marwan.h', text: 'شفت الفيديو الأخير — عندكم توصيل لمسقط؟' },
   },
 };
 
