@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Send,
@@ -109,6 +110,7 @@ export default function Inbox(): JSX.Element {
   const inboxFocus = useUIStore((s) => s.inboxFocus);
   const toggleInboxFocus = useUIStore((s) => s.toggleInboxFocus);
   const { confirm } = useConfirm();
+  const navigate = useNavigate();
   const view = useInboxStore((s) => s.view);
   const selectedId = useInboxStore((s) => s.selectedId);
   const setSelectedId = useInboxStore((s) => s.setSelectedId);
@@ -221,11 +223,16 @@ export default function Inbox(): JSX.Element {
 
   useEffect(() => {
     if (!selectedId || !filtered.find((c) => c.id === selectedId)) {
-      setSelectedId(filtered[0]?.id ?? null);
+      // The newest conversations are the locked ones, so picking filtered[0]
+      // blindly would open a locked one on load and defeat the lock.
+      setSelectedId(filtered.find((c) => !lockedConversationIds.has(c.id))?.id ?? null);
     }
-  }, [filtered, selectedId, setSelectedId]);
+  }, [filtered, selectedId, setSelectedId, lockedConversationIds]);
 
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
+  // Blurring the row only hides the preview; the conversation and its details
+  // must not render at all, since the plan notice promises they are not shown.
+  const selectedLocked = selected ? lockedConversationIds.has(selected.id) : false;
   const selectedContact = selected ? contacts.find((c) => c.id === selected.contactId) : null;
   const isBookmarked = selected ? bookmarkedConvIds.has(selected.id) : false;
 
@@ -721,7 +728,26 @@ export default function Inbox(): JSX.Element {
           !showChatMobile && 'hidden lg:flex'
         )}
       >
-        {!selected || !selectedContact ? (
+        {selectedLocked ? (
+          <div className="flex-1 flex items-center justify-center p-6 text-center">
+            <div className="max-w-sm">
+              <div className="h-16 w-16 mx-auto rounded-full bg-warning/10 flex items-center justify-center text-warning mb-4">
+                <Lock className="h-7 w-7" />
+              </div>
+              <p className="text-h3 font-semibold">هذه المحادثة محجوبة</p>
+              <p className="text-body text-muted-light dark:text-muted-dark mt-1">
+                انتهت حدود باقتك لهذا الشهر. المحادثة محفوظة ولن تضيع، وتُعرض
+                كاملةً فور التجديد أو ترقية الباقة.
+              </p>
+              <button
+                onClick={() => navigate('/billing')}
+                className="mt-4 h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium inline-flex items-center gap-2"
+              >
+                الانتقال للباقات
+              </button>
+            </div>
+          </div>
+        ) : !selected || !selectedContact ? (
           <div className="flex-1 flex items-center justify-center p-6 text-center">
             <div>
               <div className="h-16 w-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
@@ -1137,8 +1163,8 @@ export default function Inbox(): JSX.Element {
         )}
       </section>
 
-      {/* Details panel */}
-      {selected && selectedContact && <DetailsPanel conversation={selected} />}
+      {/* Details panel — hidden while locked: it carries the contact's phone number. */}
+      {selected && selectedContact && !selectedLocked && <DetailsPanel conversation={selected} />}
 
       {/* Transfer modal */}
       {selected && (
