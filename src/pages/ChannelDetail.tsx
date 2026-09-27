@@ -139,6 +139,14 @@ export default function ChannelDetail(): JSX.Element {
       setWhatsappWizardOpen(true);
       return;
     }
+    // ⚠️ مؤقّت — وضع تصوير الفيديو: الربط صار تسجيل دخول لا نموذجاً، فتُفتح
+    // نافذة المزوّد مباشرةً ويُنشأ الحساب عند نجاحها.
+    if (demoProvider) {
+      setEditing(null);
+      setConnectedVia(null);
+      setOauthOpen(true);
+      return;
+    }
     setEditing(null);
     setForm({ name: '', identifier: '', countryCode: '+968', departmentId: '' });
     setCreds({});
@@ -152,6 +160,12 @@ export default function ChannelDetail(): JSX.Element {
     // WhatsApp uses the same multi-step wizard for both add and edit
     if (meta?.type === 'whatsapp') {
       setWhatsappWizardOpen(true);
+      return;
+    }
+    // ⚠️ مؤقّت — وضع تصوير الفيديو: إعادة الربط تمرّ بتسجيل الدخول نفسه.
+    if (demoProvider) {
+      setConnectedVia(null);
+      setOauthOpen(true);
       return;
     }
     let cc = '+968';
@@ -842,13 +856,23 @@ export default function ChannelDetail(): JSX.Element {
           provider={demoProvider}
           onClose={() => setOauthOpen(false)}
           onSuccess={({ account, credentials }) => {
-            setCreds(credentials);
-            setConnectedVia(account.name);
-            setForm((f) => ({
-              ...f,
-              name: f.name.trim() || account.name,
+            // في وضع التحرير تُحدَّث القناة القائمة؛ وإلا يُنشأ حساب جديد
+            // مباشرةً باسم الحساب الذي سُجّل الدخول به — لا نموذج بينهما.
+            if (editing) {
+              updateChannel(editing.id, { credentials });
+              setConnectedVia(account.name);
+              showToast(t('تم تحديث الاتصال'), 'success');
+              return;
+            }
+            addChannel({
+              type: meta.type,
+              name: account.name,
               identifier: account.name,
-            }));
+              status: 'connected',
+              departmentId: null,
+              credentials,
+            });
+            showToast(`${t('تم ربط')} ${account.name}`, 'success');
           }}
         />
       )}

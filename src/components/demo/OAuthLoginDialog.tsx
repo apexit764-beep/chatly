@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, Loader2, Lock, X } from 'lucide-react';
-import { cn } from '@/utils/cn';
 import type { DemoOAuthProvider } from '@/config/videoDemo';
 
 /**
@@ -15,7 +14,7 @@ import type { DemoOAuthProvider } from '@/config/videoDemo';
  * وليست بيانات اعتماد حقيقية.
  */
 
-type Phase = 'login' | 'working' | 'consent' | 'select' | 'done';
+type Phase = 'login' | 'working' | 'consent' | 'done';
 
 interface Props {
   open: boolean;
@@ -29,7 +28,6 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
   const [phase, setPhase] = useState<Phase>('login');
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
-  const [accountId, setAccountId] = useState(provider.accounts[0]?.id ?? '');
 
   // Clearing on close matters: nothing typed here should outlive the dialog.
   useEffect(() => {
@@ -37,7 +35,6 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
     setPhase('login');
     setUser('');
     setPass('');
-    setAccountId(provider.accounts[0]?.id ?? '');
   }, [open, provider]);
 
   useEffect(() => {
@@ -48,7 +45,9 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
 
   if (!open) return null;
 
-  const account = provider.accounts.find((a) => a.id === accountId) ?? provider.accounts[0];
+  // لا اختيار حساب: التدفّق يربط الحساب الذي سُجّل الدخول به، وكل ما يلزم
+  // بعد ذلك هو اسمٌ للقناة يأتي منه.
+  const account = provider.accounts[0];
 
   const pause = (next: Phase, ms = 1100): void => {
     setPhase('working');
@@ -63,7 +62,7 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
   return createPortal(
     // z-[120]: يُفتح من داخل نوافذ أخرى، فلا بدّ أن يعلوها جميعاً.
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-card overflow-hidden shadow-2xl bg-white dark:bg-surface-dark" dir="rtl">
+      <div className="font-sans w-full max-w-md rounded-card overflow-hidden shadow-2xl bg-white dark:bg-surface-dark" dir="rtl">
 
         {/* شريط نافذة محاكى — يوضّح للمشاهد أن التدفّق يغادر التطبيق */}
         <div className="flex items-center gap-2 px-3 h-10 bg-bg-light dark:bg-bg-dark border-b border-border-light dark:border-border-dark">
@@ -162,7 +161,7 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
                   إلغاء
                 </button>
                 <button
-                  onClick={() => pause('select', 800)}
+                  onClick={() => pause('done', 1100)}
                   className="flex-1 h-11 rounded-full text-white text-small font-semibold hover:opacity-90"
                   style={{ background: provider.color }}
                 >
@@ -172,50 +171,7 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
             </>
           )}
 
-          {/* ===== 3. اختيار الحساب ===== */}
-          {phase === 'select' && (
-            <>
-              <p className="text-h3 font-bold mb-1">اختر الحساب المراد ربطه</p>
-              <p className="text-small text-muted-light dark:text-muted-dark mb-4">
-                ستستقبل QHub الرسائل الواردة إلى الحساب الذي تختاره.
-              </p>
-              <div className="space-y-2 mb-6">
-                {provider.accounts.map((a) => (
-                  <button
-                    key={a.id}
-                    onClick={() => setAccountId(a.id)}
-                    className={cn(
-                      'w-full text-start p-3 rounded-card border-2 transition-colors flex items-center gap-3',
-                      a.id === accountId
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border-light dark:border-border-dark hover:border-primary/40'
-                    )}
-                  >
-                    <span
-                      className="h-9 w-9 rounded-lg flex items-center justify-center text-white text-small font-bold flex-shrink-0"
-                      style={{ background: provider.color }}
-                    >
-                      {a.name.replace('@', '').charAt(0).toUpperCase()}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-small font-semibold truncate">{a.name}</span>
-                      <span className="block text-[11px] text-muted-light dark:text-muted-dark truncate">{a.detail}</span>
-                    </span>
-                    {a.id === accountId && <Check className="h-4 w-4 text-primary ms-auto flex-shrink-0" />}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => pause('done', 900)}
-                className="w-full h-11 rounded-full text-white text-small font-semibold hover:opacity-90"
-                style={{ background: provider.color }}
-              >
-                ربط الحساب
-              </button>
-            </>
-          )}
-
-          {/* ===== 4. تم ===== */}
+          {/* ===== 3. تم ===== */}
           {phase === 'done' && (
             <div className="text-center py-4">
               <div className="h-14 w-14 mx-auto rounded-full bg-success/15 flex items-center justify-center mb-4">

@@ -127,14 +127,14 @@ export default function WhatsAppConnectWizard({
   // - qr:      [method] [qr-scan]
   // - pairing: [method] [pairing-code]
   // In edit mode we skip the method picker — the channel always uses cloud creds.
-  // 'oauth' مؤقّت — وضع تصوير الفيديو: بعد نجاح تسجيل الدخول تُملأ الرموز
-  // تلقائياً، فيُتخطّى إدخالها ويُنتقل إلى التخصيص مباشرةً.
+  // 'oauth' مؤقّت — وضع تصوير الفيديو: تسجيل الدخول يملأ الاسم والرقم والرموز،
+  // فلا يبقى بعده ما يُدخَل ويكتمل الربط فور نجاحه — بلا خطوة تخصيص.
   const steps = isEditing
     ? ['connect', 'customize'] as const
     : state.method === 'cloud'
       ? ['method', 'connect', 'customize'] as const
       : state.method === 'oauth'
-      ? ['method', 'customize'] as const
+      ? ['method'] as const
       : state.method === 'pairing'
       ? ['method', 'pairing'] as const
       : state.method === 'qr'
@@ -142,7 +142,12 @@ export default function WhatsAppConnectWizard({
       : ['method'] as const;
 
   const currentKey = steps[step];
-  const isLast = step === steps.length - 1 && (isEditing || state.method !== null);
+  // 'oauth' ليس خطوة أخيرة وإن كان وحده: الربط يكتمل داخل نافذة المزوّد لا هنا،
+  // فيبقى الزر «التالي» ولا يصير «تأكيد الربط». ⚠️ مؤقّت — وضع تصوير الفيديو.
+  const isLast =
+    step === steps.length - 1 &&
+    (isEditing || state.method !== null) &&
+    state.method !== 'oauth';
 
   const stepTitle: Record<string, string> = {
     method: 'اختر طريقة الربط',
@@ -309,17 +314,18 @@ export default function WhatsAppConnectWizard({
           onClose={() => setOauthOpen(false)}
           onSuccess={({ account, credentials }) => {
             const digits = account.detail.replace(/[^\d+]/g, '');
-            setState((s) => ({
-              ...s,
-              channelName: account.name,
-              countryCode: digits.slice(0, 4) || s.countryCode,
-              phone: digits.slice(4) || s.phone,
-              phoneNumberId: credentials.phoneNumberId ?? '',
-              wabaId: credentials.wabaId ?? '',
-              graphApiVersion: credentials.graphApiVersion ?? s.graphApiVersion,
-            }));
-            setStep(1); // 'customize' — الرموز صارت جاهزة فلا حاجة لخطوة الإدخال
+            // الربط يقع هنا مباشرةً: submit يقرأ من state الذي لم يُحدَّث بعد،
+            // فتُنشأ القناة صراحةً بما عاد به تسجيل الدخول.
+            addChannel({
+              type: 'whatsapp',
+              name: account.name,
+              identifier: digits || account.name,
+              status: 'connected',
+              departmentId: null,
+              credentials,
+            });
             showToast(`تم ربط ${account.name} عبر Meta`, 'success');
+            onClose();
           }}
         />
       )}
