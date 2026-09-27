@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useDataStore } from '@/store/useDataStore';
 import { useAdminStore } from '@/store/useAdminStore';
+// ⚠️ مؤقّت — وضع تصوير الفيديو
+import { VIDEO_DEMO } from '@/config/videoDemo';
 import type { Conversation } from '@/types';
 
 const CURRENT_CLIENT_ID = 'client_1';
@@ -94,7 +96,10 @@ export function usePlanLimits(): PlanLimitState {
 
     return {
       conversationsReached: reached(inWindow.length, convLimit),
-      channelsReached: reached(channels.length, plan.limits.channels),
+      // ⚠️ مؤقّت — وضع تصوير الفيديو: البيانات التجريبية تحمل ٨ قنوات بينما
+      // حدّ الباقة ٣، فكل ربط جديد يصطدم بنافذة «انتهت حدود الباقة» ويقطع
+      // اللقطة. يُرفع الحاجز أثناء التصوير فقط. انظر src/config/videoDemo.ts
+      channelsReached: VIDEO_DEMO ? false : reached(channels.length, plan.limits.channels),
       agentsReached: reached(agents.length, plan.limits.agents),
       lockedConversationIds: new Set(overQuota.map((c) => c.id)),
     };
