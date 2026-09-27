@@ -3,6 +3,8 @@ import { useDataStore } from '@/store/useDataStore';
 import { useAIStore } from '@/store/useAIStore';
 import { useUIStore } from '@/store/useUIStore';
 import { playNotificationSound } from '@/utils/notificationSound';
+// ⚠️ مؤقّت — وضع تصوير الفيديو
+import { VIDEO_DEMO } from '@/config/videoDemo';
 
 /**
  * Simulated incoming-message pool. Picked randomly to feel like a real
@@ -54,8 +56,10 @@ const NOTIFICATION_VARIANTS: Array<{
   },
 ];
 
-const TICK_MIN_MS = 25_000; // 25s
-const TICK_MAX_MS = 55_000; // 55s
+// ⚠️ الفرع الأول مؤقّت — وضع تصوير الفيديو: بإيقاع الإنتاج (25–55 ثانية)
+// تمرّ لقطة كاملة دون وصول رسالة واحدة، فلا يظهر أن الصندوق حيّ.
+const TICK_MIN_MS = VIDEO_DEMO ? 7_000 : 25_000;
+const TICK_MAX_MS = VIDEO_DEMO ? 12_000 : 55_000;
 const AI_REPLY_DELAY = [3_000, 6_000];
 
 function pick<T>(arr: T[]): T {
@@ -129,7 +133,7 @@ export function useLiveSimulator(): void {
     };
 
     // Initial delay — wait a few seconds after mount so the user sees the first event.
-    timerRef.current = setTimeout(tick, 8_000);
+    timerRef.current = setTimeout(tick, VIDEO_DEMO ? 4_000 : 8_000);
 
     return () => {
       cancelled = true;

@@ -62,7 +62,7 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
   return createPortal(
     // z-[120]: يُفتح من داخل نوافذ أخرى، فلا بدّ أن يعلوها جميعاً.
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="font-sans w-full max-w-md rounded-card overflow-hidden shadow-2xl bg-white dark:bg-surface-dark" dir="rtl">
+      <div className="w-full max-w-md rounded-card overflow-hidden shadow-2xl bg-white dark:bg-surface-dark" dir="rtl">
 
         {/* شريط نافذة محاكى — يوضّح للمشاهد أن التدفّق يغادر التطبيق */}
         <div className="flex items-center gap-2 px-3 h-10 bg-bg-light dark:bg-bg-dark border-b border-border-light dark:border-border-dark">

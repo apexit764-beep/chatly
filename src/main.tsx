@@ -4,6 +4,12 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { getBasename } from './utils/mode';
 import { ConfirmProvider } from './components/ui';
+// الخط مستضاف محلياً لا من Google Fonts: الطلب الخارجي يفشل خلف أي شبكة
+// تحجبه، فيتعرّض التطبيق كلّه بخط احتياطي دون أن يُنبّه أحد.
+import '@fontsource/ibm-plex-sans-arabic/400.css';
+import '@fontsource/ibm-plex-sans-arabic/500.css';
+import '@fontsource/ibm-plex-sans-arabic/600.css';
+import '@fontsource/ibm-plex-sans-arabic/700.css';
 import './styles/global.css';
 console.info('[Qhub] v2');
 
