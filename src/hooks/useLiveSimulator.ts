@@ -3,6 +3,7 @@ import { useDataStore } from '@/store/useDataStore';
 import { useAIStore } from '@/store/useAIStore';
 import { useUIStore } from '@/store/useUIStore';
 import { playNotificationSound } from '@/utils/notificationSound';
+import { t } from '@/i18n/useTranslation';
 // ⚠️ مؤقّت — وضع تصوير الفيديو
 import { VIDEO_DEMO } from '@/config/videoDemo';
 
@@ -41,13 +42,13 @@ const NOTIFICATION_VARIANTS: Array<{
 }> = [
   {
     type: 'message',
-    buildTitle: (name) => `رسالة جديدة من ${name}`,
-    buildBody: () => 'تم استلام رسالة جديدة في صندوق الوارد',
+    buildTitle: (name) => `${t('رسالة جديدة من')} ${name}`,
+    buildBody: () => t('تم استلام رسالة جديدة في صندوق الوارد'),
   },
   {
     type: 'conversation',
-    buildTitle: (name) => `محادثة جديدة من ${name}`,
-    buildBody: () => 'محادثة جديدة بانتظار الإسناد',
+    buildTitle: (name) => `${t('محادثة جديدة من')} ${name}`,
+    buildBody: () => t('محادثة جديدة بانتظار الإسناد'),
   },
   {
     type: 'system',
@@ -103,7 +104,7 @@ export function useLiveSimulator(): void {
         const name = contact?.name ?? 'العميل';
         const content = pick(INCOMING_MESSAGES);
 
-        state.simulateIncomingMessage(conv.id, content);
+        state.simulateIncomingMessage(conv.id, t(content));
         playNotificationSound();
 
         // Notification — 50% message, 25% conversation, 25% AI rendered when applicable
@@ -113,11 +114,11 @@ export function useLiveSimulator(): void {
         const variant = pick(variantPool);
         state.pushNotification({
           type: variant.type,
-          title: variant.buildTitle(name),
-          body: variant.buildBody(name),
+          title: variant.buildTitle(t(name)),
+          body: variant.buildBody(t(name)),
         });
 
-        useUIStore.getState().showToast(`رسالة جديدة من ${name}`, 'info');
+        useUIStore.getState().showToast(`${t('رسالة جديدة من')} ${t(name)}`, 'info');
 
         // If conversation is AI-owned and AI enabled, schedule an AI reply.
         if (conv.aiActive && aiSettings.enabled) {

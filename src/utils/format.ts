@@ -1,3 +1,5 @@
+import { useLanguageStore } from '@/store/useLanguageStore';
+
 export function formatPhone(phone: string): string {
   return phone.replace(/(\+\d{3})(\d{4})(\d{4})/, '$1 $2 $3');
 }
@@ -6,22 +8,29 @@ export function timeAgo(iso: string): string {
   const now = new Date();
   const then = new Date(iso);
   const diff = Math.floor((now.getTime() - then.getTime()) / 1000);
-  if (diff < 60) return 'الآن';
-  if (diff < 3600) return `قبل ${Math.floor(diff / 60)} د`;
-  if (diff < 86400) return `قبل ${Math.floor(diff / 3600)} س`;
-  if (diff < 604800) return `قبل ${Math.floor(diff / 86400)} يوم`;
-  return then.toLocaleDateString('ar-OM-u-nu-latn', { day: 'numeric', month: 'short' });
+  // الإنجليزية تضع الوحدة بعد العدد ولاحقةً ('5m ago')، والعربية تضع
+  // السابقة قبله ('قبل ٥ د')، فلا تكفي ترجمة كلمة واحدة.
+  const ar = useLanguageStore.getState().language === 'ar';
+  if (diff < 60) return ar ? 'الآن' : 'now';
+  const m = Math.floor(diff / 60);
+  if (diff < 3600) return ar ? `قبل ${m} د` : `${m}m ago`;
+  const h = Math.floor(diff / 3600);
+  if (diff < 86400) return ar ? `قبل ${h} س` : `${h}h ago`;
+  const d = Math.floor(diff / 86400);
+  if (diff < 604800) return ar ? `قبل ${d} يوم` : `${d}d ago`;
+  return then.toLocaleDateString(ar ? 'ar-OM-u-nu-latn' : 'en-GB', { day: 'numeric', month: 'short' });
 }
 
 export function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('ar-OM-u-nu-latn', {
+  const loc = useLanguageStore.getState().language === 'ar' ? 'ar-OM-u-nu-latn' : 'en-GB';
+  return new Date(iso).toLocaleTimeString(loc, {
     hour: '2-digit',
     minute: '2-digit',
   });
 }
 
 export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('ar-OM-u-nu-latn', {
+  return new Date(iso).toLocaleDateString(useLanguageStore.getState().language === 'ar' ? 'ar-OM-u-nu-latn' : 'en-GB', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',

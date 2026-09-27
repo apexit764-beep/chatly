@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from '@/i18n/useTranslation';
 import { Check, Loader2, Lock, X } from 'lucide-react';
 import type { DemoOAuthProvider } from '@/config/videoDemo';
 
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }: Props): JSX.Element | null {
+  const { t, isRTL } = useTranslation();
   const [phase, setPhase] = useState<Phase>('login');
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
@@ -62,11 +64,11 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
   return createPortal(
     // z-[120]: يُفتح من داخل نوافذ أخرى، فلا بدّ أن يعلوها جميعاً.
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-card overflow-hidden shadow-2xl bg-white dark:bg-surface-dark" dir="rtl">
+      <div className="w-full max-w-md rounded-card overflow-hidden shadow-2xl bg-white dark:bg-surface-dark" dir={isRTL ? 'rtl' : 'ltr'}>
 
         {/* شريط نافذة محاكى — يوضّح للمشاهد أن التدفّق يغادر التطبيق */}
         <div className="flex items-center gap-2 px-3 h-10 bg-bg-light dark:bg-bg-dark border-b border-border-light dark:border-border-dark">
-          <button onClick={onClose} aria-label="إغلاق" className="p-1 rounded hover:bg-border-light dark:hover:bg-border-dark">
+          <button onClick={onClose} aria-label={t('إغلاق')} className="p-1 rounded hover:bg-border-light dark:hover:bg-border-dark">
             <X className="h-3.5 w-3.5" />
           </button>
           <div className="flex-1 flex items-center justify-center gap-1.5 h-6 rounded-full bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark px-3">
@@ -75,7 +77,7 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
           </div>
           {/* احذف هذا الوسم إن أردت لقطة بلا إشارة إلى المحاكاة. */}
           <span className="text-[9px] px-1.5 py-0.5 rounded bg-warning/15 text-warning font-medium whitespace-nowrap">
-            محاكاة عرض
+            {t('محاكاة عرض')}
           </span>
         </div>
 
@@ -90,9 +92,9 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
                 >
                   {provider.name.charAt(0)}
                 </div>
-                <p className="text-h3 font-bold">تسجيل الدخول إلى {provider.name}</p>
+                <p className="text-h3 font-bold">{t('تسجيل الدخول إلى')} {provider.name}</p>
                 <p className="text-small text-muted-light dark:text-muted-dark mt-1">
-                  للمتابعة إلى <span className="font-semibold">QHub</span>
+                  {t('للمتابعة إلى')} <span className="font-semibold">QHub</span>
                 </p>
               </div>
               <div className="space-y-3">
@@ -100,7 +102,7 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
                   value={user}
                   onChange={(e) => setUser(e.target.value)}
                   autoComplete="off"
-                  placeholder="البريد الإلكتروني أو رقم الهاتف"
+                  placeholder={t('البريد الإلكتروني أو رقم الهاتف')}
                   className="w-full h-11 px-3 rounded-input bg-white dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary"
                 />
                 <input
@@ -108,7 +110,7 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
                   value={pass}
                   onChange={(e) => setPass(e.target.value)}
                   autoComplete="off"
-                  placeholder="كلمة المرور"
+                  placeholder={t('كلمة المرور')}
                   className="w-full h-11 px-3 rounded-input bg-white dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary"
                 />
                 <button
@@ -117,10 +119,10 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
                   className="w-full h-11 rounded-full text-white text-body font-semibold disabled:opacity-40 hover:opacity-90"
                   style={{ background: provider.color }}
                 >
-                  تسجيل الدخول
+                  {t('تسجيل الدخول')}
                 </button>
                 <p className="text-[10px] text-center text-muted-light dark:text-muted-dark pt-1">
-                  نافذة محاكاة للعرض — لا يُرسَل ما تكتبه إلى أي جهة ولا يُحفَظ.
+                  {t('نافذة محاكاة للعرض — لا يُرسَل ما تكتبه إلى أي جهة ولا يُحفَظ.')}
                 </p>
               </div>
             </>
@@ -130,7 +132,7 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
           {phase === 'working' && (
             <div className="py-12 flex flex-col items-center gap-3">
               <Loader2 className="h-7 w-7 animate-spin" style={{ color: provider.color }} />
-              <p className="text-small text-muted-light dark:text-muted-dark">جارٍ التحقّق…</p>
+              <p className="text-small text-muted-light dark:text-muted-dark">{t('جارٍ التحقّق…')}</p>
             </div>
           )}
 
@@ -138,10 +140,10 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
           {phase === 'consent' && (
             <>
               <p className="text-h3 font-bold mb-1">
-                <span className="font-extrabold">QHub</span> يطلب الأذونات التالية
+                <span className="font-extrabold">QHub</span> {t('يطلب الأذونات التالية')}
               </p>
               <p className="text-small text-muted-light dark:text-muted-dark mb-4">
-                يمكنك سحب هذه الأذونات في أي وقت من إعدادات {provider.name}.
+                {t('يمكنك سحب هذه الأذونات في أي وقت من إعدادات')} {provider.name}.
               </p>
               <ul className="space-y-2.5 mb-6">
                 {provider.scopes.map((s) => (
@@ -149,7 +151,7 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
                     <span className="mt-0.5 h-4 w-4 rounded-full bg-success/15 flex items-center justify-center flex-shrink-0">
                       <Check className="h-2.5 w-2.5 text-success" />
                     </span>
-                    <span className="text-small">{s}</span>
+                    <span className="text-small">{t(s)}</span>
                   </li>
                 ))}
               </ul>
@@ -158,14 +160,14 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
                   onClick={onClose}
                   className="flex-1 h-11 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark"
                 >
-                  إلغاء
+                  {t('إلغاء')}
                 </button>
                 <button
                   onClick={() => pause('done', 1100)}
                   className="flex-1 h-11 rounded-full text-white text-small font-semibold hover:opacity-90"
                   style={{ background: provider.color }}
                 >
-                  متابعة
+                  {t('متابعة الأذونات')}
                 </button>
               </div>
             </>
@@ -177,15 +179,15 @@ export default function OAuthLoginDialog({ open, provider, onClose, onSuccess }:
               <div className="h-14 w-14 mx-auto rounded-full bg-success/15 flex items-center justify-center mb-4">
                 <Check className="h-7 w-7 text-success" />
               </div>
-              <p className="text-h3 font-bold">تم ربط الحساب بنجاح</p>
+              <p className="text-h3 font-bold">{t('تم ربط الحساب بنجاح')}</p>
               <p className="text-small text-muted-light dark:text-muted-dark mt-1 mb-6">
-                <span className="font-semibold">{account?.name}</span> متصل الآن بـ QHub.
+                <span className="font-semibold">{account?.name}</span> {t('متصل الآن بـ QHub.')}
               </p>
               <button
                 onClick={finish}
                 className="w-full h-11 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold"
               >
-                العودة إلى QHub
+                {t('العودة إلى QHub')}
               </button>
             </div>
           )}

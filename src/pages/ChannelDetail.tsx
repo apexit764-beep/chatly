@@ -88,13 +88,13 @@ export default function ChannelDetail(): JSX.Element {
     ? [
         {
           key: 'oauth',
-          name: `تسجيل الدخول عبر ${demoProvider.name}`,
-          badge: { label: 'موصى به ★', cls: 'bg-success/15 text-success' },
+          name: `${t('تسجيل الدخول عبر')} ${demoProvider.name}`,
+          badge: { label: t('موصى به ★'), cls: 'bg-success/15 text-success' },
           steps: [
-            `اضغط «تسجيل الدخول عبر ${demoProvider.name}»`,
-            `سجّل الدخول بحساب ${demoProvider.name} الذي يملك الصلاحية`,
-            'وافق على الأذونات التي تطلبها QHub',
-            'اختر الحساب المراد ربطه — ويكتمل الربط فوراً',
+            `${t('اضغط')} «${t('تسجيل الدخول عبر')} ${demoProvider.name}»`,
+            `${t('سجّل الدخول بحساب')} ${demoProvider.name} ${t('الذي يملك الصلاحية')}`,
+            t('وافق على الأذونات التي تطلبها QHub'),
+            t('اختر الحساب المراد ربطه — ويكتمل الربط فوراً'),
           ],
         },
         // في واتساب تبقى الطريقة الرسمية اليدوية متاحة إلى جانب تسجيل الدخول.
@@ -270,7 +270,7 @@ export default function ChannelDetail(): JSX.Element {
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-h1 font-bold">{meta.name}</h1>
-              <p className="text-body text-muted-light dark:text-muted-dark mt-1">{meta.tagline}</p>
+              <p className="text-body text-muted-light dark:text-muted-dark mt-1">{t(meta.tagline)}</p>
             </div>
             <button
               onClick={openAdd}
@@ -341,7 +341,7 @@ export default function ChannelDetail(): JSX.Element {
           <section className="bg-white dark:bg-surface-dark rounded-card border border-border-light dark:border-border-dark p-5">
             <h2 className="text-h3 font-bold mb-2">{t('عن القناة')}</h2>
             <p className="text-body text-muted-light dark:text-muted-dark leading-relaxed">
-              {meta.description}
+              {t(meta.description)}
             </p>
           </section>
 
@@ -426,7 +426,7 @@ export default function ChannelDetail(): JSX.Element {
                           {dept && (
                             <>
                               <span>·</span>
-                              <span>{dept.name}</span>
+                              <span>{t(dept.name)}</span>
                             </>
                           )}
                           <span>·</span>
@@ -439,7 +439,7 @@ export default function ChannelDetail(): JSX.Element {
                             key={a.id}
                             className="ring-2 ring-white dark:ring-surface-dark rounded-full"
                           >
-                            <Avatar name={a.name} size="xs" />
+                            <Avatar name={t(a.name)} size="xs" />
                           </div>
                         ))}
                       </div>
@@ -881,8 +881,8 @@ export default function ChannelDetail(): JSX.Element {
                 channelId,
                 phone: fm.handle.startsWith('+') ? fm.handle : '',
                 username: fm.handle.startsWith('@') ? fm.handle : undefined,
-                name: fm.name,
-                initialMessage: fm.text,
+                name: t(fm.name),
+                initialMessage: t(fm.text),
               });
             }
             showToast(`${t('تم ربط')} ${account.name}`, 'success');

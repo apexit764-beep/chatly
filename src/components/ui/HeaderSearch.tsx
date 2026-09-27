@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { t } from '@/i18n/useTranslation';
 import { useNavigate } from 'react-router-dom';
 import { Search, Users, MessageSquare, Package, Building2, UserCircle2, X } from 'lucide-react';
 import { useDataStore } from '@/store/useDataStore';
@@ -185,7 +186,7 @@ export function HeaderSearch(): JSX.Element {
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKey}
-          placeholder={isAdmin ? 'ابحث في العملاء أو الباقات...' : 'ابحث في المحادثات أو العملاء أو الموظفين...'}
+          placeholder={isAdmin ? t('ابحث في العملاء أو الباقات...') : t('ابحث في المحادثات أو العملاء أو الموظفين...')}
           className="flex-1 bg-transparent text-small focus:outline-none placeholder-muted-light dark:placeholder-muted-dark min-w-0"
         />
         {query ? (

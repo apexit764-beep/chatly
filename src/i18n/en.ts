@@ -932,4 +932,317 @@ export const en: Record<string, string> = {
   'التقنية': 'Technology',
   'الخدمات': 'Services',
   'أخرى': 'Other',
+
+  // ── ⚠️ مؤقّت — وضع تصوير الفيديو: نافذة تسجيل الدخول المحاكاة ──
+  'محاكاة عرض': 'Demo simulation',
+  'تسجيل الدخول إلى': 'Log in to',
+  'للمتابعة إلى': 'to continue to',
+  'البريد الإلكتروني أو رقم الهاتف': 'Email or phone number',
+  'نافذة محاكاة للعرض — لا يُرسَل ما تكتبه إلى أي جهة ولا يُحفَظ.':
+    'Simulated screen for demonstration — nothing you type is sent anywhere or stored.',
+  'جارٍ التحقّق…': 'Verifying…',
+  'يطلب الأذونات التالية': 'is requesting the following permissions',
+  'يمكنك سحب هذه الأذونات في أي وقت من إعدادات': 'You can revoke these permissions at any time in the settings of',
+  'تم ربط الحساب بنجاح': 'Account connected successfully',
+  'متصل الآن بـ QHub.': 'is now connected to QHub.',
+  'العودة إلى QHub': 'Back to QHub',
+
+  // الأذونات المعروضة لكل مزوّد
+  'إدارة حسابات واتساب للأعمال المرتبطة بك': 'Manage the WhatsApp Business accounts linked to you',
+  'إرسال الرسائل والرد عليها نيابةً عنك': 'Send and reply to messages on your behalf',
+  'قراءة قوالب الرسائل المعتمدة وإحصائياتها': 'Read approved message templates and their analytics',
+  'الوصول إلى رسائل Instagram Direct': 'Access your Instagram Direct messages',
+  'الرد على الرسائل نيابةً عنك': 'Reply to messages on your behalf',
+  'قراءة بيانات حساب الأعمال الأساسية': 'Read basic business account information',
+  'الوصول إلى رسائل صفحاتك على Messenger': 'Access messages for your Messenger Pages',
+  'قراءة قائمة الصفحات التي تديرها': 'Read the list of Pages you manage',
+  'الوصول إلى رسائل حسابك على TikTok': 'Access your TikTok account messages',
+  'قراءة بيانات الحساب الأساسية': 'Read basic account information',
+
+  // بطاقة الربط في صفحة القناة
+  'اربط حسابك على': 'Connect your account on',
+  'سجّل الدخول ووافق على الأذونات — لا حاجة لنسخ أي رموز يدوياً.':
+    'Log in and approve the permissions — no need to copy any tokens manually.',
+  'تسجيل الدخول عبر': 'Log in with',
+  'تم الربط بـ': 'Connected to',
+  'ربط حساب آخر': 'Connect another account',
+  'تم ربط': 'Connected',
+  'تم تحديث الاتصال': 'Connection updated',
+  'سجّل الدخول عبر': 'Log in with',
+  'أولاً': 'first',
+
+  // ── ويزرد ربط واتساب ──
+  'ربط WhatsApp': 'Connect WhatsApp',
+  'ربط بنقرة واحدة دون نسخ رموز': 'One-click connection, no tokens to copy',
+  'بدون Access Token يدوي': 'No manual access token',
+  'اختيار الرقم من حسابك مباشرةً': 'Pick the number straight from your account',
+  'الأذونات واضحة وقابلة للسحب': 'Permissions are explicit and revocable',
+  'يتطلّب صلاحية على حساب الأعمال': 'Requires a role on the business account',
+  'كود الاقتران': 'Pairing code',
+  'مثال: الرقم الرئيسي': 'e.g. Main line',
+  'إصدار Graph API': 'Graph API version',
+  'إظهار/إخفاء': 'Show/hide',
+  'توليد': 'Generate',
+  'تم نسخ الكود': 'Code copied',
+  'تم توليد Verify Token جديد': 'New verify token generated',
+  'اختبار الاتصال': 'Test connection',
+  'جاري الاتصال...': 'Connecting…',
+  'تم اختبار الاتصال بنجاح ✓': 'Connection tested successfully ✓',
+  'أدخل Phone Number ID و Access Token أولاً': 'Enter the Phone Number ID and Access Token first',
+  'أدخل اسم القناة': 'Enter a channel name',
+  'أدخل رقم الهاتف': 'Enter a phone number',
+  'اختر القسم أولاً': 'Choose a department first',
+  'في انتظار المسح...': 'Waiting for the scan…',
+  'في انتظار إدخال الكود...': 'Waiting for the code…',
+  'كود الاقتران الخاص بك': 'Your pairing code',
+  '(اختياري)': '(optional)',
+  'تسجيل الدخول عبر Meta': 'Log in with Meta',
+  'عبر Meta': 'with Meta',
+  'تم نسخ': 'Copied',
+  'لا يوجد': 'No',
+  'للنسخ': 'to copy',
+  'نسخ الكود': 'Copy code',
+  'الحصول على الكود': 'Get the code',
+  'معرّف الرقم في Meta — في إعدادات API Setup ← WhatsApp':
+    'The number ID in Meta — under API Setup → WhatsApp',
+  'معرّف حساب الأعمال الذي يضمّ الأرقام (WABA ID)':
+    'The business account that holds the numbers (WABA ID)',
+  'رمز المصادقة الدائم من System User في Business Settings في Meta':
+    'The permanent token from a System User in Meta Business Settings',
+  'انسخ هذا الرابط والصقه في إعدادات Webhook بـ Meta':
+    'Copy this URL and paste it into the Webhook settings in Meta',
+  'إصدار Graph API المستخدم في طلبات الإرسال — استخدم آخر إصدار مستقر':
+    'The Graph API version used for send requests — use the latest stable one',
+  'نفس القيمة تُكتب هنا وفي إعدادات Webhook في Meta — استخدم زر التوليد لإنشاء قيمة آمنة':
+    'The same value goes here and in the Webhook settings in Meta — use Generate for a secure value',
+  'افتح واتساب على هاتفك ← الإعدادات ← الأجهزة المرتبطة ← امسح الرمز':
+    'Open WhatsApp on your phone → Settings → Linked devices → Scan the code',
+  'أدخل رقم الهاتف للحصول على كود اقتران من 8 أحرف':
+    'Enter the phone number to get an 8-character pairing code',
+  'افتح واتساب ← الإعدادات ← الأجهزة المرتبطة ← الربط برقم الهاتف ← أدخل الكود':
+    'Open WhatsApp → Settings → Linked devices → Link with phone number → Enter the code',
+  // الرسائل الأولى الواردة بعد الربط
+  'خالد المعمري': 'Khalid Al-Maamari',
+  'ريم الكندية': 'Reem Al-Kindi',
+  'سعيد البلوشي': 'Saeed Al-Balushi',
+  'مروان الحارثي': 'Marwan Al-Harthy',
+  'مرحباً، شفت رقمكم الجديد — بكم سعر الشحنة إلى صلالة؟':
+    'Hi, I saw your new number — how much is shipping to Salalah?',
+  'حبيت المنتج في آخر ستوري — متوفّر بلون آخر؟':
+    'I loved the product in your last story — does it come in another colour?',
+  'السلام عليكم، وصلتني رسالتكم على الصفحة — كيف أكمل الطلب؟':
+    'Hello, I got your message on the Page — how do I complete the order?',
+  'شفت الفيديو الأخير — عندكم توصيل لمسقط؟':
+    'I saw your latest video — do you deliver to Muscat?',
+  // ── نصوص القنوات (tagline / description) ──
+  'تواصل مع أكثر من 2 مليار مستخدم': 'Reach more than 2 billion users',
+  'استقبل رسائل صفحات فيسبوك': 'Receive messages from your Facebook Pages',
+  'اربط صفحات فيسبوك بحساب الأعمال لاستقبال رسائل العملاء عبر Messenger وعرضها في صندوق الوارد الموحّد.':
+    'Connect your Facebook Pages to the business account to receive customer messages via Messenger in one unified inbox.',
+  'استقبل رسائل Instagram Direct': 'Receive Instagram Direct messages',
+  'استقبل الرسائل المباشرة من TikTok': 'Receive direct messages from TikTok',
+
+  // ── وسم وضع التصوير في لوحة «كيفية الربط» ──
+  'اضغط': 'Tap',
+  'سجّل الدخول بحساب': 'Log in with the',
+  'الذي يملك الصلاحية': 'account that holds the permission',
+  'وافق على الأذونات التي تطلبها QHub': 'Approve the permissions QHub requests',
+  'اختر الحساب المراد ربطه — ويكتمل الربط فوراً': 'Pick the account to connect — the link completes immediately',
+
+  // ── الهيدر والفوتر ──
+  'جميع الحقوق محفوظة': 'All rights reserved',
+
+  // ── أسماء وأقسام البيانات التجريبية الظاهرة في اللقطات ──
+  'خدمة العملاء': 'Customer Service',
+  'المبيعات': 'Sales',
+  'المالية': 'Finance',
+  'سالم الرواحي': 'Salem Al-Rawahi',
+  'الرقم الرئيسي': 'Main line',
+  'Apex Trading': 'Apex Trading',
+  // ── صندوق الوارد ──
+  ' (تقديري)': ' (estimated)',
+  '[اسم العميل]': '[customer name]',
+  '· معدّلة': '· edited',
+  'إرسال التسجيل': 'Send recording',
+  'إرفاق صورة أو ملف': 'Attach an image or file',
+  'إعادة تعيين': 'Reset',
+  'إعادة فتح المحادثة؟': 'Reopen this conversation?',
+  'إلغاء التعديل': 'Cancel edit',
+  'إنهاء الاتصال': 'End call',
+  'ابحث في القائمة على اليمين أو ابدأ محادثة جديدة': 'Search the list or start a new conversation',
+  'ابدأ الاتصال': 'Start call',
+  'اتصال صوتي': 'Voice call',
+  'اختر العميل': 'Choose a customer',
+  'اختر القناة المُرسلة': 'Choose the sending channel',
+  'اختر موظفاً': 'Choose an agent',
+  'اسم العميل (مثل: أحمد محمد)': 'Customer name (e.g. Ahmed Mohammed)',
+  'الاتجاه': 'Direction',
+  'الانتقال للباقات': 'Go to plans',
+  'الجلسات': 'Sessions',
+  'الخروج من وضع التركيز': 'Exit focus mode',
+  'الرسالة فارغة': 'The message is empty',
+  'المساعد الذكي يتعامل مع هذه المحادثة': 'The AI assistant is handling this conversation',
+  'النص': 'Text',
+  'الوقت': 'Time',
+  'الوقت المحلي للعميل': "Customer's local time",
+  'الوكيل': 'Agent',
+  'املأ اسم العميل والرقم': 'Fill in the customer name and number',
+  'انتهت حدود الباقة': 'Plan limit reached',
+  'تسجيل صوتي': 'Voice recording',
+  'تطبيق': 'Apply',
+  'تعديل الرسالة': 'Edit message',
+  'تم إرسال الرسالة الصوتية': 'Voice message sent',
+  'تم إضافة التصنيف': 'Category added',
+  'تم إعادة فتح المحادثة': 'Conversation reopened',
+  'تم إلغاء التمييز': 'Star removed',
+  'تم التمييز بنجمة': 'Starred',
+  'تم تحديث اسم العميل': 'Customer name updated',
+  'تم تحديث الحالة': 'Status updated',
+  'تم تعديل الرسالة': 'Message edited',
+  'تم حفظ الملاحظة الصوتية': 'Voice note saved',
+  'جاري التسجيل...': 'Recording…',
+  'جاري تحويل الصوت إلى نص...': 'Transcribing…',
+  'زائر': 'Visitor',
+  'سيتم إعادة فتح المحادثة وستتمكن من إرسال واستقبال رسائل جديدة.':
+    'The conversation will reopen and you will be able to send and receive new messages.',
+  'سيتم وضع علامة "محلولة" على المحادثة وإرسال رابط تقييم للعميل تلقائياً.':
+    'The conversation will be marked resolved and a rating link sent to the customer automatically.',
+  'سيتم وضع علامة "محلولة" على المحادثة. يمكن إعادة فتحها لاحقاً':
+    'The conversation will be marked resolved. It can be reopened later',
+  'صادر': 'Outgoing',
+  'طيّ التفاصيل': 'Collapse details',
+  'عميل دائم': 'Returning customer',
+  'عُدّلت الرسالة': 'Message edited',
+  'فلترة': 'Filter',
+  'لم يتم السماح بالوصول إلى الميكروفون': 'Microphone access was denied',
+  'محلي': 'local',
+  'محوّلة': 'Transferred',
+  'مرحباً، أتواصل معك بخصوص...': 'Hello, I am reaching out regarding…',
+  'مقروء': 'Read',
+  'نص مُحوّل بالذكاء الاصطناعي': 'AI-generated transcript',
+  'هذه المحادثة محجوبة': 'This conversation is hidden',
+  'وارد': 'Incoming',
+  // ── أسماء جهات الاتصال التجريبية ──
+  'أحمد الشعيلي': 'Ahmed Al-Shuaili',
+  'سارة المعمري': 'Sara Al-Maamari',
+  'شركة الوفاء للتطوير': 'Al-Wafaa Development Co.',
+  'عبدالله الهنائي': 'Abdullah Al-Hinai',
+  'منى الزدجالية': 'Muna Al-Zadjali',
+  'يوسف البوسعيدي': 'Yousef Al-Busaidi',
+  'هدى الفارسي': 'Huda Al-Farsi',
+  'بدر السيابي': 'Badr Al-Siyabi',
+  'ريم اللواتي': 'Reem Al-Lawati',
+  'مجموعة العمري التجارية': 'Al-Amri Trading Group',
+  'علي الجابري': 'Ali Al-Jabri',
+  'لطيفة الحبسي': 'Latifa Al-Habsi',
+  'فاطمة البلوشي': 'Fatima Al-Balushi',
+  'محمد الحارثي': 'Mohammed Al-Harthy',
+  'نور العلوي': 'Noor Al-Alawi',
+  // ── محاكي الرسائل الحيّ ──
+  'رسالة جديدة من': 'New message from',
+  'محادثة جديدة من': 'New conversation from',
+  'محادثة جديدة بانتظار الإسناد': 'A new conversation is waiting to be assigned',
+  'تم استلام رسالة جديدة في صندوق الوارد': 'A new message arrived in the inbox',
+  'مرحباً، عندي استفسار سريع': 'Hi, I have a quick question',
+  'هل يمكنني الحصول على عرض سعر؟': 'Could I get a quote?',
+  'متى ستردون عليّ؟': 'When will you get back to me?',
+  'شكراً، تم استلام الرد': 'Thanks, I got your reply',
+  'هل العرض ما زال متاحاً؟': 'Is the offer still available?',
+  'كيف يمكنني الدفع؟': 'How can I pay?',
+  'أحتاج مساعدة بسرعة من فضلك': 'I need help quickly, please',
+  'هل لديكم خصومات حالياً؟': 'Do you have any discounts right now?',
+  'متى ستفتح الإدارة؟': 'When does the office open?',
+  'تم إرسال الإيميل، يرجى المراجعة': 'The email has been sent, please review it',
+  'ممكن تفاصيل أكثر؟': 'Could I get more details?',
+  'تمام، سأنتظر التواصل': 'Alright, I will wait to hear from you',
+  'أهلاً وسهلاً! كيف أقدر أساعدك اليوم؟': 'Welcome! How can I help you today?',
+  'بكل سرور، اسمح لي بمراجعة طلبك خلال لحظات.': 'Of course — let me review your request in a moment.',
+  'سيتم التواصل معك من فريق المختصين قريباً.': 'Our specialist team will contact you shortly.',
+  'يمكنك الاطلاع على المعلومات الكاملة من خلال موقعنا.': 'You can find the full details on our website.',
+  'هل تريد أن أحوّلك لموظف مختص؟': 'Would you like me to transfer you to a specialist?',
+  'سعيد بخدمتك، تفضّل بسؤالك.': 'Happy to help — go ahead with your question.',
+  'خالد الكندي': 'Khalid Al-Kindi',
+  'أحمد المخيني': 'Ahmed Al-Makhaini',
+  'متابعة الأذونات': 'Continue',
+
+  // ── نصوص المحادثات التجريبية ──
+  'أبحث عن تويوتا لاند كروزر':
+    'I am looking for a Toyota Land Cruiser',
+  'أبحث عن شقة للإيجار في مسقط بميزانية 350 ر.ع':
+    'Looking for an apartment to rent in Muscat, budget OMR 350',
+  'أريد عرض الفيلا مع معاينة هذا الأسبوع':
+    'I would like to view the villa this week',
+  'أهلاً بك! كيف أقدر أساعدك اليوم؟':
+    'Welcome! How can I help you today?',
+  'استفسار سريع':
+    'A quick question',
+  'السلام عليكم':
+    'Hello',
+  'تم إرسال العقد على البريد':
+    'The contract has been emailed to you',
+  'تمام، سيتواصل معك أحد موظفي المبيعات خلال ساعة. تقدر تشاركني رقم تواصل مفضّل؟':
+    'Great — a sales agent will contact you within the hour. Could you share a preferred contact number?',
+  'تمام، شكراً لك!':
+    'Great, thank you!',
+  'ساعات عملنا من الأحد إلى الخميس، من 9 صباحاً حتى 5 مساءً. وللطوارئ يمكنك التواصل في أي وقت عبر هذه القناة.':
+    'We are open Sunday to Thursday, 9am to 5pm. For urgent matters you can reach us any time on this channel.',
+  'سعر الفيلا 1200 ر.ع شهرياً':
+    'The villa is OMR 1,200 per month',
+  'سنرسل العقد المعدل قريباً':
+    'We will send the revised contract shortly',
+  'سيتم التحقق من الطلب وإبلاغك خلال 24 ساعة':
+    'We will review the request and update you within 24 hours',
+  'شفت المنشور الجديد عن فيلا الموج':
+    'I saw the new post about the Al Mouj villa',
+  'شكراً جزيلاً':
+    'Thank you very much',
+  'شكراً جزيلاً، سأنتظر التواصل':
+    'Thank you — I will wait to hear from you',
+  'شكراً لتعاونكم، تم استلام العقد':
+    'Thanks for your help, the contract has arrived',
+  'صباح الخير، نريد متابعة العقد':
+    'Good morning — we would like to follow up on the contract',
+  'صباح النور، سنرسل العقد المعدل قريباً':
+    'Good morning — we will send the revised contract shortly',
+  'غرفتين من فضلك':
+    'Two bedrooms, please',
+  'كيف يمكنني ربط حساب الواتساب؟':
+    'How do I connect a WhatsApp account?',
+  'لدينا عدة خيارات متاحة في الخوض والسيب. هل تفضل غرفة واحدة أم غرفتين؟':
+    'We have several options in Al Khoud and Seeb. Would you prefer one bedroom or two?',
+  'ما هي ساعات العمل؟':
+    'What are your opening hours?',
+  'متى يمكنني المعاينة في نزوى؟':
+    'When can I view the one in Nizwa?',
+  'مرحباً':
+    'Hello',
+  'مرحباً سالم':
+    'Hello Salem',
+  'مرحباً، ممكن أعرف الباقات والأسعار؟':
+    'Hi, could you tell me about your plans and pricing?',
+  'مساء الخير':
+    'Good evening',
+  'ممتاز، أريد التواصل مع موظف مبيعات لمعرفة المزيد':
+    'Great — I would like to speak to a sales agent to learn more',
+  'نعم! 14 يوم تجريبية مجانية بدون الحاجة لإدخال بطاقة دفع. تقدر تجرب جميع المزايا قبل الاشتراك.':
+    'Yes! A 14-day free trial with no card required. You can try every feature before subscribing.',
+  'نعم، هذا السعر مناسب':
+    'Yes, that price works for me',
+  'هل الشقة في الخوض ما زالت متاحة؟':
+    'Is the apartment in Al Khoud still available?',
+  'هل في فترة تجريبية مجانية؟':
+    'Is there a free trial?',
+  'هل لديكم سيارات للإيجار اليومي في صلالة؟':
+    'Do you have daily car rentals in Salalah?',
+  'هل يمكن تأجيل الدفعة الشهرية؟':
+    'Can the monthly payment be deferred?',
+  'هل يمكن تجديد العقد بنفس الشروط؟':
+    'Can the contract be renewed on the same terms?',
+  'وعليكم السلام ورحمة الله، أهلاً وسهلاً بك في Qhub. كيف يمكنني مساعدتك؟':
+    'Hello and welcome to Qhub. How can I help you?',
+  'أهلاً وسهلاً! نوفر 4 باقات تناسب جميع الأحجام:\n• المبتدئ: 7 ر.ع/شهر (قناة واحدة، 3 موظفين)\n• الاحترافي: 19 ر.ع/شهر (3 قنوات، 10 موظفين)\n• الأعمال: 38 ر.ع/شهر (10 قنوات، 25 موظف)\n• المؤسسات: 96 ر.ع/شهر (بلا حدود)':
+    'Welcome! We offer 4 plans for every size:\n• Starter: OMR 7/mo (1 channel, 3 agents)\n• Professional: OMR 19/mo (3 channels, 10 agents)\n• Business: OMR 38/mo (10 channels, 25 agents)\n• Enterprise: OMR 96/mo (unlimited)',
+  'محادثات أخرى': 'Other conversations',
+  'تم تحويل المحادثة إلى': 'Conversation transferred to',
+
 };

@@ -1,5 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { t } from '@/i18n/useTranslation';
+import { useLanguageStore } from '@/store/useLanguageStore';
+
+/** لغة تنسيق التواريخ تتبع لغة الواجهة. */
+const locale = (): string =>
+  useLanguageStore.getState().language === 'ar' ? 'ar-OM-u-nu-latn' : 'en-GB';
 import {
   Search,
   Send,
@@ -377,7 +383,7 @@ export default function Inbox(): JSX.Element {
       const original = selected.messages.find((m) => m.id === editingMessageId);
       if (original && trimmed !== original.content) {
         editMessage(selected.id, editingMessageId, trimmed);
-        showToast('تم تعديل الرسالة', 'success');
+        showToast(t('تم تعديل الرسالة'), 'success');
       }
       setEditingMessageId(null);
       setDraft('');
@@ -385,10 +391,10 @@ export default function Inbox(): JSX.Element {
     }
     if (inputMode === 'note') {
       sendMessage(selected.id, draft.trim(), 'note');
-      showToast('تم حفظ الملاحظة', 'success');
+      showToast(t('تم حفظ الملاحظة'), 'success');
     } else {
       sendMessage(selected.id, draft.trim(), 'text');
-      showToast('تم إرسال الرسالة', 'success');
+      showToast(t('تم إرسال الرسالة'), 'success');
     }
     setDraft('');
   };
@@ -400,17 +406,17 @@ export default function Inbox(): JSX.Element {
     const convChannel = channels.find((c) => c.id === selected.channelId);
     const ratingPrefs = convChannel?.ratingConfig ?? useSettingsStore.getState().rating;
     const ok = await confirm({
-      title: 'إغلاق المحادثة؟',
+      title: t('إغلاق المحادثة؟'),
       message: ratingPrefs.enabled
-        ? 'سيتم وضع علامة "محلولة" على المحادثة وإرسال رابط تقييم للعميل تلقائياً.'
-        : 'سيتم وضع علامة "محلولة" على المحادثة. يمكن إعادة فتحها لاحقاً',
+        ? t('سيتم وضع علامة "محلولة" على المحادثة وإرسال رابط تقييم للعميل تلقائياً.')
+        : t('سيتم وضع علامة "محلولة" على المحادثة. يمكن إعادة فتحها لاحقاً'),
       variant: 'info',
-      confirmText: 'تأكيد',
+      confirmText: t('تأكيد'),
     });
     if (!ok) return;
     // Same path the auto-close uses, so both closes behave identically.
     closeConversationWithRating(selected.id);
-    showToast('تم إغلاق المحادثة', 'success');
+    showToast(t('تم إغلاق المحادثة'), 'success');
   };
 
   const insertTemplate = (body: string): void => {
@@ -428,11 +434,11 @@ export default function Inbox(): JSX.Element {
     downloadCsv(
       `conv-${selectedContact.name}-${new Date().toISOString().slice(0, 10)}.csv`,
       selected.messages.map((m) => ({
-        'الاتجاه': m.direction === 'in' ? 'وارد' : 'صادر',
-        'النوع': m.type,
-        'النص': m.content,
-        'الوقت': new Date(m.timestamp).toLocaleString('ar-OM-u-nu-latn'),
-        'مقروء': m.read ? 'نعم' : 'لا',
+        [t('الاتجاه')]: m.direction === 'in' ? t('وارد') : t('صادر'),
+        [t('النوع')]: m.type,
+        [t('النص')]: m.content,
+        [t('الوقت')]: new Date(m.timestamp).toLocaleString(locale()),
+        [t('مقروء')]: m.read ? t('نعم') : t('لا'),
       }))
     );
     showToast(`تم تحميل ${selected.messages.length} رسالة`, 'success');
@@ -473,7 +479,7 @@ export default function Inbox(): JSX.Element {
         const secs = duration % 60;
         const label = `${mins}:${secs.toString().padStart(2, '0')}`;
         sendAttachment(selected!.id, 'voice', label, url, isNoteMode);
-        showToast(isNoteMode ? 'تم حفظ الملاحظة الصوتية' : 'تم إرسال الرسالة الصوتية', 'success');
+        showToast(isNoteMode ? t('تم حفظ الملاحظة الصوتية') : t('تم إرسال الرسالة الصوتية'), 'success');
       };
 
       mediaRecorder.start();
@@ -481,7 +487,7 @@ export default function Inbox(): JSX.Element {
       setRecordingTime(0);
       recordingTimerRef.current = setInterval(() => setRecordingTime((t) => t + 1), 1000);
     } catch {
-      showToast('لم يتم السماح بالوصول إلى الميكروفون', 'error');
+      showToast(t('لم يتم السماح بالوصول إلى الميكروفون'), 'error');
     }
   };
 
@@ -528,8 +534,8 @@ export default function Inbox(): JSX.Element {
             'hover:scale-110 active:scale-95',
           )}
           style={{ color: '#fff' }}
-          title={inboxFocus ? 'الخروج من وضع التركيز (Esc)' : 'وضع ملء الشاشة'}
-          aria-label={inboxFocus ? 'الخروج من وضع التركيز' : 'وضع ملء الشاشة'}
+          title={inboxFocus ? t('الخروج من وضع التركيز (Esc)') : t('وضع ملء الشاشة')}
+          aria-label={inboxFocus ? t('الخروج من وضع التركيز') : t('وضع ملء الشاشة')}
         >
           {inboxFocus ? (
             <Minimize2 className="h-5 w-5" />
@@ -538,7 +544,7 @@ export default function Inbox(): JSX.Element {
           )}
           {/* Tooltip label on hover */}
           <span className="absolute end-full me-3 px-2.5 py-1 rounded-md bg-[#111827] text-white text-[11px] font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
-            {inboxFocus ? 'خروج (Esc)' : 'ملء الشاشة'}
+            {inboxFocus ? t('خروج (Esc)') : t('ملء الشاشة')}
           </span>
         </button>
       </div>
@@ -557,23 +563,23 @@ export default function Inbox(): JSX.Element {
         )}
       >
         <div className="h-[56px] px-4 flex items-center justify-between border-b border-border-light dark:border-border-dark flex-shrink-0">
-          <h2 className="text-h3 font-bold">المحادثات</h2>
+          <h2 className="text-h3 font-bold">{t('المحادثات')}</h2>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setNewConvOpen(true)}
               className="h-8 px-3 rounded-full bg-primary hover:bg-primary-dark text-white text-[12px] font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
-              title="بدء محادثة جديدة"
-              aria-label="محادثة جديدة"
+              title={t('بدء محادثة جديدة')}
+              aria-label={t('محادثة جديدة')}
               style={{ color: '#fff' }}
             >
               <SquarePen className="h-3.5 w-3.5" />
-              محادثة جديدة
+              {t('محادثة جديدة')}
             </button>
             <button
               onClick={toggleConversationList}
               className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center text-muted-light dark:text-muted-dark"
-              title="طيّ القائمة"
-              aria-label="طيّ القائمة"
+              title={t('طيّ القائمة')}
+              aria-label={t('طيّ القائمة')}
             >
               <PanelLeftClose className="h-4 w-4" />
             </button>
@@ -585,7 +591,7 @@ export default function Inbox(): JSX.Element {
               <Search className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark" />
               <input
                 type="text"
-                placeholder="ابحث عن محادثة..."
+                placeholder={t('ابحث عن محادثة...')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full h-9 ps-3 pe-9 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary"
@@ -622,7 +628,7 @@ export default function Inbox(): JSX.Element {
         <div className="flex-1 overflow-y-auto divide-y divide-border-light dark:divide-border-dark">
           {filtered.length === 0 && (
             <div className="text-center py-12 text-muted-light dark:text-muted-dark">
-              <p className="text-body">لا توجد محادثات</p>
+              <p className="text-body">{t('لا توجد محادثات')}</p>
             </div>
           )}
           {filtered.map((conv) => {
@@ -648,7 +654,7 @@ export default function Inbox(): JSX.Element {
                 }}
                 // Not aria-disabled: the row is still actionable, it just
                 // explains the lock instead of opening the conversation.
-                title={locked ? 'انتهت حدود الباقة' : undefined}
+                title={locked ? t('انتهت حدود الباقة') : undefined}
                 className={cn(
                   'w-full text-start flex gap-3 p-3 transition-colors hover:bg-bg-light dark:hover:bg-bg-dark',
                   isSelected && 'bg-primary/5',
@@ -657,7 +663,7 @@ export default function Inbox(): JSX.Element {
                 )}
               >
                 <div className="relative flex-shrink-0">
-                  <Avatar name={contact.name} size="md" />
+                  <Avatar name={t(contact.name)} size="md" />
                   {convChannel && (
                     <span className="absolute -bottom-1 -end-1 ring-2 ring-white dark:ring-surface-dark rounded-lg">
                       <ChannelIcon type={convChannel.type} size={10} className="!h-5 !w-5" />
@@ -667,12 +673,12 @@ export default function Inbox(): JSX.Element {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-0.5">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <p className="text-body font-semibold truncate">{contact.name}</p>
+                      <p className="text-body font-semibold truncate">{t(contact.name)}</p>
                       {isConvBookmarked && <Star className="h-3 w-3 text-warning fill-warning flex-shrink-0" />}
                       {conv.aiActive && (
                         <span
                           className="inline-flex items-center gap-0.5 px-1.5 h-4 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white text-[9px] font-bold flex-shrink-0"
-                          title="المساعد الذكي يتعامل مع هذه المحادثة"
+                          title={t('المساعد الذكي يتعامل مع هذه المحادثة')}
                         >
                           <Bot className="h-2.5 w-2.5" />
                           AI
@@ -681,10 +687,10 @@ export default function Inbox(): JSX.Element {
                       {conv.aiHandedOff && !conv.aiActive && (
                         <span
                           className="inline-flex items-center gap-0.5 px-1.5 h-4 rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-300 text-[9px] font-bold flex-shrink-0 border border-violet-200 dark:border-violet-700"
-                          title="تم تحويلها من المساعد الذكي"
+                          title={t('تم تحويلها من المساعد الذكي')}
                         >
                           <Bot className="h-2.5 w-2.5" />
-                          محوّلة
+                          {t('محوّلة')}
                         </span>
                       )}
                     </div>
@@ -693,16 +699,16 @@ export default function Inbox(): JSX.Element {
                         {timeAgo(conv.lastMessageAt)}
                       </span>
                       {conv.status === 'open' ? (
-                        <span className="h-2 w-2 rounded-full bg-primary" title="جديدة" />
+                        <span className="h-2 w-2 rounded-full bg-primary" title={t('جديدة')} />
                       ) : conv.status === 'in_progress' ? (
-                        <span className="h-2 w-2 rounded-full bg-warning" title="قيد المعالجة" />
+                        <span className="h-2 w-2 rounded-full bg-warning" title={t('قيد المعالجة')} />
                       ) : (
-                        <span className="h-2 w-2 rounded-full bg-success" title="مغلقة" />
+                        <span className="h-2 w-2 rounded-full bg-success" title={t('مغلقة')} />
                       )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <p className="text-small text-muted-light dark:text-muted-dark truncate flex-1">{conv.lastMessage}</p>
+                    <p className="text-small text-muted-light dark:text-muted-dark truncate flex-1">{t(conv.lastMessage)}</p>
                     {conv.sessionCount > 1 && (
                       <span className="text-[10px] font-medium text-muted-light dark:text-muted-dark flex items-center gap-0.5 flex-shrink-0" title={`${conv.sessionCount} جلسات`}>
                         <RotateCcw className="h-3 w-3" />{conv.sessionCount}
@@ -734,7 +740,7 @@ export default function Inbox(): JSX.Element {
               <div className="h-16 w-16 mx-auto rounded-full bg-warning/10 flex items-center justify-center text-warning mb-4">
                 <Lock className="h-7 w-7" />
               </div>
-              <p className="text-h3 font-semibold">هذه المحادثة محجوبة</p>
+              <p className="text-h3 font-semibold">{t('هذه المحادثة محجوبة')}</p>
               <p className="text-body text-muted-light dark:text-muted-dark mt-1">
                 انتهت حدود باقتك لهذا الشهر. المحادثة محفوظة ولن تضيع، وتُعرض
                 كاملةً فور التجديد أو ترقية الباقة.
@@ -743,7 +749,7 @@ export default function Inbox(): JSX.Element {
                 onClick={() => navigate('/billing')}
                 className="mt-4 h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium inline-flex items-center gap-2"
               >
-                الانتقال للباقات
+                {t('الانتقال للباقات')}
               </button>
             </div>
           </div>
@@ -753,16 +759,16 @@ export default function Inbox(): JSX.Element {
               <div className="h-16 w-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
                 <Search className="h-7 w-7" />
               </div>
-              <p className="text-h3 font-semibold">اختر محادثة للبدء</p>
+              <p className="text-h3 font-semibold">{t('اختر محادثة للبدء')}</p>
               <p className="text-body text-muted-light dark:text-muted-dark mt-1">
-                ابحث في القائمة على اليمين أو ابدأ محادثة جديدة
+                {t('ابحث في القائمة على اليمين أو ابدأ محادثة جديدة')}
               </p>
               <button
                 onClick={() => setNewConvOpen(true)}
                 className="mt-4 h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium inline-flex items-center gap-2"
               >
                 <MessageSquarePlus className="h-4 w-4" />
-                محادثة جديدة
+                {t('محادثة جديدة')}
               </button>
             </div>
           </div>
@@ -774,7 +780,7 @@ export default function Inbox(): JSX.Element {
               <button
                 onClick={() => setShowChatMobile(false)}
                 className="lg:hidden text-muted-light dark:text-muted-dark p-1.5"
-                aria-label="رجوع"
+                aria-label={t('رجوع')}
               >
                 <ArrowRight className="h-5 w-5" />
               </button>
@@ -784,8 +790,8 @@ export default function Inbox(): JSX.Element {
                 <button
                   onClick={toggleConversationList}
                   className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark hidden lg:flex items-center justify-center text-muted-light dark:text-muted-dark"
-                  title="إظهار قائمة المحادثات"
-                  aria-label="إظهار قائمة المحادثات"
+                  title={t('إظهار قائمة المحادثات')}
+                  aria-label={t('إظهار قائمة المحادثات')}
                 >
                   <PanelLeftOpen className="h-4 w-4" />
                 </button>
@@ -796,9 +802,9 @@ export default function Inbox(): JSX.Element {
                 className="flex items-center gap-3 min-w-0 flex-shrink hover:opacity-80 transition-opacity"
                 onClick={() => { if (detailsCollapsed) toggleDetails(); }}
               >
-                <Avatar name={selectedContact.name} size="sm" />
+                <Avatar name={t(selectedContact.name)} size="sm" />
                 <div className="min-w-0 text-start">
-                  <p className="text-body font-bold truncate">{selectedContact.name}</p>
+                  <p className="text-body font-bold truncate">{t(selectedContact.name)}</p>
                   {(() => {
                     const ch = channels.find((c) => c.id === selected.channelId);
                     return ch ? (
@@ -821,8 +827,8 @@ export default function Inbox(): JSX.Element {
                 <button
                   onClick={() => setCallModalOpen(true)}
                   className="h-8 w-8 rounded-full hover:bg-green-50 dark:hover:bg-green-900/20 flex items-center justify-center text-green-600 dark:text-green-400 transition-colors"
-                  title="اتصال صوتي"
-                  aria-label="اتصال صوتي"
+                  title={t('اتصال صوتي')}
+                  aria-label={t('اتصال صوتي')}
                 >
                   <Phone className="h-3.5 w-3.5" />
                 </button>
@@ -841,7 +847,7 @@ export default function Inbox(): JSX.Element {
                   } else {
                     setStatus(selected.id, s);
                   }
-                  showToast('تم تحديث الحالة', 'success');
+                  showToast(t('تم تحديث الحالة'), 'success');
                 }}
               />
 
@@ -850,8 +856,8 @@ export default function Inbox(): JSX.Element {
                 <button
                   onClick={toggleDetails}
                   className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark hidden xl:flex items-center justify-center text-muted-light dark:text-muted-dark"
-                  title="إظهار التفاصيل"
-                  aria-label="إظهار لوحة التفاصيل"
+                  title={t('إظهار التفاصيل')}
+                  aria-label={t('إظهار لوحة التفاصيل')}
                 >
                   <PanelRightOpen className="h-4 w-4" />
                 </button>
@@ -863,7 +869,7 @@ export default function Inbox(): JSX.Element {
                 <button
                   onClick={() => setMenuOpen((v) => !v)}
                   className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center text-muted-light dark:text-muted-dark"
-                  aria-label="المزيد"
+                  aria-label={t('المزيد')}
                 >
                   <MoreHorizontal className="h-5 w-5" />
                 </button>
@@ -871,11 +877,11 @@ export default function Inbox(): JSX.Element {
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                     <div className="absolute end-0 mt-1 w-56 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1.5 z-20">
-                      <MenuItem icon={<UserCog className="h-4 w-4" />} label="تحويل لموظف آخر" onClick={() => { setTransferOpen(true); setMenuOpen(false); }} />
-                      <MenuItem icon={<Star className={cn('h-4 w-4', isBookmarked && 'fill-warning text-warning')} />} label={isBookmarked ? 'إلغاء التمييز' : 'تمييز بنجمة'} onClick={() => { toggleBookmark(selected.id); showToast(isBookmarked ? 'تم إلغاء التمييز' : 'تم التمييز بنجمة', 'success'); setMenuOpen(false); }} />
-                      <MenuItem icon={<MessageSquarePlus className="h-4 w-4" />} label="محادثة جديدة" onClick={() => { setNewConvOpen(true); setMenuOpen(false); }} />
+                      <MenuItem icon={<UserCog className="h-4 w-4" />} label={t('تحويل لموظف آخر')} onClick={() => { setTransferOpen(true); setMenuOpen(false); }} />
+                      <MenuItem icon={<Star className={cn('h-4 w-4', isBookmarked && 'fill-warning text-warning')} />} label={isBookmarked ? t('إلغاء التمييز') : t('تمييز بنجمة')} onClick={() => { toggleBookmark(selected.id); showToast(isBookmarked ? t('تم إلغاء التمييز') : t('تم التمييز بنجمة'), 'success'); setMenuOpen(false); }} />
+                      <MenuItem icon={<MessageSquarePlus className="h-4 w-4" />} label={t('محادثة جديدة')} onClick={() => { setNewConvOpen(true); setMenuOpen(false); }} />
                       <div className="h-px bg-border-light dark:bg-border-dark my-1" />
-                      <MenuItem icon={<Download className="h-4 w-4" />} label="تحميل المحادثة (CSV)" onClick={handleDownloadConv} />
+                      <MenuItem icon={<Download className="h-4 w-4" />} label={t('تحميل المحادثة (CSV)')} onClick={handleDownloadConv} />
                     </div>
                   </>
                 )}
@@ -897,9 +903,9 @@ export default function Inbox(): JSX.Element {
                 const today = new Date().toDateString();
                 const msgDate = new Date(m.timestamp).toDateString();
                 const dateLabel = msgDate === today
-                  ? 'اليوم'
+                  ? t('اليوم')
                   : new Date(m.timestamp).toLocaleDateString('ar-OM-u-nu-latn', { day: 'numeric', month: 'long' });
-                const agentForMsg = m.direction === 'out' ? (agents.find((a) => a.id === (selected.assignedTo ?? currentUserId))?.name ?? 'الوكيل') : '';
+                const agentForMsg = m.direction === 'out' ? (agents.find((a) => a.id === (selected.assignedTo ?? currentUserId))?.name ?? t('الوكيل')) : '';
                 const cycleStart = sessionStarts.get(m.id);
                 return (
                   <div key={m.id} data-msg-id={m.id}>
@@ -910,7 +916,7 @@ export default function Inbox(): JSX.Element {
                         <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-[11px] font-bold text-primary whitespace-nowrap">
                           <RotateCcw className="h-3.5 w-3.5" />
                           الدورة {cycleStart.index} · إعادة فتح · {dateLabel}
-                          {cycleStart.inferred && ' (تقديري)'}
+                          {cycleStart.inferred && t(' (تقديري)')}
                         </span>
                         <span className="flex-1 h-px bg-primary/25" />
                       </div>
@@ -921,7 +927,7 @@ export default function Inbox(): JSX.Element {
                         </span>
                       </div>
                     )}
-                    <MessageBubble msg={m} contactName={selectedContact.name} agentName={agentForMsg} onEdit={startEdit} isEditing={editingMessageId === m.id} />
+                    <MessageBubble msg={m} contactName={t(selectedContact.name)} agentName={agentForMsg} onEdit={startEdit} isEditing={editingMessageId === m.id} />
                   </div>
                 );
               })}
@@ -939,23 +945,23 @@ export default function Inbox(): JSX.Element {
                       <Lock className="h-4.5 w-4.5 text-success" />
                     </div>
                     <div>
-                      <p className="text-body font-semibold">تم إغلاق المحادثة</p>
-                      <p className="text-small text-muted-light dark:text-muted-dark">لا يمكن إرسال رسائل جديدة حتى يتم إعادة فتحها</p>
+                      <p className="text-body font-semibold">{t('تم إغلاق المحادثة')}</p>
+                      <p className="text-small text-muted-light dark:text-muted-dark">{t('لا يمكن إرسال رسائل جديدة حتى يتم إعادة فتحها')}</p>
                     </div>
                   </div>
                   <button
                     onClick={async () => {
                       const ok = await confirm({
-                        title: 'إعادة فتح المحادثة؟',
-                        message: 'سيتم إعادة فتح المحادثة وستتمكن من إرسال واستقبال رسائل جديدة.',
-                        confirmText: 'إعادة فتح',
+                        title: t('إعادة فتح المحادثة؟'),
+                        message: t('سيتم إعادة فتح المحادثة وستتمكن من إرسال واستقبال رسائل جديدة.'),
+                        confirmText: t('إعادة فتح'),
                       });
-                      if (ok) { reopenConversation(selected.id); showToast('تم إعادة فتح المحادثة', 'success'); }
+                      if (ok) { reopenConversation(selected.id); showToast(t('تم إعادة فتح المحادثة'), 'success'); }
                     }}
                     className="h-9 px-4 rounded-full border border-primary text-primary text-small font-medium hover:bg-primary hover:text-white transition-colors flex items-center gap-2"
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
-                    إعادة فتح
+                    {t('إعادة فتح')}
                   </button>
                 </div>
               </div>
@@ -969,11 +975,11 @@ export default function Inbox(): JSX.Element {
               {editingMessageId && (
                 <div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-primary/5 dark:bg-primary/10 border border-primary/20 flex items-center gap-2">
                   <Edit2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                  <span className="text-small font-medium">تعديل الرسالة</span>
+                  <span className="text-small font-medium">{t('تعديل الرسالة')}</span>
                   <button
                     type="button"
                     onClick={cancelEdit}
-                    title="إلغاء التعديل"
+                    title={t('إلغاء التعديل')}
                     className="ms-auto p-1 rounded-full text-muted-light dark:text-muted-dark hover:bg-current/10 hover:text-current transition-colors"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -1001,13 +1007,13 @@ export default function Inbox(): JSX.Element {
                         type="text"
                         value={templateSearch}
                         onChange={(e) => setTemplateSearch(e.target.value)}
-                        placeholder="ابحث في الردود السريعة..."
+                        placeholder={t('ابحث في الردود السريعة...')}
                         className="w-full h-8 ps-3 pe-8 rounded-lg bg-white dark:bg-surface-dark border border-transparent text-small focus:outline-none focus:border-primary"
                       />
                     </div>
                     <div className="space-y-1 max-h-52 overflow-y-auto">
                       {filteredTemplates.length === 0 ? (
-                        <p className="text-center text-small text-muted-light dark:text-muted-dark py-4">لا توجد ردود مطابقة</p>
+                        <p className="text-center text-small text-muted-light dark:text-muted-dark py-4">{t('لا توجد ردود مطابقة')}</p>
                       ) : (
                         filteredTemplates.map((t) => (
                           <button
@@ -1032,7 +1038,7 @@ export default function Inbox(): JSX.Element {
                     <span className="text-danger font-semibold text-lg tabular-nums">
                       {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
                     </span>
-                    <span className="text-muted-light dark:text-muted-dark text-small">جاري التسجيل...</span>
+                    <span className="text-muted-light dark:text-muted-dark text-small">{t('جاري التسجيل...')}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <button
@@ -1040,7 +1046,7 @@ export default function Inbox(): JSX.Element {
                       className="h-10 px-5 rounded-full text-small font-medium border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex items-center gap-2"
                     >
                       <X className="h-4 w-4" />
-                      إلغاء
+                      {t('إلغاء')}
                     </button>
                     <button
                       onClick={stopRecording}
@@ -1048,7 +1054,7 @@ export default function Inbox(): JSX.Element {
                       style={{ color: '#fff' }}
                     >
                       <Square className="h-3.5 w-3.5 fill-current" />
-                      إرسال التسجيل
+                      {t('إرسال التسجيل')}
                     </button>
                   </div>
                 </div>
@@ -1069,7 +1075,7 @@ export default function Inbox(): JSX.Element {
                       cancelEdit();
                     }
                   }}
-                  placeholder={inputMode === 'note' ? 'اكتب ملاحظة داخلية...' : 'اكتب ردك هنا...'}
+                  placeholder={inputMode === 'note' ? t('اكتب ملاحظة داخلية...') : t('اكتب ردك هنا...')}
                   rows={1}
                   style={{ maxHeight: COMPOSER_MAX_HEIGHT }}
                   className="w-full resize-none bg-transparent border-0 text-body focus:outline-none placeholder:text-muted-light dark:placeholder:text-muted-dark overflow-y-auto"
@@ -1088,7 +1094,7 @@ export default function Inbox(): JSX.Element {
                       disabled={editingMsg?.type === 'note'}
                       activeClass="bg-primary text-white"
                       icon={<MessageSquare className="h-3.5 w-3.5" />}
-                      label="رسالة"
+                      label={t('رسالة')}
                       onClick={() => !editingMessageId && setInputMode('message')}
                     />
                     <ModeBtn
@@ -1096,7 +1102,7 @@ export default function Inbox(): JSX.Element {
                       disabled={editingMsg?.type === 'text'}
                       activeClass="bg-warning text-white"
                       icon={<StickyNote className="h-3.5 w-3.5" />}
-                      label="ملاحظة"
+                      label={t('ملاحظة')}
                       onClick={() => !editingMessageId && setInputMode('note')}
                     />
                   </div>
@@ -1104,24 +1110,24 @@ export default function Inbox(): JSX.Element {
                       assistant, so quick replies read as an AI button. */}
                   <ToolBtn
                     icon={<Zap className="h-[18px] w-[18px]" />}
-                    label="الردود السريعة"
+                    label={t('الردود السريعة')}
                     onClick={() => setShowTemplates((v) => !v)}
                   />
                   <ToolBtn
                     icon={<Smile className="h-[18px] w-[18px]" />}
-                    label="رمز تعبيري"
+                    label={t('رمز تعبيري')}
                     onClick={() => setShowEmoji((v) => !v)}
                   />
                   {/* Images go through here too — the picker accepts them, so a second
                       icon only asked the user to classify the file before choosing it. */}
                   <ToolBtn
                     icon={<Paperclip className="h-[18px] w-[18px]" />}
-                    label="إرفاق صورة أو ملف"
+                    label={t('إرفاق صورة أو ملف')}
                     onClick={() => fileInputRef.current?.click()}
                   />
                   <ToolBtn
                     icon={<Mic className="h-[18px] w-[18px]" />}
-                    label="تسجيل صوتي"
+                    label={t('تسجيل صوتي')}
                     onClick={startRecording}
                   />
                   {showEmoji && (
@@ -1138,7 +1144,7 @@ export default function Inbox(): JSX.Element {
                       onClick={cancelEdit}
                       className="h-10 px-4 rounded-full text-small font-medium border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
                     >
-                      إلغاء
+                      {t('إلغاء')}
                     </button>
                   )}
                   <button
@@ -1150,7 +1156,7 @@ export default function Inbox(): JSX.Element {
                     )}
                     style={{ color: '#fff' }}
                   >
-                    {editingMessageId ? 'حفظ' : inputMode === 'note' ? 'حفظ' : 'إرسال'}
+                    {editingMessageId ? t('حفظ') : inputMode === 'note' ? t('حفظ') : t('إرسال')}
                     {!editingMessageId && <ArrowRight className="h-4 w-4 rotate-180" />}
                   </button>
                 </div>
@@ -1179,7 +1185,7 @@ export default function Inbox(): JSX.Element {
       {selected && selectedContact && (() => {
         const ch = channels.find((c) => c.id === selected.channelId);
         return (
-          <Modal open={callModalOpen} onClose={() => { if (callState !== 'idle') endCall(); else setCallModalOpen(false); }} title="اتصال صوتي" size="sm">
+          <Modal open={callModalOpen} onClose={() => { if (callState !== 'idle') endCall(); else setCallModalOpen(false); }} title={t('اتصال صوتي')} size="sm">
             <div className="flex flex-col items-center gap-5 py-3">
               <div className="relative">
                 {callState !== 'idle' && (
@@ -1198,7 +1204,7 @@ export default function Inbox(): JSX.Element {
                   <p className="text-body text-muted-light dark:text-muted-dark mt-1" dir="ltr">{formatPhone(selectedContact.phone)}</p>
                 )}
                 {callState === 'calling' && (
-                  <p className="text-body text-primary mt-2 animate-pulse font-medium">جاري الاتصال...</p>
+                  <p className="text-body text-primary mt-2 animate-pulse font-medium">{t('جاري الاتصال...')}</p>
                 )}
                 {callState === 'connected' && (
                   <p className="text-body text-success mt-2 font-medium">{formatCallTime(callTimer)}</p>
@@ -1223,13 +1229,13 @@ export default function Inbox(): JSX.Element {
                     className="flex-1 flex items-center justify-center gap-2 h-10 px-4 bg-primary hover:bg-primary-dark text-white font-medium rounded-btn transition-colors"
                   >
                     <Phone className="h-4 w-4" />
-                    ابدأ الاتصال
+                    {t('ابدأ الاتصال')}
                   </button>
                   <button
                     onClick={() => setCallModalOpen(false)}
                     className="h-10 px-5 border border-border-light dark:border-border-dark rounded-btn hover:bg-bg-light dark:hover:bg-bg-dark transition-colors text-body font-medium"
                   >
-                    إلغاء
+                    {t('إلغاء')}
                   </button>
                 </>
               ) : (
@@ -1238,7 +1244,7 @@ export default function Inbox(): JSX.Element {
                   className="flex-1 flex items-center justify-center gap-2 h-10 px-4 bg-danger hover:bg-red-600 text-white font-medium rounded-btn transition-colors"
                 >
                   <PhoneOff className="h-4 w-4" />
-                  إنهاء الاتصال
+                  {t('إنهاء الاتصال')}
                 </button>
               )}
             </div>
@@ -1275,9 +1281,9 @@ function AgentSearchSelect({
     return a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q);
   });
   const statusLabel: Record<string, { label: string; cls: string }> = {
-    online: { label: 'متاح', cls: 'text-success' },
-    busy: { label: 'مشغول', cls: 'text-warning' },
-    offline: { label: 'غير متصل', cls: 'text-muted-light dark:text-muted-dark' },
+    online: { label: t('متاح'), cls: 'text-success' },
+    busy: { label: t('مشغول'), cls: 'text-warning' },
+    offline: { label: t('غير متصل'), cls: 'text-muted-light dark:text-muted-dark' },
   };
 
   const getDropdownStyle = (): React.CSSProperties => {
@@ -1309,7 +1315,7 @@ function AgentSearchSelect({
             <span className={cn('text-[10px] font-medium', statusLabel[selected.status].cls)}>{statusLabel[selected.status].label}</span>
           </>
         ) : (
-          <span className="text-small text-muted-light dark:text-muted-dark flex-1">اختر موظفاً...</span>
+          <span className="text-small text-muted-light dark:text-muted-dark flex-1">{t('اختر موظفاً...')}</span>
         )}
         <ChevronDown className={cn('h-4 w-4 text-muted-light dark:text-muted-dark transition-transform', open && 'rotate-180')} />
       </button>
@@ -1323,13 +1329,13 @@ function AgentSearchSelect({
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="ابحث بالاسم أو البريد..."
+                placeholder={t('ابحث بالاسم أو البريد...')}
                 className="w-full h-9 ps-3 pe-3 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary"
               />
             </div>
             <div className="max-h-60 overflow-y-auto">
               {filtered.length === 0 ? (
-                <p className="px-3 py-4 text-small text-muted-light dark:text-muted-dark text-center">لا نتائج</p>
+                <p className="px-3 py-4 text-small text-muted-light dark:text-muted-dark text-center">{t('لا نتائج')}</p>
               ) : (
                 filtered.map((a) => {
                   const dept = departments.find((d) => a.departments.includes(d.id));
@@ -1380,12 +1386,12 @@ function TransferModal({ open, onClose, conversation }: { open: boolean; onClose
 
   const submit = (): void => {
     if (!target) {
-      showToast('اختر موظفاً', 'error');
+      showToast(t('اختر موظفاً'), 'error');
       return;
     }
     assign(conversation.id, target);
     const agent = agents.find((a) => a.id === target);
-    showToast(`تم تحويل المحادثة إلى ${agent?.name}`, 'success');
+    showToast(`${t('تم تحويل المحادثة إلى')} ${t(agent?.name ?? '')}`, 'success');
     onClose();
   };
 
@@ -1393,18 +1399,18 @@ function TransferModal({ open, onClose, conversation }: { open: boolean; onClose
     <Modal
       open={open}
       onClose={onClose}
-      title="تحويل المحادثة"
+      title={t('تحويل المحادثة')}
       size="md"
       footer={
         <>
-          <button onClick={onClose} className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">إلغاء</button>
-          <button onClick={submit} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">تحويل</button>
+          <button onClick={onClose} className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">{t('إلغاء')}</button>
+          <button onClick={submit} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">{t('تحويل')}</button>
         </>
       }
     >
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <label className="text-small font-medium text-muted-light dark:text-muted-dark">حوّل إلى</label>
+          <label className="text-small font-medium text-muted-light dark:text-muted-dark">{t('حوّل إلى')}</label>
           <AgentSearchSelect
             agents={eligibleAgents}
             departments={departments}
@@ -1413,12 +1419,12 @@ function TransferModal({ open, onClose, conversation }: { open: boolean; onClose
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-small font-medium text-muted-light dark:text-muted-dark">ملاحظة داخلية (اختياري)</label>
+          <label className="text-small font-medium text-muted-light dark:text-muted-dark">{t('ملاحظة داخلية (اختياري)')}</label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={2}
-            placeholder="السبب أو تفاصيل للموظف..."
+            placeholder={t('السبب أو تفاصيل للموظف...')}
             className="w-full px-3 py-2 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
           />
         </div>
@@ -1491,7 +1497,7 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
   const previewMessage = useMemo(() => {
     if (template) {
       return template.body
-        .replace(/{{اسم_العميل}}/g, contactName || '[اسم العميل]')
+        .replace(/{{اسم_العميل}}/g, contactName || t('[اسم العميل]'))
         .replace(/{{التاريخ}}/g, new Date().toLocaleDateString('ar-OM-u-nu-latn'));
     }
     return message;
@@ -1505,10 +1511,10 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
   }, [templateId]);
 
   const validate = (): string | null => {
-    if (!channelId) return 'اختر القناة المُرسلة';
-    if (contactMode === 'existing' && !existingContactId) return 'اختر العميل';
-    if (contactMode === 'new' && (!newName.trim() || !newPhone.trim())) return 'املأ اسم العميل والرقم';
-    if (!previewMessage.trim()) return 'الرسالة فارغة';
+    if (!channelId) return t('اختر القناة المُرسلة');
+    if (contactMode === 'existing' && !existingContactId) return t('اختر العميل');
+    if (contactMode === 'new' && (!newName.trim() || !newPhone.trim())) return t('املأ اسم العميل والرقم');
+    if (!previewMessage.trim()) return t('الرسالة فارغة');
     return null;
   };
 
@@ -1564,16 +1570,16 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
     <Drawer
       open={open}
       onClose={onClose}
-      title="بدء محادثة جديدة"
+      title={t('بدء محادثة جديدة')}
       side="start"
       width="w-[480px]"
     >
       <div className="space-y-5 pb-20">
         {/* Channel */}
-        <Field label="القناة المرسلة" required>
+        <Field label={t('القناة المرسلة')} required>
           {connectedChannels.length === 0 ? (
             <div className="p-3 rounded-lg bg-warning/10 text-warning text-small">
-              لا توجد قنوات متصلة. اذهب إلى صفحة القنوات لربط حساب.
+              {t('لا توجد قنوات متصلة. اذهب إلى صفحة القنوات لربط حساب.')}
             </div>
           ) : (
             <div className="relative">
@@ -1587,7 +1593,7 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
               >
                 {(() => {
                   const sel = connectedChannels.find((c) => c.id === channelId);
-                  if (!sel) return <span className="text-muted-light dark:text-muted-dark">اختر القناة</span>;
+                  if (!sel) return <span className="text-muted-light dark:text-muted-dark">{t('اختر القناة')}</span>;
                   return (
                     <>
                       <ChannelIcon type={sel.type} size={10} className="!h-5 !w-5" />
@@ -1626,7 +1632,7 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
 
         {/* Contact */}
         <Field
-          label="العميل"
+          label={t('العميل')}
           required
           action={contactMode === 'existing' ? (
             <button
@@ -1634,7 +1640,7 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
               onClick={() => setContactMode('new')}
               className="text-small font-medium text-primary hover:underline flex items-center gap-1"
             >
-              <Plus className="h-3.5 w-3.5" /> عميل جديد
+              <Plus className="h-3.5 w-3.5" /> {t('عميل جديد')}
             </button>
           ) : (
             <button
@@ -1642,7 +1648,7 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
               onClick={() => setContactMode('existing')}
               className="text-small font-medium text-primary hover:underline"
             >
-              ← اختر من القائمة
+              {t('← اختر من القائمة')}
             </button>
           )}
         >
@@ -1663,7 +1669,7 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
                     <span className="text-[11px] text-muted-light dark:text-muted-dark font-mono" dir="ltr">{formatPhone(existingContact.phone)}</span>
                   </span>
                 ) : (
-                  <span className="text-muted-light dark:text-muted-dark">اختر عميل...</span>
+                  <span className="text-muted-light dark:text-muted-dark">{t('اختر عميل...')}</span>
                 )}
                 <ChevronDown className={cn('h-4 w-4 text-muted-light dark:text-muted-dark transition-transform flex-shrink-0', contactDropdownOpen && 'rotate-180')} />
               </button>
@@ -1675,7 +1681,7 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
                       <Search className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark" />
                       <input
                         type="text"
-                        placeholder="ابحث بالاسم أو الرقم..."
+                        placeholder={t('ابحث بالاسم أو الرقم...')}
                         value={contactSearch}
                         onChange={(e) => setContactSearch(e.target.value)}
                         autoFocus
@@ -1684,7 +1690,7 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
                     </div>
                     <div className="max-h-64 overflow-y-auto divide-y divide-border-light dark:divide-border-dark">
                       {filteredContacts.length === 0 ? (
-                        <p className="p-4 text-small text-muted-light dark:text-muted-dark text-center">لا نتائج</p>
+                        <p className="p-4 text-small text-muted-light dark:text-muted-dark text-center">{t('لا نتائج')}</p>
                       ) : (
                         filteredContacts.map((c) => (
                           <button
@@ -1715,7 +1721,7 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
               <Input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="اسم العميل (مثل: أحمد محمد)"
+                placeholder={t('اسم العميل (مثل: أحمد محمد)')}
               />
               <PhoneField
                 countryCode={phoneCode}
@@ -1730,25 +1736,25 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
 
         {/* Pre-assignment */}
         <div className="grid grid-cols-2 gap-3">
-          <Field label="القسم">
+          <Field label={t('القسم')}>
             <select
               value={departmentId}
               onChange={(e) => setDepartmentId(e.target.value)}
               className="w-full h-10 ps-3 pe-9 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
             >
-              <option value="">بدون قسم</option>
+              <option value="">{t('بدون قسم')}</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </select>
           </Field>
-          <Field label="المسؤول">
+          <Field label={t('المسؤول')}>
             <select
               value={agentId}
               onChange={(e) => setAgentId(e.target.value)}
               className="w-full h-10 ps-3 pe-9 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
             >
-              <option value="">غير مُسند</option>
+              <option value="">{t('غير مُسند')}</option>
               <option value="__ai__">AI Agent (Default)</option>
               {eligibleAgents.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
@@ -1759,14 +1765,14 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
 
         {/* Template */}
         <Field
-          label="قالب الرسالة"
+          label={t('قالب الرسالة')}
         >
           <select
             value={templateId}
             onChange={(e) => setTemplateId(e.target.value)}
             className="w-full h-10 ps-3 pe-9 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
           >
-            <option value="">بدون قالب (نص حر)</option>
+            <option value="">{t('بدون قالب (نص حر)')}</option>
             {templates.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
@@ -1774,19 +1780,19 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
         </Field>
 
         {/* Message preview */}
-        <Field label="الرسالة">
+        <Field label={t('الرسالة')}>
           <textarea
             value={previewMessage}
             onChange={(e) => setMessage(e.target.value)}
             rows={4}
-            placeholder="مرحباً، أتواصل معك بخصوص..."
+            placeholder={t('مرحباً، أتواصل معك بخصوص...')}
             className="w-full px-3 py-2 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary leading-relaxed"
           />
           {template && (
             <div className="mt-2 flex items-start gap-2 p-2 rounded-lg bg-info/5 border border-info/20">
               <Sparkles className="h-4 w-4 text-info flex-shrink-0 mt-0.5" />
               <p className="text-[11px] text-info">
-                قالب معتمد — تعديل النص قد يغيّر المحتوى.
+                {t('قالب معتمد — تعديل النص قد يغيّر المحتوى.')}
               </p>
             </div>
           )}
@@ -1794,10 +1800,10 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
       </div>
       <div className="absolute bottom-0 inset-x-0 px-5 py-3 bg-white dark:bg-surface-dark border-t border-border-light dark:border-border-dark flex items-center gap-2">
         <button onClick={submit} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2" style={{ color: '#fff' }}>
-          <Send className="h-4 w-4" /> إرسال
+          <Send className="h-4 w-4" /> {t('إرسال')}
         </button>
         <button onClick={onClose} className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">
-          إلغاء
+          {t('إلغاء')}
         </button>
       </div>
     </Drawer>
@@ -1825,7 +1831,7 @@ function Field({
         <label className="text-small font-medium">
           {label}
           {required && <span className="text-danger ms-0.5">*</span>}
-          {optional && <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span>}
+          {optional && <span className="text-muted-light dark:text-muted-dark font-normal ms-1">{t('(اختياري)')}</span>}
         </label>
         {action}
       </div>
@@ -1881,7 +1887,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
         `محادثة مع ${contact.name} (${contactTypeLabel[contact.type]}). آخر طلب: ${last3.slice(0, 120)}${last3.length > 120 ? '...' : ''}`
       );
       setGenerating(false);
-      showToast('تم توليد الملخص', 'success');
+      showToast(t('تم توليد الملخص'), 'success');
     }, 700);
   };
 
@@ -1898,38 +1904,38 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
   const handleSaveName = (): void => {
     if (editName.trim() && editName.trim() !== contact.name) {
       updateContact(contact.id, { name: editName.trim() });
-      showToast('تم تحديث اسم العميل', 'success');
+      showToast(t('تم تحديث اسم العميل'), 'success');
     }
     setEditingName(false);
   };
 
   const allTags = storeTags;
   const contactTypeEntries: { type: import('@/types').ContactType; label: string }[] = [
-    { type: 'visitor', label: 'زائر' },
-    { type: 'lead', label: 'محتمل' },
-    { type: 'customer', label: 'عميل' },
-    { type: 'returning', label: 'عميل دائم' },
+    { type: 'visitor', label: t('زائر') },
+    { type: 'lead', label: t('محتمل') },
+    { type: 'customer', label: t('عميل') },
+    { type: 'returning', label: t('عميل دائم') },
     { type: 'vip', label: 'VIP' },
-    { type: 'company', label: 'شركة' },
+    { type: 'company', label: t('شركة') },
   ];
-  const currentCategory = contactTypeLabel[contact.type];
+  const currentCategory = t(contactTypeLabel[contact.type]);
 
   const aiAgentOption = { id: '__ai__', name: 'AI Agent (Default)' };
-  const assigneeOptions = [aiAgentOption, ...agents.map((a) => ({ id: a.id, name: a.name }))];
+  const assigneeOptions = [aiAgentOption, ...agents.map((a) => ({ id: a.id, name: t(a.name) }))];
 
   const startedAt = conversation.messages[0]?.timestamp ?? conversation.lastMessageAt;
   const startedDate = new Date(startedAt);
-  const startedFull = startedDate.toLocaleDateString('ar-OM-u-nu-latn', { year: 'numeric', month: 'long', day: 'numeric' }) + ' ' + startedDate.toLocaleTimeString('ar-OM-u-nu-latn', { hour: '2-digit', minute: '2-digit' });
+  const startedFull = startedDate.toLocaleDateString(locale(), { year: 'numeric', month: 'long', day: 'numeric' }) + ' ' + startedDate.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
   const convIdNum = conversation.id.replace(/\D/g, '') || conversation.id;
 
   return (
     <aside className="w-[300px] flex-shrink-0 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card overflow-hidden hidden xl:flex flex-col">
       {/* Section header */}
       <div className="h-[56px] px-4 flex items-center justify-between border-b border-border-light dark:border-border-dark flex-shrink-0">
-        <h2 className="text-h3 font-bold">التفاصيل</h2>
+        <h2 className="text-h3 font-bold">{t('التفاصيل')}</h2>
         <button
           onClick={toggleDetails}
-          title="طيّ التفاصيل"
+          title={t('طيّ التفاصيل')}
           className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center text-muted-light dark:text-muted-dark"
         >
           <PanelRightClose className="h-4 w-4" />
@@ -1962,14 +1968,14 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
           <span dir="ltr">{formatPhone(contact.phone)}</span>
         </p>
         <div className="flex items-center justify-center gap-3 mt-2 text-small text-muted-light dark:text-muted-dark">
-          <span className="flex items-center gap-1" title="الدولة">
+          <span className="flex items-center gap-1" title={t('الدولة')}>
             <MapPin className="h-3 w-3" />
-            عُمان
+            {t('عُمان')}
           </span>
-          <span className="flex items-center gap-1" title="الوقت المحلي للعميل">
+          <span className="flex items-center gap-1" title={t('الوقت المحلي للعميل')}>
             <ClockIcon className="h-3 w-3" />
-            {new Date().toLocaleTimeString('ar-OM-u-nu-latn', { hour: '2-digit', minute: '2-digit' })}
-            <span className="text-[10px] opacity-70">محلي</span>
+            {new Date().toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' })}
+            <span className="text-[10px] opacity-70">{t('محلي')}</span>
           </span>
         </div>
       </div>
@@ -1977,23 +1983,23 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
       {/* Assignee/Group */}
       <div className="p-4 border-b border-border-light dark:border-border-dark space-y-3">
         <AssigneeRow
-          label="الموظف المسؤول"
+          label={t('الموظف المسؤول')}
           value={conversation.assignedTo}
           options={assigneeOptions}
-          placeholder="غير مُسند"
-          onChange={(id) => { assign(conversation.id, id === '__ai__' ? null : id); showToast(id ? 'تم الإسناد' : 'تم إلغاء الإسناد', 'success'); }}
+          placeholder={t('غير مُسند')}
+          onChange={(id) => { assign(conversation.id, id === '__ai__' ? null : id); showToast(id ? t('تم الإسناد') : t('تم إلغاء الإسناد'), 'success'); }}
           renderIndicator={(opt) => opt ? (
             opt.id === '__ai__' ? (
               <AiAvatar size="xs" />
-            ) : <Avatar name={opt.name} size="xs" />
+            ) : <Avatar name={t(opt.name)} size="xs" />
           ) : <span className="h-5 w-5 rounded-full bg-bg-light dark:bg-bg-dark border border-dashed border-border-light dark:border-border-dark" />}
         />
         <AssigneeRow
-          label="القسم"
+          label={t('القسم')}
           value={groupId || null}
-          options={departments.map((d) => ({ id: d.id, name: d.name, color: d.color }))}
-          placeholder="بدون قسم"
-          onChange={(id) => { setGroupId(id ?? ''); showToast('تم تحديث القسم', 'success'); }}
+          options={departments.map((d) => ({ id: d.id, name: t(d.name), color: d.color }))}
+          placeholder={t('بدون قسم')}
+          onChange={(id) => { setGroupId(id ?? ''); showToast(t('تم تحديث القسم'), 'success'); }}
           renderIndicator={(opt) => opt ? (
             <span className="h-5 w-5 rounded-full flex-shrink-0" style={{ background: opt.color ?? '#9CA3AF' }} />
           ) : (
@@ -2005,9 +2011,9 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
       {/* Tags */}
       <div className="p-4 border-b border-border-light dark:border-border-dark">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-small text-muted-light dark:text-muted-dark">الوسوم</p>
+          <p className="text-small text-muted-light dark:text-muted-dark">{t('الوسوم')}</p>
           <button onClick={() => setAddingTag(true)} className="text-[11px] font-medium text-primary hover:underline flex items-center gap-0.5">
-            <Plus className="h-3 w-3" /> وسم جديد
+            <Plus className="h-3 w-3" /> {t('وسم جديد')}
           </button>
         </div>
         <div
@@ -2027,7 +2033,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
             </span>
           ))}
           {contact.tags.length === 0 && !tagsOpen && (
-            <span className="text-small text-muted-light dark:text-muted-dark">اختر وسم...</span>
+            <span className="text-small text-muted-light dark:text-muted-dark">{t('اختر وسم...')}</span>
           )}
           {tagsOpen && (() => {
             const available = allTags.filter((t) => !contact.tags.includes(t));
@@ -2036,7 +2042,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
                 {available.length > 0 ? available.map((t) => (
                   <button key={t} onMouseDown={(e) => e.preventDefault()} onClick={(e) => { e.stopPropagation(); addContactTag(contact.id, t); showToast(`تم إضافة: ${t}`, 'success'); setTagsOpen(false); }} className="w-full px-3 py-1.5 text-small text-start hover:bg-bg-light dark:hover:bg-bg-dark">{t}</button>
                 )) : (
-                  <p className="px-3 py-1.5 text-small text-muted-light dark:text-muted-dark italic">لا توجد وسوم متاحة</p>
+                  <p className="px-3 py-1.5 text-small text-muted-light dark:text-muted-dark italic">{t('لا توجد وسوم متاحة')}</p>
                 )}
               </div>
             );
@@ -2049,7 +2055,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
       {addingTag && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setAddingTag(false); setNewTag(''); }}>
           <div className="bg-white dark:bg-surface-dark rounded-xl shadow-xl w-80 p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-h3 font-bold mb-4 text-center">إضافة وسم جديد</h3>
+            <h3 className="text-h3 font-bold mb-4 text-center">{t('إضافة وسم جديد')}</h3>
             <input
               autoFocus
               value={newTag}
@@ -2058,7 +2064,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
                 if (e.key === 'Enter' && newTag.trim()) handleCreateTag();
                 if (e.key === 'Escape') { setAddingTag(false); setNewTag(''); }
               }}
-              placeholder="اسم الوسم..."
+              placeholder={t('اسم الوسم...')}
               className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 mb-4"
             />
             <div className="flex gap-2">
@@ -2067,13 +2073,13 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
                 disabled={!newTag.trim()}
                 className="flex-1 h-10 rounded-lg bg-primary hover:bg-primary-dark text-white font-medium text-body transition-colors disabled:opacity-50"
               >
-                إضافة
+                {t('إضافة')}
               </button>
               <button
                 onClick={() => { setAddingTag(false); setNewTag(''); }}
                 className="flex-1 h-10 rounded-lg border border-border-light dark:border-border-dark text-body font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
               >
-                إلغاء
+                {t('إلغاء')}
               </button>
             </div>
           </div>
@@ -2083,9 +2089,9 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
       {/* Categories */}
       <div className="p-4 border-b border-border-light dark:border-border-dark">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-small text-muted-light dark:text-muted-dark">التصنيف</p>
+          <p className="text-small text-muted-light dark:text-muted-dark">{t('التصنيف')}</p>
           <button onClick={() => setAddingCategory(true)} className="text-[11px] font-medium text-primary hover:underline flex items-center gap-0.5">
-            <Plus className="h-3 w-3" /> تصنيف جديد
+            <Plus className="h-3 w-3" /> {t('تصنيف جديد')}
           </button>
         </div>
         <div className="relative">
@@ -2116,16 +2122,16 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
       {addingCategory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setAddingCategory(false); setNewCategory(''); }}>
           <div className="bg-white dark:bg-surface-dark rounded-xl shadow-xl w-80 p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-h3 font-bold mb-4 text-center">إضافة تصنيف جديد</h3>
+            <h3 className="text-h3 font-bold mb-4 text-center">{t('إضافة تصنيف جديد')}</h3>
             <input
               autoFocus
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && newCategory.trim()) { showToast(`تم إضافة التصنيف: ${newCategory.trim()}`, 'success'); setAddingCategory(false); setNewCategory(''); }
+                if (e.key === 'Entert(' && newCategory.trim()) { showToast(`${t('تم إضافة التصنيف')}: ${newCategory.trim()}`, 'success'); setAddingCategory(false); setNewCategory(''); }
                 if (e.key === 'Escape') { setAddingCategory(false); setNewCategory(''); }
               }}
-              placeholder="اسم التصنيف..."
+              placeholder={t('اسم التصنيف...')}
               className="w-full h-10 px-3 rounded-lg border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 mb-4"
             />
             <div className="flex gap-2">
@@ -2134,42 +2140,42 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
                 disabled={!newCategory.trim()}
                 className="flex-1 h-10 rounded-lg bg-primary hover:bg-primary-dark text-white font-medium text-body transition-colors disabled:opacity-50"
               >
-                إضافة
+                {t('إضافة')}
               </button>
               <button
                 onClick={() => { setAddingCategory(false); setNewCategory(''); }}
                 className="flex-1 h-10 rounded-lg border border-border-light dark:border-border-dark text-body font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
               >
-                إلغاء
+                {t('إلغاء')}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <Collapsible open={openAttrs} onToggle={() => setOpenAttrs((v) => !v)} title="خصائص المحادثة">
-        <Attr label="المعرّف" value={`#${convIdNum.padStart(4, '0')}`} />
-        <Attr label="بدأت" value={startedFull} />
+      <Collapsible open={openAttrs} onToggle={() => setOpenAttrs((v) => !v)} title={t('خصائص المحادثة')}>
+        <Attr label={t('المعرّف')} value={`#${convIdNum.padStart(4, '0')}`} />
+        <Attr label={t('بدأت')} value={startedFull} />
         <Attr
-          label="القناة"
-          value={convChannel?.name ?? 'غير محدد'}
+          label={t('القناة')}
+          value={convChannel?.name ?? t('غير محدد')}
           icon={convChannel ? <ChannelIcon type={convChannel.type} size={10} className="!h-3.5 !w-3.5" /> : undefined}
         />
         {conversation.sessionCount > 1 && (
-          <Attr label="الجلسات" value={`${conversation.sessionCount} جلسات`} />
+          <Attr label={t('الجلسات')} value={`${conversation.sessionCount} جلسات`} />
         )}
       </Collapsible>
 
-      <Collapsible open={openRecent} onToggle={() => setOpenRecent((v) => !v)} title={`محادثات أخرى (${totalContactConvs - 1})`}>
+      <Collapsible open={openRecent} onToggle={() => setOpenRecent((v) => !v)} title={`${t('محادثات أخرى')} (${totalContactConvs - 1})`}>
         {recent.length === 0 ? (
-          <p className="text-small text-muted-light dark:text-muted-dark italic px-1">لا محادثات أخرى</p>
+          <p className="text-small text-muted-light dark:text-muted-dark italic px-1">{t('لا محادثات أخرى')}</p>
         ) : (
           <>
             {recent.map((c) => {
               const ch = channels.find((x) => x.id === c.channelId);
               return (
                 <button key={c.id} onClick={() => useInboxStore.getState().setSelectedId(c.id)} className="w-full text-start p-2 rounded-lg bg-bg-light dark:bg-bg-dark mb-1.5 text-small hover:bg-border-light dark:hover:bg-border-dark transition-colors">
-                  <p className="line-clamp-1 font-medium">{c.lastMessage}</p>
+                  <p className="line-clamp-1 font-medium">{t(c.lastMessage)}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     {ch && <ChannelIcon type={ch.type} size={10} className="!h-3 !w-3" />}
                     <span className="text-muted-light dark:text-muted-dark text-[11px]">{timeAgo(c.lastMessageAt)}</span>
@@ -2184,14 +2190,14 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
         )}
       </Collapsible>
 
-      <Collapsible open={openTech} onToggle={() => setOpenTech((v) => !v)} title="معلومات تقنية">
+      <Collapsible open={openTech} onToggle={() => setOpenTech((v) => !v)} title={t('معلومات تقنية')}>
         <Attr label="IP" value="156.220.45.12" icon={<Globe className="h-3 w-3" />} />
-        <Attr label="نظام التشغيل" value="Android 14" icon={<Monitor className="h-3 w-3" />} />
+        <Attr label={t('نظام التشغيل')} value="Android 14" icon={<Monitor className="h-3 w-3" />} />
       </Collapsible>
 
       <div className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-small font-semibold">ملخص المحادثة</p>
+          <p className="text-small font-semibold">{t('ملخص المحادثة')}</p>
           <Sparkles className="h-4 w-4 text-primary" />
         </div>
         {summary ? (
@@ -2209,7 +2215,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                توليد ملخص
+                {t('توليد ملخص')}
               </>
             )}
           </button>
@@ -2337,9 +2343,9 @@ function StatusDropdown({
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const options: { value: ConversationStatus; label: string; dotColor: string }[] = [
-    { value: 'open', label: 'جديدة', dotColor: 'bg-primary' },
-    { value: 'in_progress', label: 'قيد المعالجة', dotColor: 'bg-warning' },
-    { value: 'closed', label: 'مغلقة', dotColor: 'bg-success' },
+    { value: 'open', label: t('جديدة'), dotColor: 'bg-primary' },
+    { value: 'in_progress', label: t('قيد المعالجة'), dotColor: 'bg-warning' },
+    { value: 'closed', label: t('مغلقة'), dotColor: 'bg-success' },
   ];
   const current = options.find((o) => o.value === status) ?? options[0];
   const triggerClass =
@@ -2426,7 +2432,7 @@ function InboxFilterButton({
             : 'text-muted-light dark:text-muted-dark border-border-light dark:border-border-dark hover:bg-bg-light dark:hover:bg-bg-dark'
         )}
         aria-expanded={filterOpen}
-        title="فلترة"
+        title={t('فلترة')}
       >
         <SlidersHorizontal className="h-4 w-4" strokeWidth={1.75} />
         {filterActive && (
@@ -2458,7 +2464,7 @@ function InboxSortButton(): JSX.Element {
         className="h-9 w-9 rounded-full flex items-center justify-center border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex-shrink-0"
         aria-haspopup="menu"
         aria-expanded={sortOpen}
-        title={{ recent: 'الأحدث أولاً', oldest: 'الأقدم أولاً', unread: 'غير المقروءة أولاً' }[sortKey]}
+        title={{ recent: t('الأحدث أولاً'), oldest: t('الأقدم أولاً'), unread: t('غير المقروءة أولاً') }[sortKey]}
       >
         <ArrowDownUp className="h-4 w-4" strokeWidth={1.75} />
       </button>
@@ -2472,7 +2478,7 @@ function InboxSortButton(): JSX.Element {
                 onClick={() => { setSortKey(k); setSortOpen(false); }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-small hover:bg-bg-light dark:hover:bg-bg-dark text-start"
               >
-                <span className="flex-1">{ { recent: 'الأحدث أولاً', oldest: 'الأقدم أولاً', unread: 'غير المقروءة أولاً' }[k] }</span>
+                <span className="flex-1">{ { recent: t('الأحدث أولاً'), oldest: t('الأقدم أولاً'), unread: t('غير المقروءة أولاً') }[k] }</span>
                 {sortKey === k && <Check className="h-3.5 w-3.5 text-primary" />}
               </button>
             ))}
@@ -2502,19 +2508,19 @@ function InboxFilters({
 
   type ViewItem = { key: InboxView; label: string; count: number; icon: JSX.Element };
   const viewItems: ViewItem[] = [
-    { key: 'all', label: 'الكل', count: counts.all, icon: <Globe className="h-4 w-4 text-slate-500" strokeWidth={2} /> },
-    { key: 'mine', label: 'صندوقي', count: counts.mine, icon: <InboxIcon className="h-4 w-4 text-primary" strokeWidth={2} /> },
-    { key: 'unassigned', label: 'غير مسندة', count: counts.unassigned, icon: <UserX className="h-4 w-4 text-warning" strokeWidth={2} /> },
-    { key: 'starred', label: 'مميزة', count: counts.starred, icon: <Star className="h-4 w-4 text-warning" strokeWidth={2} /> },
+    { key: 'all', label: t('الكل'), count: counts.all, icon: <Globe className="h-4 w-4 text-slate-500" strokeWidth={2} /> },
+    { key: 'mine', label: t('صندوقي'), count: counts.mine, icon: <InboxIcon className="h-4 w-4 text-primary" strokeWidth={2} /> },
+    { key: 'unassigned', label: t('غير مسندة'), count: counts.unassigned, icon: <UserX className="h-4 w-4 text-warning" strokeWidth={2} /> },
+    { key: 'starred', label: t('مميزة'), count: counts.starred, icon: <Star className="h-4 w-4 text-warning" strokeWidth={2} /> },
   ];
   const currentView = viewItems.find((i) => i.key === view) ?? viewItems[0];
 
   type StatusItem = { key: ConversationStatus | null; label: string; count: number; icon: JSX.Element };
   const statusItems: StatusItem[] = [
-    { key: null, label: 'كل الحالات', count: counts.all, icon: <Globe className="h-4 w-4 text-slate-500" strokeWidth={2} /> },
-    { key: 'open', label: 'جديدة', count: statusCounts.open, icon: <Sparkles className="h-4 w-4 text-primary" strokeWidth={2} /> },
-    { key: 'in_progress', label: 'قيد المعالجة', count: statusCounts.in_progress, icon: <ClockIcon className="h-4 w-4 text-warning" strokeWidth={2} /> },
-    { key: 'closed', label: 'مغلقة', count: statusCounts.closed, icon: <CheckCircle2 className="h-4 w-4 text-success" strokeWidth={2} /> },
+    { key: null, label: t('كل الحالات'), count: counts.all, icon: <Globe className="h-4 w-4 text-slate-500" strokeWidth={2} /> },
+    { key: 'open', label: t('جديدة'), count: statusCounts.open, icon: <Sparkles className="h-4 w-4 text-primary" strokeWidth={2} /> },
+    { key: 'in_progress', label: t('قيد المعالجة'), count: statusCounts.in_progress, icon: <ClockIcon className="h-4 w-4 text-warning" strokeWidth={2} /> },
+    { key: 'closed', label: t('مغلقة'), count: statusCounts.closed, icon: <CheckCircle2 className="h-4 w-4 text-success" strokeWidth={2} /> },
   ];
   return (
     <div className="flex items-center gap-1.5">
@@ -2600,18 +2606,18 @@ function FilterDrawer({
   const hasAnyFilter = !!tmpChannel || !!tmpDept;
 
   return (
-    <Drawer open={open} onClose={onClose} title="تصفية" side="start" width="w-[360px]">
+    <Drawer open={open} onClose={onClose} title={t('تصفية')} side="start" width="w-[360px]">
       <div className="flex flex-col h-full">
         <div className="flex-1 space-y-6 overflow-y-auto">
           <FilterPanel
-            title="القناة"
+            title={t('القناة')}
             options={channels.map((c) => ({ id: c.id, label: c.name, indicator: <ChannelIcon type={c.type} size={10} className="!h-4 !w-4" /> }))}
             selectedId={tmpChannel}
             onSelect={setTmpChannel}
             allLabel="كل القنوات"
           />
           <FilterPanel
-            title="القسم"
+            title={t('القسم')}
             options={departments.map((d) => ({ id: d.id, label: d.name, indicator: <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} /> }))}
             selectedId={tmpDept}
             onSelect={setTmpDept}
@@ -2624,13 +2630,13 @@ function FilterDrawer({
             disabled={!hasAnyFilter}
             className="flex-1 h-10 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors disabled:opacity-40 disabled:pointer-events-none"
           >
-            إعادة تعيين
+            {t('إعادة تعيين')}
           </button>
           <button
             onClick={() => onApply(tmpChannel, tmpDept)}
             className="flex-1 h-10 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium transition-colors"
           >
-            تطبيق
+            {t('تطبيق')}
           </button>
         </div>
       </div>
@@ -2827,7 +2833,7 @@ function MessageBubble({
   const isOut = msg.direction === 'out';
   const isNote = msg.type === 'note' || msg.isInternalNote === true;
   const isAI = isOut && msg.sender === 'ai';
-  const name = isOut ? (isAI ? 'المساعد الذكي' : agentName) : contactName;
+  const name = isOut ? (isAI ? t('المساعد الذكي') : agentName) : contactName;
   const dateLabel = timeAgo(msg.timestamp);
 
   // Only outgoing text/note messages sent by the human agent within window are editable
@@ -2878,13 +2884,13 @@ function MessageBubble({
               // `anywhere` rather than `break-word`: only the former lowers the
               // element's min-content width, which is what lets the bubble shrink
               // instead of the long word pushing it wide and overflowing.
-              <p className="whitespace-pre-wrap [overflow-wrap:anywhere] leading-relaxed">{msg.content}</p>
+              <p className="whitespace-pre-wrap [overflow-wrap:anywhere] leading-relaxed">{t(msg.content)}</p>
             )}
             <div className={cn('flex items-center gap-1.5 text-[10px] mt-1', headerMutedClass)}>
               {isOut ? (
                 <>
                   <span className="tabular-nums">{dateLabel}</span>
-                  {isEdited && <span title="عُدّلت الرسالة">· معدّلة</span>}
+                  {isEdited && <span title={t('عُدّلت الرسالة')}>{t('· معدّلة')}</span>}
                   {isAI && <Bot className="h-3 w-3" />}
                   <span>· {name}</span>
                 </>
@@ -2892,7 +2898,7 @@ function MessageBubble({
                 <>
                   <span>{name}</span>
                   <span className="tabular-nums">· {dateLabel}</span>
-                  {isEdited && <span title="عُدّلت الرسالة">· معدّلة</span>}
+                  {isEdited && <span title={t('عُدّلت الرسالة')}>{t('· معدّلة')}</span>}
                 </>
               )}
             </div>
@@ -2901,7 +2907,7 @@ function MessageBubble({
             <button
               type="button"
               onClick={() => onEdit(msg)}
-              title="تعديل الرسالة"
+              title={t('تعديل الرسالة')}
               className="opacity-0 group-hover:opacity-100 focus:opacity-100 h-7 w-7 rounded-full flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-all"
             >
               <Edit2 className="h-3.5 w-3.5" />
@@ -3007,14 +3013,14 @@ function VoicePlayer({ src, duration, transcription, transcribing }: { src?: str
       {transcribing && (
         <div className="flex items-center gap-1.5 text-[11px] text-violet-600 dark:text-violet-400">
           <Sparkles className="h-3 w-3 animate-pulse" />
-          <span>جاري تحويل الصوت إلى نص...</span>
+          <span>{t('جاري تحويل الصوت إلى نص...')}</span>
         </div>
       )}
       {transcription && !transcribing && (
         <div className="bg-violet-50 dark:bg-violet-950/30 border border-violet-200/50 dark:border-violet-800/30 rounded-lg px-2.5 py-1.5 text-[12px] leading-relaxed">
           <div className="flex items-center gap-1 text-violet-600 dark:text-violet-400 text-[10px] font-medium mb-0.5">
             <Sparkles className="h-2.5 w-2.5" />
-            نص مُحوّل بالذكاء الاصطناعي
+            {t('نص مُحوّل بالذكاء الاصطناعي')}
           </div>
           <p className="text-current">{transcription}</p>
         </div>

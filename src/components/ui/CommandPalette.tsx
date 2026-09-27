@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { t } from '@/i18n/useTranslation';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -206,7 +207,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): JSX.Elem
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={isAdmin ? 'ابحث في العملاء أو الباقات...' : 'ابحث في المحادثات أو العملاء أو الموظفين...'}
+                placeholder={isAdmin ? t('ابحث في العملاء أو الباقات...') : t('ابحث في المحادثات أو العملاء أو الموظفين...')}
                 className="flex-1 bg-transparent text-body focus:outline-none placeholder-muted-light dark:placeholder-muted-dark"
               />
               <kbd className="px-1.5 py-0.5 rounded text-[10px] bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark border border-border-light dark:border-border-dark">ESC</kbd>

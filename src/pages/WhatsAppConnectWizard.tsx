@@ -18,6 +18,7 @@ import {
 import { Avatar, Input, PhoneField as SharedPhoneField } from '@components/ui';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
+import { t } from '@/i18n/useTranslation';
 import { cn } from '@/utils/cn';
 import { WhatsAppIcon } from '@components/ui/BrandIcons';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
@@ -152,18 +153,18 @@ export default function WhatsAppConnectWizard({
     state.method !== 'oauth';
 
   const stepTitle: Record<string, string> = {
-    method: 'اختر طريقة الربط',
-    connect: 'الاتصال بـ Meta',
-    customize: 'التخصيص والإسناد',
-    qr: 'مسح رمز QR',
-    pairing: 'الربط بكود الاقتران',
+    method: t('اختر طريقة الربط'),
+    connect: t('الاتصال بـ Meta'),
+    customize: t('التخصيص والإسناد'),
+    qr: t('مسح رمز QR'),
+    pairing: t('الربط بكود الاقتران'),
   };
 
   const validate = (): string | null => {
-    if (currentKey === 'method' && !state.method) return 'اختر طريقة الربط';
+    if (currentKey === 'method' && !state.method) return t('اختر طريقة الربط');
     if (currentKey === 'connect') {
-      if (!state.channelName.trim()) return 'أدخل اسم القناة';
-      if (!state.phone.trim()) return 'أدخل رقم الهاتف';
+      if (!state.channelName.trim()) return t('أدخل اسم القناة');
+      if (!state.phone.trim()) return t('أدخل رقم الهاتف');
     }
     return null;
   };
@@ -197,7 +198,7 @@ export default function WhatsAppConnectWizard({
         departmentId: state.departmentId || null,
         ...(Object.keys(credentials).length > 0 ? { credentials } : {}),
       });
-      showToast('تم تحديث القناة', 'success');
+      showToast(t('تم تحديث القناة'), 'success');
     } else {
       // Every step is filled in normally; the limit only bites on confirm.
       if (channelsReached) {
@@ -212,7 +213,7 @@ export default function WhatsAppConnectWizard({
         departmentId: state.departmentId || null,
         ...(Object.keys(credentials).length > 0 ? { credentials } : {}),
       });
-      showToast('تم بدء الربط — تحقق من حالة التفعيل خلال دقائق', 'success');
+      showToast(t('تم بدء الربط — تحقق من حالة التفعيل خلال دقائق'), 'success');
     }
     onClose();
   };
@@ -236,11 +237,11 @@ export default function WhatsAppConnectWizard({
               <WhatsAppIcon className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-h3 font-bold">{isEditing ? `تعديل: ${editingChannel?.name}` : 'ربط WhatsApp'}</h2>
+              <h2 className="text-h3 font-bold">{isEditing ? `${t('تعديل')}: ${editingChannel?.name}` : t('ربط WhatsApp')}</h2>
               <p className="text-[11px] text-muted-light dark:text-muted-dark">{stepTitle[currentKey]}</p>
             </div>
           </div>
-          <button onClick={onClose} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center" aria-label="إغلاق">
+          <button onClick={onClose} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center" aria-label={t('إغلاق')}>
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -275,22 +276,22 @@ export default function WhatsAppConnectWizard({
               onClick={onClose}
               className="h-10 px-4 rounded-full text-small font-medium text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark"
             >
-              إلغاء
+              {t('إلغاء')}
             </button>
             {currentKey === 'connect' && (
               <button
                 type="button"
                 onClick={() => {
                   if (!state.phoneNumberId.trim() || !state.accessToken.trim()) {
-                    showToast('أدخل Phone Number ID و Access Token أولاً', 'error');
+                    showToast(t('أدخل Phone Number ID و Access Token أولاً'), 'error');
                     return;
                   }
-                  showToast('تم اختبار الاتصال بنجاح ✓', 'success');
+                  showToast(t('تم اختبار الاتصال بنجاح ✓'), 'success');
                 }}
                 className="h-10 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex items-center gap-2"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
-                اختبار الاتصال
+                {t('اختبار الاتصال')}
               </button>
             )}
             <button
@@ -299,7 +300,7 @@ export default function WhatsAppConnectWizard({
               className="h-10 px-5 rounded-full text-white text-small font-medium flex items-center gap-2 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: brandColor }}
             >
-              {isLast ? (isEditing ? 'حفظ التغييرات' : 'تأكيد الربط') : 'التالي'}
+              {isLast ? (isEditing ? t('حفظ التغييرات') : t('تأكيد الربط')) : t('التالي')}
               {!isLast && <ArrowLeft className="h-4 w-4" />}
             </button>
           </div>
@@ -331,10 +332,10 @@ export default function WhatsAppConnectWizard({
             addIncomingConversation({
               channelId,
               phone: fm.handle,
-              name: fm.name,
-              initialMessage: fm.text,
+              name: t(fm.name),
+              initialMessage: t(fm.text),
             });
-            showToast(`تم ربط ${account.name} عبر Meta`, 'success');
+            showToast(`${t('تم ربط')} ${account.name} ${t('عبر Meta')}`, 'success');
             onClose();
           }}
         />
@@ -353,11 +354,11 @@ function MethodStep({
     {
       key: 'cloud',
       title: 'Meta Business Cloud API',
-      subtitle: 'الطريقة الرسمية المعتمدة',
-      pros: ['مجاني حتى 1000 محادثة/شهر', 'موثوق 100%', 'قوالب معتمدة + إحصائيات'],
-      cons: ['يحتاج Meta Business Manager'],
+      subtitle: t('الطريقة الرسمية المعتمدة'),
+      pros: [t('مجاني حتى 1000 محادثة/شهر'), t('موثوق 100%'), t('قوالب معتمدة + إحصائيات')],
+      cons: [t('يحتاج Meta Business Manager')],
       icon: Cloud,
-      badge: { label: 'موصى به ★', cls: 'bg-success/15 text-success' },
+      badge: { label: t('موصى به ★'), cls: 'bg-success/15 text-success' },
     },
     // ⚠️ مؤقّت — وضع تصوير الفيديو: تُخفى الطريقتان غير الرسميتين
     // (كود الاقتران وQR) ويحلّ محلّهما تسجيل الدخول عبر Meta.
@@ -365,30 +366,30 @@ function MethodStep({
       ? [
           {
             key: 'oauth' as const,
-            title: 'تسجيل الدخول عبر Meta',
-            subtitle: 'ربط بنقرة واحدة دون نسخ رموز',
-            pros: ['بدون Access Token يدوي', 'اختيار الرقم من حسابك مباشرةً', 'الأذونات واضحة وقابلة للسحب'],
-            cons: ['يتطلّب صلاحية على حساب الأعمال'],
+            title: t('تسجيل الدخول عبر Meta'),
+            subtitle: t('ربط بنقرة واحدة دون نسخ رموز'),
+            pros: [t('بدون Access Token يدوي'), t('اختيار الرقم من حسابك مباشرةً'), t('الأذونات واضحة وقابلة للسحب')],
+            cons: [t('يتطلّب صلاحية على حساب الأعمال')],
             icon: Cloud,
-            badge: { label: 'الأسهل', cls: 'bg-primary/15 text-primary' },
+            badge: { label: t('الأسهل'), cls: 'bg-primary/15 text-primary' },
           },
         ]
       : [
           {
             key: 'pairing' as const,
-            title: 'كود الاقتران',
-            subtitle: 'كود 8 أحرف يُدخل في واتساب',
-            pros: ['أبسط من QR', 'يعمل بدون كاميرا', 'مناسب لأجهزة بعيدة'],
-            cons: ['غير رسمي', 'خطر حظر محدود'],
+            title: t('كود الاقتران'),
+            subtitle: t('كود 8 أحرف يُدخل في واتساب'),
+            pros: [t('أبسط من QR'), t('يعمل بدون كاميرا'), t('مناسب لأجهزة بعيدة')],
+            cons: [t('غير رسمي'), t('خطر حظر محدود')],
             icon: KeyRound,
-            badge: { label: 'الأسهل', cls: 'bg-primary/15 text-primary' },
+            badge: { label: t('الأسهل'), cls: 'bg-primary/15 text-primary' },
           },
           {
             key: 'qr' as const,
             title: 'QR Code',
-            subtitle: 'مسح ضوئي من الكاميرا',
-            pros: ['سريع جداً', 'لا حاجة لإدخال رقم'],
-            cons: ['غير رسمي', 'يحتاج كاميرا الهاتف'],
+            subtitle: t('مسح ضوئي من الكاميرا'),
+            pros: [t('سريع جداً'), t('لا حاجة لإدخال رقم')],
+            cons: [t('غير رسمي'), t('يحتاج كاميرا الهاتف')],
             icon: QrCode,
           },
         ]),
@@ -435,7 +436,7 @@ function MethodStep({
                   </span>
                 ))}
                 {o.cons.length > 0 && (
-                  <span className="text-[10px] font-bold mt-1">عيوبها</span>
+                  <span className="text-[10px] font-bold mt-1">{t('عيوبها')}</span>
                 )}
                 {o.cons.map((c) => (
                   <span key={c} className="text-[11px] inline-flex items-center gap-1 text-muted-light dark:text-muted-dark">
@@ -452,7 +453,7 @@ function MethodStep({
         <div className="flex items-start gap-2 p-2.5 rounded-card bg-warning/10 border border-warning/30">
           <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
           <p className="text-[11px] text-muted-light dark:text-muted-dark">
-            هذه الطريقة غير رسمية (WhatsApp Web protocol). للأعمال الجادة استخدم Cloud API.
+            {t('هذه الطريقة غير رسمية (WhatsApp Web protocol). للأعمال الجادة استخدم Cloud API.')}
           </p>
         </div>
       )}
@@ -467,14 +468,14 @@ function ConnectStep({
   const [showToken, setShowToken] = useState(false);
 
   const copy = (text: string, label: string): void => {
-    if (!text) { showToast(`لا يوجد ${label} للنسخ`, 'error'); return; }
+    if (!text) { showToast(`${t('لا يوجد')} ${label} ${t('للنسخ')}`, 'error'); return; }
     void navigator.clipboard.writeText(text);
-    showToast(`تم نسخ ${label}`, 'success');
+    showToast(`${t('تم نسخ')} ${label}`, 'success');
   };
   const regenerateVerifyToken = (): void => {
     const token = Array.from({ length: 16 }, () => 'abcdefghijklmnopqrstuvwxyz0123456789'[Math.floor(Math.random() * 36)]).join('');
     setState({ ...state, verifyToken: `wh_${token}` });
-    showToast('تم توليد Verify Token جديد', 'success');
+    showToast(t('تم توليد Verify Token جديد'), 'success');
   };
 
   return (
@@ -482,13 +483,13 @@ function ConnectStep({
       {/* Row 1 — display name + WhatsApp number */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input
-          label="اسم الرقم (للعرض)"
+          label={t('اسم الرقم (للعرض)')}
           value={state.channelName}
           onChange={(e) => setState({ ...state, channelName: e.target.value })}
-          placeholder="مثال: الرقم الرئيسي"
+          placeholder={t('مثال: الرقم الرئيسي')}
         />
         <SharedPhoneField
-          label="رقم الواتساب"
+          label={t('رقم الواتساب')}
           countryCode={state.countryCode}
           phone={state.phone}
           onCountryCodeChange={(c) => setState({ ...state, countryCode: c })}
@@ -498,7 +499,7 @@ function ConnectStep({
       </div>
 
       {/* Phone Number ID */}
-      <FieldGroup label={<>Phone Number ID<span className="text-danger ms-0.5">*</span></>} hint="معرّف الرقم في Meta — في إعدادات API Setup ← WhatsApp">
+      <FieldGroup label={<>Phone Number ID<span className="text-danger ms-0.5">*</span></>} hint={t('معرّف الرقم في Meta — في إعدادات API Setup ← WhatsApp')}>
         <Input
           value={state.phoneNumberId}
           onChange={(e) => setState({ ...state, phoneNumberId: e.target.value })}
@@ -507,7 +508,7 @@ function ConnectStep({
       </FieldGroup>
 
       {/* WABA ID */}
-      <FieldGroup label={<>WhatsApp Business Account ID<span className="text-danger ms-0.5">*</span></>} hint="معرّف حساب الأعمال الذي يضمّ الأرقام (WABA ID)">
+      <FieldGroup label={<>WhatsApp Business Account ID<span className="text-danger ms-0.5">*</span></>} hint={t('معرّف حساب الأعمال الذي يضمّ الأرقام (WABA ID)')}>
         <Input
           value={state.wabaId}
           onChange={(e) => setState({ ...state, wabaId: e.target.value })}
@@ -516,7 +517,7 @@ function ConnectStep({
       </FieldGroup>
 
       {/* Access Token */}
-      <FieldGroup label={<>Access Token<span className="text-danger ms-0.5">*</span></>} hint="رمز المصادقة الدائم من System User في Business Settings في Meta">
+      <FieldGroup label={<>Access Token<span className="text-danger ms-0.5">*</span></>} hint={t('رمز المصادقة الدائم من System User في Business Settings في Meta')}>
         <div className="relative">
           <span className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark pointer-events-none">
             <KeyRound className="h-4 w-4" />
@@ -532,7 +533,7 @@ function ConnectStep({
             type="button"
             onClick={() => setShowToken((v) => !v)}
             className="absolute start-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark flex items-center justify-center"
-            aria-label="إظهار/إخفاء"
+            aria-label={t('إظهار/إخفاء')}
           >
             {showToken ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
           </button>
@@ -541,17 +542,17 @@ function ConnectStep({
 
       {/* Row 5 — Callback URL + Graph API Version */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <FieldGroup label="Callback URL" hint="انسخ هذا الرابط والصقه في إعدادات Webhook بـ Meta">
+        <FieldGroup label="Callback URL" hint={t('انسخ هذا الرابط والصقه في إعدادات Webhook بـ Meta')}>
           <FieldWithAction
             value={state.callbackUrl}
             onChange={(v) => setState({ ...state, callbackUrl: v })}
             placeholder="https://yourserver.com/webhook/whatsapp"
             actions={[
-              { icon: Copy, label: 'نسخ', onClick: () => copy(state.callbackUrl, 'Callback URL') },
+              { icon: Copy, label: t('نسخ'), onClick: () => copy(state.callbackUrl, 'Callback URL') },
             ]}
           />
         </FieldGroup>
-        <FieldGroup label="إصدار Graph API" hint="إصدار Graph API المستخدم في طلبات الإرسال — استخدم آخر إصدار مستقر">
+        <FieldGroup label={t('إصدار Graph API')} hint={t('إصدار Graph API المستخدم في طلبات الإرسال — استخدم آخر إصدار مستقر')}>
           <select
             value={state.graphApiVersion}
             onChange={(e) => setState({ ...state, graphApiVersion: e.target.value })}
@@ -567,14 +568,14 @@ function ConnectStep({
       </div>
 
       {/* Verify Token */}
-      <FieldGroup label="Verify Token" hint="نفس القيمة تُكتب هنا وفي إعدادات Webhook في Meta — استخدم زر التوليد لإنشاء قيمة آمنة">
+      <FieldGroup label="Verify Token" hint={t('نفس القيمة تُكتب هنا وفي إعدادات Webhook في Meta — استخدم زر التوليد لإنشاء قيمة آمنة')}>
         <FieldWithAction
           value={state.verifyToken}
           onChange={(v) => setState({ ...state, verifyToken: v })}
           placeholder="wh_xxxxxxxxxxxxxxxx"
           actions={[
-            { icon: RefreshCw, label: 'توليد', onClick: regenerateVerifyToken },
-            { icon: Copy, label: 'نسخ', onClick: () => copy(state.verifyToken, 'Verify Token') },
+            { icon: RefreshCw, label: t('توليد'), onClick: regenerateVerifyToken },
+            { icon: Copy, label: t('نسخ'), onClick: () => copy(state.verifyToken, 'Verify Token') },
           ]}
         />
       </FieldGroup>
@@ -650,23 +651,23 @@ function CustomizeStep({
     <div className="space-y-3">
       <section className="space-y-3">
         <div className="space-y-1.5">
-          <label className="text-small font-medium text-muted-light dark:text-muted-dark">القسم المسؤول<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
+          <label className="text-small font-medium text-muted-light dark:text-muted-dark">{t('القسم المسؤول')}<span className="text-muted-light dark:text-muted-dark font-normal ms-1">{t('(اختياري)')}</span></label>
           <select
             value={state.departmentId}
             onChange={(e) => setState({ ...state, departmentId: e.target.value, agentIds: [] })}
             className="w-full h-10 ps-3 pe-9 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
           >
-            <option value="">بدون قسم محدد</option>
+            <option value="">{t('بدون قسم محدد')}</option>
             {departments.map((d) => (<option key={d.id} value={d.id}>{d.name}</option>))}
           </select>
         </div>
         <div>
           <label className="text-small font-medium text-muted-light dark:text-muted-dark mb-1.5 block">
-            الوكلاء ({state.agentIds.length} مختار)<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span>
+            الوكلاء ({state.agentIds.length} مختار)<span className="text-muted-light dark:text-muted-dark font-normal ms-1">{t('(اختياري)')}</span>
           </label>
           <div className="rounded-card border border-border-light dark:border-border-dark max-h-44 overflow-y-auto">
             {eligibleAgents.length === 0 ? (
-              <p className="p-3 text-small text-muted-light dark:text-muted-dark text-center">اختر القسم أولاً</p>
+              <p className="p-3 text-small text-muted-light dark:text-muted-dark text-center">{t('اختر القسم أولاً')}</p>
             ) : (
               eligibleAgents.map((a) => {
                 const selected = state.agentIds.includes(a.id);
@@ -701,7 +702,7 @@ function QrStep({ brandColor, onClose }: { brandColor: string; onClose: () => vo
   return (
     <div className="text-center max-w-md mx-auto py-2">
       <p className="text-body text-muted-light dark:text-muted-dark mb-4">
-        افتح واتساب على هاتفك ← الإعدادات ← الأجهزة المرتبطة ← امسح الرمز
+        {t('افتح واتساب على هاتفك ← الإعدادات ← الأجهزة المرتبطة ← امسح الرمز')}
       </p>
       <div className="mx-auto h-60 w-60 bg-white rounded-card border-2 border-border-light p-3 relative">
         <img
@@ -721,7 +722,7 @@ function QrStep({ brandColor, onClose }: { brandColor: string; onClose: () => vo
       <div className="mt-4 flex items-center justify-center gap-2 text-small">
         <Loader2 className="h-4 w-4 animate-spin" style={{ color: brandColor }} />
         <span className="text-muted-light dark:text-muted-dark">
-          {status === 'waiting' ? 'في انتظار المسح...' : 'جاري الاتصال...'}
+          {status === 'waiting' ? t('في انتظار المسح...') : t('جاري الاتصال...')}
         </span>
       </div>
       <button
@@ -729,7 +730,7 @@ function QrStep({ brandColor, onClose }: { brandColor: string; onClose: () => vo
         className="mt-4 h-10 px-5 rounded-full text-white text-small font-medium hover:opacity-90"
         style={{ background: brandColor }}
       >
-        إنهاء
+        {t('إنهاء')}
       </button>
     </div>
   );
@@ -748,7 +749,7 @@ function PairingStep({
   const [status, setStatus] = useState<'idle' | 'waiting' | 'connecting'>('idle');
 
   const generate = (): void => {
-    if (!state.phone.trim()) { showToast('أدخل رقم الهاتف', 'error'); return; }
+    if (!state.phone.trim()) { showToast(t('أدخل رقم الهاتف'), 'error'); return; }
     // 8-char code (random for demo)
     const c = Array.from({ length: 8 }, () => 'ABCDEFGHIJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
     setCode(c);
@@ -759,17 +760,17 @@ function PairingStep({
   const copyCode = (): void => {
     if (!code) return;
     void navigator.clipboard.writeText(code);
-    showToast('تم نسخ الكود', 'success');
+    showToast(t('تم نسخ الكود'), 'success');
   };
 
   if (!code) {
     return (
       <div className="space-y-3 max-w-md mx-auto">
         <p className="text-small text-muted-light dark:text-muted-dark text-center">
-          أدخل رقم الهاتف للحصول على كود اقتران من 8 أحرف
+          {t('أدخل رقم الهاتف للحصول على كود اقتران من 8 أحرف')}
         </p>
         <SharedPhoneField
-        label="رقم الهاتف"
+        label={t('رقم الهاتف')}
         countryCode={state.countryCode}
         phone={state.phone}
         onCountryCodeChange={(c) => setState({ ...state, countryCode: c })}
@@ -781,7 +782,7 @@ function PairingStep({
           className="w-full h-11 rounded-full text-white text-small font-semibold hover:opacity-90"
           style={{ background: brandColor }}
         >
-          الحصول على الكود
+          {t('الحصول على الكود')}
         </button>
       </div>
     );
@@ -789,9 +790,9 @@ function PairingStep({
 
   return (
     <div className="text-center max-w-md mx-auto py-2">
-      <p className="text-small text-muted-light dark:text-muted-dark mb-1">كود الاقتران الخاص بك</p>
+      <p className="text-small text-muted-light dark:text-muted-dark mb-1">{t('كود الاقتران الخاص بك')}</p>
       <p className="text-[11px] text-muted-light dark:text-muted-dark mb-4">
-        افتح واتساب ← الإعدادات ← الأجهزة المرتبطة ← الربط برقم الهاتف ← أدخل الكود
+        {t('افتح واتساب ← الإعدادات ← الأجهزة المرتبطة ← الربط برقم الهاتف ← أدخل الكود')}
       </p>
       <div className="flex items-center justify-center gap-1.5 mb-3">
         {code.slice(0, 4).split('').map((c, i) => (
@@ -810,12 +811,12 @@ function PairingStep({
         onClick={copyCode}
         className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark inline-flex items-center gap-1.5"
       >
-        <Copy className="h-3.5 w-3.5" /> نسخ الكود
+        <Copy className="h-3.5 w-3.5" /> {t('نسخ الكود')}
       </button>
       <div className="mt-4 flex items-center justify-center gap-2 text-small">
         <Loader2 className="h-4 w-4 animate-spin" style={{ color: brandColor }} />
         <span className="text-muted-light dark:text-muted-dark">
-          {status === 'waiting' ? 'في انتظار إدخال الكود...' : 'جاري الاتصال...'}
+          {status === 'waiting' ? t('في انتظار إدخال الكود...') : t('جاري الاتصال...')}
         </span>
       </div>
       <button
@@ -823,7 +824,7 @@ function PairingStep({
         className="mt-4 h-10 px-5 rounded-full text-white text-small font-medium hover:opacity-90"
         style={{ background: brandColor }}
       >
-        إنهاء
+        {t('إنهاء')}
       </button>
     </div>
   );

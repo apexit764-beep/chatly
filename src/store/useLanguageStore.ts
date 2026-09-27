@@ -20,6 +20,10 @@ function applyLanguage(lang: Language): void {
   document.documentElement.dir = lang === 'en' ? 'ltr' : 'rtl';
 }
 
+// اللغة المحفوظة تُطبَّق عند الإقلاع لا عند التبديل وحده: بغير ذلك يُعاد
+// تحميل الصفحة بالإنجليزية نصّاً وبالعربية اتجاهاً، فينقلب التخطيط كلّه.
+applyLanguage(initialLanguage);
+
 export const useLanguageStore = create<LanguageState>((set) => ({
   language: initialLanguage,
   toggle: () =>
