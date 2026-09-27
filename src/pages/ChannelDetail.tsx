@@ -41,6 +41,9 @@ import WhatsAppConnectWizard from './WhatsAppConnectWizard';
 import { WidgetSettings, type WidgetSubTab } from './channelSettings/WidgetSettings';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { PlanLimitModal } from '@components/billing/PlanLimitModal';
+// ⚠️ مؤقّت — وضع تصوير الفيديو
+import { demoOAuthFor } from '@/config/videoDemo';
+import OAuthLoginDialog from '@components/demo/OAuthLoginDialog';
 
 interface ChannelTab {
   key: string;
@@ -72,6 +75,30 @@ export default function ChannelDetail(): JSX.Element {
   const [editing, setEditing] = useState<Channel | null>(null);
   const [form, setForm] = useState({ name: '', identifier: '', countryCode: '+968', departmentId: '' });
   const [creds, setCreds] = useState<Record<string, string>>({});
+  // ⚠️ مؤقّت — وضع تصوير الفيديو
+  const demoProvider = demoOAuthFor(type);
+  const [oauthOpen, setOauthOpen] = useState(false);
+  const [connectedVia, setConnectedVia] = useState<string | null>(null);
+
+  // ⚠️ مؤقّت — وضع تصوير الفيديو: لوحة «كيفية الربط» يجب أن تصف الطرق المعروضة
+  // فعلاً، وإلا شرحت للمشاهد طريقة لا يجدها في النافذة.
+  const howToMethods = demoProvider
+    ? [
+        {
+          key: 'oauth',
+          name: `تسجيل الدخول عبر ${demoProvider.name}`,
+          badge: { label: 'موصى به ★', cls: 'bg-success/15 text-success' },
+          steps: [
+            `اضغط «تسجيل الدخول عبر ${demoProvider.name}»`,
+            `سجّل الدخول بحساب ${demoProvider.name} الذي يملك الصلاحية`,
+            'وافق على الأذونات التي تطلبها QHub',
+            'اختر الحساب المراد ربطه — ويكتمل الربط فوراً',
+          ],
+        },
+        // في واتساب تبقى الطريقة الرسمية اليدوية متاحة إلى جانب تسجيل الدخول.
+        ...(type === 'whatsapp' ? (meta?.methods ?? []).filter((m) => m.key === 'cloud') : []),
+      ]
+    : meta?.methods;
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const [ratingFor, setRatingFor] = useState<Channel | null>(null);
@@ -115,6 +142,7 @@ export default function ChannelDetail(): JSX.Element {
     setEditing(null);
     setForm({ name: '', identifier: '', countryCode: '+968', departmentId: '' });
     setCreds({});
+    setConnectedVia(null); // ⚠️ مؤقّت — وضع تصوير الفيديو
     setAddOpen(true);
   };
 
@@ -134,6 +162,8 @@ export default function ChannelDetail(): JSX.Element {
     }
     setForm({ name: c.name, identifier: local, countryCode: cc, departmentId: c.departmentId ?? '' });
     setCreds(c.credentials ?? {});
+    // ⚠️ مؤقّت — وضع تصوير الفيديو: قناة محفوظة تحمل رموزاً تعني أن الربط تمّ.
+    setConnectedVia(Object.keys(c.credentials ?? {}).length > 0 ? c.name : null);
     setAddOpen(true);
   };
 
@@ -145,11 +175,20 @@ export default function ChannelDetail(): JSX.Element {
     const fullIdentifier = meta?.identifierType === 'phone'
       ? `${form.countryCode}${form.identifier.replace(/^0+/, '')}`
       : form.identifier;
-    // Require all declared credential fields before connecting
-    const missing = (meta.credentials ?? []).filter((f) => !creds[f.key]?.trim());
-    if (missing.length > 0) {
-      showToast(`${t('أكمل')}: ${missing.map((m) => m.label).join('، ')}`, 'error');
-      return;
+    // ⚠️ مؤقّت — وضع تصوير الفيديو: الرموز تأتي من تسجيل الدخول، فالمطلوب
+    // هنا إتمام تسجيل الدخول لا ملء الحقول.
+    if (demoProvider) {
+      if (!connectedVia) {
+        showToast(`${t('سجّل الدخول عبر')} ${demoProvider.name} ${t('أولاً')}`, 'error');
+        return;
+      }
+    } else {
+      // Require all declared credential fields before connecting
+      const missing = (meta.credentials ?? []).filter((f) => !creds[f.key]?.trim());
+      if (missing.length > 0) {
+        showToast(`${t('أكمل')}: ${missing.map((m) => m.label).join('، ')}`, 'error');
+        return;
+      }
     }
     const hasCreds = Object.keys(creds).length > 0;
     if (editing) {
@@ -488,9 +527,9 @@ export default function ChannelDetail(): JSX.Element {
         <div className="space-y-5">
           <section className="bg-white dark:bg-surface-dark rounded-card border border-border-light dark:border-border-dark p-5 sticky top-4">
             <h2 className="text-h3 font-bold mb-4">{t('كيفية الربط')}</h2>
-            {meta.methods && meta.methods.length > 0 ? (
+            {howToMethods && howToMethods.length > 0 ? (
               <div className="space-y-2">
-                {meta.methods.map((m) => {
+                {howToMethods.map((m) => {
                   const isOpen = openMethod === m.key;
                   return (
                     <div
@@ -614,8 +653,43 @@ export default function ChannelDetail(): JSX.Element {
             />
           )}
 
-          {/* Connection credentials (per channel type) */}
-          {meta.credentials && meta.credentials.length > 0 && (
+          {/* ⚠️ مؤقّت — وضع تصوير الفيديو: تسجيل الدخول عبر المزوّد يحلّ محلّ
+              لصق الرموز يدوياً لإنستغرام وماسنجر وتيك توك. انظر src/config/videoDemo.ts */}
+          {demoProvider ? (
+            <div className="space-y-3 p-4 rounded-card bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-center">
+              {connectedVia ? (
+                <>
+                  <div className="h-11 w-11 mx-auto rounded-full bg-success/15 flex items-center justify-center">
+                    <Check className="h-5 w-5 text-success" />
+                  </div>
+                  <p className="text-small font-semibold">تم الربط بـ {demoProvider.name}</p>
+                  <p className="text-[11px] text-muted-light dark:text-muted-dark">
+                    الحساب: <span className="font-semibold">{connectedVia}</span>
+                  </p>
+                  <button
+                    onClick={() => { setConnectedVia(null); setCreds({}); }}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    ربط حساب آخر
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-small font-semibold">اربط حسابك على {demoProvider.name}</p>
+                  <p className="text-[11px] text-muted-light dark:text-muted-dark">
+                    سجّل الدخول ووافق على الأذونات — لا حاجة لنسخ أي رموز يدوياً.
+                  </p>
+                  <button
+                    onClick={() => setOauthOpen(true)}
+                    className="w-full h-11 rounded-full text-white text-small font-semibold hover:opacity-90"
+                    style={{ background: demoProvider.color }}
+                  >
+                    تسجيل الدخول عبر {demoProvider.name}
+                  </button>
+                </>
+              )}
+            </div>
+          ) : meta.credentials && meta.credentials.length > 0 && (
             <div className="space-y-3 p-3 rounded-card bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark">
               <p className="text-small font-semibold flex items-center gap-1.5">
                 <KeyRound className="h-3.5 w-3.5 text-primary" />
@@ -759,6 +833,25 @@ export default function ChannelDetail(): JSX.Element {
       )}
 
       <PlanLimitModal open={planLimitOpen} onClose={() => setPlanLimitOpen(false)} />
+
+      {/* ⚠️ مؤقّت — وضع تصوير الفيديو: تدفّق تسجيل الدخول المحاكى.
+          عند نجاحه يملأ اسم القناة والمعرّف والرموز. */}
+      {demoProvider && (
+        <OAuthLoginDialog
+          open={oauthOpen}
+          provider={demoProvider}
+          onClose={() => setOauthOpen(false)}
+          onSuccess={({ account, credentials }) => {
+            setCreds(credentials);
+            setConnectedVia(account.name);
+            setForm((f) => ({
+              ...f,
+              name: f.name.trim() || account.name,
+              identifier: account.name,
+            }));
+          }}
+        />
+      )}
     </div>
   );
 }

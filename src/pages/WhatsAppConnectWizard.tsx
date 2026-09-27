@@ -23,8 +23,12 @@ import { WhatsAppIcon } from '@components/ui/BrandIcons';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { PlanLimitModal } from '@components/billing/PlanLimitModal';
 import type { Channel } from '@/types';
+// ⚠️ مؤقّت — وضع تصوير الفيديو
+import { VIDEO_DEMO, DEMO_OAUTH } from '@/config/videoDemo';
+import OAuthLoginDialog from '@components/demo/OAuthLoginDialog';
 
-type ConnectionMethod = 'cloud' | 'qr' | 'pairing';
+// 'oauth' مؤقّت — وضع تصوير الفيديو، انظر src/config/videoDemo.ts
+type ConnectionMethod = 'cloud' | 'qr' | 'pairing' | 'oauth';
 
 interface WizardState {
   method: ConnectionMethod | null;
@@ -99,6 +103,8 @@ export default function WhatsAppConnectWizard({
 
   const [step, setStep] = useState(0);
   const [state, setState] = useState<WizardState>(initialState);
+  // ⚠️ مؤقّت — وضع تصوير الفيديو
+  const [oauthOpen, setOauthOpen] = useState(false);
 
   // Reset / hydrate when the modal opens or the target channel changes
   useEffect(() => {
@@ -121,10 +127,14 @@ export default function WhatsAppConnectWizard({
   // - qr:      [method] [qr-scan]
   // - pairing: [method] [pairing-code]
   // In edit mode we skip the method picker — the channel always uses cloud creds.
+  // 'oauth' مؤقّت — وضع تصوير الفيديو: بعد نجاح تسجيل الدخول تُملأ الرموز
+  // تلقائياً، فيُتخطّى إدخالها ويُنتقل إلى التخصيص مباشرةً.
   const steps = isEditing
     ? ['connect', 'customize'] as const
     : state.method === 'cloud'
       ? ['method', 'connect', 'customize'] as const
+      : state.method === 'oauth'
+      ? ['method', 'customize'] as const
       : state.method === 'pairing'
       ? ['method', 'pairing'] as const
       : state.method === 'qr'
@@ -154,6 +164,9 @@ export default function WhatsAppConnectWizard({
   const next = (): void => {
     const err = validate();
     if (err) { showToast(err, 'error'); return; }
+    // ⚠️ مؤقّت — وضع تصوير الفيديو: «التالي» بعد اختيار تسجيل الدخول عبر Meta
+    // يفتح نافذة المزوّد بدل الانتقال؛ الانتقال يقع عند نجاحها.
+    if (currentKey === 'method' && state.method === 'oauth') { setOauthOpen(true); return; }
     if (isLast) { submit(); return; }
     setStep((s) => s + 1);
   };
@@ -162,7 +175,7 @@ export default function WhatsAppConnectWizard({
 
   const submit = (): void => {
     const credentials: Record<string, string> = {};
-    if (isEditing || state.method === 'cloud') {
+    if (isEditing || state.method === 'cloud' || state.method === 'oauth') {
       if (state.phoneNumberId) credentials.phoneNumberId = state.phoneNumberId;
       if (state.wabaId) credentials.wabaId = state.wabaId;
       if (state.accessToken) credentials.accessToken = state.accessToken;
@@ -286,6 +299,30 @@ export default function WhatsAppConnectWizard({
         )}
       </div>
       <PlanLimitModal open={planLimitOpen} onClose={() => setPlanLimitOpen(false)} />
+
+      {/* ⚠️ مؤقّت — وضع تصوير الفيديو: تدفّق تسجيل الدخول المحاكى عبر Meta.
+          عند نجاحه يملأ اسم القناة والرقم والرموز، ثم ينتقل إلى التخصيص. */}
+      {VIDEO_DEMO && (
+        <OAuthLoginDialog
+          open={oauthOpen}
+          provider={DEMO_OAUTH.whatsapp}
+          onClose={() => setOauthOpen(false)}
+          onSuccess={({ account, credentials }) => {
+            const digits = account.detail.replace(/[^\d+]/g, '');
+            setState((s) => ({
+              ...s,
+              channelName: account.name,
+              countryCode: digits.slice(0, 4) || s.countryCode,
+              phone: digits.slice(4) || s.phone,
+              phoneNumberId: credentials.phoneNumberId ?? '',
+              wabaId: credentials.wabaId ?? '',
+              graphApiVersion: credentials.graphApiVersion ?? s.graphApiVersion,
+            }));
+            setStep(1); // 'customize' — الرموز صارت جاهزة فلا حاجة لخطوة الإدخال
+            showToast(`تم ربط ${account.name} عبر Meta`, 'success');
+          }}
+        />
+      )}
     </div>,
     document.body,
   );
@@ -306,28 +343,45 @@ function MethodStep({
       icon: Cloud,
       badge: { label: 'موصى به ★', cls: 'bg-success/15 text-success' },
     },
-    {
-      key: 'pairing',
-      title: 'كود الاقتران',
-      subtitle: 'كود 8 أحرف يُدخل في واتساب',
-      pros: ['أبسط من QR', 'يعمل بدون كاميرا', 'مناسب لأجهزة بعيدة'],
-      cons: ['غير رسمي', 'خطر حظر محدود'],
-      icon: KeyRound,
-      badge: { label: 'الأسهل', cls: 'bg-primary/15 text-primary' },
-    },
-    {
-      key: 'qr',
-      title: 'QR Code',
-      subtitle: 'مسح ضوئي من الكاميرا',
-      pros: ['سريع جداً', 'لا حاجة لإدخال رقم'],
-      cons: ['غير رسمي', 'يحتاج كاميرا الهاتف'],
-      icon: QrCode,
-    },
+    // ⚠️ مؤقّت — وضع تصوير الفيديو: تُخفى الطريقتان غير الرسميتين
+    // (كود الاقتران وQR) ويحلّ محلّهما تسجيل الدخول عبر Meta.
+    ...(VIDEO_DEMO
+      ? [
+          {
+            key: 'oauth' as const,
+            title: 'تسجيل الدخول عبر Meta',
+            subtitle: 'ربط بنقرة واحدة دون نسخ رموز',
+            pros: ['بدون Access Token يدوي', 'اختيار الرقم من حسابك مباشرةً', 'الأذونات واضحة وقابلة للسحب'],
+            cons: ['يتطلّب صلاحية على حساب الأعمال'],
+            icon: Cloud,
+            badge: { label: 'الأسهل', cls: 'bg-primary/15 text-primary' },
+          },
+        ]
+      : [
+          {
+            key: 'pairing' as const,
+            title: 'كود الاقتران',
+            subtitle: 'كود 8 أحرف يُدخل في واتساب',
+            pros: ['أبسط من QR', 'يعمل بدون كاميرا', 'مناسب لأجهزة بعيدة'],
+            cons: ['غير رسمي', 'خطر حظر محدود'],
+            icon: KeyRound,
+            badge: { label: 'الأسهل', cls: 'bg-primary/15 text-primary' },
+          },
+          {
+            key: 'qr' as const,
+            title: 'QR Code',
+            subtitle: 'مسح ضوئي من الكاميرا',
+            pros: ['سريع جداً', 'لا حاجة لإدخال رقم'],
+            cons: ['غير رسمي', 'يحتاج كاميرا الهاتف'],
+            icon: QrCode,
+          },
+        ]),
   ];
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-2.5">
+      {/* الأعمدة تتبع عدد الطرق المعروضة، فلا يبقى عمود فارغ حين تُخفى طريقة. */}
+      <div className={cn('grid gap-2.5', options.length === 2 ? 'grid-cols-2' : 'grid-cols-3')}>
         {options.map((o) => {
           const Icon = o.icon;
           const selected = state.method === o.key;
