@@ -810,7 +810,7 @@ export default function Inbox(): JSX.Element {
                     return ch ? (
                       <div className="flex items-center gap-1 text-[11px] text-muted-light dark:text-muted-dark -mt-0.5">
                         <ChannelIcon type={ch.type} size={10} className="!h-3.5 !w-3.5" />
-                        <span>{ch.name}</span>
+                        <span>{t(ch.name)}</span>
                         <span className="opacity-60">·</span>
                         <span className="opacity-60" dir="ltr">{ch.identifier}</span>
                       </div>
@@ -1196,10 +1196,10 @@ export default function Inbox(): JSX.Element {
                   </>
                 )}
                 {callState === 'idle' && <span className="absolute -inset-1.5 rounded-full border-2 border-primary/20 animate-pulse" />}
-                <Avatar name={selectedContact.name} size="lg" />
+                <Avatar name={t(selectedContact.name)} size="lg" />
               </div>
               <div className="text-center">
-                <p className="text-h2 font-bold">{selectedContact.name}</p>
+                <p className="text-h2 font-bold">{t(selectedContact.name)}</p>
                 {selectedContact.phone && (
                   <p className="text-body text-muted-light dark:text-muted-dark mt-1" dir="ltr">{formatPhone(selectedContact.phone)}</p>
                 )}
@@ -1214,7 +1214,7 @@ export default function Inbox(): JSX.Element {
                 <div className="flex items-center gap-2 px-3 py-2 rounded-btn bg-bg-light dark:bg-bg-dark">
                   <ChannelIcon type={ch.type} size={18} />
                   <div className="flex flex-col text-start">
-                    <span className="text-small font-medium leading-tight">{ch.name}</span>
+                    <span className="text-small font-medium leading-tight">{t(ch.name)}</span>
                     <span className="text-small text-muted-light dark:text-muted-dark leading-tight" dir="ltr">{ch.identifier}</span>
                   </div>
                   <span className="h-2 w-2 rounded-full bg-success mr-auto" />
@@ -1597,7 +1597,7 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
                   return (
                     <>
                       <ChannelIcon type={sel.type} size={10} className="!h-5 !w-5" />
-                      <span className="truncate">{sel.name}</span>
+                      <span className="truncate">{t(sel.name)}</span>
                       <span className="text-[11px] text-muted-light dark:text-muted-dark font-mono">{sel.identifier}</span>
                     </>
                   );
@@ -1664,8 +1664,8 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
               >
                 {existingContact ? (
                   <span className="flex items-center gap-2 flex-1 min-w-0">
-                    <Avatar name={existingContact.name} size="xs" />
-                    <span className="font-medium truncate">{existingContact.name}</span>
+                    <Avatar name={t(existingContact.name)} size="xs" />
+                    <span className="font-medium truncate">{t(existingContact.name)}</span>
                     <span className="text-[11px] text-muted-light dark:text-muted-dark font-mono" dir="ltr">{formatPhone(existingContact.phone)}</span>
                   </span>
                 ) : (
@@ -1944,7 +1944,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
       <div className="flex-1 overflow-y-auto">
       {/* Contact header */}
       <div className="p-5 flex flex-col items-center text-center border-b border-border-light dark:border-border-dark">
-        <Avatar name={contact.name} size="lg" />
+        <Avatar name={t(contact.name)} size="lg" />
         {editingName ? (
           <input
             autoFocus
@@ -1959,7 +1959,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
             className="text-h3 font-bold mt-3 group cursor-pointer inline-flex items-center gap-1.5"
             onClick={() => { setEditName(contact.name); setEditingName(true); }}
           >
-            {contact.name}
+            {t(contact.name)}
             <Edit2 className="h-3 w-3 text-muted-light dark:text-muted-dark opacity-0 group-hover:opacity-100 transition-opacity" />
           </p>
         )}
@@ -2020,13 +2020,13 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
           className="relative flex flex-wrap items-center gap-1.5 min-h-[36px] px-2.5 py-1.5 rounded-lg border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark cursor-pointer"
           onClick={() => { if (!tagsOpen) setTagsOpen(true); }}
         >
-          {contact.tags.map((t) => (
-            <span key={t} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-small">
-              {t}
+          {contact.tags.map((tag) => (
+            <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-small">
+              {t(tag)}
               <button
-                onClick={(e) => { e.stopPropagation(); removeContactTag(contact.id, t); showToast(`تم إزالة: ${t}`, 'success'); }}
+                onClick={(e) => { e.stopPropagation(); removeContactTag(contact.id, tag); showToast(`${t('تم إزالة')}: ${t(tag)}`, 'success'); }}
                 className="hover:bg-primary/20 rounded-full p-0.5"
-                aria-label={`إزالة ${t}`}
+                aria-label={`${t('إزالة')} ${t(tag)}`}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -2036,7 +2036,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
             <span className="text-small text-muted-light dark:text-muted-dark">{t('اختر وسم...')}</span>
           )}
           {tagsOpen && (() => {
-            const available = allTags.filter((t) => !contact.tags.includes(t));
+            const available = allTags.filter((x) => !contact.tags.includes(x));
             return (
               <div className="absolute top-full mt-1 inset-x-0 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg shadow-card-hover py-1 z-20 max-h-40 overflow-y-auto">
                 {available.length > 0 ? available.map((t) => (
@@ -2158,7 +2158,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
         <Attr label={t('بدأت')} value={startedFull} />
         <Attr
           label={t('القناة')}
-          value={convChannel?.name ?? t('غير محدد')}
+          value={t(convChannel?.name ?? 'غير محدد')}
           icon={convChannel ? <ChannelIcon type={convChannel.type} size={10} className="!h-3.5 !w-3.5" /> : undefined}
         />
         {conversation.sessionCount > 1 && (
@@ -2322,7 +2322,7 @@ function AssigneeRow<T extends { id: string; name: string; color?: string }>({
                   className="w-full flex items-center gap-2 px-3 py-2 text-small hover:bg-bg-light dark:hover:bg-bg-dark text-start"
                 >
                   {renderIndicator(opt)}
-                  <span className="flex-1 font-medium truncate">{opt.name}</span>
+                  <span className="flex-1 font-medium truncate">{t(opt.name)}</span>
                   {current?.id === opt.id && <Check className="h-3.5 w-3.5 text-primary" />}
                 </button>
               ))}
@@ -2611,7 +2611,7 @@ function FilterDrawer({
         <div className="flex-1 space-y-6 overflow-y-auto">
           <FilterPanel
             title={t('القناة')}
-            options={channels.map((c) => ({ id: c.id, label: c.name, indicator: <ChannelIcon type={c.type} size={10} className="!h-4 !w-4" /> }))}
+            options={channels.map((c) => ({ id: c.id, label: t(c.name), indicator: <ChannelIcon type={c.type} size={10} className="!h-4 !w-4" /> }))}
             selectedId={tmpChannel}
             onSelect={setTmpChannel}
             allLabel="كل القنوات"
@@ -2731,7 +2731,7 @@ function ViewOption({ item, active, onClick }: { item: { label: string; count: n
       )}
     >
       <span className="flex-shrink-0">{item.icon}</span>
-      <span className="truncate">{item.label}</span>
+      <span className="truncate">{t(item.label)}</span>
       {item.count > 0 && (
         <span className="text-[11px] font-medium text-muted-light dark:text-muted-dark tabular-nums">
           {item.count}

@@ -1245,4 +1245,23 @@ export const en: Record<string, string> = {
   'محادثات أخرى': 'Other conversations',
   'تم تحويل المحادثة إلى': 'Conversation transferred to',
 
+  // ── أسماء القنوات والوسوم في البيانات التجريبية ──
+  'المبيعات - عقارات': 'Sales — Real Estate',
+  'الفواتير والدفع': 'Billing & Payments',
+  'موقع Qhub - شات حي': 'Qhub site — Live chat',
+  'تم إزالة': 'Removed',
+  // الوسوم
+  'مسقط': 'Muscat',
+  'نزوى': 'Nizwa',
+  'صلالة': 'Salalah',
+  'صحار': 'Sohar',
+  'الخوض': 'Al Khoud',
+  'فيلا': 'Villa',
+  'شقة': 'Apartment',
+  'مطور': 'Developer',
+  'مالك ذهبي': 'Gold owner',
+  'عاجل': 'Urgent',
+  'إيجار': 'Rent',
+  'شراء': 'Purchase',
+  'سيارات': 'Cars',
 };
