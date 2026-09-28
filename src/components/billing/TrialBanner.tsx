@@ -17,8 +17,13 @@ function daysLabel(n: number, ar: boolean): string {
 /**
  * شريط دائم يعلو التطبيق ما دام العميل في فترة تجريبية.
  *
- * أعلى الشِلّ لا داخل الصفحات: الحالة تخصّ الحساب كلّه لا صفحةً بعينها،
- * ووضعه هنا يضمن ظهوره مرّة واحدة في كل مسار دون تكرار.
+ * موضعه أعلى الشِلّ لا داخل الصفحات: الحالة تخصّ الحساب كلّه لا صفحةً
+ * بعينها، فيظهر مرّة واحدة في كل مسار، ويبقى مرئياً في وضع التركيز حيث
+ * يُخفى الهيدر.
+ *
+ * ولونه محايد داكن لا أزرق الهوية عمداً: صبغ شريط إعلاميّ بلون الهوية
+ * يُفقد الأفعال الحقيقية بروزها في الشاشة كلّها، فبقي الأزرق للفعل وحده
+ * وصار الزرّ الأبيض أعلى تباين هنا.
  *
  * يختفي وحده بانتهاء المدّة — عندها تتولّى نافذة انتهاء التجربة الأمر،
  * فلا يجتمع تنبيهان على المعنى ذاته.
@@ -31,27 +36,12 @@ export function TrialBanner(): JSX.Element | null {
   if (!active) return null;
 
   return (
-    <div
-      className={cn(
-        'relative isolate flex-shrink-0 overflow-hidden',
-        'border-b border-border-light/60 dark:border-border-dark/60'
-      )}
-    >
-      {/* تدرّج خفيف خلف الشريط: يميّزه عن الهيدر دون أن ينافس محتوى الصفحة. */}
-      <div
-        aria-hidden
-        className={cn(
-          'absolute inset-0 -z-10 bg-gradient-to-l',
-          endingSoon
-            ? 'from-danger/10 via-warning/10 to-transparent'
-            : 'from-primary/10 via-primary/5 to-transparent'
-        )}
-      />
+    <div className="flex-shrink-0 bg-[#0B1220] text-white">
       <div className="flex items-center gap-3 px-4 sm:px-6 h-11">
         <span
           className={cn(
             'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold flex-shrink-0',
-            endingSoon ? 'bg-danger/15 text-danger' : 'bg-primary/15 text-primary'
+            endingSoon ? 'bg-danger/20 text-[#FCA5A5]' : 'bg-white/10 text-white/90'
           )}
         >
           <Sparkles className="h-3 w-3" />
@@ -59,8 +49,10 @@ export function TrialBanner(): JSX.Element | null {
         </span>
 
         <p className="text-small min-w-0 truncate">
-          <span className="font-semibold">{daysLabel(daysLeft, ar)}</span>
-          <span className="text-muted-light dark:text-muted-dark">
+          <span className={cn('font-semibold', endingSoon && 'text-[#FCA5A5]')}>
+            {daysLabel(daysLeft, ar)}
+          </span>
+          <span className="text-white/55">
             {' — '}
             {t('اشترك الآن لتحتفظ بمحادثاتك وإعداداتك دون انقطاع.')}
           </span>
@@ -68,11 +60,7 @@ export function TrialBanner(): JSX.Element | null {
 
         <button
           onClick={() => navigate('/subscribe')}
-          className={cn(
-            'ms-auto flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full',
-            'text-[12px] font-semibold text-white transition-colors',
-            endingSoon ? 'bg-danger hover:bg-danger/90' : 'bg-primary hover:bg-primary-dark'
-          )}
+          className="ms-auto flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full bg-white text-[#0B1220] text-[12px] font-semibold hover:bg-white/90 transition-colors"
         >
           {t('اختر باقة')}
           <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-0 ltr:rotate-180" />

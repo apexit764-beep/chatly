@@ -1269,4 +1269,5 @@ export const en: Record<string, string> = {
   'اشترك الآن لتحتفظ بمحادثاتك وإعداداتك دون انقطاع.':
     'Subscribe now to keep your conversations and settings without interruption.',
   'اختر باقة': 'Choose a plan',
+  'في باقتك التجريبية': 'on your trial plan',
 };
