@@ -78,7 +78,7 @@ import { closeConversationWithRating } from '@/utils/closeConversation';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { PlanLimitModal } from '@components/billing/PlanLimitModal';
 import { useSettingsStore } from '@/store/useSettingsStore';
-import { useAIStore } from '@/store/useAIStore';
+import { useAIStore, resolveBehavior } from '@/store/useAIStore';
 import { contactTypeLabel } from '@/utils/labels';
 import { transcribeAudio, getAIResponse } from '@/utils/ai';
 import { formatPhone, formatTime, timeAgo } from '@/utils/format';
@@ -287,7 +287,7 @@ export default function Inbox(): JSX.Element {
   }, [selectedId, markRead]);
 
   const aiSettings = useAIStore((s) => s.settings);
-  const aiBehaviors = useAIStore((s) => s.channelBehaviors);
+  const aiOverrides = useAIStore((s) => s.channelOverrides);
   const updateTranscription = useDataStore((s) => s.updateMessageTranscription);
   const setTranscribing = useDataStore((s) => s.setMessageTranscribing);
   const simulateAIReply = useDataStore((s) => s.simulateAIReply);
@@ -324,7 +324,7 @@ export default function Inbox(): JSX.Element {
                 // account; only the vendor connection is shared.
                 const reply = await getAIResponse(
                   transcription,
-                  { ...aiSettings, ...(aiBehaviors[conv.channelId] ?? {}) },
+                  { ...aiSettings, ...resolveBehavior(aiSettings, aiOverrides[conv.channelId]) },
                   history,
                 );
                 simulateAIReply(conv.id, reply);
@@ -336,7 +336,7 @@ export default function Inbox(): JSX.Element {
         }
       });
     });
-  }, [conversations, aiSettings, aiBehaviors, updateTranscription, setTranscribing, simulateAIReply]);
+  }, [conversations, aiSettings, aiOverrides, updateTranscription, setTranscribing, simulateAIReply]);
 
   // ESC exits focus mode
   useEffect(() => {

@@ -134,16 +134,79 @@ export function pickBehavior(s: AISettings | AIBehavior): AIBehavior {
   return out as AIBehavior;
 }
 
+export function pickShared(s: AISettings): Pick<AISettings, (typeof AI_SHARED_KEYS)[number]> {
+  const out: Record<string, unknown> = {};
+  for (const k of AI_SHARED_KEYS) out[k] = s[k];
+  return out as Pick<AISettings, (typeof AI_SHARED_KEYS)[number]>;
+}
+
+/**
+ * السلوك مقسوم ثلاثة أقسام، ولكل حساب أن يرث كل قسم من الافتراضي أو
+ * يخصّصه وحده. قبلها كان التخصيص كتلة واحدة: تعديل ساعات واتساب ينسخ
+ * معرفته ونبرته أيضاً، فيتوقّف عن متابعة أي تعديل لاحق على الافتراضي.
+ */
+export type BehaviorGroup = 'style' | 'knowledge' | 'transfer';
+
+export const BEHAVIOR_GROUPS = {
+  style: ['languages', 'tone', 'dialect', 'gulfCountry'],
+  knowledge: ['prompt', 'forbiddenTopics', 'forbiddenReply', 'useKnowledgeBase', 'learnFromAgents'],
+  transfer: [
+    'transferOnRequest',
+    'transferOnFailure',
+    'transferOnNegativeSentiment',
+    'transferOnRepeat',
+    'transferOnPayment',
+    'transferOnUrgent',
+    'transferKeywords',
+    'transferTargetType',
+    'transferAgentId',
+    'transferDepartmentId',
+    'alwaysOn',
+    'schedule',
+    'offHoursMessage',
+    'autoCloseEnabled',
+    'autoCloseHours',
+  ],
+} as const satisfies Record<BehaviorGroup, readonly (keyof AIBehavior)[]>;
+
+// حقل سلوك جديد لا ينتمي لقسم لا يمكن تخصيصه ولا يُحفظ لأي حساب — فيفشل
+// البناء هنا بدل أن يضيع الحقل بصمت.
+type GroupedKey = (typeof BEHAVIOR_GROUPS)[BehaviorGroup][number];
+const _everyBehaviorKeyIsGrouped: Exclude<keyof AIBehavior, GroupedKey> extends never ? true : never = true;
+void _everyBehaviorKeyIsGrouped;
+
+export const BEHAVIOR_GROUP_ORDER: BehaviorGroup[] = ['style', 'knowledge', 'transfer'];
+
+export function pickGroup(s: AIBehavior | AISettings, group: BehaviorGroup): Partial<AIBehavior> {
+  const out: Record<string, unknown> = {};
+  for (const k of BEHAVIOR_GROUPS[group]) out[k] = s[k];
+  return out as Partial<AIBehavior>;
+}
+
+/** الأقسام التي خصّصها حساب؛ القسم الغائب يُورَث من الافتراضي. */
+export type ChannelOverride = Partial<Record<BehaviorGroup, Partial<AIBehavior>>>;
+
+/** السلوك الفعلي لحساب: الافتراضي، وفوقه كل قسم خصّصه. */
+export function resolveBehavior(settings: AISettings, override?: ChannelOverride): AIBehavior {
+  const out = pickBehavior(settings);
+  if (!override) return out;
+  for (const g of BEHAVIOR_GROUP_ORDER) {
+    if (override[g]) Object.assign(out, override[g]);
+  }
+  return out;
+}
+
 interface AIState {
   /** Shared connection + the default behavior inherited by unconfigured accounts. */
   settings: AISettings;
-  /** Behavior overrides, keyed by channel id. Absent means "inherit the defaults". */
-  channelBehaviors: Record<string, AIBehavior>;
+  /** Per-section overrides keyed by channel id. A missing section inherits the default. */
+  channelOverrides: Record<string, ChannelOverride>;
   setSettings: (patch: Partial<AISettings>) => void;
-  /** Give one account its own behavior. */
-  setChannelBehavior: (channelId: string, behavior: AIBehavior) => void;
-  /** Drop an account's override so it follows the defaults again. */
-  clearChannelBehavior: (channelId: string) => void;
+  /**
+   * يكتب أقسام حساب دفعة واحدة: قسم بقيمٍ يُخصَّص، وقسم بـ`null` يعود للافتراضي.
+   * الأقسام غير المذكورة لا تُمسّ.
+   */
+  setChannelGroups: (channelId: string, groups: Partial<Record<BehaviorGroup, Partial<AIBehavior> | null>>) => void;
   /** Behavior in effect for an account, falling back to the defaults. */
   behaviorFor: (channelId: string) => AIBehavior;
   reset: () => void;
@@ -238,7 +301,9 @@ const DEFAULT_SETTINGS: AISettings = {
 };
 
 const STORAGE_KEY = 'qhub_ai_settings';
-const BEHAVIORS_KEY = 'qhub_ai_channel_behaviors';
+const OVERRIDES_KEY = 'qhub_ai_channel_overrides';
+/** الصيغة القديمة: سلوك كامل لكل حساب. تُقرأ مرة لترحيلها ولا يُكتب فيها. */
+const LEGACY_BEHAVIORS_KEY = 'qhub_ai_channel_behaviors';
 
 function loadInitial(): AISettings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS;
@@ -251,17 +316,38 @@ function loadInitial(): AISettings {
   }
 }
 
-function loadBehaviors(): Record<string, AIBehavior> {
+function loadOverrides(): Record<string, ChannelOverride> {
   if (typeof window === 'undefined') return {};
+  // Fill any field added since an override was written, so a stored section
+  // never leaves the form with undefined values.
+  const base = pickBehavior(DEFAULT_SETTINGS);
+  const fill = (group: BehaviorGroup, values: Partial<AIBehavior>): Partial<AIBehavior> => ({
+    ...pickGroup(base, group),
+    ...pickGroup({ ...base, ...values }, group),
+  });
   try {
-    const raw = localStorage.getItem(BEHAVIORS_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as Record<string, Partial<AIBehavior>>;
-    // Fill any field added since the override was written, so a stored override
-    // never leaves the form with undefined values.
-    const base = pickBehavior(DEFAULT_SETTINGS);
+    const raw = localStorage.getItem(OVERRIDES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Record<string, ChannelOverride>;
+      return Object.fromEntries(
+        Object.entries(parsed).map(([id, o]) => [
+          id,
+          Object.fromEntries(
+            BEHAVIOR_GROUP_ORDER.filter((g) => o[g]).map((g) => [g, fill(g, o[g]!)])
+          ) as ChannelOverride,
+        ])
+      );
+    }
+    // الحساب المخصّص بالصيغة القديمة خُصّص كله، فيصير مخصّصاً في الأقسام
+    // الثلاثة بقيمه نفسها — لا يرث فجأة شيئاً لم يكن يرثه.
+    const legacy = localStorage.getItem(LEGACY_BEHAVIORS_KEY);
+    if (!legacy) return {};
+    const parsed = JSON.parse(legacy) as Record<string, Partial<AIBehavior>>;
     return Object.fromEntries(
-      Object.entries(parsed).map(([id, b]) => [id, { ...base, ...b }])
+      Object.entries(parsed).map(([id, b]) => [
+        id,
+        Object.fromEntries(BEHAVIOR_GROUP_ORDER.map((g) => [g, fill(g, b)])) as ChannelOverride,
+      ])
     );
   } catch {
     return {};
@@ -272,37 +358,39 @@ function persist(s: AISettings): void {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* ignore */ }
 }
 
-function persistBehaviors(b: Record<string, AIBehavior>): void {
-  try { localStorage.setItem(BEHAVIORS_KEY, JSON.stringify(b)); } catch { /* ignore */ }
+function persistOverrides(o: Record<string, ChannelOverride>): void {
+  try { localStorage.setItem(OVERRIDES_KEY, JSON.stringify(o)); } catch { /* ignore */ }
 }
 
 export const useAIStore = create<AIState>((set, get) => ({
   settings: loadInitial(),
-  channelBehaviors: loadBehaviors(),
+  channelOverrides: loadOverrides(),
   setSettings: (patch) =>
     set((s) => {
       const next = { ...s.settings, ...patch };
       persist(next);
       return { settings: next };
     }),
-  setChannelBehavior: (channelId, behavior) =>
+  setChannelGroups: (channelId, groups) =>
     set((s) => {
-      const next = { ...s.channelBehaviors, [channelId]: pickBehavior(behavior) };
-      persistBehaviors(next);
-      return { channelBehaviors: next };
-    }),
-  clearChannelBehavior: (channelId) =>
-    set((s) => {
-      const next = { ...s.channelBehaviors };
-      delete next[channelId];
-      persistBehaviors(next);
-      return { channelBehaviors: next };
+      const current: ChannelOverride = { ...(s.channelOverrides[channelId] ?? {}) };
+      for (const g of BEHAVIOR_GROUP_ORDER) {
+        if (!(g in groups)) continue;
+        const values = groups[g];
+        if (values) current[g] = pickGroup(values as AIBehavior, g);
+        else delete current[g];
+      }
+      const next = { ...s.channelOverrides };
+      if (Object.keys(current).length) next[channelId] = current;
+      else delete next[channelId];
+      persistOverrides(next);
+      return { channelOverrides: next };
     }),
   behaviorFor: (channelId) =>
-    get().channelBehaviors[channelId] ?? pickBehavior(get().settings),
+    resolveBehavior(get().settings, get().channelOverrides[channelId]),
   reset: () => {
     persist(DEFAULT_SETTINGS);
-    persistBehaviors({});
-    set({ settings: DEFAULT_SETTINGS, channelBehaviors: {} });
+    persistOverrides({});
+    set({ settings: DEFAULT_SETTINGS, channelOverrides: {} });
   },
 }));
