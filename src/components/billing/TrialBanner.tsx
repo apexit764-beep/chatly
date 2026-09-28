@@ -35,13 +35,18 @@ export function TrialBanner(): JSX.Element | null {
 
   if (!active) return null;
 
+  // التصعيد على مرحلتين: حبّة حمراء في آخر ثلاثة أيام، والشريط كلّه أحمر
+  // في اليوم الأخير وحده. صبغه أحمر ثلاثة أيام متّصلة يحرق التصعيد باكراً،
+  // فتألفه العين ويعود خلفيةً لا تنبيهاً.
+  const red = daysLeft <= 1;
+
   return (
-    <div className="flex-shrink-0 bg-[#0B1220] text-white">
+    <div className={cn('flex-shrink-0 text-white', red ? 'bg-[#B42318]' : 'bg-[#0B1220]')}>
       <div className="flex items-center gap-3 px-4 sm:px-6 h-11">
         <span
           className={cn(
             'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold flex-shrink-0',
-            endingSoon ? 'bg-danger/20 text-[#FCA5A5]' : 'bg-white/10 text-white/90'
+            red ? 'bg-white/20 text-white' : endingSoon ? 'bg-danger text-white' : 'bg-white/10 text-white/90'
           )}
         >
           <Sparkles className="h-3 w-3" />
@@ -49,7 +54,7 @@ export function TrialBanner(): JSX.Element | null {
         </span>
 
         <p className="text-small min-w-0 truncate">
-          <span className={cn('font-semibold', endingSoon && 'text-[#FCA5A5]')}>
+          <span className={cn('font-semibold', !red && endingSoon && 'text-[#FCA5A5]')}>
             {daysLabel(daysLeft, ar)}
           </span>
           <span className="text-white/55">
@@ -60,7 +65,10 @@ export function TrialBanner(): JSX.Element | null {
 
         <button
           onClick={() => navigate('/subscribe')}
-          className="ms-auto flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full bg-white text-[#0B1220] text-[12px] font-semibold hover:bg-white/90 transition-colors"
+          className={cn(
+            'ms-auto flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full bg-white text-[12px] font-semibold hover:bg-white/90 transition-colors',
+            red ? 'text-[#B42318]' : 'text-[#0B1220]'
+          )}
         >
           {t('اختر باقة')}
           <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-0 ltr:rotate-180" />
