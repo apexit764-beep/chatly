@@ -488,9 +488,14 @@ export default function AISettings(): JSX.Element {
         </button>
       </div>
 
-      {/* Accounts tab — channel picker strip */}
+      {/*
+        المنتقي وتبويباته في بطاقة واحدة لا بطاقتين متجاورتين: الشريط يختار
+        الحساب، والتبويبات تحته تعرض إعداداته — فهما رأس كتلة واحدة، وفصلهما
+        كان يجعل المنتقي جزيرةً معلّقة فوق إعدادات لا يظهر أنها تخصّه.
+      */}
       {tab === 'accounts' && (
-        <Card className="p-5">
+        <Card className="p-0 overflow-hidden">
+          <div className="p-5">
           <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
             <div>
               <p className="text-body font-bold">الحسابات المربوطة</p>
@@ -544,29 +549,31 @@ export default function AISettings(): JSX.Element {
                 ? `${scopedAccount.name} له إعداداته الخاصة.`
                 : `${scopedAccount.name} يستخدم الإعدادات الافتراضية — أي تعديل تحفظه هنا بينطبق عليه لحاله.`}
           </p>
-        </Card>
-      )}
+          </div>
 
-      {/* Behavior sub-tabs — visible only in accounts tab when an account is selected */}
-      {tab === 'accounts' && scopedAccount && (
-        <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2 overflow-x-auto">
-          {([
-            { key: 'knowledge', label: 'المعرفة والقيود', Icon: BookOpen },
-            { key: 'transfer', label: 'التحويل والجدولة', Icon: UserCog },
-          ] as { key: BehaviorTab; label: string; Icon: typeof Mic }[]).map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setSubTab(t.key)}
-              className={cn(
-                'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
-                subTab === t.key ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
-              )}
-            >
-              <t.Icon className="h-4 w-4" />
-              {t.label}
-            </button>
-          ))}
-        </div>
+          {/* تبويبات الحساب المختار — داخل البطاقة نفسها بحدٍّ يفصلها عن المنتقي
+              لا ببياض يقطعها عنه. */}
+          {scopedAccount && (
+            <div className="flex items-center gap-1 px-5 border-t border-border-light dark:border-border-dark bg-bg-light/40 dark:bg-bg-dark/30 overflow-x-auto">
+              {([
+                { key: 'knowledge', label: 'المعرفة والقيود', Icon: BookOpen },
+                { key: 'transfer', label: 'التحويل والجدولة', Icon: UserCog },
+              ] as { key: BehaviorTab; label: string; Icon: typeof Mic }[]).map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setSubTab(t.key)}
+                  className={cn(
+                    'h-11 px-4 text-small font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap',
+                    subTab === t.key ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+                  )}
+                >
+                  <t.Icon className="h-4 w-4" />
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </Card>
       )}
 
 
