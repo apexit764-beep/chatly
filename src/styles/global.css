@@ -196,29 +196,9 @@ input[inputmode='tel'] {
 }
 
 
-/* ── شريط الفترة التجريبية ──────────────────────────────────────────
-   بريقٌ يمرّ مرّةً كل تسع ثوانٍ لا حركةً متّصلة: العنصر دائم على الشاشة،
-   والحركة المستمرّة عليه تتحوّل إزعاجاً بعد دقيقة. */
-.qh-trial-sheen::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    100deg,
-    transparent 35%,
-    rgba(255, 255, 255, 0.07) 48%,
-    rgba(255, 255, 255, 0.12) 50%,
-    rgba(255, 255, 255, 0.07) 52%,
-    transparent 65%
-  );
-  background-size: 260% 100%;
-  animation: qhTrialSheen 9s ease-in-out infinite;
-}
-@keyframes qhTrialSheen {
-  0%, 62%  { background-position: 160% 0; }
-  100%     { background-position: -60% 0; }
-}
+/* كان هنا بريقٌ أبيض يعبر شريط الفترة التجريبية. أُزيل مع انقلاب الشريط
+   إلى تنبيه فاتح: طبقة بيضاء فوق أرضية فاتحة لا تُرى أصلاً، فبقيت حركةً
+   تُحسب ولا تُبصَر. والساعة الرمليّة أدناه تكفي وحدها. */
 
 /* ── الساعة الرمليّة ────────────────────────────────────────────────
    دورة واحدة من تسع ثوانٍ: الرمل ينزل ببطء حتى الثانية السابعة، ثم
@@ -277,7 +257,6 @@ input[inputmode='tel'] {
   .qh-ai-halo,
   .qh-ai-bob,
   .qh-ai-eye,
-  .qh-trial-sheen::after,
   .qh-trial-pulse,
   .qh-hg-frame,
   .qh-hg-top,
@@ -285,6 +264,5 @@ input[inputmode='tel'] {
   .qh-hg-stream {
     animation: none;
   }
-  .qh-trial-sheen::after { opacity: 0; }
   .qh-ai-halo { opacity: 0.25; }
 }
