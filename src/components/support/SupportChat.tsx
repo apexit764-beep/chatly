@@ -14,6 +14,33 @@ function formatTime(iso: string): string {
   }
 }
 
+/** مكان الزرّ بعد سحبه — يبقى حيث تركه المستخدم بين الزيارات. */
+const FAB_POS_KEY = 'qhub_support_fab_pos';
+const FAB_SIZE = 56;
+const EDGE = 12;
+/** أقل مسافة تُعدّ سحباً — ما دونها نقرة، حتى لا ترتجف اليد فتُلغي الفتح. */
+const DRAG_THRESHOLD = 5;
+
+interface Point { x: number; y: number }
+
+function clampToViewport(p: Point): Point {
+  return {
+    x: Math.min(Math.max(EDGE, p.x), window.innerWidth - FAB_SIZE - EDGE),
+    y: Math.min(Math.max(EDGE, p.y), window.innerHeight - FAB_SIZE - EDGE),
+  };
+}
+
+function loadFabPos(): Point | null {
+  try {
+    const raw = localStorage.getItem(FAB_POS_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw) as Point;
+    return Number.isFinite(p.x) && Number.isFinite(p.y) ? clampToViewport(p) : null;
+  } catch {
+    return null;
+  }
+}
+
 const QUICK_REPLIES = [
   'كيف أضيف موظف جديد؟',
   'كيف أربط واتساب؟',
@@ -36,6 +63,93 @@ export function SupportChat(): JSX.Element {
   const [draft, setDraft] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * الزرّ قابل للسحب لأن مكانه الثابت يغطّي أزراراً في بعض الصفحات (مثل
+   * «حفظ التغييرات»). `null` = المكان الافتراضي في الزاوية.
+   */
+  const [fabPos, setFabPos] = useState<Point | null>(loadFabPos);
+  const [dragging, setDragging] = useState(false);
+  const drag = useRef<{ start: Point; origin: Point; moved: boolean } | null>(null);
+  /** النقرة التي تُنهي سحباً لا تفتح الدردشة. */
+  const suppressClick = useRef(false);
+  const [viewport, setViewport] = useState({ w: window.innerWidth, h: window.innerHeight });
+
+  useEffect(() => {
+    const onResize = (): void => {
+      setViewport({ w: window.innerWidth, h: window.innerHeight });
+      setFabPos((p) => (p ? clampToViewport(p) : p));
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const onFabPointerDown = (e: React.PointerEvent<HTMLButtonElement>): void => {
+    if (e.button !== 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    drag.current = {
+      start: { x: e.clientX, y: e.clientY },
+      origin: { x: rect.left, y: rect.top },
+      moved: false,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onFabPointerMove = (e: React.PointerEvent<HTMLButtonElement>): void => {
+    const d = drag.current;
+    if (!d) return;
+    const dx = e.clientX - d.start.x;
+    const dy = e.clientY - d.start.y;
+    if (!d.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+    if (!d.moved) {
+      d.moved = true;
+      setDragging(true);
+    }
+    setFabPos(clampToViewport({ x: d.origin.x + dx, y: d.origin.y + dy }));
+  };
+
+  const onFabPointerUp = (e: React.PointerEvent<HTMLButtonElement>): void => {
+    const d = drag.current;
+    drag.current = null;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    if (!d?.moved) return;
+    suppressClick.current = true;
+    setDragging(false);
+  };
+
+  // Saved once the drag ends, not on every pointer move.
+  useEffect(() => {
+    if (dragging || !fabPos) return;
+    try { localStorage.setItem(FAB_POS_KEY, JSON.stringify(fabPos)); } catch { /* ignore */ }
+  }, [dragging, fabPos]);
+
+  const onFabClick = (): void => {
+    if (suppressClick.current) {
+      suppressClick.current = false;
+      return;
+    }
+    toggleOpen();
+  };
+
+  /**
+   * النافذة تفتح بجانب الزرّ أينما كان: فوقه إن كان في النصف السفلي وتحته
+   * إن كان في العلوي، ومحاذيةً لحافّته القريبة من طرف الشاشة.
+   */
+  const panelWidth = Math.min(380, viewport.w - 48);
+  const panelHeight = Math.min(560, viewport.h - 128);
+  const panelAbove = fabPos ? fabPos.y + FAB_SIZE / 2 > viewport.h / 2 : true;
+  const panelStyle: React.CSSProperties | undefined = fabPos
+    ? {
+        left: Math.min(
+          Math.max(EDGE, fabPos.x + FAB_SIZE / 2 > viewport.w / 2 ? fabPos.x + FAB_SIZE - panelWidth : fabPos.x),
+          viewport.w - panelWidth - EDGE
+        ),
+        top: Math.min(
+          Math.max(EDGE, panelAbove ? fabPos.y - 16 - panelHeight : fabPos.y + FAB_SIZE + 16),
+          viewport.h - panelHeight - EDGE
+        ),
+      }
+    : undefined;
 
   useEffect(() => {
     if (!open) return;
@@ -69,12 +183,22 @@ export function SupportChat(): JSX.Element {
     <>
       {/* FAB */}
       <button
-        onClick={toggleOpen}
+        onClick={onFabClick}
+        onPointerDown={onFabPointerDown}
+        onPointerMove={onFabPointerMove}
+        onPointerUp={onFabPointerUp}
+        onPointerCancel={onFabPointerUp}
         aria-label={open ? 'إغلاق دردشة الدعم' : 'فتح دردشة الدعم'}
-        className="fixed bottom-6 end-6 z-[90] group"
+        title="اضغط للفتح · اسحب لتحريكه"
+        style={fabPos ? { left: fabPos.x, top: fabPos.y } : undefined}
+        className={cn(
+          'fixed z-[90] group touch-none select-none',
+          !fabPos && 'bottom-6 end-6',
+          dragging ? 'cursor-grabbing' : 'cursor-grab'
+        )}
       >
         {/* Pulse rings */}
-        {!open && (
+        {!open && !dragging && (
           <>
             <span className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
             <span className="absolute inset-[-4px] rounded-full bg-primary/10 animate-pulse" />
@@ -84,7 +208,8 @@ export function SupportChat(): JSX.Element {
           className={cn(
             'relative h-14 w-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-300',
             'bg-gradient-to-br from-primary to-primary-dark text-white',
-            'group-hover:scale-110 group-active:scale-95 group-hover:shadow-2xl group-hover:shadow-primary/30',
+            'group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-primary/30',
+            dragging ? 'scale-110 shadow-2xl shadow-primary/40' : 'group-active:scale-95',
             open && 'rotate-180'
           )}
         >
@@ -105,11 +230,12 @@ export function SupportChat(): JSX.Element {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.96 }}
+            initial={{ opacity: 0, y: panelAbove ? 20 : -20, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.96 }}
+            exit={{ opacity: 0, y: panelAbove ? 20 : -20, scale: 0.96 }}
             transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-            className="fixed bottom-24 end-6 z-[91] w-[380px] max-w-[calc(100vw-3rem)] h-[560px] max-h-[calc(100vh-8rem)] bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-2xl flex flex-col overflow-hidden"
+            style={panelStyle}
+            className={cn('fixed z-[91]', !fabPos && 'bottom-24 end-6', 'w-[380px] max-w-[calc(100vw-3rem)] h-[560px] max-h-[calc(100vh-8rem)] bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-2xl flex flex-col overflow-hidden')}
           >
             {/* Header */}
             <div className="bg-gradient-to-br from-primary to-primary-dark text-white px-4 py-3 flex items-start gap-3 flex-shrink-0">
