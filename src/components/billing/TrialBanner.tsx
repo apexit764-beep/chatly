@@ -7,6 +7,19 @@ import { useLanguageStore } from '@/store/useLanguageStore';
 import { useTrialStatus } from '@/hooks/useTrialStatus';
 import { TrialHourglass } from './TrialHourglass';
 
+/**
+ * دافئ عند طرفه القصيّ، كحليٌّ عند الشريط الجانبي فيذوب فيه بدل أن يقطعه:
+ * الفترة التجريبية مدّة تنفد، والدفء يقولها بغير لون إنذار.
+ *
+ * و`#172554` ليس لوناً جديداً بل قاع تدرّج الشريط الجانبي نفسه، فيلتقي
+ * الشريطان على اللون ذاته حيث يتماسّان.
+ *
+ * وينقلب مع اتجاه الصفحة لأن الشريط الجانبي ينتقل معه: في العربية يمين
+ * الشاشة، وفي الإنجليزية يسارها.
+ */
+const TRIAL_GRADIENT =
+  'rtl:bg-[linear-gradient(90deg,#78350F_0%,#172554_100%)] ltr:bg-[linear-gradient(90deg,#172554_0%,#78350F_100%)]';
+
 /** صيغة العدّاد: العربية تُعرب العدد، والإنجليزية تكتفي بالجمع. */
 function daysLabel(n: number, ar: boolean): string {
   if (!ar) return n === 1 ? '1 day left' : `${n} days left`;
@@ -52,7 +65,7 @@ export function TrialBanner(): JSX.Element | null {
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
         'qh-trial-sheen relative flex-shrink-0 overflow-hidden text-white',
-        red ? 'bg-[#B42318]' : 'bg-[#0B1220]'
+        red ? 'bg-[#B42318]' : TRIAL_GRADIENT
       )}
     >
       {/* وهج خفيف عند طرف الزرّ: يجمع العين عليه بلا إطار ولا لون إضافي. */}
