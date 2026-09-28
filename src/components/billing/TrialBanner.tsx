@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft, Hourglass } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/useTranslation';
 import { useLanguageStore } from '@/store/useLanguageStore';
@@ -49,7 +49,7 @@ export function TrialBanner(): JSX.Element | null {
             red ? 'bg-white/20 text-white' : endingSoon ? 'bg-danger text-white' : 'bg-white/10 text-white/90'
           )}
         >
-          <Sparkles className="h-3 w-3" />
+          <Hourglass className="h-3 w-3" />
           {t('باقة تجريبية')}
         </span>
 
