@@ -8,17 +8,18 @@ import { useTrialStatus } from '@/hooks/useTrialStatus';
 import { TrialHourglass } from './TrialHourglass';
 
 /**
- * دافئ عند طرفه القصيّ، كحليٌّ عند الشريط الجانبي فيذوب فيه بدل أن يقطعه:
- * الفترة التجريبية مدّة تنفد، والدفء يقولها بغير لون إنذار.
+ * برتقاليٌّ خالص من طرف إلى طرف: الفترة التجريبية مدّة تنفد، والدفء يقولها
+ * بغير لون إنذار. ومزجه بالكحليّ جرّبناه فبان طرفه بنّياً موحلاً، فبقي
+ * التدرّج داخل البرتقالي وحده ومداه ضيّق حتى يُقرأ متعمَّداً لا متّسخاً.
  *
- * و`#172554` ليس لوناً جديداً بل قاع تدرّج الشريط الجانبي نفسه، فيلتقي
- * الشريطان على اللون ذاته حيث يتماسّان.
+ * والطرفان محكومان بتباين النص الأبيض لا بالذوق: `#C2410C` يعطي 5.18
+ * و`#9A3412` يعطي 7.31، وكلاهما فوق حدّ 4.5. وما فتح عن ذلك يسقط دونه —
+ * `#F59E0B` مثلاً عند 2.15 يذيب النص في الخلفية.
  *
- * وينقلب مع اتجاه الصفحة لأن الشريط الجانبي ينتقل معه: في العربية يمين
- * الشاشة، وفي الإنجليزية يسارها.
+ * وينقلب مع اتجاه الصفحة ليبقى الطرف الغامق ملاصقاً للشريط الجانبي.
  */
 const TRIAL_GRADIENT =
-  'rtl:bg-[linear-gradient(90deg,#78350F_0%,#172554_100%)] ltr:bg-[linear-gradient(90deg,#172554_0%,#78350F_100%)]';
+  'rtl:bg-[linear-gradient(90deg,#C2410C_0%,#9A3412_100%)] ltr:bg-[linear-gradient(90deg,#9A3412_0%,#C2410C_100%)]';
 
 /** صيغة العدّاد: العربية تُعرب العدد، والإنجليزية تكتفي بالجمع. */
 function daysLabel(n: number, ar: boolean): string {
@@ -53,9 +54,13 @@ export function TrialBanner(): JSX.Element | null {
 
   if (!active) return null;
 
-  // التصعيد على مرحلتين: حبّة حمراء في آخر ثلاثة أيام، والشريط كلّه أحمر
-  // في اليوم الأخير وحده. صبغه أحمر ثلاثة أيام متّصلة يحرق التصعيد باكراً،
-  // فتألفه العين ويعود خلفيةً لا تنبيهاً.
+  // التصعيد على مرحلتين: حبّة داكنة في آخر ثلاثة أيام، والشريط كلّه أحمر
+  // عميق في اليوم الأخير وحده. صبغه أحمر ثلاثة أيام متّصلة يحرق التصعيد
+  // باكراً، فتألفه العين ويعود خلفيةً لا تنبيهاً.
+  //
+  // والتصعيد يقيس نفسه على الخلفية لا على قاعدة ثابتة: حين كانت داكنة
+  // محايدة كفى الأحمر المعتاد، فلمّا صارت برتقالية صار جارَه فذاب فيه —
+  // فنزل الأحمر إلى `#7F1D1D` وصارت الحبّة داكنةً لا حمراء.
   const red = daysLeft <= 1;
 
   return (
@@ -65,16 +70,15 @@ export function TrialBanner(): JSX.Element | null {
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
         'qh-trial-sheen relative flex-shrink-0 overflow-hidden text-white',
-        red ? 'bg-[#B42318]' : TRIAL_GRADIENT
+        red ? 'bg-[#7F1D1D]' : TRIAL_GRADIENT
       )}
     >
-      {/* وهج خفيف عند طرف الزرّ: يجمع العين عليه بلا إطار ولا لون إضافي. */}
+      {/* وهج خفيف يرفع الطرف بلا إطار ولا لون إضافي. وهو أبيض في الحالتين:
+          كان أزرق الهوية حين كانت الخلفية داكنة محايدة، فلمّا صارت برتقالية
+          صار الأزرق فوقها لطخة غريبة لا وهجاً. */}
       <div
         aria-hidden
-        className={cn(
-          'absolute top-1/2 start-0 -translate-y-1/2 h-24 w-56 rounded-full blur-3xl pointer-events-none',
-          red ? 'bg-white/10' : 'bg-primary/25'
-        )}
+        className="absolute top-1/2 start-0 -translate-y-1/2 h-24 w-56 rounded-full blur-3xl pointer-events-none bg-white/10"
       />
 
       <div className="relative flex items-center gap-3 px-4 sm:px-6 h-11">
@@ -87,7 +91,7 @@ export function TrialBanner(): JSX.Element | null {
             red
               ? 'qh-trial-pulse bg-white/20 text-white'
               : endingSoon
-                ? 'bg-danger text-white'
+                ? 'bg-black/30 text-white'
                 : 'bg-white/10 text-white/90'
           )}
         >
@@ -101,8 +105,10 @@ export function TrialBanner(): JSX.Element | null {
           transition={{ delay: 0.18, duration: 0.3 }}
           className="text-small min-w-0 truncate"
         >
-          {/* tabular-nums: العدّاد ينقص يوماً بعد يوم فلا يقفز عرضه معه. */}
-          <span className={cn('font-semibold tabular-nums', !red && endingSoon && 'text-[#FCA5A5]')}>
+          {/* tabular-nums: العدّاد ينقص يوماً بعد يوم فلا يقفز عرضه معه.
+              وكان يُصبغ أحمر فاتحاً في آخر ثلاثة أيام، فذاب في الخلفية
+              البرتقالية؛ والحبّة الداكنة تحمل التصعيد وحدها الآن. */}
+          <span className="font-semibold tabular-nums">
             {daysLabel(daysLeft, ar)}
           </span>
           <span className="text-white/55">
