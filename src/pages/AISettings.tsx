@@ -39,10 +39,24 @@ import {
   TrendingUp,
   Loader2,
   RefreshCw,
+  Bot,
+  SlidersHorizontal,
+  MousePointerClick,
+  Plug,
 } from 'lucide-react';
 import { Card, ChannelIcon, Select, useConfirm, Drawer } from '@components/ui';
 import { OpenAIIcon, ClaudeIcon, GeminiIcon } from '@components/ui/BrandIcons';
-import { useAIStore, pickBehavior, type AISettings as AISettingsType, type AILanguage, type AITone, type AIDialect, type AIGulfCountry, type AIModel, type AIProvider, type DaySchedule } from '@/store/useAIStore';
+import {
+  useAIStore,
+  pickGroup,
+  pickShared,
+  resolveBehavior,
+  AI_SHARED_KEYS,
+  BEHAVIOR_GROUP_ORDER,
+  type BehaviorGroup,
+  type ChannelOverride,
+  type AISettings as AISettingsType, type AILanguage, type AITone, type AIDialect, type AIGulfCountry, type AIModel, type AIProvider, type DaySchedule,
+} from '@/store/useAIStore';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { cn } from '@/utils/cn';
@@ -75,6 +89,42 @@ const GULF_COUNTRIES: { value: AIGulfCountry; name: string; flag: string }[] = [
   { value: 'qa', name: 'قطر', flag: '🇶🇦' },
   { value: 'bh', name: 'البحرين', flag: '🇧🇭' },
 ];
+
+/** اختيار «الإعدادات الافتراضية» في قائمة سلوك المساعد — ليس معرّف قناة. */
+const DEFAULT_SCOPE = '__default__';
+
+type GroupMode = 'default' | 'custom';
+
+const GROUP_META: Record<BehaviorGroup, { label: string; short: string; Icon: typeof Mic }> = {
+  style: { label: 'اللغة والأسلوب', short: 'الأسلوب', Icon: Mic },
+  knowledge: { label: 'المعرفة والقيود', short: 'المعرفة', Icon: BookOpen },
+  transfer: { label: 'التحويل والجدولة', short: 'التحويل', Icon: UserCog },
+};
+
+function modesOf(o?: ChannelOverride): Record<BehaviorGroup, GroupMode> {
+  return {
+    style: o?.style ? 'custom' : 'default',
+    knowledge: o?.knowledge ? 'custom' : 'default',
+    transfer: o?.transfer ? 'custom' : 'default',
+  };
+}
+
+/** «8 حسابات» لا «8 حساب» — العدد يحكم صيغة المعدود. */
+function accountsCount(n: number): string {
+  if (n === 1) return 'حساب واحد';
+  if (n === 2) return 'حسابان';
+  if (n >= 3 && n <= 10) return `${n} حسابات`;
+  const tail = n % 100;
+  return tail >= 11 && tail <= 99 ? `${n} حساباً` : `${n} حساب`;
+}
+
+/** سطر الحالة تحت اسم الحساب في القائمة. */
+function overrideSummary(o?: ChannelOverride): string {
+  const custom = BEHAVIOR_GROUP_ORDER.filter((g) => o?.[g]);
+  if (custom.length === 0) return 'يتبع الإعدادات الافتراضية';
+  if (custom.length === BEHAVIOR_GROUP_ORDER.length) return 'مخصّص بالكامل';
+  return `مخصّص: ${custom.map((g) => GROUP_META[g].short).join(' · ')}`;
+}
 
 const DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
@@ -153,12 +203,14 @@ const PROVIDERS: ProviderInfo[] = [
 export default function AISettings(): JSX.Element {
   const saved = useAIStore((s) => s.settings);
   const setSettings = useAIStore((s) => s.setSettings);
-  const channelBehaviors = useAIStore((s) => s.channelBehaviors);
-  const setChannelBehavior = useAIStore((s) => s.setChannelBehavior);
-  const clearChannelBehavior = useAIStore((s) => s.clearChannelBehavior);
+  const channelOverrides = useAIStore((s) => s.channelOverrides);
+  const setChannelGroups = useAIStore((s) => s.setChannelGroups);
 
-  /** null = the shared defaults; otherwise the id of the account being edited. */
-  const [scope, setScope] = useState<string | null>(null);
+  /**
+   * ما هو مفتوح في «سلوك المساعد»: `null` لا شيء بعد (الحالة الفارغة)،
+   * و`DEFAULT_SCOPE` الإعدادات الافتراضية، وإلا معرّف الحساب.
+   */
+  const [selection, setSelection] = useState<string | null>(null);
 
   const channels = useDataStore((s) => s.channels);
   const agents = useDataStore((s) => s.agents);
@@ -181,15 +233,25 @@ export default function AISettings(): JSX.Element {
   const [testing, setTesting] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);
 
-  // The form always shows the shared connection; the behavior half comes from
-  // whichever scope is selected.
-  useEffect(() => {
-    const behavior = scope ? channelBehaviors[scope] ?? pickBehavior(saved) : pickBehavior(saved);
-    const next = { ...saved, ...behavior };
+  const scopedAccount =
+    selection && selection !== DEFAULT_SCOPE ? channels.find((c) => c.id === selection) ?? null : null;
+  const isDefaultScope = selection === DEFAULT_SCOPE;
+  const scopedOverride = scopedAccount ? channelOverrides[scopedAccount.id] : undefined;
+
+  /** لكل قسم من أقسام الحساب المختار: يرث أم مخصّص — مسودّة تُكتب مع الحفظ. */
+  const [modes, setModes] = useState<Record<BehaviorGroup, GroupMode>>(modesOf());
+
+  // The form always shows the shared connection; the behavior half is what
+  // the selected account actually runs with — the default, plus each section
+  // it customised.
+  const loadForm = (): void => {
+    const next = { ...saved, ...resolveBehavior(saved, scopedOverride) };
     setForm(next);
     setAutoCloseText(String(next.autoCloseHours));
+    setModes(modesOf(scopedOverride));
     setDirty(false);
-  }, [saved, scope, channelBehaviors]);
+  };
+  useEffect(loadForm, [saved, selection, channelOverrides]);
 
   /** تغيير أي من هذه يُبطل نتيجة الفحص السابق — فُحص شيء آخر. */
   const CONNECTION_FIELDS: (keyof AISettingsType)[] = ['provider', 'apiKey', 'model'];
@@ -323,8 +385,57 @@ export default function AISettings(): JSX.Element {
     })));
   };
 
-  const scopedAccount = scope ? channels.find((c) => c.id === scope) ?? null : null;
-  const customCount = channels.filter((c) => channelBehaviors[c.id]).length;
+  const customCount = channels.filter((c) => channelOverrides[c.id]).length;
+  /** حسابات ترث قسماً واحداً على الأقل — أي يمسّها تعديل الافتراضي. */
+  const inheritingCount = channels.filter(
+    (c) => BEHAVIOR_GROUP_ORDER.some((g) => !channelOverrides[c.id]?.[g])
+  ).length;
+
+  /** اسم ما يُعدَّل الآن، لرسائل التأكيد. */
+  const selectionLabel = scopedAccount?.name ?? 'الإعدادات الافتراضية';
+
+  /**
+   * الانتقال لحساب آخر يعيد تحميل النموذج بقيمه، فأي تعديل لم يُحفظ كان
+   * يضيع بصمت — والقائمة الجانبية تجعل هذا الانتقال بنقرة واحدة.
+   */
+  const selectScope = async (next: string | null): Promise<void> => {
+    if (next === selection) return;
+    if (dirty) {
+      const ok = await confirm({
+        title: 'تعديلات غير محفوظة',
+        message: `عدّلت على ${selectionLabel} ولم تحفظ بعد. إذا انتقلت الآن ستضيع هذه التعديلات.`,
+        variant: 'warning',
+        confirmText: 'تجاهل التعديلات والانتقال',
+        cancelText: 'البقاء هنا',
+      });
+      if (!ok) return;
+    }
+    setSelection(next);
+  };
+
+  /**
+   * التحويل لـ«مخصّص» يبدأ من القيم الموروثة نفسها — لا من الصفر. والرجوع
+   * لـ«الافتراضي» يعيد قيم القسم للافتراضي، ويُحذف التخصيص عند الحفظ.
+   */
+  const setGroupMode = async (group: BehaviorGroup, mode: GroupMode): Promise<void> => {
+    if (!scopedAccount || modes[group] === mode) return;
+    if (mode === 'default') {
+      if (scopedOverride?.[group] || dirty) {
+        const ok = await confirm({
+          title: `إرجاع ${GROUP_META[group].label} للافتراضي؟`,
+          message: `سيتبع ${scopedAccount.name} ${GROUP_META[group].label} من الإعدادات الافتراضية، وتُحذف قيمه الخاصة بهذا القسم عند الحفظ.`,
+          variant: 'warning',
+          confirmText: 'إرجاع للافتراضي',
+          cancelText: 'إلغاء',
+        });
+        if (!ok) return;
+      }
+      setForm((f) => ({ ...f, ...pickGroup(saved, group) }));
+      if (group === 'transfer') setAutoCloseText(String(saved.autoCloseHours));
+    }
+    setModes((m) => ({ ...m, [group]: mode }));
+    setDirty(true);
+  };
 
   const save = async (): Promise<void> => {
     // The switch is what turns auto-close off, so an enabled card with no hours
@@ -334,29 +445,35 @@ export default function AISettings(): JSX.Element {
       return;
     }
     // مساعد «مُفعّل» بلا مفتاح حالة مكسورة: يَعِد العميل بالرد ولا يستطيع.
-    // الفحص على الحفظ العام وحده — في نطاق حساب لا تُكتب حقول الاتصال أصلاً،
-    // ولا يملك المستخدم إصلاح المفتاح من هناك.
-    if (!scopedAccount && form.enabled && !form.apiKey.trim()) {
+    // الفحص حين تتغيّر إعدادات الاتصال المشتركة فقط — حفظ نبرة حساب أو
+    // معرفته لا يُمنع بسبب مفتاح لم يلمسه المستخدم في هذا الحفظ.
+    const sharedChanged = AI_SHARED_KEYS.some(
+      (k) => JSON.stringify(form[k]) !== JSON.stringify(saved[k])
+    );
+    if (sharedChanged && form.enabled && !form.apiKey.trim()) {
       showToast('أدخل مفتاح API أو أوقف المساعد الذكي — لا يمكن تفعيله بلا مفتاح', 'error');
       return;
     }
     const modelLabel = (currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '');
-    const summary: { label: string; value: string }[] = scopedAccount
-      ? [
-          { label: 'الحساب', value: scopedAccount.name },
-          { label: 'النبرة واللهجة', value: `${TONES.find((t) => t.value === form.tone)?.label ?? form.tone}` },
-          { label: 'ساعات العمل', value: form.alwaysOn ? 'على مدار الساعة' : 'حسب الجدول' },
-          {
-            label: 'الإغلاق التلقائي',
-            value: form.autoCloseEnabled ? `بعد ${form.autoCloseHours} ساعة` : 'معطّل',
-          },
-        ]
-      : [
-          { label: 'المزوّد', value: currentProvider.name },
-          { label: 'النموذج', value: modelLabel },
-          { label: 'القنوات المُفعّلة', value: `${form.enabledChannels.length} / ${channels.length}` },
-          { label: 'حالة المساعد', value: form.enabled ? 'مُفعّل' : 'مُعطّل' },
-        ];
+    const summary: { label: string; value: string }[] = [
+      ...(!scopedAccount || sharedChanged
+        ? [
+            { label: 'المزوّد', value: currentProvider.name },
+            { label: 'النموذج', value: modelLabel },
+            { label: 'القنوات المُفعّلة', value: `${form.enabledChannels.length} / ${channels.length}` },
+            { label: 'حالة المساعد', value: form.enabled ? 'مُفعّل' : 'مُعطّل' },
+          ]
+        : []),
+      ...(scopedAccount
+        ? [
+            { label: 'الحساب', value: scopedAccount.name },
+            ...BEHAVIOR_GROUP_ORDER.map((g) => ({
+              label: GROUP_META[g].label,
+              value: modes[g] === 'custom' ? 'مخصّص' : 'الافتراضي',
+            })),
+          ]
+        : []),
+    ];
     const ok = await confirm({
       title: 'تأكيد حفظ التغييرات',
       message: (
@@ -378,8 +495,16 @@ export default function AISettings(): JSX.Element {
     });
     if (!ok) return;
     if (scopedAccount) {
-      // Connection fields are read-only in this scope, so only behavior is written.
-      setChannelBehavior(scopedAccount.id, pickBehavior(form));
+      // The shared half goes to the workspace settings; each section of the
+      // behavior goes to the account only if it is customised there — an
+      // inherited section is dropped so it keeps following the default.
+      if (sharedChanged) setSettings(pickShared(form));
+      setChannelGroups(
+        scopedAccount.id,
+        Object.fromEntries(
+          BEHAVIOR_GROUP_ORDER.map((g) => [g, modes[g] === 'custom' ? pickGroup(form, g) : null])
+        )
+      );
       showToast(`تم حفظ إعدادات المساعد لـ${scopedAccount.name}`, 'success');
     } else {
       setSettings(form);
@@ -397,18 +522,18 @@ export default function AISettings(): JSX.Element {
    */
   const mutedIfOff = cn('transition-opacity', !form.enabled && 'opacity-50 pointer-events-none');
 
-  type BehaviorTab = 'knowledge' | 'transfer';
-  const [tab, setTab] = useState<'connection' | 'personality' | 'features' | 'accounts'>('connection');
-  /** Which behavior sub-tab is open inside the accounts tab. */
-  const [subTab, setSubTab] = useState<BehaviorTab>('knowledge');
+  const [tab, setTab] = useState<'connection' | 'features' | 'behavior'>('connection');
+  /** Which section is open for the selected scope inside «سلوك المساعد». */
+  const [subTab, setSubTab] = useState<BehaviorGroup>('style');
 
-  const behaviorTab: BehaviorTab | null =
-    tab === 'accounts' && scope ? subTab : null;
+  const behaviorTab: BehaviorGroup | null =
+    tab === 'behavior' && (isDefaultScope || scopedAccount) ? subTab : null;
 
-  const goToTab = (next: typeof tab): void => {
-    if (next !== 'accounts') setScope(null);
-    setTab(next);
-  };
+  /**
+   * القسم الموروث يُعرض بقيم الافتراضي للقراءة فقط: ‎<fieldset disabled>‎
+   * يعطّل كل زرّ وحقل بداخله دفعة واحدة، فلا يُعدَّل هنا ما مكانه الافتراضي.
+   */
+  const inherited = Boolean(scopedAccount && behaviorTab && modes[behaviorTab] === 'default');
 
   return (
     <div className="flex flex-col min-h-full relative">
@@ -442,7 +567,7 @@ export default function AISettings(): JSX.Element {
       {/* Top-level tabs */}
       <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2 overflow-x-auto">
         <button
-          onClick={() => goToTab('connection')}
+          onClick={() => setTab('connection')}
           className={cn(
             'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
             tab === 'connection' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
@@ -452,17 +577,7 @@ export default function AISettings(): JSX.Element {
           إعدادات الربط
         </button>
         <button
-          onClick={() => goToTab('personality')}
-          className={cn(
-            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
-            tab === 'personality' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
-          )}
-        >
-          <Mic className="h-4 w-4" />
-          اللغة والأسلوب
-        </button>
-        <button
-          onClick={() => goToTab('features')}
+          onClick={() => setTab('features')}
           className={cn(
             'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
             tab === 'features' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
@@ -472,14 +587,14 @@ export default function AISettings(): JSX.Element {
           الميزات والرصيد
         </button>
         <button
-          onClick={() => goToTab('accounts')}
+          onClick={() => setTab('behavior')}
           className={cn(
             'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
-            tab === 'accounts' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+            tab === 'behavior' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
           )}
         >
-          <Radio className="h-4 w-4" />
-          تخصيص الحسابات المربوطة
+          <Bot className="h-4 w-4" />
+          سلوك المساعد
           {customCount > 0 && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/15 text-success font-bold">
               {customCount}
@@ -488,51 +603,141 @@ export default function AISettings(): JSX.Element {
         </button>
       </div>
 
+      {/* Muting is applied per section, not on this wrapper: opacity can't be
+          undone on a child (it multiplies with the parent's), so a section that
+          must stay usable while the assistant is off has to sit outside the
+          muted element — not be excepted from inside it. */}
       {/*
-        المنتقي وتبويباته في بطاقة واحدة لا بطاقتين متجاورتين: الشريط يختار
-        الحساب، والتبويبات تحته تعرض إعداداته — فهما رأس كتلة واحدة، وفصلهما
-        كان يجعل المنتقي جزيرةً معلّقة فوق إعدادات لا يظهر أنها تخصّه.
+        «سلوك المساعد» بنفس تخطيط صفحة الإعدادات: القائمة عمودياً على جانب،
+        وإعدادات المختار بجانبها. أول القائمة الإعدادات الافتراضية، ثم الحسابات.
       */}
-      {tab === 'accounts' && (
-        <Card className="p-0 overflow-hidden">
-          <div className="p-5">
-          <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
-            <div>
-              <p className="text-body font-bold">الحسابات المربوطة</p>
-              <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
-                اختر حساباً لتخصيص معرفته وقيوده وقواعد تحويله. الحسابات غير المخصّصة ترث الإعدادات الافتراضية.
-              </p>
-            </div>
-            {scopedAccount && channelBehaviors[scopedAccount.id] && (
-              <button
-                onClick={() => {
-                  clearChannelBehavior(scopedAccount.id);
-                  showToast(`رجع ${scopedAccount.name} للإعدادات الافتراضية`, 'success');
-                }}
-                className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex-shrink-0"
-              >
-                إرجاع للافتراضي
-              </button>
-            )}
+      <div className={cn(tab === 'behavior' && 'flex flex-col lg:flex-row gap-5 items-start')}>
+      {tab === 'behavior' && (
+        <>
+          {/* الجوال: لا مكان لعمودين، فالقائمة تصير منسدلة فوق الإعدادات. */}
+          <div className="lg:hidden w-full">
+            <Select
+              value={selection ?? ''}
+              onChange={(e) => { void selectScope(e.target.value || null); }}
+              aria-label="اختر ما تريد تخصيصه"
+              className="!h-11 !rounded-xl"
+            >
+              <option value="">— اختر حساباً لتخصيصه —</option>
+              <option value={DEFAULT_SCOPE}>الإعدادات الافتراضية</option>
+              {channels.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}{channelOverrides[c.id] ? ' · مخصّص' : ''}
+                </option>
+              ))}
+            </Select>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {channels.map((c) => {
-              const custom = Boolean(channelBehaviors[c.id]);
+          <nav
+            aria-label="الحسابات المربوطة"
+            className="hidden lg:block w-[248px] flex-shrink-0 bg-white dark:bg-surface-dark rounded-card shadow-card dark:shadow-card-dark p-3 space-y-1 sticky top-4"
+          >
+            <ScopeItem
+              active={isDefaultScope}
+              onClick={() => { void selectScope(DEFAULT_SCOPE); }}
+              icon={<SlidersHorizontal className="h-[18px] w-[18px]" />}
+              label="الإعدادات الافتراضية"
+              hint={channels.length ? `يرثها ${inheritingCount} من ${accountsCount(channels.length)}` : 'تنطبق على كل حساب تربطه'}
+            />
+            <p className="px-3 pt-3 pb-1 text-[11px] font-semibold text-muted-light dark:text-muted-dark">
+              الحسابات المربوطة
+            </p>
+            {channels.length === 0 ? (
+              <p className="px-3 py-2 text-[12px] text-muted-light dark:text-muted-dark leading-relaxed">
+                لا توجد حسابات مربوطة بعد.{' '}
+                <Link to="/channels" className="text-primary font-semibold hover:underline">ربط قناة</Link>
+              </p>
+            ) : (
+              channels.map((c) => (
+                <ScopeItem
+                  key={c.id}
+                  active={selection === c.id}
+                  onClick={() => { void selectScope(c.id); }}
+                  icon={<ChannelIcon type={c.type} size={18} />}
+                  label={c.name}
+                  hint={overrideSummary(channelOverrides[c.id])}
+                  custom={Boolean(channelOverrides[c.id])}
+                />
+              ))
+            )}
+          </nav>
+        </>
+      )}
+
+      <div className={cn('space-y-5', tab === 'behavior' && 'flex-1 min-w-0 w-full')}>
+      {tab === 'behavior' && !behaviorTab && (
+        <Card className="px-6 py-12 flex flex-col items-center text-center">
+          <span className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+            {channels.length ? <MousePointerClick className="h-7 w-7" /> : <Plug className="h-7 w-7" />}
+          </span>
+          <h2 className="text-body font-bold mt-4">
+            {channels.length ? 'اختر قناة لتخصيص إعدادات الذكاء الاصطناعي' : 'لا توجد حسابات مربوطة بعد'}
+          </h2>
+          <p className="text-small text-muted-light dark:text-muted-dark mt-1.5 max-w-md leading-relaxed">
+            {channels.length
+              ? 'اختر حساباً من القائمة لتحدّد أسلوب المساعد ومعرفته وقواعد تحويله فيه، أو افتح الإعدادات الافتراضية لتعديل ما ترثه كل الحسابات.'
+              : 'اربط قناة لتخصّص إعدادات المساعد لها. وحتى ذلك الحين يمكنك ضبط الإعدادات الافتراضية — وتنطبق على كل حساب تربطه لاحقاً.'}
+          </p>
+          <div className="flex items-center gap-2 mt-5 flex-wrap justify-center">
+            {channels.length === 0 && (
+              <Link
+                to="/channels"
+                style={{ color: '#fff' }}
+                className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold inline-flex items-center gap-1.5 transition-colors"
+              >
+                ربط قناة
+              </Link>
+            )}
+            <button
+              onClick={() => { void selectScope(DEFAULT_SCOPE); }}
+              className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-semibold hover:bg-bg-light dark:hover:bg-bg-dark transition-colors inline-flex items-center gap-1.5"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              فتح الإعدادات الافتراضية
+            </button>
+          </div>
+        </Card>
+      )}
+
+      {behaviorTab && (
+        <Card className="p-0 overflow-hidden">
+          <div className="p-5 flex items-start gap-3">
+            <span className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+              {scopedAccount ? <ChannelIcon type={scopedAccount.type} size={22} /> : <SlidersHorizontal className="h-5 w-5" />}
+            </span>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-body font-bold">
+                {scopedAccount ? `تخصيص إعدادات ${scopedAccount.name}` : 'الإعدادات الافتراضية'}
+              </h2>
+              <p className="text-small text-muted-light dark:text-muted-dark mt-0.5 leading-relaxed">
+                {scopedAccount
+                  ? 'لكل قسم اختر: يتبع الإعدادات الافتراضية، أو إعدادات خاصة بهذا الحساب.'
+                  : channels.length
+                    ? `تنطبق على كل حساب لم يخصّص القسم — يرثها حالياً ${inheritingCount} من ${accountsCount(channels.length)}.`
+                    : 'تنطبق على كل حساب تربطه.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 px-5 border-t border-border-light dark:border-border-dark bg-bg-light/40 dark:bg-bg-dark/30 overflow-x-auto">
+            {BEHAVIOR_GROUP_ORDER.map((g) => {
+              const { label, Icon } = GROUP_META[g];
               return (
                 <button
-                  key={c.id}
-                  onClick={() => setScope(c.id)}
+                  key={g}
+                  onClick={() => setSubTab(g)}
                   className={cn(
-                    'h-9 px-3 rounded-full text-small font-medium border transition-colors flex items-center gap-2',
-                    scope === c.id
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border-light dark:border-border-dark hover:border-primary/30'
+                    'h-11 px-4 text-small font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap',
+                    subTab === g ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
                   )}
                 >
-                  <ChannelIcon type={c.type} size={16} />
-                  <span className="truncate max-w-[10rem]">{c.name}</span>
-                  {custom && (
+                  <Icon className="h-4 w-4" />
+                  {label}
+                  {scopedAccount && modes[g] === 'custom' && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/15 text-success font-bold">
                       مخصّص
                     </span>
@@ -542,48 +747,60 @@ export default function AISettings(): JSX.Element {
             })}
           </div>
 
-          <p className="text-small text-muted-light dark:text-muted-dark mt-3">
-            {!scopedAccount
-              ? 'اختر حساباً من الشريط أعلاه لعرض إعداداته.'
-              : channelBehaviors[scopedAccount.id]
-                ? `${scopedAccount.name} له إعداداته الخاصة.`
-                : `${scopedAccount.name} يستخدم الإعدادات الافتراضية — أي تعديل تحفظه هنا بينطبق عليه لحاله.`}
-          </p>
-          </div>
-
-          {/* تبويبات الحساب المختار — داخل البطاقة نفسها بحدٍّ يفصلها عن المنتقي
-              لا ببياض يقطعها عنه. */}
           {scopedAccount && (
-            <div className="flex items-center gap-1 px-5 border-t border-border-light dark:border-border-dark bg-bg-light/40 dark:bg-bg-dark/30 overflow-x-auto">
-              {([
-                { key: 'knowledge', label: 'المعرفة والقيود', Icon: BookOpen },
-                { key: 'transfer', label: 'التحويل والجدولة', Icon: UserCog },
-              ] as { key: BehaviorTab; label: string; Icon: typeof Mic }[]).map((t) => (
-                <button
-                  key={t.key}
-                  onClick={() => setSubTab(t.key)}
-                  className={cn(
-                    'h-11 px-4 text-small font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap',
-                    subTab === t.key ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
-                  )}
-                >
-                  <t.Icon className="h-4 w-4" />
-                  {t.label}
-                </button>
-              ))}
+            <div className="px-5 py-4 border-t border-border-light dark:border-border-dark flex items-center justify-between gap-4 flex-wrap">
+              <p className="text-small leading-relaxed flex-1 min-w-[16rem]">
+                {modes[behaviorTab] === 'default' ? (
+                  <>
+                    يستخدم {scopedAccount.name} «{GROUP_META[behaviorTab].label}» من الإعدادات الافتراضية — القيم أدناه للعرض فقط.{' '}
+                    <button
+                      onClick={() => { void selectScope(DEFAULT_SCOPE); }}
+                      className="text-primary font-semibold hover:underline"
+                    >
+                      تعديل الافتراضي
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {scopedAccount.name} له «{GROUP_META[behaviorTab].label}» خاصة به — تعديل الإعدادات الافتراضية لا يغيّرها.
+                  </>
+                )}
+              </p>
+              <div
+                role="radiogroup"
+                aria-label={`مصدر ${GROUP_META[behaviorTab].label}`}
+                className="inline-flex p-1 rounded-full bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark flex-shrink-0"
+              >
+                {(['default', 'custom'] as GroupMode[]).map((m) => {
+                  const active = modes[behaviorTab] === m;
+                  return (
+                    <button
+                      key={m}
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => { void setGroupMode(behaviorTab, m); }}
+                      className={cn(
+                        'h-8 px-4 rounded-full text-small font-semibold transition-colors',
+                        active
+                          ? 'bg-white dark:bg-surface-dark text-primary shadow-sm'
+                          : 'text-muted-light dark:text-muted-dark hover:text-current'
+                      )}
+                    >
+                      {m === 'default' ? 'الافتراضي' : 'مخصّص'}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </Card>
       )}
 
-
-
-
-      {/* Muting is applied per section, not on this wrapper: opacity can't be
-          undone on a child (it multiplies with the parent's), so a section that
-          must stay usable while the assistant is off has to sit outside the
-          muted element — not be excepted from inside it. */}
-      <div className="space-y-5">
+      <fieldset
+        disabled={inherited}
+        aria-label={inherited ? 'قيم موروثة من الإعدادات الافتراضية — للعرض فقط' : undefined}
+        className={cn('min-w-0 m-0 p-0 border-0 space-y-5', inherited && 'opacity-75')}
+      >
 
       {/* ═══ Tab 1: الربط والنموذج ═══ */}
       {tab === 'connection' && (
@@ -982,7 +1199,7 @@ export default function AISettings(): JSX.Element {
       )}
 
       {/* ═══ Tab 3: اللغة والأسلوب ═══ */}
-      {tab === 'personality' && (
+      {behaviorTab === 'style' && (
         <div className={cn('space-y-5', mutedIfOff)} aria-disabled={!form.enabled}>
           {/* Languages */}
           <SectionCard
@@ -1023,7 +1240,7 @@ export default function AISettings(): JSX.Element {
             title="نبرة وأسلوب الرد"
             description="حدّد شخصية المساعد عند التحدث مع العملاء."
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-2">
               {TONES.map((t) => {
                 const active = form.tone === t.value;
                 const Icon = t.Icon;
@@ -1220,7 +1437,7 @@ export default function AISettings(): JSX.Element {
 
       {/* ═══ Tab 4: التحويل والدوام ═══ */}
       {behaviorTab === 'transfer' && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+        <div className="grid grid-cols-1 2xl:grid-cols-2 gap-5 items-start">
           {/* Transfer to staff */}
           <div className={mutedIfOff} aria-disabled={!form.enabled}>
           <SectionCard
@@ -1448,6 +1665,8 @@ export default function AISettings(): JSX.Element {
         </div>
       )}
 
+      </fieldset>
+      </div>
       </div>
       </div>
 
@@ -1463,10 +1682,7 @@ export default function AISettings(): JSX.Element {
             </div>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => {
-                  setForm(saved);
-                  setAutoCloseText(String(saved.autoCloseHours));
-                }}
+                onClick={loadForm}
                 className="h-10 px-4 rounded-xl text-small font-medium border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
               >
                 تجاهل
@@ -1549,6 +1765,47 @@ export default function AISettings(): JSX.Element {
         </div>
       </Drawer>
     </div>
+  );
+}
+
+/** عنصر في قائمة «سلوك المساعد» — بنمط قائمة صفحة الإعدادات. */
+function ScopeItem({
+  active,
+  onClick,
+  icon,
+  label,
+  hint,
+  custom = false,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  hint: string;
+  custom?: boolean;
+}): JSX.Element {
+  return (
+    <button
+      onClick={onClick}
+      aria-current={active ? 'true' : undefined}
+      className={cn(
+        'flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-start transition-colors',
+        active
+          ? 'bg-primary/10 text-primary'
+          : 'text-[#374151] dark:text-[#D1D5DB] hover:bg-bg-light dark:hover:bg-bg-dark'
+      )}
+    >
+      <span className="flex-shrink-0 flex items-center justify-center w-5">{icon}</span>
+      <span className="flex-1 min-w-0">
+        <span className="flex items-center gap-1.5">
+          <span className="text-body font-medium truncate">{label}</span>
+          {custom && <span className="h-1.5 w-1.5 rounded-full bg-success flex-shrink-0" aria-hidden />}
+        </span>
+        <span className={cn('block text-[11px] truncate', active ? 'text-primary' : 'text-muted-light dark:text-muted-dark')}>
+          {hint}
+        </span>
+      </span>
+    </button>
   );
 }
 
