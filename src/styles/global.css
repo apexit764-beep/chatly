@@ -195,11 +195,96 @@ input[inputmode='tel'] {
   94%           { transform: scaleY(0.1); }
 }
 
+
+/* ── شريط الفترة التجريبية ──────────────────────────────────────────
+   بريقٌ يمرّ مرّةً كل تسع ثوانٍ لا حركةً متّصلة: العنصر دائم على الشاشة،
+   والحركة المستمرّة عليه تتحوّل إزعاجاً بعد دقيقة. */
+.qh-trial-sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.07) 48%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.07) 52%,
+    transparent 65%
+  );
+  background-size: 260% 100%;
+  animation: qhTrialSheen 9s ease-in-out infinite;
+}
+@keyframes qhTrialSheen {
+  0%, 62%  { background-position: 160% 0; }
+  100%     { background-position: -60% 0; }
+}
+
+/* ── الساعة الرمليّة ────────────────────────────────────────────────
+   دورة واحدة من تسع ثوانٍ: الرمل ينزل ببطء حتى الثانية السابعة، ثم
+   تنقلب الساعة. والانقلابة تخفي عودة الرمل إلى أعلى، فتُقرأ الدورة
+   متّصلةً لا مقطوعة. */
+.qh-hg { overflow: visible; }
+
+.qh-hg-frame {
+  transform-origin: 12px 12px;
+  animation: qhHgFlip 9s ease-in-out infinite;
+}
+@keyframes qhHgFlip {
+  0%, 74%   { transform: rotate(0deg); }
+  88%, 100% { transform: rotate(180deg); }
+}
+
+/* العليا تنكمش نحو العنق: الرمل ينحسر من أعلى فيبقى أسفله. */
+.qh-hg-top {
+  transform-origin: 12px 10.4px;
+  animation: qhHgDrain 9s ease-in-out infinite;
+}
+@keyframes qhHgDrain {
+  0%        { transform: scale(1); }
+  70%, 100% { transform: scale(0); }
+}
+
+/* السفلى تتراكم من القاع. */
+.qh-hg-bottom {
+  transform-origin: 12px 20.4px;
+  animation: qhHgFill 9s ease-in-out infinite;
+}
+@keyframes qhHgFill {
+  0%        { transform: scale(0); }
+  70%, 100% { transform: scale(1); }
+}
+
+/* الخيط يظهر ما دام الرمل ينزل فقط. */
+.qh-hg-stream {
+  animation: qhHgStream 9s ease-in-out infinite;
+}
+@keyframes qhHgStream {
+  0%, 68%        { opacity: 0.55; }
+  72%, 100%      { opacity: 0; }
+}
+
+/* في اليوم الأخير تنبض الحبّة نبضاً هادئاً. */
+.qh-trial-pulse {
+  animation: qhTrialPulse 2.6s ease-in-out infinite;
+}
+@keyframes qhTrialPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.62; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .qh-ai-halo,
   .qh-ai-bob,
-  .qh-ai-eye {
+  .qh-ai-eye,
+  .qh-trial-sheen::after,
+  .qh-trial-pulse,
+  .qh-hg-frame,
+  .qh-hg-top,
+  .qh-hg-bottom,
+  .qh-hg-stream {
     animation: none;
   }
+  .qh-trial-sheen::after { opacity: 0; }
   .qh-ai-halo { opacity: 0.25; }
 }
