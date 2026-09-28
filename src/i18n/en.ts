@@ -1264,4 +1264,9 @@ export const en: Record<string, string> = {
   'إيجار': 'Rent',
   'شراء': 'Purchase',
   'سيارات': 'Cars',
+  // ── شريط الفترة التجريبية ──
+  'باقة تجريبية': 'Trial plan',
+  'اشترك الآن لتحتفظ بمحادثاتك وإعداداتك دون انقطاع.':
+    'Subscribe now to keep your conversations and settings without interruption.',
+  'اختر باقة': 'Choose a plan',
 };

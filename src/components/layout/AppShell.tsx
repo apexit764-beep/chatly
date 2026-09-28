@@ -8,6 +8,7 @@ import { Toast } from '@components/ui';
 import { SupportChat } from '@components/support/SupportChat';
 import { SubscriptionExpiredModal } from '@components/billing/SubscriptionExpiredModal';
 import { TrialExpiredModal } from '@components/billing/TrialExpiredModal';
+import { TrialBanner } from '@components/billing/TrialBanner';
 import { useUIStore } from '@/store/useUIStore';
 import { useLiveSimulator } from '@/hooks/useLiveSimulator';
 import { useAutoClose } from '@/hooks/useAutoClose';
@@ -29,6 +30,7 @@ export function AppShell(): JSX.Element {
       {!focused && <IconSidebar />}
       {!focused && <SectionSidebar />}
       <div className="flex-1 flex flex-col min-w-0 h-screen">
+        {getAppMode() === 'client' && <TrialBanner />}
         {!focused && <TopHeader />}
         <main className={isInbox ? 'flex-1 overflow-hidden min-h-0' : 'flex-1 overflow-y-auto overflow-x-hidden'}>
           <AnimatePresence mode="wait">
