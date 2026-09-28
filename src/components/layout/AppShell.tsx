@@ -26,27 +26,31 @@ export function AppShell(): JSX.Element {
   // Closes idle conversations on each account's own auto-close period
   useAutoClose();
   return (
-    <div className="flex h-screen overflow-hidden bg-bg-light dark:bg-bg-dark text-[14px] text-[#111827] dark:text-[#F1F5F9]">
-      {!focused && <IconSidebar />}
-      {!focused && <SectionSidebar />}
-      <div className="flex-1 flex flex-col min-w-0 h-screen">
-        {getAppMode() === 'client' && <TrialBanner />}
-        {!focused && <TopHeader />}
-        <main className={isInbox ? 'flex-1 overflow-hidden min-h-0' : 'flex-1 overflow-y-auto overflow-x-hidden'}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.2 }}
-              className="h-full"
-            >
-              <Outlet />
-            </motion.div>
-          </AnimatePresence>
-        </main>
-        {!isInbox && getAppMode() === 'client' && <Footer />}
+    <div className="flex flex-col h-screen overflow-hidden bg-bg-light dark:bg-bg-dark text-[14px] text-[#111827] dark:text-[#F1F5F9]">
+      {/* فوق الشريطين الجانبيين لا بجانبهما: الفترة التجريبية حالة حساب لا
+          حالة صفحة، فتعلو الواجهة كلّها ولا يتغيّر عرضها بتغيّر الصفحة. */}
+      {getAppMode() === 'client' && <TrialBanner />}
+      <div className="flex flex-1 min-h-0">
+        {!focused && <IconSidebar />}
+        {!focused && <SectionSidebar />}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
+          {!focused && <TopHeader />}
+          <main className={isInbox ? 'flex-1 overflow-hidden min-h-0' : 'flex-1 overflow-y-auto overflow-x-hidden'}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2 }}
+                className="h-full"
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
+          </main>
+          {!isInbox && getAppMode() === 'client' && <Footer />}
+        </div>
       </div>
       <OnboardingModal />
       <Toast />

@@ -168,7 +168,7 @@ function InboxSectionSidebar(): JSX.Element {
   const showingAllConvs = selectedChannelId === null && selectedDepartmentId === null;
 
   return (
-    <aside className="w-[240px] flex-shrink-0 h-screen sticky top-0 bg-sidebar-light dark:bg-sidebar-dark border-l border-border-light dark:border-border-dark flex flex-col z-20">
+    <aside className="w-[240px] flex-shrink-0 h-full sticky top-0 bg-sidebar-light dark:bg-sidebar-dark border-l border-border-light dark:border-border-dark flex flex-col z-20">
       <SectionHeader>{t('المحادثات')}</SectionHeader>
       <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
         <SectionItem
@@ -262,7 +262,7 @@ function SettingsSectionSidebar(): JSX.Element {
   const setTab = useInboxStore((s) => s.setSettingsTab);
 
   return (
-    <aside className="w-[240px] flex-shrink-0 h-screen sticky top-0 bg-white dark:bg-surface-dark border-l border-border-light dark:border-border-dark flex flex-col z-20">
+    <aside className="w-[240px] flex-shrink-0 h-full sticky top-0 bg-white dark:bg-surface-dark border-l border-border-light dark:border-border-dark flex flex-col z-20">
       <div className="h-[56px] px-4 flex items-center border-b border-border-light dark:border-border-dark flex-shrink-0">
         <h2 className="text-h3 font-bold">{t('الإعدادات')}</h2>
       </div>
@@ -292,7 +292,7 @@ function ReportsSectionSidebar(): JSX.Element {
     { key: 'customers', label: 'العملاء' },
   ];
   return (
-    <aside className="w-[240px] flex-shrink-0 h-screen sticky top-0 bg-sidebar-light dark:bg-sidebar-dark border-l border-border-light dark:border-border-dark flex flex-col z-20">
+    <aside className="w-[240px] flex-shrink-0 h-full sticky top-0 bg-sidebar-light dark:bg-sidebar-dark border-l border-border-light dark:border-border-dark flex flex-col z-20">
       <SectionHeader>{t('التقارير')}</SectionHeader>
       <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
         {items.map((it, i) => (
