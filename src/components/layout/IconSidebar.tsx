@@ -150,7 +150,7 @@ export function IconSidebar(): JSX.Element {
     return (
       <aside
         className={cn(
-          'w-[64px] flex-shrink-0 h-screen sticky top-0 flex flex-col items-center py-3 z-30 text-white',
+          'w-[64px] flex-shrink-0 h-full sticky top-0 flex flex-col items-center py-3 z-30 text-white',
           SIDEBAR_GRADIENT,
         )}
       >
@@ -193,7 +193,7 @@ export function IconSidebar(): JSX.Element {
   return (
     <aside
       className={cn(
-        'w-[240px] flex-shrink-0 h-screen sticky top-0 flex flex-col z-30 text-white',
+        'w-[240px] flex-shrink-0 h-full sticky top-0 flex flex-col z-30 text-white',
         SIDEBAR_GRADIENT,
       )}
     >
