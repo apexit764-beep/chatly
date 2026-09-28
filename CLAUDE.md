@@ -30,7 +30,8 @@ Three deployment targets:
      rather than leaving it to the `404.html` fallback (`channels/tiktok` was created
      this way at `bc08952a`). The breakdown below was fully enumerated at `bc08952a`
      and sums to the live total, but it is a map of the tree's shape, not a checklist:
-     - root `index.html` + `404.html` (2)
+     - root `index.html` + `404.html` (2) — the build emits no `dist/404.html`; the
+       server's copy is just `index.html`, so publish `dist/index.html` to it
      - 43 top-level client routes
      - `settings/` × 6 (`api`, `appearance`, `general`, `languages`, `notifications`, `security`)
      - `channels/` × 17 (`email`, `gmail`, `instagram`, `messenger`, `new`, `outlook`,
