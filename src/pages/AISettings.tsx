@@ -118,14 +118,6 @@ function accountsCount(n: number): string {
   return tail >= 11 && tail <= 99 ? `${n} حساباً` : `${n} حساب`;
 }
 
-/** سطر الحالة تحت اسم الحساب في القائمة. */
-function overrideSummary(o?: ChannelOverride): string {
-  const custom = BEHAVIOR_GROUP_ORDER.filter((g) => o?.[g]);
-  if (custom.length === 0) return 'يتبع الإعدادات الافتراضية';
-  if (custom.length === BEHAVIOR_GROUP_ORDER.length) return 'مخصّص بالكامل';
-  return `مخصّص: ${custom.map((g) => GROUP_META[g].short).join(' · ')}`;
-}
-
 const DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
 interface ProviderInfo {
@@ -609,7 +601,7 @@ export default function AISettings(): JSX.Element {
           muted element — not be excepted from inside it. */}
       {/*
         «سلوك المساعد» بنفس تخطيط صفحة الإعدادات: القائمة عمودياً على جانب،
-        وإعدادات المختار بجانبها. أول القائمة الإعدادات الافتراضية، ثم الحسابات.
+        وإعدادات المختار بجانبها. فوقها بطاقة الإعدادات الافتراضية وحدها.
       */}
       <div className={cn(tab === 'behavior' && 'flex flex-col lg:flex-row gap-5 items-start')}>
       {tab === 'behavior' && (
@@ -632,39 +624,66 @@ export default function AISettings(): JSX.Element {
             </Select>
           </div>
 
-          <nav
-            aria-label="الحسابات المربوطة"
-            className="hidden lg:block w-[248px] flex-shrink-0 bg-white dark:bg-surface-dark rounded-card shadow-card dark:shadow-card-dark p-3 space-y-1 sticky top-4"
-          >
-            <ScopeItem
-              active={isDefaultScope}
+          <div className="hidden lg:block w-[248px] flex-shrink-0 space-y-3 sticky top-4">
+            {/*
+              الافتراضي بطاقة وحده لا عنصراً أوّل في القائمة: ليس حساباً، بل
+              ما ترثه الحسابات — وخلطه بها كان يوحي بأنه قناة من القنوات.
+            */}
+            <button
               onClick={() => { void selectScope(DEFAULT_SCOPE); }}
-              icon={<SlidersHorizontal className="h-[18px] w-[18px]" />}
-              label="الإعدادات الافتراضية"
-              hint={channels.length ? `يرثها ${inheritingCount} من ${accountsCount(channels.length)}` : 'تنطبق على كل حساب تربطه'}
-            />
-            <p className="px-3 pt-3 pb-1 text-[11px] font-semibold text-muted-light dark:text-muted-dark">
-              الحسابات المربوطة
-            </p>
-            {channels.length === 0 ? (
-              <p className="px-3 py-2 text-[12px] text-muted-light dark:text-muted-dark leading-relaxed">
-                لا توجد حسابات مربوطة بعد.{' '}
-                <Link to="/channels" className="text-primary font-semibold hover:underline">ربط قناة</Link>
-              </p>
-            ) : (
-              channels.map((c) => (
-                <ScopeItem
-                  key={c.id}
-                  active={selection === c.id}
-                  onClick={() => { void selectScope(c.id); }}
-                  icon={<ChannelIcon type={c.type} size={18} />}
-                  label={c.name}
-                  hint={overrideSummary(channelOverrides[c.id])}
-                  custom={Boolean(channelOverrides[c.id])}
-                />
-              ))
-            )}
-          </nav>
+              aria-current={isDefaultScope ? 'true' : undefined}
+              className={cn(
+                'w-full flex items-center gap-3 p-3 rounded-card text-start transition-colors border',
+                isDefaultScope
+                  ? 'bg-primary/10 border-primary/40 text-primary'
+                  : 'bg-white dark:bg-surface-dark border-transparent shadow-card dark:shadow-card-dark hover:border-primary/30'
+              )}
+            >
+              <span className={cn(
+                'h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0',
+                isDefaultScope ? 'bg-primary/15' : 'bg-primary/10 text-primary'
+              )}>
+                <SlidersHorizontal className="h-[18px] w-[18px]" />
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-body font-semibold truncate">الإعدادات الافتراضية</span>
+                <span className={cn('block text-[11px] truncate', isDefaultScope ? 'text-primary' : 'text-muted-light dark:text-muted-dark')}>
+                  {channels.length ? `يرثها ${inheritingCount} من ${accountsCount(channels.length)}` : 'تنطبق على كل حساب تربطه'}
+                </span>
+              </span>
+            </button>
+
+            <nav
+              aria-label="الحسابات المربوطة"
+              className="bg-white dark:bg-surface-dark rounded-card shadow-card dark:shadow-card-dark p-3 space-y-1"
+            >
+              <div className="flex items-center justify-between px-3 pt-1 pb-2">
+                <p className="text-body font-bold">الحسابات المربوطة</p>
+                {channels.length > 0 && (
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark tabular-nums">
+                    {channels.length}
+                  </span>
+                )}
+              </div>
+              {channels.length === 0 ? (
+                <p className="px-3 py-2 text-[12px] text-muted-light dark:text-muted-dark leading-relaxed">
+                  لا توجد حسابات مربوطة بعد.{' '}
+                  <Link to="/channels" className="text-primary font-semibold hover:underline">ربط قناة</Link>
+                </p>
+              ) : (
+                channels.map((c) => (
+                  <AccountItem
+                    key={c.id}
+                    active={selection === c.id}
+                    onClick={() => { void selectScope(c.id); }}
+                    icon={<ChannelIcon type={c.type} size={18} />}
+                    label={c.name}
+                    custom={Boolean(channelOverrides[c.id])}
+                  />
+                ))
+              )}
+            </nav>
+          </div>
         </>
       )}
 
@@ -1768,21 +1787,23 @@ export default function AISettings(): JSX.Element {
   );
 }
 
-/** عنصر في قائمة «سلوك المساعد» — بنمط قائمة صفحة الإعدادات. */
-function ScopeItem({
+/**
+ * حساب في قائمة «سلوك المساعد» — بنمط قائمة صفحة الإعدادات. تحت الاسم شارة
+ * واحدة: «مخصّص» إن خصّص قسماً واحداً على الأقل، وإلا «افتراضي». تفصيل
+ * الأقسام المخصّصة في تبويبات الحساب نفسه، لا هنا.
+ */
+function AccountItem({
   active,
   onClick,
   icon,
   label,
-  hint,
-  custom = false,
+  custom,
 }: {
   active: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
-  hint: string;
-  custom?: boolean;
+  custom: boolean;
 }): JSX.Element {
   return (
     <button
@@ -1797,12 +1818,16 @@ function ScopeItem({
     >
       <span className="flex-shrink-0 flex items-center justify-center w-5">{icon}</span>
       <span className="flex-1 min-w-0">
-        <span className="flex items-center gap-1.5">
-          <span className="text-body font-medium truncate">{label}</span>
-          {custom && <span className="h-1.5 w-1.5 rounded-full bg-success flex-shrink-0" aria-hidden />}
-        </span>
-        <span className={cn('block text-[11px] truncate', active ? 'text-primary' : 'text-muted-light dark:text-muted-dark')}>
-          {hint}
+        <span className="block text-body font-medium truncate">{label}</span>
+        <span
+          className={cn(
+            'inline-block mt-1 text-[10px] px-1.5 py-0.5 rounded-full font-bold',
+            custom
+              ? 'bg-success/15 text-success'
+              : 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark'
+          )}
+        >
+          {custom ? 'مخصّص' : 'افتراضي'}
         </span>
       </span>
     </button>
