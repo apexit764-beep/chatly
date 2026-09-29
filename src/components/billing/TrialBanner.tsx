@@ -66,7 +66,7 @@ export function TrialBanner(): JSX.Element | null {
   // التصعيد باكراً، فتألفه العين ويعود خلفيةً لا تنبيهاً.
   //
   // والكهرمانيّ لا الأصفر الصافي: النص الغامق عليه #78350F بتباين 8.75،
-  // والثانويّ عند `/75` بـ4.60، والأبيض على الحبّة والزرّ #B45309 بـ5.02.
+  // والثانويّ عند `/75` بـ4.60، والأبيض على الحبّة #B45309 بـ5.02.
   // الأصفر الصافي لا يحمل نصاً أبيض مقروءاً أصلاً.
   const red = daysLeft <= 1;
   const amber = !red && endingSoon;
@@ -143,11 +143,9 @@ export function TrialBanner(): JSX.Element | null {
           onClick={() => navigate('/subscribe')}
           className={cn(
             'ms-auto flex-shrink-0 inline-flex items-center gap-2 h-9 px-4 rounded-full text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-shadow',
-            red
-              ? 'bg-[#B42318] hover:bg-[#991B1B]'
-              : amber
-                ? 'bg-[#B45309] hover:bg-[#92400E]'
-                : 'bg-primary hover:bg-primary-dark'
+            // لون الهوية في كل الحالات: الزرّ هو الفعل نفسه لا الإنذار، فلا
+            // يتلوّن مع الشريط — الشريط والحبّة يحملان درجة الإلحاح وحدهما.
+            'bg-primary hover:bg-primary-dark'
           )}
         >
           {t('اختر باقة')}
