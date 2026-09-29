@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowLeft, X } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/useTranslation';
 import { useLanguageStore } from '@/store/useLanguageStore';
@@ -14,6 +15,21 @@ function daysLabel(n: number, ar: boolean): string {
   if (n === 2) return 'يتبقّى يومان';
   if (n <= 10) return `تتبقّى ${n} أيام`;
   return `يتبقّى ${n} يوماً`;
+}
+
+/**
+ * الإغلاق يخفي الشريط لبقيّة اليوم لا إلى الأبد: هو عدّاد تنازليّ، وإخفاؤه
+ * نهائياً يُسقط الغرض منه. فيُحفظ تاريخ اليوم، ويعود الشريط في الغد.
+ */
+const DISMISS_KEY = 'qhub_trial_banner_dismissed';
+
+function today(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+function dismissedToday(): boolean {
+  try { return localStorage.getItem(DISMISS_KEY) === today(); } catch { return false; }
 }
 
 /**
@@ -42,18 +58,28 @@ export function TrialBanner(): JSX.Element | null {
   const { active, daysLeft, endingSoon } = useTrialStatus();
   const navigate = useNavigate();
   const ar = useLanguageStore((s) => s.language) === 'ar';
-
-  if (!active) return null;
+  const [dismissed, setDismissed] = useState(dismissedToday);
 
   // التصعيد على مرحلتين: حبّة مصمتة في آخر ثلاثة أيام، والشريط كلّه ينقلب
   // إلى تنبيه خطر أحمر في اليوم الأخير وحده. صبغه أحمر ثلاثة أيام متّصلة
   // يحرق التصعيد باكراً، فتألفه العين ويعود خلفيةً لا تنبيهاً.
   const red = daysLeft <= 1;
+  // اليوم الأخير لا يُغلق: بعده تتوقّف الخدمة، فلا يُخفى آخر إنذار قبلها.
+  const dismissible = !red;
+
+  const dismiss = (): void => {
+    try { localStorage.setItem(DISMISS_KEY, today()); } catch { /* ignore */ }
+    setDismissed(true);
+  };
 
   return (
+    <AnimatePresence initial={false}>
+    {active && !(dismissible && dismissed) && (
     <motion.div
+      key="trial-banner"
       initial={{ height: 0, opacity: 0 }}
       animate={{ height: 44, opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
         'relative flex-shrink-0 overflow-hidden border-b',
@@ -62,7 +88,13 @@ export function TrialBanner(): JSX.Element | null {
           : 'bg-[#EFF6FF] border-[#BFDBFE] text-[#1E3A8A] dark:bg-[#132B52] dark:border-[#1E3A8A] dark:text-[#BFDBFE]'
       )}
     >
-      <div className="relative flex items-center gap-3 px-4 sm:px-6 h-11">
+      {/*
+        الرسالة كلّها كتلة واحدة في الوسط: على الشاشات العريضة كانت الحبّة في
+        طرف والزرّ في الطرف الآخر بينهما عرض الشاشة كلّه، فلا تُقرأ جملةً
+        واحدة. والحشو الجانبي يحجز مكان زرّ الإغلاق فلا تتراكب الكتلة عليه.
+      */}
+      <div className="relative flex items-center justify-center h-11 px-12 sm:px-14">
+      <div className="flex items-center gap-3 min-w-0">
         <motion.span
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
@@ -89,7 +121,7 @@ export function TrialBanner(): JSX.Element | null {
           {/* tabular-nums: العدّاد ينقص يوماً بعد يوم فلا يقفز عرضه معه. */}
           <span className="font-semibold tabular-nums">{daysLabel(daysLeft, ar)}</span>
           {/* `/75` لا أقلّ: عند `/70` يهبط التباين إلى 4.31 دون الحدّ. */}
-          <span className="opacity-75">
+          <span className="opacity-75 hidden md:inline">
             {' — '}
             {t('اشترك الآن لتحتفظ بمحادثاتك وإعداداتك دون انقطاع.')}
           </span>
@@ -103,7 +135,7 @@ export function TrialBanner(): JSX.Element | null {
           whileTap={{ scale: 0.97 }}
           onClick={() => navigate('/subscribe')}
           className={cn(
-            'ms-auto flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-white text-[12px] font-semibold shadow-sm hover:shadow-md transition-shadow',
+            'ms-1 flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-white text-[12px] font-semibold shadow-sm hover:shadow-md transition-shadow',
             red ? 'bg-[#B42318] hover:bg-[#991B1B]' : 'bg-primary hover:bg-primary-dark'
           )}
         >
@@ -111,6 +143,20 @@ export function TrialBanner(): JSX.Element | null {
           <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-0 ltr:rotate-180" />
         </motion.button>
       </div>
+
+        {dismissible && (
+          <button
+            onClick={dismiss}
+            aria-label={t('إخفاء الشريط')}
+            title={t('إخفاء الشريط لبقيّة اليوم')}
+            className="absolute end-3 sm:end-4 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 hover:bg-[#1E3A8A]/10 dark:hover:bg-white/10 transition"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
     </motion.div>
+    )}
+    </AnimatePresence>
   );
 }
