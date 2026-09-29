@@ -60,10 +60,16 @@ export function TrialBanner(): JSX.Element | null {
   const ar = useLanguageStore((s) => s.language) === 'ar';
   const [dismissed, setDismissed] = useState(dismissedToday);
 
-  // التصعيد على مرحلتين: حبّة مصمتة في آخر ثلاثة أيام، والشريط كلّه ينقلب
-  // إلى تنبيه خطر أحمر في اليوم الأخير وحده. صبغه أحمر ثلاثة أيام متّصلة
-  // يحرق التصعيد باكراً، فتألفه العين ويعود خلفيةً لا تنبيهاً.
+  // التصعيد ثلاث درجات بألوان التنبيهات المعروفة: أزرق إعلاميّ في معظم
+  // المدّة، وكهرمانيّ تحذيريّ في آخر ثلاثة أيام، وأحمر في اليوم الأخير
+  // وحده. الأحمر لا يمتدّ أكثر من يوم: صبغ الشريط به أياماً متّصلة يحرق
+  // التصعيد باكراً، فتألفه العين ويعود خلفيةً لا تنبيهاً.
+  //
+  // والكهرمانيّ لا الأصفر الصافي: النص الغامق عليه #78350F بتباين 8.75،
+  // والثانويّ عند `/75` بـ4.60، والأبيض على الحبّة والزرّ #B45309 بـ5.02.
+  // الأصفر الصافي لا يحمل نصاً أبيض مقروءاً أصلاً.
   const red = daysLeft <= 1;
+  const amber = !red && endingSoon;
   // اليوم الأخير لا يُغلق: بعده تتوقّف الخدمة، فلا يُخفى آخر إنذار قبلها.
   const dismissible = !red;
 
@@ -85,7 +91,9 @@ export function TrialBanner(): JSX.Element | null {
         'relative flex-shrink-0 overflow-hidden border-b',
         red
           ? 'bg-[#FEF2F2] border-[#FECACA] text-[#991B1B] dark:bg-[#3B1414] dark:border-[#7F1D1D] dark:text-[#FECACA]'
-          : 'bg-[#EFF6FF] border-[#BFDBFE] text-[#1E3A8A] dark:bg-[#132B52] dark:border-[#1E3A8A] dark:text-[#BFDBFE]'
+          : amber
+            ? 'bg-[#FFFBEB] border-[#FDE68A] text-[#78350F] dark:bg-[#3A2A0C] dark:border-[#78350F] dark:text-[#FDE68A]'
+            : 'bg-[#EFF6FF] border-[#BFDBFE] text-[#1E3A8A] dark:bg-[#132B52] dark:border-[#1E3A8A] dark:text-[#BFDBFE]'
       )}
     >
       {/*
@@ -102,8 +110,8 @@ export function TrialBanner(): JSX.Element | null {
             'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] font-semibold flex-shrink-0',
             red
               ? 'qh-trial-pulse bg-[#B42318] text-white'
-              : endingSoon
-                ? 'bg-[#1E40AF] text-white'
+              : amber
+                ? 'bg-[#B45309] text-white'
                 : 'bg-[#DBEAFE] text-[#1E40AF] dark:bg-[#1E3A8A] dark:text-[#DBEAFE]'
           )}
         >
@@ -135,7 +143,11 @@ export function TrialBanner(): JSX.Element | null {
           onClick={() => navigate('/subscribe')}
           className={cn(
             'ms-auto flex-shrink-0 inline-flex items-center gap-2 h-9 px-4 rounded-full text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-shadow',
-            red ? 'bg-[#B42318] hover:bg-[#991B1B]' : 'bg-primary hover:bg-primary-dark'
+            red
+              ? 'bg-[#B42318] hover:bg-[#991B1B]'
+              : amber
+                ? 'bg-[#B45309] hover:bg-[#92400E]'
+                : 'bg-primary hover:bg-primary-dark'
           )}
         >
           {t('اختر باقة')}
@@ -147,7 +159,10 @@ export function TrialBanner(): JSX.Element | null {
             onClick={dismiss}
             aria-label={t('إخفاء الشريط')}
             title={t('إخفاء الشريط لبقيّة اليوم')}
-            className="flex-shrink-0 -me-1.5 h-8 w-8 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 hover:bg-[#1E3A8A]/10 dark:hover:bg-white/10 transition"
+            className={cn(
+              'flex-shrink-0 -me-1.5 h-8 w-8 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 dark:hover:bg-white/10 transition',
+              amber ? 'hover:bg-[#78350F]/10' : 'hover:bg-[#1E3A8A]/10'
+            )}
           >
             <X className="h-[18px] w-[18px]" />
           </button>
