@@ -1,0 +1,1 @@
+import{am as n,af as s}from"./index-DacNwZGT.js";function m({className:e,...a}){return n.jsx("span",{className:s("inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-small font-medium border",e),...a})}export{m as B};
