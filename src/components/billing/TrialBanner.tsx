@@ -94,7 +94,7 @@ export function TrialBanner(): JSX.Element | null {
         حيث يُتوقَّع، بعيداً عن «اختر باقة» فلا يُضغط أحدهما بدل الآخر.
         والحشو الجانبي بعرض حشو المحتوى تحته تقريباً.
       */}
-      <div className="relative flex items-center gap-3 sm:gap-4 h-[52px] px-4 sm:px-8 lg:px-10">
+      <div className="relative flex items-center gap-3 sm:gap-4 h-[52px] px-4 sm:px-6 lg:px-8">
         <motion.span
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
