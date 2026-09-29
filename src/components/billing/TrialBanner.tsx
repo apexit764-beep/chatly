@@ -89,10 +89,8 @@ export function TrialBanner(): JSX.Element | null {
       )}
     >
       {/*
-        الرسالة وزرّها متجاوران على طرف — الزرّ يكمل الجملة، وعلى الشاشات
-        العريضة كان بينهما عرض الشاشة كلّه — والإغلاق وحده على الطرف الآخر
-        حيث يُتوقَّع، بعيداً عن «اختر باقة» فلا يُضغط أحدهما بدل الآخر.
-        والحشو الجانبي بعرض حشو المحتوى تحته تقريباً.
+        الحبّة والرسالة على طرف، والزرّ والإغلاق على الطرف الآخر. والحشو
+        الجانبي بعرض حشو المحتوى تحته تقريباً، فلا يلتصق الشريط بحافّتي الشاشة.
       */}
       <div className="relative flex items-center gap-3 sm:gap-4 h-[52px] px-4 sm:px-6 lg:px-8">
         <motion.span
@@ -135,7 +133,7 @@ export function TrialBanner(): JSX.Element | null {
           whileTap={{ scale: 0.97 }}
           onClick={() => navigate('/subscribe')}
           className={cn(
-            'flex-shrink-0 inline-flex items-center gap-2 h-9 px-4 rounded-full text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-shadow',
+            'ms-auto flex-shrink-0 inline-flex items-center gap-2 h-9 px-4 rounded-full text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-shadow',
             red ? 'bg-[#B42318] hover:bg-[#991B1B]' : 'bg-primary hover:bg-primary-dark'
           )}
         >
@@ -148,7 +146,7 @@ export function TrialBanner(): JSX.Element | null {
             onClick={dismiss}
             aria-label={t('إخفاء الشريط')}
             title={t('إخفاء الشريط لبقيّة اليوم')}
-            className="ms-auto flex-shrink-0 -me-1.5 h-8 w-8 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 hover:bg-[#1E3A8A]/10 dark:hover:bg-white/10 transition"
+            className="flex-shrink-0 -me-1.5 h-8 w-8 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 hover:bg-[#1E3A8A]/10 dark:hover:bg-white/10 transition"
           >
             <X className="h-[18px] w-[18px]" />
           </button>
