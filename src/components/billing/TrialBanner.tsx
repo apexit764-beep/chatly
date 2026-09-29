@@ -90,9 +90,10 @@ export function TrialBanner(): JSX.Element | null {
     >
       {/*
         الحبّة والرسالة على طرف، والزرّ والإغلاق على الطرف الآخر. والحشو
-        الجانبي بعرض حشو المحتوى تحته تقريباً، فلا يلتصق الشريط بحافّتي الشاشة.
+        الجانبي 16px على كل العروض: بحشو رأس الشريط الجانبي نفسه، فتقع الحبّة
+        على خطّ شعار Qhub تحتها تماماً.
       */}
-      <div className="relative flex items-center gap-3 sm:gap-4 h-[52px] px-4 sm:px-6 lg:px-8">
+      <div className="relative flex items-center gap-3 sm:gap-4 h-[52px] px-4">
         <motion.span
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
