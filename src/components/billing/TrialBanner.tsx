@@ -78,7 +78,7 @@ export function TrialBanner(): JSX.Element | null {
     <motion.div
       key="trial-banner"
       initial={{ height: 0, opacity: 0 }}
-      animate={{ height: 44, opacity: 1 }}
+      animate={{ height: 52, opacity: 1 }}
       exit={{ height: 0, opacity: 0 }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
@@ -89,18 +89,16 @@ export function TrialBanner(): JSX.Element | null {
       )}
     >
       {/*
-        الرسالة كلّها كتلة واحدة في الوسط: على الشاشات العريضة كانت الحبّة في
-        طرف والزرّ في الطرف الآخر بينهما عرض الشاشة كلّه، فلا تُقرأ جملةً
-        واحدة. والحشو الجانبي يحجز مكان زرّ الإغلاق فلا تتراكب الكتلة عليه.
+        الحبّة والرسالة على طرف، والزرّ والإغلاق على الطرف الآخر. والحشو
+        الجانبي بعرض حشو المحتوى تحته تقريباً، فلا يلتصق الشريط بحافّتي الشاشة.
       */}
-      <div className="relative flex items-center justify-center h-11 px-12 sm:px-14">
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="relative flex items-center gap-3 sm:gap-4 h-[52px] px-4 sm:px-8 lg:px-10">
         <motion.span
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.12, duration: 0.3 }}
           className={cn(
-            'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold flex-shrink-0',
+            'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] font-semibold flex-shrink-0',
             red
               ? 'qh-trial-pulse bg-[#B42318] text-white'
               : endingSoon
@@ -108,7 +106,7 @@ export function TrialBanner(): JSX.Element | null {
                 : 'bg-[#DBEAFE] text-[#1E40AF] dark:bg-[#1E3A8A] dark:text-[#DBEAFE]'
           )}
         >
-          <TrialHourglass className="h-3.5 w-3.5" />
+          <TrialHourglass className="h-4 w-4" />
           {t('باقة تجريبية')}
         </motion.span>
 
@@ -116,10 +114,10 @@ export function TrialBanner(): JSX.Element | null {
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.18, duration: 0.3 }}
-          className="text-small min-w-0 truncate"
+          className="text-[14px] min-w-0 truncate"
         >
           {/* tabular-nums: العدّاد ينقص يوماً بعد يوم فلا يقفز عرضه معه. */}
-          <span className="font-semibold tabular-nums">{daysLabel(daysLeft, ar)}</span>
+          <span className="font-bold tabular-nums">{daysLabel(daysLeft, ar)}</span>
           {/* `/75` لا أقلّ: عند `/70` يهبط التباين إلى 4.31 دون الحدّ. */}
           <span className="opacity-75 hidden md:inline">
             {' — '}
@@ -135,23 +133,22 @@ export function TrialBanner(): JSX.Element | null {
           whileTap={{ scale: 0.97 }}
           onClick={() => navigate('/subscribe')}
           className={cn(
-            'ms-1 flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-white text-[12px] font-semibold shadow-sm hover:shadow-md transition-shadow',
+            'ms-auto flex-shrink-0 inline-flex items-center gap-2 h-9 px-4 rounded-full text-white text-[13px] font-semibold shadow-sm hover:shadow-md transition-shadow',
             red ? 'bg-[#B42318] hover:bg-[#991B1B]' : 'bg-primary hover:bg-primary-dark'
           )}
         >
           {t('اختر باقة')}
-          <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-0 ltr:rotate-180" />
+          <ArrowLeft className="h-4 w-4 rtl:rotate-0 ltr:rotate-180" />
         </motion.button>
-      </div>
 
         {dismissible && (
           <button
             onClick={dismiss}
             aria-label={t('إخفاء الشريط')}
             title={t('إخفاء الشريط لبقيّة اليوم')}
-            className="absolute end-3 sm:end-4 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 hover:bg-[#1E3A8A]/10 dark:hover:bg-white/10 transition"
+            className="flex-shrink-0 -me-1.5 h-8 w-8 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 hover:bg-[#1E3A8A]/10 dark:hover:bg-white/10 transition"
           >
-            <X className="h-4 w-4" />
+            <X className="h-[18px] w-[18px]" />
           </button>
         )}
       </div>
