@@ -35,6 +35,9 @@ import {
   widgetConfig as initialWidgetConfig,
 } from './mockData';
 
+
+/** Conversation-list preview for the rating request — the link stays out of staff view. */
+export const RATING_SENT_PREVIEW = 'أُرسل طلب التقييم للعميل';
 interface DataState {
   currentUserId: string;
   agents: Agent[];
@@ -54,7 +57,12 @@ interface DataState {
   appSettings: AppSettings;
 
   // Conversation actions
-  sendMessage: (conversationId: string, content: string, type?: 'text' | 'note') => void;
+  sendMessage: (
+    conversationId: string,
+    content: string,
+    type?: 'text' | 'note',
+    extra?: Pick<Message, 'ratingToken'>,
+  ) => void;
   editMessage: (conversationId: string, messageId: string, newContent: string) => void;
   assignConversation: (conversationId: string, agentId: string | null) => void;
   setConversationStatus: (conversationId: string, status: Conversation['status']) => void;
@@ -227,7 +235,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   widgetConfig: initialWidgetConfig,
   whatsappConnected: true,
 
-  sendMessage: (conversationId, content, type = 'text') =>
+  sendMessage: (conversationId, content, type = 'text', extra) =>
     set((state) => {
       const message: Message = {
         id: newId(),
@@ -238,6 +246,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         timestamp: new Date().toISOString(),
         read: true,
         delivered: true,
+        ...extra,
       };
       const isNote = type === 'note';
       return {
@@ -247,7 +256,8 @@ export const useDataStore = create<DataState>((set, get) => ({
                 ...c,
                 messages: [...c.messages, message],
                 // Notes don't update last-customer-message preview
-                lastMessage: isNote ? c.lastMessage : content,
+                // The list preview is staff-facing too — no rating link in it.
+                lastMessage: isNote ? c.lastMessage : extra?.ratingToken ? RATING_SENT_PREVIEW : content,
                 lastMessageAt: isNote ? c.lastMessageAt : message.timestamp,
               }
             : c
