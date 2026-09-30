@@ -40,5 +40,7 @@ export function closeConversationWithRating(conversationId: string): void {
   );
   const url = `${window.location.origin}/rate/?t=${token}`;
   // Sending does not reopen a closed conversation, so the order is safe.
-  useDataStore.getState().sendMessage(conv.id, `${prefs.message}\n${url}`);
+  // The customer gets the text with the link; the token lets the inbox show
+  // staff a card in its place, so no agent can open it and rate themselves.
+  useDataStore.getState().sendMessage(conv.id, `${prefs.message}\n${url}`, 'text', { ratingToken: token });
 }

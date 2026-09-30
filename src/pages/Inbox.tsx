@@ -71,10 +71,11 @@ import {
   Select,
   useConfirm,
 } from '@components/ui';
-import { useDataStore } from '@/store/useDataStore';
+import { useDataStore, RATING_SENT_PREVIEW } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useInboxStore } from '@/store/useInboxStore';
 import { closeConversationWithRating } from '@/utils/closeConversation';
+import { useRatingStore } from '@/store/useRatingStore';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { PlanLimitModal } from '@components/billing/PlanLimitModal';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -436,7 +437,7 @@ export default function Inbox(): JSX.Element {
       selected.messages.map((m) => ({
         [t('الاتجاه')]: m.direction === 'in' ? t('وارد') : t('صادر'),
         [t('النوع')]: m.type,
-        [t('النص')]: m.content,
+        [t('النص')]: staffText(m),
         [t('الوقت')]: new Date(m.timestamp).toLocaleString(locale()),
         [t('مقروء')]: m.read ? t('نعم') : t('لا'),
       }))
@@ -927,7 +928,11 @@ export default function Inbox(): JSX.Element {
                         </span>
                       </div>
                     )}
-                    <MessageBubble msg={m} contactName={t(selectedContact.name)} agentName={agentForMsg} onEdit={startEdit} isEditing={editingMessageId === m.id} />
+                    {ratingTokenOf(m) ? (
+                      <RatingRequestCard token={ratingTokenOf(m)!} timestamp={m.timestamp} />
+                    ) : (
+                      <MessageBubble msg={m} contactName={t(selectedContact.name)} agentName={agentForMsg} onEdit={startEdit} isEditing={editingMessageId === m.id} />
+                    )}
                   </div>
                 );
               })}
@@ -1882,7 +1887,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
   const generateSummary = (): void => {
     setGenerating(true);
     setTimeout(() => {
-      const last3 = conversation.messages.slice(-3).map((m) => m.content).join(' ');
+      const last3 = conversation.messages.slice(-3).map(staffText).join(' ');
       setSummary(
         `محادثة مع ${contact.name} (${contactTypeLabel[contact.type]}). آخر طلب: ${last3.slice(0, 120)}${last3.length > 120 ? '...' : ''}`
       );
@@ -2816,6 +2821,55 @@ function ToolBtn({ icon, label, onClick }: { icon: React.ReactNode; label: strin
 }
 
 const EDIT_WINDOW_MINUTES = 30;
+
+/**
+ * The rating request as staff see it. The customer receives the text with the
+ * link; here it is only an event, with no link — an agent holding a clickable
+ * link could rate their own conversation, and a stray click would spend the
+ * customer's single-use rating.
+ *
+ * Messages sent before the token was stored on the message are recognised by
+ * the link in their text.
+ */
+const RATING_LINK = /\/rate\/\?t=([\w-]+)/;
+
+function ratingTokenOf(msg: Conversation['messages'][number]): string | null {
+  if (msg.ratingToken) return msg.ratingToken;
+  if (msg.direction !== 'out' || msg.type !== 'text') return null;
+  return RATING_LINK.exec(msg.content)?.[1] ?? null;
+}
+
+/** Message text as staff may see it: the rating link is swapped for its event label. */
+function staffText(msg: Conversation['messages'][number]): string {
+  return ratingTokenOf(msg) ? RATING_SENT_PREVIEW : msg.content;
+}
+
+function RatingRequestCard({ token, timestamp }: { token: string; timestamp: string }): JSX.Element {
+  const rating = useRatingStore((s) => s.ratings.find((r) => r.token === token));
+  const expired = Boolean(rating && !rating.submittedAt && new Date(rating.expiresAt).getTime() < Date.now());
+
+  const status = rating?.submittedAt
+    ? {
+        label: rating.ratingConversation != null ? `${t('قيّم')} ★${rating.ratingConversation}` : t('قيّم'),
+        cls: 'bg-success/15 text-[#047857] dark:text-success',
+      }
+    : expired
+      ? { label: t('انتهت صلاحيته'), cls: 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark' }
+      : { label: t('بانتظار التقييم'), cls: 'bg-warning/15 text-[#B45309] dark:text-warning' };
+
+  return (
+    <div className="flex justify-center mb-5">
+      <div className="inline-flex items-center gap-2.5 flex-wrap justify-center px-3.5 py-2 rounded-full border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark shadow-sm text-small">
+        <span className="h-6 w-6 rounded-full bg-warning/15 text-warning flex items-center justify-center flex-shrink-0">
+          <Star className="h-3.5 w-3.5" />
+        </span>
+        <span className="font-semibold">{t('أُرسل طلب التقييم للعميل')}</span>
+        <span className="text-[11px] text-muted-light dark:text-muted-dark tabular-nums">{timeAgo(timestamp)}</span>
+        <span className={cn('text-[11px] font-bold px-2 py-0.5 rounded-full', status.cls)}>{status.label}</span>
+      </div>
+    </div>
+  );
+}
 
 function MessageBubble({
   msg,

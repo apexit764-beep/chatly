@@ -219,6 +219,12 @@ export interface Message {
   transcribing?: boolean;
   /** Voice message recorded as an internal note */
   isInternalNote?: boolean;
+  /**
+   * The rating-request message sent on close. Its text (with the link) goes to
+   * the customer; the inbox shows staff an event card instead, so an agent
+   * never holds a clickable link that would let them rate their own chat.
+   */
+  ratingToken?: string;
 }
 
 export interface Conversation {
