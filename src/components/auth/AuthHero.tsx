@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { MessageSquare, Users, BarChart3, Bot } from 'lucide-react';
-import { QhubFullLogo } from '@components/ui';
+import { QhubLogo } from '@components/ui/SekaaLogo';
 
 const FEATURES = [
   { icon: MessageSquare, label: 'صندوق وارد واحد', desc: 'واتساب، بريد، إنستغرام ومسنجر بنفس اللوحة' },
@@ -54,9 +54,13 @@ export function AuthHero(): JSX.Element {
         transition={{ duration: 0.5, delay: 0.1 }}
         className="relative w-full max-w-lg"
       >
-        {/* Logo + brand */}
-        <div className="flex items-center justify-center mb-8">
-          <QhubFullLogo className="h-12 text-white" mono />
+        {/* Logo + brand: the app icon (white tile, colour mark) over the name —
+            the same icon people will see on their phone. */}
+        <div className="flex flex-col items-center gap-3 mb-8">
+          <span className="h-20 w-20 rounded-[22%] bg-white shadow-lg shadow-black/15 flex items-center justify-center">
+            <QhubLogo className="w-[62%]" />
+          </span>
+          <span dir="ltr" className="text-2xl font-extrabold tracking-wider text-white">QHUB</span>
         </div>
 
         {/* Main heading */}
