@@ -65,6 +65,10 @@ So always:
 3. Only then publish `index.html` (**every** copy — enumerate the tree, don't assume
    a count) and `version.json` last.
 
+Files at the `dist/` root other than the HTML and `version.json` — the favicon
+`qhub-logo.svg` — are not under `assets-v2/`, so step 1 misses them. Upload them
+with the assets whenever they change; `index.html` links the favicon by that name.
+
 Since `verify:deploy` cannot reach the domain from the agent proxy, diff the list of
 files you actually uploaded against `ls dist/assets-v2` before touching any HTML —
 doing that by eye misses files. It caught `channelTypes-vTlv0ltc.js` on build `793b4e4b`.
