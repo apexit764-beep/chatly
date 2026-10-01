@@ -961,13 +961,15 @@ function TwoFactorRow(): JSX.Element {
       return;
     }
     setCodeError(null);
+    // The verified code is the proof; 2FA is on from this moment. Step 3 then
+    // reports a fact rather than asking to confirm one, so closing the dialog
+    // from the X cannot leave the user believing it is on when it is not.
+    setSecurity({ twoFactor: true });
     setStep(3);
   };
 
   const finishSetup = (): void => {
-    setSecurity({ twoFactor: true });
     closeSetup();
-    showToast('تم تفعيل المصادقة الثنائية بنجاح', 'success');
   };
 
   const closeDisable = (): void => {
@@ -1229,11 +1231,21 @@ function TwoFactorRow(): JSX.Element {
 
         {step === 3 && (
           <div className="space-y-5">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-success/10 mb-3">
-                <ShieldCheck className="h-6 w-6 text-success" />
+            {/* Success first: by this step 2FA is already on. */}
+            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-success/10 border border-success/25" role="status">
+              <span className="h-9 w-9 rounded-full bg-success/15 flex items-center justify-center flex-shrink-0">
+                <ShieldCheck className="h-5 w-5 text-[#047857] dark:text-success" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-body font-semibold text-[#047857] dark:text-success">تم تفعيل المصادقة الثنائية بنجاح</p>
+                <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
+                  سيُطلب منك رمز من تطبيق المصادقة عند كل تسجيل دخول.
+                </p>
               </div>
-              <h3 className="text-h3 font-semibold mb-1">أكواد الاسترداد</h3>
+            </div>
+
+            <div>
+              <h3 className="text-body font-semibold mb-1">أكواد الاسترداد</h3>
               <p className="text-small text-muted-light dark:text-muted-dark">
                 احفظ هذه الأكواد في مكان آمن. يمكنك استخدامها للدخول إذا فقدت جهازك.
               </p>
@@ -1258,16 +1270,15 @@ function TwoFactorRow(): JSX.Element {
             </div>
 
             <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
-              <p className="text-small text-warning font-medium flex items-center gap-1.5">
+              <p className="text-small text-[#B45309] dark:text-warning font-medium flex items-center gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
                 لن تتمكن من رؤية هذه الأكواد مرة أخرى بعد إغلاق هذه النافذة
               </p>
             </div>
 
             <div className="flex justify-end pt-2">
-              <button onClick={finishSetup} className="h-10 px-5 rounded-full bg-success hover:bg-success/90 text-white text-small font-medium inline-flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4" />
-                تم، تفعيل المصادقة الثنائية
+              <button onClick={finishSetup} className="h-10 px-6 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">
+                تم
               </button>
             </div>
           </div>
