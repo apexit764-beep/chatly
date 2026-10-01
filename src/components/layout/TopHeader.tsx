@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell,
-  Sun,
   Moon,
+  Languages,
   ChevronLeft,
   Menu,
   CreditCard,
@@ -76,10 +76,6 @@ export function TopHeader(): JSX.Element {
   const notificationsOpen = useUIStore((s) => s.notificationsOpen);
   const setNotificationsOpen = useUIStore((s) => s.setNotificationsOpen);
   const toggleNotifications = useUIStore((s) => s.toggleNotifications);
-  const theme = useThemeStore((s) => s.theme);
-  const toggleTheme = useThemeStore((s) => s.toggle);
-  const language = useLanguageStore((s) => s.language);
-  const toggleLanguage = useLanguageStore((s) => s.toggle);
   const unreadNotifs = notifications.filter((n) => !n.read).length;
 
   const [profileOpen, setProfileOpen] = useState(false);
@@ -154,22 +150,6 @@ export function TopHeader(): JSX.Element {
             />
           )}
         </div>
-        <button
-          onClick={toggleTheme}
-          title={theme === 'dark' ? t('الوضع الفاتح') : t('الوضع الداكن')}
-          aria-label={t('تبديل المظهر')}
-          className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
-        >
-          {theme === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
-        </button>
-        <button
-          onClick={toggleLanguage}
-          title={language === 'ar' ? 'English' : t('العربية')}
-          aria-label={t('تبديل اللغة')}
-          className="h-9 min-w-9 px-2 rounded-lg flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current transition-colors"
-        >
-          <span className="text-[12px] font-bold uppercase tracking-wide">{language === 'ar' ? 'EN' : 'AR'}</span>
-        </button>
       </div>
 
       {/* Divider */}
@@ -211,6 +191,10 @@ function ProfileChip({
   onAvailableChange: (next: boolean) => void;
 }): JSX.Element {
   const { t } = useTranslation();
+  const theme = useThemeStore((s) => s.theme);
+  const toggleTheme = useThemeStore((s) => s.toggle);
+  const language = useLanguageStore((s) => s.language);
+  const setLanguage = useLanguageStore((s) => s.setLanguage);
   const roleLabel = user.role === 'admin' ? t('مدير الحساب') : t('موظف');
   const dotColor = available === false ? 'bg-warning' : 'bg-success';
   return (
@@ -281,6 +265,53 @@ function ProfileChip({
               <SettingsIcon className="h-4 w-4 text-muted-light dark:text-muted-dark" />
               <span>{t('الإعدادات')}</span>
             </NavLink>
+            {/*
+              Display preferences live here rather than in the header: they are
+              set once and rarely touched, so they do not earn a permanent slot
+              next to notifications. The menu stays open while they change, so
+              the switch is seen taking effect.
+            */}
+            <div className="h-px bg-border-light dark:bg-border-dark my-1" />
+            <div className="flex items-center gap-2.5 px-3 py-2 text-body">
+              <Moon className="h-4 w-4 text-muted-light dark:text-muted-dark" />
+              <span className="flex-1">{t('الوضع الداكن')}</span>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                role="switch"
+                aria-checked={theme === 'dark'}
+                aria-label={t('الوضع الداكن')}
+                className={cn(
+                  'relative h-5 w-9 rounded-full transition-colors flex-shrink-0',
+                  theme === 'dark' ? 'bg-primary' : 'bg-border-light dark:bg-border-dark',
+                )}
+              >
+                <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all', theme === 'dark' ? 'end-0.5' : 'start-0.5')} />
+              </button>
+            </div>
+            <div className="flex items-center gap-2.5 px-3 py-2 text-body">
+              <Languages className="h-4 w-4 text-muted-light dark:text-muted-dark" />
+              <span className="flex-1">{t('اللغة')}</span>
+              <div role="radiogroup" aria-label={t('اللغة')} className="flex items-center p-0.5 rounded-full bg-bg-light dark:bg-bg-dark flex-shrink-0">
+                {([['ar', 'عربي'], ['en', 'EN']] as const).map(([code, label]) => (
+                  <button
+                    key={code}
+                    type="button"
+                    role="radio"
+                    aria-checked={language === code}
+                    onClick={() => setLanguage(code)}
+                    className={cn(
+                      'h-6 px-2.5 rounded-full text-[11px] font-semibold transition-colors',
+                      language === code
+                        ? 'bg-white dark:bg-surface-dark text-primary shadow-sm'
+                        : 'text-muted-light dark:text-muted-dark hover:text-current',
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="h-px bg-border-light dark:bg-border-dark my-1" />
             <button
               onClick={() => { onClose(); onLogout(); }}
