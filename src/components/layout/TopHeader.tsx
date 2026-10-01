@@ -4,6 +4,7 @@ import {
   Bell,
   Moon,
   Languages,
+  BookOpen,
   ChevronLeft,
   Menu,
   CreditCard,
@@ -123,6 +124,22 @@ export function TopHeader(): JSX.Element {
 
       {/* Action buttons */}
       <div className="flex items-center gap-1">
+        {/*
+          Knowledge base shortcut. It glows to draw the eye to the one page that
+          makes the assistant's answers better; on the page itself it settles
+          into a plain active state, since there is nowhere left to point.
+        */}
+        <NavLink
+          to="/knowledge-base"
+          title={t('قاعدة المعرفة')}
+          aria-label={t('قاعدة المعرفة')}
+          className={({ isActive }) => cn(
+            'relative h-9 w-9 rounded-lg flex items-center justify-center text-primary dark:text-[#60A5FA] transition-colors',
+            isActive ? 'bg-primary/10' : 'qh-kb-glow hover:bg-primary/10',
+          )}
+        >
+          <BookOpen className="h-[18px] w-[18px]" />
+        </NavLink>
         <div className="relative">
           <button
             onClick={toggleNotifications}
