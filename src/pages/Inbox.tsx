@@ -81,6 +81,7 @@ import { downloadCsv } from '@/utils/csv';
 import { cn } from '@/utils/cn';
 import { deriveSessions } from '@/utils/sessions';
 import SessionRail from '@/components/inbox/SessionRail';
+import { VoiceRecorder } from '@/components/inbox/VoiceRecorder';
 import type { Conversation, ConversationSession, ConversationStatus, Channel, Department, Contact } from '@/types';
 import type { InboxView } from '@/store/useInboxStore';
 
@@ -157,11 +158,10 @@ export default function Inbox(): JSX.Element {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesScrollRef = useRef<HTMLDivElement>(null);
   const [activeSession, setActiveSession] = useState(1);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordingChunksRef = useRef<Blob[]>([]);
-  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // An open microphone stream means the composer is in recording mode. The
+  // conversation and mode are fixed when recording starts, so switching chats
+  // mid-recording cannot send the message to the wrong place.
+  const [recording, setRecording] = useState<{ stream: MediaStream; conversationId: string; note: boolean } | null>(null);
 
   useEffect(() => {
     if (callState === 'calling') {
@@ -453,63 +453,33 @@ export default function Inbox(): JSX.Element {
   };
 
   const startRecording = async (): Promise<void> => {
-    if (!selected) return;
+    if (!selected || recording) return;
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      showToast('المتصفح لا يدعم التسجيل الصوتي', 'error');
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      recordingChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) recordingChunksRef.current.push(e.data);
-      };
-
-      const isNoteMode = inputMode === 'note';
-      mediaRecorder.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(recordingChunksRef.current, { type: 'audio/webm' });
-        const url = URL.createObjectURL(blob);
-        const duration = recordingTime;
-        const mins = Math.floor(duration / 60);
-        const secs = duration % 60;
-        const label = `${mins}:${secs.toString().padStart(2, '0')}`;
-        sendAttachment(selected!.id, 'voice', label, url, isNoteMode);
-        showToast(isNoteMode ? 'تم حفظ الملاحظة الصوتية' : 'تم إرسال الرسالة الصوتية', 'success');
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingTime(0);
-      recordingTimerRef.current = setInterval(() => setRecordingTime((t) => t + 1), 1000);
-    } catch {
-      showToast('لم يتم السماح بالوصول إلى الميكروفون', 'error');
+      setRecording({ stream, conversationId: selected.id, note: inputMode === 'note' });
+    } catch (err) {
+      const name = (err as DOMException)?.name;
+      showToast(
+        name === 'NotFoundError' || name === 'OverconstrainedError'
+          ? 'لا يوجد ميكروفون متصل بالجهاز'
+          : name === 'NotReadableError'
+            ? 'الميكروفون مستخدم من تطبيق آخر'
+            : 'اسمح للمتصفح باستخدام الميكروفون من أيقونة القفل بجانب الرابط، ثم حاول مجدداً',
+        'error'
+      );
     }
   };
 
-  const stopRecording = (): void => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    setIsRecording(false);
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current);
-      recordingTimerRef.current = null;
-    }
-  };
-
-  const cancelRecording = (): void => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.ondataavailable = null;
-      mediaRecorderRef.current.onstop = null;
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
-    }
-    setIsRecording(false);
-    setRecordingTime(0);
-    if (recordingTimerRef.current) {
-      clearInterval(recordingTimerRef.current);
-      recordingTimerRef.current = null;
-    }
+  const sendRecording = (url: string, seconds: number): void => {
+    if (!recording) return;
+    const label = `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
+    sendAttachment(recording.conversationId, 'voice', label, url, recording.note);
+    showToast(recording.note ? 'تم حفظ الملاحظة الصوتية' : 'تم إرسال الرسالة الصوتية', 'success');
+    setRecording(null);
   };
 
   return (
@@ -1030,33 +1000,13 @@ export default function Inbox(): JSX.Element {
                 );
               })()}
 
-              {isRecording ? (
-                <div className="px-4 py-6 flex flex-col items-center gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="h-3 w-3 rounded-full bg-danger animate-pulse" />
-                    <span className="text-danger font-semibold text-lg tabular-nums">
-                      {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
-                    </span>
-                    <span className="text-muted-light dark:text-muted-dark text-small">جاري التسجيل...</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={cancelRecording}
-                      className="h-10 px-5 rounded-full text-small font-medium border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex items-center gap-2"
-                    >
-                      <X className="h-4 w-4" />
-                      إلغاء
-                    </button>
-                    <button
-                      onClick={stopRecording}
-                      className="h-10 px-5 rounded-full text-small font-medium bg-danger hover:bg-danger/90 text-white transition-colors flex items-center gap-2"
-                      style={{ color: '#fff' }}
-                    >
-                      <Square className="h-3.5 w-3.5 fill-current" />
-                      إرسال التسجيل
-                    </button>
-                  </div>
-                </div>
+              {recording ? (
+                <VoiceRecorder
+                  stream={recording.stream}
+                  note={recording.note}
+                  onSend={sendRecording}
+                  onCancel={() => setRecording(null)}
+                />
               ) : (
               <>
               {/* Textarea — one row at rest, grown to fit as you type */}
