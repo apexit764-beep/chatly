@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, Mic, Pause, Trash2 } from 'lucide-react';
+import { Mic, Pause, Send, Trash2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { t } from '@/i18n/useTranslation';
 
@@ -226,14 +226,16 @@ export function VoiceRecorder({
       <button
         type="button"
         onClick={send}
+        title={note ? t('حفظ') : t('إرسال')}
+        aria-label={note ? t('حفظ') : t('إرسال')}
         className={cn(
-          'h-10 px-5 flex-shrink-0 rounded-full text-small font-medium transition-colors flex items-center gap-2 text-white',
+          'h-10 w-10 flex-shrink-0 rounded-full transition-colors flex items-center justify-center text-white shadow-sm',
           note ? 'bg-warning hover:opacity-90' : 'bg-primary hover:bg-primary-dark'
         )}
         style={{ color: '#fff' }}
       >
-        {note ? t('حفظ') : t('إرسال')}
-        <ArrowRight className="h-4 w-4 rotate-180" />
+        {/* The plane points along the reading direction: left in RTL. */}
+        <Send className="h-[18px] w-[18px] rtl:-scale-x-100" />
       </button>
     </div>
   );
