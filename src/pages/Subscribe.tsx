@@ -8,7 +8,6 @@ import {
   CreditCard,
   Loader2,
   ArrowLeft,
-  Sparkles,
   CheckCircle2,
   AlertTriangle,
   ChevronDown,
@@ -531,25 +530,6 @@ export default function Subscribe(): JSX.Element {
                 </tbody>
               </table>
             </div>
-          </Card>
-
-          {/* Not sure which plan */}
-          <Card className="p-5 mb-8 flex flex-col sm:flex-row items-center justify-center gap-4 text-center sm:text-start">
-            <span className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-              <Sparkles className="h-5 w-5" />
-            </span>
-            <div className="flex-1">
-              <p className="text-body font-semibold">مش متأكد أي باقة تناسبك؟</p>
-              <p className="text-small text-muted-light dark:text-muted-dark">
-                تحدّث إلينا لنساعدك في الاختيار حسب حجم فريقك وعدد محادثاتك.
-              </p>
-            </div>
-            <button
-              onClick={() => { setContactPlan(null); setContactOpen(true); }}
-              className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex-shrink-0"
-            >
-              تواصل معنا
-            </button>
           </Card>
 
           {/* Trust badges */}
