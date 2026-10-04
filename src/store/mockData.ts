@@ -400,12 +400,13 @@ export const conversations: Conversation[] = [
   {
     id: 'conv3', contactId: 'c3', assignedTo: 'a3', status: 'in_progress', sessionCount: 1,
     channelId: 'ch3', departmentId: 'd2', aiHandedOff: true, handedOffAt: nowMinus(day(2) - 6),
-    lastMessage: 'معك محمد من خدمة العملاء، العقد المعدل يصلك اليوم', lastMessageAt: nowMinus(day(2) - 14),
+    lastMessage: 'تمام، بانتظاره', lastMessageAt: nowMinus(day(2) - 16),
     unreadCount: 0, notes: ['مراجعة العقد من القانوني'], activityLog: [],
     messages: [
       { id: 'm20', conversationId: 'conv3', direction: 'in', type: 'text', content: 'صباح الخير، نريد متابعة العقد', timestamp: nowMinus(day(2)), read: true, delivered: true },
       { id: 'm21', conversationId: 'conv3', direction: 'out', type: 'text', content: 'صباح النور، سنرسل العقد المعدل قريباً', timestamp: nowMinus(day(2) - 5), read: true, delivered: true, sender: 'ai' },
       { id: 'm22', conversationId: 'conv3', direction: 'out', type: 'text', content: 'معك محمد من خدمة العملاء، العقد المعدل يصلك اليوم', timestamp: nowMinus(day(2) - 14), read: true, delivered: true, sender: 'agent' },
+      { id: 'm23', conversationId: 'conv3', direction: 'in', type: 'text', content: 'تمام، بانتظاره', timestamp: nowMinus(day(2) - 16), read: true, delivered: true },
     ],
   },
   {
@@ -483,12 +484,13 @@ export const conversations: Conversation[] = [
   {
     id: 'conv11', contactId: 'c10', assignedTo: 'a4', status: 'in_progress', sessionCount: 1,
     channelId: 'ch4', departmentId: 'd3', aiHandedOff: true, handedOffAt: nowMinus(day(3) - 26),
-    lastMessage: 'معك نور من المالية، رفعنا طلب التأجيل وسنبلغك بالنتيجة', lastMessageAt: nowMinus(day(3) - 30),
+    lastMessage: 'شكراً، بانتظار ردكم', lastMessageAt: nowMinus(day(3) - 30),
     unreadCount: 0, notes: [], activityLog: [],
     messages: [
       { id: 'm100', conversationId: 'conv11', direction: 'in', type: 'text', content: 'هل يمكن تأجيل الدفعة الشهرية؟', timestamp: nowMinus(day(3) - 20), read: true, delivered: true },
       { id: 'm101', conversationId: 'conv11', direction: 'out', type: 'text', content: 'سيتم التحقق من الطلب وإبلاغك خلال 24 ساعة', timestamp: nowMinus(day(3) - 25), read: true, delivered: true, sender: 'ai' },
-      { id: 'm102', conversationId: 'conv11', direction: 'out', type: 'text', content: 'معك نور من المالية، رفعنا طلب التأجيل وسنبلغك بالنتيجة', timestamp: nowMinus(day(3) - 30), read: true, delivered: true, sender: 'agent' },
+      { id: 'm102', conversationId: 'conv11', direction: 'out', type: 'text', content: 'معك نور من المالية، رفعنا طلب التأجيل وسنبلغك بالنتيجة', timestamp: nowMinus(day(3) - 28), read: true, delivered: true, sender: 'agent' },
+      { id: 'm103', conversationId: 'conv11', direction: 'in', type: 'text', content: 'شكراً، بانتظار ردكم', timestamp: nowMinus(day(3) - 30), read: true, delivered: true },
     ],
   },
   {
