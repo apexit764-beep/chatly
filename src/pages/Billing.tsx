@@ -344,7 +344,7 @@ export default function Billing(): JSX.Element {
 
               <div>
                 <p className="text-small font-bold mb-2">حدود الباقة</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <LimitTile icon={<Users className="h-4 w-4" />} label="الموظفين" value={plan.limits.agents} />
                   {/* One limit for every connected account, whatever its type:
                       4 means four WhatsApp numbers or one each of four channels. */}
@@ -949,15 +949,16 @@ function DetailTile({ label, value, valueClass }: { label: string; value: string
 }
 
 function LimitTile({ icon, label, value, hint }: { icon: ReactNode; label: string; value: number; hint?: string }): JSX.Element {
+  // Vertical: icon over the figure over its label, so the four limits sit
+  // in a single row and read as one strip.
   return (
-    <div className="rounded-xl border border-border-light dark:border-border-dark p-3 flex items-center gap-3">
+    <div className="rounded-xl border border-border-light dark:border-border-dark px-2 py-3 flex flex-col items-center text-center gap-1.5">
       <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">{icon}</span>
-      <div className="min-w-0">
-        <p className="text-body font-bold tabular-nums leading-tight">{value === -1 ? 'غير محدود' : value.toLocaleString('en')}</p>
-        <p className="text-[11px] text-muted-light dark:text-muted-dark leading-tight mt-0.5">
-          {label}{hint && <span className="opacity-80"> · {hint}</span>}
-        </p>
-      </div>
+      <p className="text-body font-bold tabular-nums leading-tight">{value === -1 ? 'غير محدود' : value.toLocaleString('en')}</p>
+      <p className="text-[11px] text-muted-light dark:text-muted-dark leading-tight">
+        {label}
+        {hint && <span className="block opacity-80">{hint}</span>}
+      </p>
     </div>
   );
 }
