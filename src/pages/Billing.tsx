@@ -365,7 +365,7 @@ export default function Billing(): JSX.Element {
                   <LimitTile icon={<Users className="h-4 w-4" />} label="الموظفين" value={plan.limits.agents} />
                   {/* One limit for every connected account, whatever its type:
                       4 means four WhatsApp numbers or one each of four channels. */}
-                  <LimitTile icon={<Radio className="h-4 w-4" />} label="القنوات" hint="أي نوع" value={plan.limits.channels} />
+                  <LimitTile icon={<Radio className="h-4 w-4" />} label="القنوات" tooltip="يشمل كل الحسابات المربوطة من أي نوع" value={plan.limits.channels} />
                   <LimitTile icon={<MessageSquare className="h-4 w-4" />} label="المحادثات" value={plan.limits.conversations} />
                   <LimitTile icon={<Users2 className="h-4 w-4" />} label="جهات الاتصال" value={plan.limits.contacts} />
                 </div>
@@ -951,17 +951,21 @@ function DetailTile({ label, value, valueClass }: { label: string; value: string
   );
 }
 
-function LimitTile({ icon, label, value, hint }: { icon: ReactNode; label: string; value: number; hint?: string }): JSX.Element {
+function LimitTile({ icon, label, value, tooltip }: { icon: ReactNode; label: string; value: number; tooltip?: string }): JSX.Element {
   // Vertical: icon over the figure over its label, so the four limits sit
-  // in a single row and read as one strip.
+  // in a single row and read as one strip. Any explanation goes in a hover
+  // tooltip so every card keeps the same one-line label.
   return (
-    <div className="rounded-xl border border-border-light dark:border-border-dark px-2 py-3 flex flex-col items-center text-center gap-1.5">
+    <div
+      title={tooltip}
+      className={cn(
+        'rounded-xl border border-border-light dark:border-border-dark px-2 py-3 flex flex-col items-center text-center gap-1.5',
+        tooltip && 'cursor-help',
+      )}
+    >
       <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">{icon}</span>
       <p className="text-body font-bold tabular-nums leading-tight">{value === -1 ? 'غير محدود' : value.toLocaleString('en')}</p>
-      <p className="text-[11px] text-muted-light dark:text-muted-dark leading-tight">
-        {label}
-        {hint && <span className="block opacity-80">{hint}</span>}
-      </p>
+      <p className="text-[11px] text-muted-light dark:text-muted-dark leading-tight">{label}</p>
     </div>
   );
 }
