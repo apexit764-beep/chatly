@@ -5,11 +5,15 @@ import { Modal } from '@components/ui';
 /**
  * Short silent clips of connecting each channel, recorded from the live app:
  * open the channel, «ربط حساب جديد», fill the fields, connect. They loop like
- * a GIF — but as H.264 they weigh ~150KB instead of several MB, and stay sharp.
+ * a GIF — but as H.264 / VP9 they weigh ~150KB instead of several MB, and stay sharp.
  *
  * Keys are the channel type, or `whatsapp-<method>` for WhatsApp's methods.
  */
 const VIDEOS = import.meta.glob<string>('@/assets/connect-guides/*.mp4', { eager: true, query: '?url', import: 'default' });
+// VP9 alongside H.264: MP4 is listed first, so every browser that can play
+// it does; builds without the H.264 codec (Chromium, some Linux) fall through
+// to the WebM.
+const WEBMS = import.meta.glob<string>('@/assets/connect-guides/*.webm', { eager: true, query: '?url', import: 'default' });
 const POSTERS = import.meta.glob<string>('@/assets/connect-guides/*.jpg', { eager: true, query: '?url', import: 'default' });
 
 function assetFor(map: Record<string, string>, key: string, ext: string): string | undefined {
@@ -32,6 +36,7 @@ function prefersReducedMotion(): boolean {
  */
 export function ConnectGuide({ guideKey, title }: { guideKey: string; title: string }): JSX.Element | null {
   const src = assetFor(VIDEOS, guideKey, 'mp4');
+  const webm = assetFor(WEBMS, guideKey, 'webm');
   const poster = assetFor(POSTERS, guideKey, 'jpg');
   const [still] = useState(prefersReducedMotion);
   const [playing, setPlaying] = useState(!still);
@@ -54,7 +59,6 @@ export function ConnectGuide({ guideKey, title }: { guideKey: string; title: str
         <video
           ref={ref}
           key={src}
-          src={src}
           poster={poster}
           muted
           loop
@@ -64,7 +68,10 @@ export function ConnectGuide({ guideKey, title }: { guideKey: string; title: str
           className="absolute inset-0 h-full w-full object-cover cursor-zoom-in"
           onClick={() => setExpanded(true)}
           aria-label={title}
-        />
+        >
+          <source src={src} type="video/mp4" />
+          {webm && <source src={webm} type="video/webm" />}
+        </video>
         {!playing && (
           <button
             type="button"
@@ -89,16 +96,10 @@ export function ConnectGuide({ guideKey, title }: { guideKey: string; title: str
       </div>
 
       <Modal open={expanded} onClose={() => setExpanded(false)} title={title} size="xl">
-        <video
-          src={src}
-          poster={poster}
-          muted
-          loop
-          playsInline
-          autoPlay
-          controls
-          className="w-full rounded-lg bg-black"
-        />
+        <video poster={poster} muted loop playsInline autoPlay controls className="w-full rounded-lg bg-black">
+          <source src={src} type="video/mp4" />
+          {webm && <source src={webm} type="video/webm" />}
+        </video>
       </Modal>
     </>
   );
