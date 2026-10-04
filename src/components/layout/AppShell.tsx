@@ -27,15 +27,16 @@ export function AppShell(): JSX.Element {
   useAutoClose();
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg-light dark:bg-bg-dark text-[14px] text-[#111827] dark:text-[#F1F5F9]">
-      {/* فوق الشريطين الجانبيين لا بجانبهما: الفترة التجريبية حالة حساب لا
-          حالة صفحة، فتعلو الواجهة كلّها ولا يتغيّر عرضها بتغيّر الصفحة. */}
-      {getAppMode() === 'client' && <TrialBanner />}
       <div className="flex flex-1 min-h-0">
         {!focused && <IconSidebar />}
         {!focused && <SectionSidebar />}
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
           {!focused && <TopHeader />}
-          <main className={isInbox ? 'flex-1 overflow-hidden min-h-0' : 'flex-1 overflow-y-auto overflow-x-hidden'}>
+          <main className={isInbox ? 'flex-1 overflow-hidden min-h-0 flex flex-col' : 'flex-1 overflow-y-auto overflow-x-hidden'}>
+            {/* داخل المحتوى أعلى عنوان الصفحة، خارج انتقال الصفحات فلا يومض
+                مع كل تنقّل. هامشه بحشو الصفحات نفسه، وحشو الصفحة العلويّ هو
+                الفاصل بينه وبين العنوان. */}
+            {getAppMode() === 'client' && <TrialBanner className={isInbox ? 'px-2 pt-2' : 'px-4 lg:px-6 pt-4 lg:pt-6'} />}
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
@@ -43,7 +44,7 @@ export function AppShell(): JSX.Element {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.2 }}
-                className="h-full"
+                className={isInbox ? 'flex-1 min-h-0' : 'h-full'}
               >
                 <Outlet />
               </motion.div>
