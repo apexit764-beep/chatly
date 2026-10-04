@@ -319,61 +319,59 @@ export default function Billing(): JSX.Element {
           )}
         >
           {/*
-            Wide rather than tall: the plan and its period on one side, the
-            limits and payment on the other, then the features across the full
-            width — so the whole subscription reads without scrolling.
+            Two columns on wide screens: the subscription itself stacked on one
+            side exactly as on the phone, the plan's features on the other,
+            with a divider between them. On the phone the features follow below.
           */}
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="h-6 w-6" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-h2 font-bold">{plan.nameAr}</h3>
-                    <p className="text-small text-muted-light dark:text-muted-dark">{plan.tagline}</p>
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="h-6 w-6" />
                 </div>
+                <div className="min-w-0">
+                  <h3 className="text-h2 font-bold">{plan.nameAr}</h3>
+                  <p className="text-small text-muted-light dark:text-muted-dark">{plan.tagline}</p>
+                </div>
+              </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <DetailTile label="المبلغ" value={`${formatMoney(sub.amount, sub.currency)} / ${sub.billingCycle === 'monthly' ? 'شهر' : 'سنة'}`} />
+                <DetailTile label="الحالة" value="نشط" valueClass="text-[#047857] dark:text-success" />
+                <DetailTile label="بداية الفترة" value={formatDate(sub.currentPeriodStart)} />
+                <DetailTile label="نهاية الفترة" value={formatDate(sub.currentPeriodEnd)} />
+              </div>
+
+              <div>
+                <p className="text-small font-bold mb-2">حدود الباقة</p>
                 <div className="grid grid-cols-2 gap-3">
-                  <DetailTile label="المبلغ" value={`${formatMoney(sub.amount, sub.currency)} / ${sub.billingCycle === 'monthly' ? 'شهر' : 'سنة'}`} />
-                  <DetailTile label="الحالة" value="نشط" valueClass="text-[#047857] dark:text-success" />
-                  <DetailTile label="بداية الفترة" value={formatDate(sub.currentPeriodStart)} />
-                  <DetailTile label="نهاية الفترة" value={formatDate(sub.currentPeriodEnd)} />
+                  <LimitTile icon={<Users className="h-4 w-4" />} label="الموظفين" value={plan.limits.agents} />
+                  {/* One limit for every connected account, whatever its type:
+                      4 means four WhatsApp numbers or one each of four channels. */}
+                  <LimitTile icon={<Radio className="h-4 w-4" />} label="القنوات" hint="أي نوع" value={plan.limits.channels} />
+                  <LimitTile icon={<MessageSquare className="h-4 w-4" />} label="المحادثات" value={plan.limits.conversations} />
+                  <LimitTile icon={<Users2 className="h-4 w-4" />} label="جهات الاتصال" value={plan.limits.contacts} />
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <p className="text-small font-bold mb-2">حدود الباقة</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <LimitTile icon={<Users className="h-4 w-4" />} label="الموظفين" value={plan.limits.agents} />
-                    {/* One limit for every connected account, whatever its type:
-                        4 means four WhatsApp numbers or one each of four channels. */}
-                    <LimitTile icon={<Radio className="h-4 w-4" />} label="القنوات" hint="أي نوع" value={plan.limits.channels} />
-                    <LimitTile icon={<MessageSquare className="h-4 w-4" />} label="المحادثات" value={plan.limits.conversations} />
-                    <LimitTile icon={<Users2 className="h-4 w-4" />} label="جهات الاتصال" value={plan.limits.contacts} />
+              {sub.paymentMethod && (
+                <div className="rounded-xl bg-bg-light dark:bg-bg-dark p-3 flex items-center gap-3">
+                  <div className="h-8 w-12 rounded bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark flex items-center justify-center text-[10px] font-bold uppercase">
+                    {sub.paymentMethod.brand}
+                  </div>
+                  <div>
+                    <p className="text-small font-semibold">•••• {sub.paymentMethod.last4}</p>
+                    <p className="text-[11px] text-muted-light dark:text-muted-dark">تنتهي {sub.paymentMethod.expMonth}/{sub.paymentMethod.expYear}</p>
                   </div>
                 </div>
-
-                {sub.paymentMethod && (
-                  <div className="rounded-xl bg-bg-light dark:bg-bg-dark p-3 flex items-center gap-3">
-                    <div className="h-8 w-12 rounded bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark flex items-center justify-center text-[10px] font-bold uppercase">
-                      {sub.paymentMethod.brand}
-                    </div>
-                    <div>
-                      <p className="text-small font-semibold">•••• {sub.paymentMethod.last4}</p>
-                      <p className="text-[11px] text-muted-light dark:text-muted-dark">تنتهي {sub.paymentMethod.expMonth}/{sub.paymentMethod.expYear}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
 
-            <div className="pt-5 border-t border-border-light dark:border-border-dark">
+            {/* The divider is this column's inline-start edge: a rule above it
+                on the phone, a vertical line between the columns on desktop. */}
+            <div className="pt-5 border-t md:pt-0 md:border-t-0 md:border-s md:ps-6 border-border-light dark:border-border-dark">
               <p className="text-small font-bold mb-3">ميزات الباقة</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+              <div className="space-y-2.5">
                 {plan.features.map((f, i) => (
                   <div key={i} className="flex items-start gap-2 text-small">
                     <Check className="h-3.5 w-3.5 text-success flex-shrink-0 mt-0.5" />
