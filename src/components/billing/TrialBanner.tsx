@@ -33,11 +33,12 @@ function dismissedToday(): boolean {
 }
 
 /**
- * شريط دائم يعلو التطبيق ما دام العميل في فترة تجريبية.
+ * شريط دائم ما دام العميل في فترة تجريبية.
  *
- * موضعه أعلى الشِلّ لا داخل الصفحات: الحالة تخصّ الحساب كلّه لا صفحةً
- * بعينها، فيظهر مرّة واحدة في كل مسار، ويبقى مرئياً في وضع التركيز حيث
- * يُخفى الهيدر.
+ * موضعه داخل منطقة المحتوى أعلى عنوان الصفحة، لا فوق الواجهة كلّها:
+ * يوضع مرّة واحدة في الشِلّ فيظهر في كل مسار بالهيئة نفسها، ويبقى مرئياً
+ * في وضع التركيز حيث يُخفى الهيدر. `className` يضبط هامشه ليحاذي حشو
+ * الصفحة التي تحته.
  *
  * وهيئته هيئة تنبيه إعلاميّ فاتح: أرضية زرقاء باهتة وحدٌّ سفليّ ونصّ
  * غامق. والفاتح يقلب المنطق كلّه رأساً على عقب — فالنص الأبيض يذوب فيه،
@@ -54,7 +55,7 @@ function dismissedToday(): boolean {
  * يختفي وحده بانتهاء المدّة — عندها تتولّى نافذة انتهاء التجربة الأمر،
  * فلا يجتمع تنبيهان على المعنى ذاته.
  */
-export function TrialBanner(): JSX.Element | null {
+export function TrialBanner({ className }: { className?: string }): JSX.Element | null {
   const { active, daysLeft, endingSoon } = useTrialStatus();
   const navigate = useNavigate();
   const ar = useLanguageStore((s) => s.language) === 'ar';
@@ -84,11 +85,15 @@ export function TrialBanner(): JSX.Element | null {
     <motion.div
       key="trial-banner"
       initial={{ height: 0, opacity: 0 }}
-      animate={{ height: 52, opacity: 1 }}
+      animate={{ height: 'auto', opacity: 1 }}
       exit={{ height: 0, opacity: 0 }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      className="flex-shrink-0 overflow-hidden"
+    >
+    <div className={className}>
+    <div
       className={cn(
-        'relative flex-shrink-0 overflow-hidden border-b',
+        'relative overflow-hidden rounded-card border',
         red
           ? 'bg-[#FEF2F2] border-[#FECACA] text-[#991B1B] dark:bg-[#3B1414] dark:border-[#7F1D1D] dark:text-[#FECACA]'
           : amber
@@ -96,11 +101,7 @@ export function TrialBanner(): JSX.Element | null {
             : 'bg-[#EFF6FF] border-[#BFDBFE] text-[#1E3A8A] dark:bg-[#132B52] dark:border-[#1E3A8A] dark:text-[#BFDBFE]'
       )}
     >
-      {/*
-        الحبّة والرسالة على طرف، والزرّ والإغلاق على الطرف الآخر. والحشو
-        الجانبي 16px على كل العروض: بحشو رأس الشريط الجانبي نفسه، فتقع الحبّة
-        على خطّ شعار Qhub تحتها تماماً.
-      */}
+      {/* الحبّة والرسالة على طرف، والزرّ والإغلاق على الطرف الآخر. */}
       <div className="relative flex items-center gap-3 sm:gap-4 h-[52px] px-4">
         <motion.span
           initial={{ opacity: 0, y: -4 }}
@@ -166,6 +167,8 @@ export function TrialBanner(): JSX.Element | null {
           </button>
         )}
       </div>
+    </div>
+    </div>
     </motion.div>
     )}
     </AnimatePresence>
