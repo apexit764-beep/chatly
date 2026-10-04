@@ -24,7 +24,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { downloadCsv, printAsPdf } from '@/utils/csv';
 import { formatNumber } from '@/utils/format';
 import { cn } from '@/utils/cn';
-import { firstReplyCases, slaMinutesFor } from '@/utils/firstReplySla';
+import { firstReplyCases, slaMinutesFor, type FirstReplyCase } from '@/utils/firstReplySla';
 
 type Range = 'today' | 'week' | 'month' | 'custom';
 
@@ -80,7 +80,10 @@ export default function Reports(): JSX.Element {
   // First-reply compliance — each case against its own department's target.
   // Cases are counted, never their minutes averaged: departments with
   // different targets do not share a scale.
-  const slaCases = firstReplyCases(conversations, departments)
+  const rangeEnd = addDays(rangeStart, newConvsLine.length).getTime();
+  const rangeCases = firstReplyCases(conversations, departments)
+    .filter((c) => c.startedAt >= rangeStart.getTime() && c.startedAt < rangeEnd);
+  const slaCases = rangeCases
     .filter((c) => slaDept === 'all' || (slaDept === 'none' ? c.departmentId === null : c.departmentId === slaDept));
   const slaDays: SlaDay[] = newConvsLine.map((_, i) => {
     const from = addDays(rangeStart, i).getTime();
@@ -178,26 +181,19 @@ export default function Reports(): JSX.Element {
   ];
   const handoffMax = Math.max(...handoffReasons.map((r) => r.count), 1);
 
-  // Agent performance — handled = assigned conversations, avgReply estimated from message gaps
+  // Agent performance — handled = assigned conversations. Reply speed is the
+  // share of their cases answered within target, not average minutes: one
+  // agent's cases can come from departments with different targets.
   const agentRows = agents.filter((a) => a.invitationStatus === 'active').map((a) => {
     const myConvs = conversations.filter((c) => c.assignedTo === a.id);
     const handled = myConvs.length;
-    // Avg first response: gap between first incoming and first outgoing message
-    const replies: number[] = [];
-    myConvs.forEach((c) => {
-      const firstIn = c.messages.find((m) => m.direction === 'in');
-      const firstOut = c.messages.find((m) => m.direction === 'out' && firstIn && new Date(m.timestamp) > new Date(firstIn.timestamp));
-      if (firstIn && firstOut) {
-        const gap = (new Date(firstOut.timestamp).getTime() - new Date(firstIn.timestamp).getTime()) / 60000;
-        if (gap >= 0 && gap < 60) replies.push(gap);
-      }
-    });
-    const avgReply = replies.length > 0 ? (replies.reduce((s, n) => s + n, 0) / replies.length).toFixed(1) : '—';
+    const myIds = new Set(myConvs.map((c) => c.id));
+    const replyCompliance = compliance(rangeCases.filter((c) => myIds.has(c.conversationId)));
     const resolutionRate = handled > 0 ? Math.round((myConvs.filter((c) => c.status === 'closed').length / handled) * 100) : 0;
     return {
       agent: a,
       handled,
-      avgReply,
+      replyCompliance,
       resolutionRate,
       rating: (4 + Math.random()).toFixed(1),
     };
@@ -209,7 +205,7 @@ export default function Reports(): JSX.Element {
         'الموظف': r.agent.name,
         'البريد': r.agent.email,
         'المحادثات': r.handled,
-        'متوسط الرد (دقيقة)': r.avgReply,
+        'الالتزام بوقت الرد %': r.replyCompliance.pct ?? '—',
         'معدل الحل %': r.resolutionRate,
         'التقييم': r.rating,
       }));
@@ -220,8 +216,7 @@ export default function Reports(): JSX.Element {
     // PDF: open print window with summary derived from real store data
     const totalNewConvs = newConvsLine.reduce((s, n) => s + n, 0);
     const totalReplies = conversations.reduce((s, c) => s + c.messages.filter((m) => m.direction === 'out').length, 0);
-    const validAvg = agentRows.map((r) => r.avgReply).filter((v) => v !== '—').map(Number);
-    const avgReplyAll = validAvg.length > 0 ? (validAvg.reduce((s, n) => s + n, 0) / validAvg.length).toFixed(1) : '—';
+    const all = compliance(rangeCases);
     const totalConvs = conversations.length;
     const closedConvs = conversations.filter((c) => c.status === 'closed').length;
     const resolutionPct = totalConvs > 0 ? Math.round((closedConvs / totalConvs) * 100) : 0;
@@ -232,14 +227,14 @@ export default function Reports(): JSX.Element {
       <table>
         <tr><td>محادثات جديدة</td><td class="right">${totalNewConvs}</td></tr>
         <tr><td>ردود الموظفين</td><td class="right">${totalReplies}</td></tr>
-        <tr><td>متوسط وقت الرد</td><td class="right">${avgReplyAll} دقيقة</td></tr>
+        <tr><td>الالتزام بوقت الرد الأول</td><td class="right">${all.pct === null ? '—' : `${all.pct}% (${all.met} ضمن الهدف · ${all.breached} متجاوزة)`}</td></tr>
         <tr><td>معدل الحلّ</td><td class="right">${resolutionPct}%</td></tr>
       </table>
       <h2>أداء الموظفين</h2>
       <table>
-        <thead><tr><th>الموظف</th><th class="right">المحادثات</th><th class="right">متوسط الرد</th><th class="right">معدل الحلّ</th><th class="right">التقييم</th></tr></thead>
+        <thead><tr><th>الموظف</th><th class="right">المحادثات</th><th class="right">الالتزام بالرد</th><th class="right">معدل الحلّ</th><th class="right">التقييم</th></tr></thead>
         <tbody>
-          ${agentRows.map((r) => `<tr><td>${r.agent.name}</td><td class="right">${r.handled}</td><td class="right">${r.avgReply} د</td><td class="right">${r.resolutionRate}%</td><td class="right">⭐ ${r.rating}</td></tr>`).join('')}
+          ${agentRows.map((r) => `<tr><td>${r.agent.name}</td><td class="right">${r.handled}</td><td class="right">${r.replyCompliance.pct === null ? '—' : `${r.replyCompliance.pct}%`}</td><td class="right">${r.resolutionRate}%</td><td class="right">⭐ ${r.rating}</td></tr>`).join('')}
         </tbody>
       </table>
       <h2>المحادثات حسب الوسم</h2>
@@ -332,11 +327,10 @@ export default function Reports(): JSX.Element {
           iconColor="text-info"
         />
         <StatCard
-          label="متوسط وقت الرد"
+          label="الالتزام بوقت الرد"
           value={(() => {
-            const valid = agentRows.map((r) => r.avgReply).filter((v) => v !== '—').map(Number);
-            if (valid.length === 0) return '—';
-            return (valid.reduce((s, n) => s + n, 0) / valid.length).toFixed(1) + ' د';
+            const all = compliance(rangeCases);
+            return all.pct === null ? '—' : `${all.pct}%`;
           })()}
           icon={<Clock className="h-5 w-5" />}
           iconBg="bg-warning/10"
@@ -571,13 +565,13 @@ export default function Reports(): JSX.Element {
                 <tr>
                   <th className="text-start font-medium px-4 py-2.5">الموظف</th>
                   <th className="text-start font-medium px-4 py-2.5">المحادثات</th>
-                  <th className="text-start font-medium px-4 py-2.5">متوسط الرد</th>
+                  <th className="text-start font-medium px-4 py-2.5" title="نسبة محادثاته التي رُدّ عليها ضمن هدف قسمها">الالتزام بالرد</th>
                   <th className="text-start font-medium px-4 py-2.5">معدل الحل</th>
                   <th className="text-start font-medium px-4 py-2.5">التقييم</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                {agentRows.map(({ agent, handled, avgReply, resolutionRate, rating }) => (
+                {agentRows.map(({ agent, handled, replyCompliance, resolutionRate, rating }) => (
                   <tr key={agent.id} className="hover:bg-bg-light dark:hover:bg-bg-dark transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
@@ -586,7 +580,9 @@ export default function Reports(): JSX.Element {
                       </div>
                     </td>
                     <td className="px-4 py-3">{handled}</td>
-                    <td className="px-4 py-3">{avgReply} د</td>
+                    <td className="px-4 py-3 tabular-nums" title={replyCompliance.pct === null ? undefined : `${replyCompliance.met} ضمن الهدف · ${replyCompliance.breached} متجاوزة`}>
+                      {replyCompliance.pct === null ? '—' : `${replyCompliance.pct}%`}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 w-24">
                         <div className="flex-1 h-1.5 bg-bg-light dark:bg-bg-dark rounded-full overflow-hidden">
@@ -611,6 +607,14 @@ export default function Reports(): JSX.Element {
       </motion.div>
     </div>
   );
+}
+
+/** Met vs. breached; pending cases are not counted until they resolve either way. */
+function compliance(cases: FirstReplyCase[]): { met: number; breached: number; pct: number | null } {
+  const met = cases.filter((c) => c.outcome === 'met').length;
+  const breached = cases.filter((c) => c.outcome === 'breached').length;
+  const total = met + breached;
+  return { met, breached, pct: total > 0 ? Math.round((met / total) * 100) : null };
 }
 
 interface SlaDay {
