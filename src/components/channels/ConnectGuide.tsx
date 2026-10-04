@@ -55,7 +55,7 @@ export function ConnectGuide({ guideKey, title }: { guideKey: string; title: str
 
   return (
     <>
-      <div className="relative mb-4 rounded-xl overflow-hidden border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark aspect-[13/10] group">
+      <div className="relative mb-4 rounded-xl overflow-hidden border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark aspect-[8/5] group">
         <video
           ref={ref}
           key={src}
@@ -96,7 +96,9 @@ export function ConnectGuide({ guideKey, title }: { guideKey: string; title: str
       </div>
 
       <Modal open={expanded} onClose={() => setExpanded(false)} title={title} size="xl">
-        <video poster={poster} muted loop playsInline autoPlay controls className="w-full max-h-[68vh] object-contain rounded-lg bg-black">
+        {/* Sized by the clip itself, so it sits centred with no black bars;
+            the clips are full-screen recordings, so their dialogs are centred too. */}
+        <video poster={poster} muted loop playsInline autoPlay controls className="block mx-auto max-w-full max-h-[68vh] w-auto h-auto rounded-lg border border-border-light dark:border-border-dark">
           <source src={src} type="video/mp4" />
           {webm && <source src={webm} type="video/webm" />}
         </video>
