@@ -296,84 +296,13 @@ export default function Billing(): JSX.Element {
 
       {/* Subscription details modal */}
       {sub && (
-        <Modal open={showSubDetails} onClose={() => setShowSubDetails(false)} title="تفاصيل الاشتراك" size="md">
-          <div className="space-y-5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
-                <Sparkles className="h-6 w-6" />
-              </div>
-              <div>
-                <h3 className="text-h2 font-bold">{plan.nameAr}</h3>
-                <p className="text-small text-muted-light dark:text-muted-dark">{plan.tagline}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl bg-bg-light dark:bg-bg-dark p-3">
-                <p className="text-[11px] text-muted-light dark:text-muted-dark mb-1">المبلغ</p>
-                <p className="text-body font-bold">{formatMoney(sub.amount, sub.currency)} / {sub.billingCycle === 'monthly' ? 'شهر' : 'سنة'}</p>
-              </div>
-              <div className="rounded-xl bg-bg-light dark:bg-bg-dark p-3">
-                <p className="text-[11px] text-muted-light dark:text-muted-dark mb-1">الحالة</p>
-                <p className="text-body font-bold text-success">نشط</p>
-              </div>
-              <div className="rounded-xl bg-bg-light dark:bg-bg-dark p-3">
-                <p className="text-[11px] text-muted-light dark:text-muted-dark mb-1">بداية الفترة</p>
-                <p className="text-body font-bold">{formatDate(sub.currentPeriodStart)}</p>
-              </div>
-              <div className="rounded-xl bg-bg-light dark:bg-bg-dark p-3">
-                <p className="text-[11px] text-muted-light dark:text-muted-dark mb-1">نهاية الفترة</p>
-                <p className="text-body font-bold">{formatDate(sub.currentPeriodEnd)}</p>
-              </div>
-            </div>
-
-            {sub.paymentMethod && (
-              <div className="rounded-xl bg-bg-light dark:bg-bg-dark p-3 flex items-center gap-3">
-                <div className="h-8 w-12 rounded bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark flex items-center justify-center text-[10px] font-bold uppercase">
-                  {sub.paymentMethod.brand}
-                </div>
-                <div>
-                  <p className="text-small font-semibold">•••• {sub.paymentMethod.last4}</p>
-                  <p className="text-[11px] text-muted-light dark:text-muted-dark">تنتهي {sub.paymentMethod.expMonth}/{sub.paymentMethod.expYear}</p>
-                </div>
-              </div>
-            )}
-
-            <div>
-              <p className="text-small font-bold mb-2">حدود الباقة</p>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-center gap-2 text-small">
-                  <Users className="h-4 w-4 text-primary" />
-                  <span>الوكلاء: <strong>{plan.limits.agents === -1 ? 'غير محدود' : plan.limits.agents}</strong></span>
-                </div>
-                <div className="flex items-center gap-2 text-small">
-                  <Radio className="h-4 w-4 text-primary" />
-                  <span>القنوات: <strong>{plan.limits.channels === -1 ? 'غير محدود' : plan.limits.channels}</strong></span>
-                </div>
-                <div className="flex items-center gap-2 text-small">
-                  <MessageSquare className="h-4 w-4 text-primary" />
-                  <span>المحادثات: <strong>{plan.limits.conversations === -1 ? 'غير محدود' : plan.limits.conversations}</strong></span>
-                </div>
-                <div className="flex items-center gap-2 text-small">
-                  <Users2 className="h-4 w-4 text-primary" />
-                  <span>جهات الاتصال: <strong>{plan.limits.contacts === -1 ? 'غير محدود' : plan.limits.contacts}</strong></span>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <p className="text-small font-bold mb-2">ميزات الباقة</p>
-              <div className="space-y-1.5">
-                {plan.features.map((f, i) => (
-                  <div key={i} className="flex items-center gap-2 text-small">
-                    <Check className="h-3.5 w-3.5 text-success flex-shrink-0" />
-                    <span>{f}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-border-light dark:border-border-dark flex items-center justify-between">
+        <Modal
+          open={showSubDetails}
+          onClose={() => setShowSubDetails(false)}
+          title="تفاصيل الاشتراك"
+          size="xl"
+          footer={(
+            <div className="w-full flex items-center justify-between">
               <button
                 onClick={() => { setShowSubDetails(false); handleCancel(); }}
                 className="text-small text-danger hover:text-danger/80 font-medium transition-colors"
@@ -386,6 +315,72 @@ export default function Billing(): JSX.Element {
               >
                 إغلاق
               </button>
+            </div>
+          )}
+        >
+          {/*
+            Wide rather than tall: the plan and its period on one side, the
+            limits and payment on the other, then the features across the full
+            width — so the whole subscription reads without scrolling.
+          */}
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="h-6 w-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-h2 font-bold">{plan.nameAr}</h3>
+                    <p className="text-small text-muted-light dark:text-muted-dark">{plan.tagline}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <DetailTile label="المبلغ" value={`${formatMoney(sub.amount, sub.currency)} / ${sub.billingCycle === 'monthly' ? 'شهر' : 'سنة'}`} />
+                  <DetailTile label="الحالة" value="نشط" valueClass="text-[#047857] dark:text-success" />
+                  <DetailTile label="بداية الفترة" value={formatDate(sub.currentPeriodStart)} />
+                  <DetailTile label="نهاية الفترة" value={formatDate(sub.currentPeriodEnd)} />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="text-small font-bold mb-2">حدود الباقة</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <LimitTile icon={<Users className="h-4 w-4" />} label="الموظفين" value={plan.limits.agents} />
+                    {/* One limit for every connected account, whatever its type:
+                        4 means four WhatsApp numbers or one each of four channels. */}
+                    <LimitTile icon={<Radio className="h-4 w-4" />} label="القنوات" hint="أي نوع" value={plan.limits.channels} />
+                    <LimitTile icon={<MessageSquare className="h-4 w-4" />} label="المحادثات" value={plan.limits.conversations} />
+                    <LimitTile icon={<Users2 className="h-4 w-4" />} label="جهات الاتصال" value={plan.limits.contacts} />
+                  </div>
+                </div>
+
+                {sub.paymentMethod && (
+                  <div className="rounded-xl bg-bg-light dark:bg-bg-dark p-3 flex items-center gap-3">
+                    <div className="h-8 w-12 rounded bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark flex items-center justify-center text-[10px] font-bold uppercase">
+                      {sub.paymentMethod.brand}
+                    </div>
+                    <div>
+                      <p className="text-small font-semibold">•••• {sub.paymentMethod.last4}</p>
+                      <p className="text-[11px] text-muted-light dark:text-muted-dark">تنتهي {sub.paymentMethod.expMonth}/{sub.paymentMethod.expYear}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-5 border-t border-border-light dark:border-border-dark">
+              <p className="text-small font-bold mb-3">ميزات الباقة</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                {plan.features.map((f, i) => (
+                  <div key={i} className="flex items-start gap-2 text-small">
+                    <Check className="h-3.5 w-3.5 text-success flex-shrink-0 mt-0.5" />
+                    <span>{f}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </Modal>
@@ -943,5 +938,28 @@ function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
         </div>
       </Modal>
     </Card>
+  );
+}
+
+function DetailTile({ label, value, valueClass }: { label: string; value: string; valueClass?: string }): JSX.Element {
+  return (
+    <div className="rounded-xl bg-bg-light dark:bg-bg-dark p-3">
+      <p className="text-[11px] text-muted-light dark:text-muted-dark mb-1">{label}</p>
+      <p className={cn('text-body font-bold', valueClass)}>{value}</p>
+    </div>
+  );
+}
+
+function LimitTile({ icon, label, value, hint }: { icon: ReactNode; label: string; value: number; hint?: string }): JSX.Element {
+  return (
+    <div className="rounded-xl border border-border-light dark:border-border-dark p-3 flex items-center gap-3">
+      <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-body font-bold tabular-nums leading-tight">{value === -1 ? 'غير محدود' : value.toLocaleString('en')}</p>
+        <p className="text-[11px] text-muted-light dark:text-muted-dark leading-tight mt-0.5">
+          {label}{hint && <span className="opacity-80"> · {hint}</span>}
+        </p>
+      </div>
+    </div>
   );
 }
