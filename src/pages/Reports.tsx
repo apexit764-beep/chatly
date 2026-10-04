@@ -182,18 +182,18 @@ export default function Reports(): JSX.Element {
   const handoffMax = Math.max(...handoffReasons.map((r) => r.count), 1);
 
   // Agent performance — handled = assigned conversations. Reply speed is the
-  // share of their cases answered within target, not average minutes: one
-  // agent's cases can come from departments with different targets.
+  // agent's own average first reply, from the same cases the compliance chart
+  // counts; the account-wide card stays a share, since it mixes departments.
   const agentRows = agents.filter((a) => a.invitationStatus === 'active').map((a) => {
     const myConvs = conversations.filter((c) => c.assignedTo === a.id);
     const handled = myConvs.length;
     const myIds = new Set(myConvs.map((c) => c.id));
-    const replyCompliance = compliance(rangeCases.filter((c) => myIds.has(c.conversationId)));
+    const avgReply = averageReply(rangeCases.filter((c) => myIds.has(c.conversationId)));
     const resolutionRate = handled > 0 ? Math.round((myConvs.filter((c) => c.status === 'closed').length / handled) * 100) : 0;
     return {
       agent: a,
       handled,
-      replyCompliance,
+      avgReply,
       resolutionRate,
       rating: (4 + Math.random()).toFixed(1),
     };
@@ -205,7 +205,7 @@ export default function Reports(): JSX.Element {
         'الموظف': r.agent.name,
         'البريد': r.agent.email,
         'المحادثات': r.handled,
-        'الالتزام بوقت الرد %': r.replyCompliance.pct ?? '—',
+        'متوسط الرد (دقيقة)': r.avgReply.minutes === null ? '—' : Math.round(r.avgReply.minutes),
         'معدل الحل %': r.resolutionRate,
         'التقييم': r.rating,
       }));
@@ -232,9 +232,9 @@ export default function Reports(): JSX.Element {
       </table>
       <h2>أداء الموظفين</h2>
       <table>
-        <thead><tr><th>الموظف</th><th class="right">المحادثات</th><th class="right">الالتزام بالرد</th><th class="right">معدل الحلّ</th><th class="right">التقييم</th></tr></thead>
+        <thead><tr><th>الموظف</th><th class="right">المحادثات</th><th class="right">متوسط الرد</th><th class="right">معدل الحلّ</th><th class="right">التقييم</th></tr></thead>
         <tbody>
-          ${agentRows.map((r) => `<tr><td>${r.agent.name}</td><td class="right">${r.handled}</td><td class="right">${r.replyCompliance.pct === null ? '—' : `${r.replyCompliance.pct}%`}</td><td class="right">${r.resolutionRate}%</td><td class="right">⭐ ${r.rating}</td></tr>`).join('')}
+          ${agentRows.map((r) => `<tr><td>${r.agent.name}</td><td class="right">${r.handled}</td><td class="right">${formatMinutes(r.avgReply.minutes)}</td><td class="right">${r.resolutionRate}%</td><td class="right">⭐ ${r.rating}</td></tr>`).join('')}
         </tbody>
       </table>
       <h2>المحادثات حسب الوسم</h2>
@@ -565,13 +565,13 @@ export default function Reports(): JSX.Element {
                 <tr>
                   <th className="text-start font-medium px-4 py-2.5">الموظف</th>
                   <th className="text-start font-medium px-4 py-2.5">المحادثات</th>
-                  <th className="text-start font-medium px-4 py-2.5" title="نسبة محادثاته التي رُدّ عليها ضمن هدف قسمها">الالتزام بالرد</th>
+                  <th className="text-start font-medium px-4 py-2.5" title="متوسط الوقت حتى أول رد للموظف">متوسط الرد</th>
                   <th className="text-start font-medium px-4 py-2.5">معدل الحل</th>
                   <th className="text-start font-medium px-4 py-2.5">التقييم</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                {agentRows.map(({ agent, handled, replyCompliance, resolutionRate, rating }) => (
+                {agentRows.map(({ agent, handled, avgReply, resolutionRate, rating }) => (
                   <tr key={agent.id} className="hover:bg-bg-light dark:hover:bg-bg-dark transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
@@ -580,8 +580,8 @@ export default function Reports(): JSX.Element {
                       </div>
                     </td>
                     <td className="px-4 py-3">{handled}</td>
-                    <td className="px-4 py-3 tabular-nums" title={replyCompliance.pct === null ? undefined : `${replyCompliance.met} ضمن الهدف · ${replyCompliance.breached} متجاوزة`}>
-                      {replyCompliance.pct === null ? '—' : `${replyCompliance.pct}%`}
+                    <td className="px-4 py-3 tabular-nums" title={avgReply.count > 0 ? `من ${avgReply.count} ${avgReply.count === 1 ? 'رد' : 'ردود'}` : 'لا توجد ردود في الفترة'}>
+                      {formatMinutes(avgReply.minutes)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 w-24">
@@ -615,6 +615,21 @@ function compliance(cases: FirstReplyCase[]): { met: number; breached: number; p
   const breached = cases.filter((c) => c.outcome === 'breached').length;
   const total = met + breached;
   return { met, breached, pct: total > 0 ? Math.round((met / total) * 100) : null };
+}
+
+/** Average minutes to the first reply, over the answered cases only. */
+function averageReply(cases: FirstReplyCase[]): { minutes: number | null; count: number } {
+  const answered = cases.map((c) => c.replyMinutes).filter((m): m is number => m !== null);
+  if (answered.length === 0) return { minutes: null, count: 0 };
+  return { minutes: answered.reduce((s, n) => s + n, 0) / answered.length, count: answered.length };
+}
+
+function formatMinutes(minutes: number | null): string {
+  if (minutes === null) return '—';
+  const m = Math.round(minutes);
+  if (m < 60) return `${m} د`;
+  const h = Math.floor(m / 60);
+  return m % 60 === 0 ? `${h} س` : `${h} س ${m % 60} د`;
 }
 
 interface SlaDay {
