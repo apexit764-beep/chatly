@@ -31,6 +31,7 @@ export const departments: Department[] = [
     channels: ['ch1', 'ch2'],
     agents: ['a2', 'a5'],
     createdAt: nowMinus(60 * 24 * 200),
+    slaMinutes: 15,
   },
   {
     id: 'd2',
@@ -40,6 +41,7 @@ export const departments: Department[] = [
     channels: ['ch1', 'ch3'],
     agents: ['a3'],
     createdAt: nowMinus(60 * 24 * 180),
+    slaMinutes: 30,
   },
   {
     id: 'd3',
@@ -49,6 +51,7 @@ export const departments: Department[] = [
     channels: ['ch4'],
     agents: ['a4'],
     createdAt: nowMinus(60 * 24 * 150),
+    slaMinutes: 60,
   },
   {
     id: 'd4',
@@ -58,6 +61,7 @@ export const departments: Department[] = [
     channels: ['ch1', 'ch2', 'ch3', 'ch4'],
     agents: ['a1'],
     createdAt: nowMinus(60 * 24 * 365),
+    slaMinutes: 60,
   },
 ];
 
@@ -360,9 +364,9 @@ export const contacts: Contact[] = [
 export const conversations: Conversation[] = [
   {
     id: 'conv1', contactId: 'c1', assignedTo: 'a2', status: 'in_progress', sessionCount: 3,
-    channelId: 'ch2', departmentId: 'd1', aiHandedOff: true,
-    lastMessage: 'هل الشقة في الخوض ما زالت متاحة؟',
-    lastMessageAt: nowMinus(15), unreadCount: 2,
+    channelId: 'ch2', departmentId: 'd1', aiHandedOff: true, handedOffAt: nowMinus(20),
+    lastMessage: 'أهلاً أحمد، معك فاطمة من المبيعات. نعم، شقة الخوض ما زالت متاحة',
+    lastMessageAt: nowMinus(12), unreadCount: 0,
     notes: ['العميل مهتم جداً، تواصل غداً صباحاً'],
     activityLog: [
       { id: 'e1', type: 'assign', description: 'تم تحويل المحادثة من المساعد الذكي إلى فاطمة البلوشي', by: 'a1', timestamp: nowMinus(20) },
@@ -381,7 +385,8 @@ export const conversations: Conversation[] = [
       { id: 'm4', conversationId: 'conv1', direction: 'out', type: 'text', content: 'لدينا عدة خيارات متاحة في الخوض والسيب. هل تفضل غرفة واحدة أم غرفتين؟', timestamp: nowMinus(day(3) - 4), read: true, delivered: true, sender: 'ai' },
       { id: 'm5', conversationId: 'conv1', direction: 'in', type: 'text', content: 'غرفتين من فضلك', timestamp: nowMinus(day(3) - 7), read: true, delivered: true },
       { id: 'm5v', conversationId: 'conv1', direction: 'in', type: 'voice', content: '0:12', timestamp: nowMinus(17), read: true, delivered: true },
-      { id: 'm6', conversationId: 'conv1', direction: 'in', type: 'text', content: 'هل الشقة في الخوض ما زالت متاحة؟', timestamp: nowMinus(15), read: false, delivered: true },
+      { id: 'm6', conversationId: 'conv1', direction: 'in', type: 'text', content: 'هل الشقة في الخوض ما زالت متاحة؟', timestamp: nowMinus(15), read: true, delivered: true },
+      { id: 'm7', conversationId: 'conv1', direction: 'out', type: 'text', content: 'أهلاً أحمد، معك فاطمة من المبيعات. نعم، شقة الخوض ما زالت متاحة', timestamp: nowMinus(12), read: true, delivered: true, sender: 'agent' },
     ],
   },
   {
@@ -398,12 +403,13 @@ export const conversations: Conversation[] = [
   },
   {
     id: 'conv3', contactId: 'c3', assignedTo: 'a3', status: 'in_progress', sessionCount: 1,
-    channelId: 'ch3', departmentId: 'd2', aiHandedOff: true,
-    lastMessage: 'سنرسل العقد المعدل قريباً', lastMessageAt: nowMinus(day(2) - 5),
+    channelId: 'ch3', departmentId: 'd2', aiHandedOff: true, handedOffAt: nowMinus(day(2) - 6),
+    lastMessage: 'معك محمد من خدمة العملاء، العقد المعدل يصلك اليوم', lastMessageAt: nowMinus(day(2) - 14),
     unreadCount: 0, notes: ['مراجعة العقد من القانوني'], activityLog: [],
     messages: [
       { id: 'm20', conversationId: 'conv3', direction: 'in', type: 'text', content: 'صباح الخير، نريد متابعة العقد', timestamp: nowMinus(day(2)), read: true, delivered: true },
       { id: 'm21', conversationId: 'conv3', direction: 'out', type: 'text', content: 'صباح النور، سنرسل العقد المعدل قريباً', timestamp: nowMinus(day(2) - 5), read: true, delivered: true, sender: 'ai' },
+      { id: 'm22', conversationId: 'conv3', direction: 'out', type: 'text', content: 'معك محمد من خدمة العملاء، العقد المعدل يصلك اليوم', timestamp: nowMinus(day(2) - 14), read: true, delivered: true, sender: 'agent' },
     ],
   },
   {
@@ -421,12 +427,13 @@ export const conversations: Conversation[] = [
     id: 'conv5', contactId: 'c2', assignedTo: 'a2', status: 'closed', sessionCount: 2,
     channelId: 'ch2', departmentId: 'd1',
     // جلستان: أُرسل العقد قبل 5 أيام، وأكّد الاستلام قبل يومين ثم أُغلقت.
-    lastMessage: 'شكراً لتعاونكم، تم استلام العقد', lastMessageAt: nowMinus(day(2) - 12),
+    lastMessage: 'العفو، سعدنا بخدمتك', lastMessageAt: nowMinus(day(2) - 14),
     unreadCount: 0, notes: ['تم توقيع العقد بنجاح'],
     activityLog: [{ id: 'e10', type: 'status', description: 'إغلاق المحادثة', by: 'a2', timestamp: nowMinus(day(2) - 15) }],
     messages: [
       { id: 'm40', conversationId: 'conv5', direction: 'out', type: 'text', content: 'تم إرسال العقد على البريد', timestamp: nowMinus(day(5) - 10), read: true, delivered: true },
       { id: 'm41', conversationId: 'conv5', direction: 'in', type: 'text', content: 'شكراً لتعاونكم، تم استلام العقد', timestamp: nowMinus(day(2) - 12), read: true, delivered: true },
+      { id: 'm42', conversationId: 'conv5', direction: 'out', type: 'text', content: 'العفو، سعدنا بخدمتك', timestamp: nowMinus(day(2) - 14), read: true, delivered: true, sender: 'agent' },
     ],
   },
   {
@@ -459,12 +466,13 @@ export const conversations: Conversation[] = [
   {
     id: 'conv9', contactId: 'c9', assignedTo: 'a2', status: 'open', sessionCount: 2,
     channelId: 'ch1', departmentId: 'd1',
-    lastMessage: 'نعم، هذا السعر مناسب', lastMessageAt: nowMinus(90),
+    lastMessage: 'ممتاز ريم، أرسلت لك مسودة العقد', lastMessageAt: nowMinus(69),
     unreadCount: 0, notes: [], activityLog: [],
     messages: [
       // جلستان: عُرض السعر قبل 4 أيام، ووافق العميل اليوم.
       { id: 'm80', conversationId: 'conv9', direction: 'out', type: 'text', content: 'سعر الفيلا 1200 ر.ع شهرياً', timestamp: nowMinus(day(4) - 6), read: true, delivered: true },
       { id: 'm81', conversationId: 'conv9', direction: 'in', type: 'text', content: 'نعم، هذا السعر مناسب', timestamp: nowMinus(90), read: true, delivered: true },
+      { id: 'm82', conversationId: 'conv9', direction: 'out', type: 'text', content: 'ممتاز ريم، أرسلت لك مسودة العقد', timestamp: nowMinus(69), read: true, delivered: true, sender: 'agent' },
     ],
   },
   {
@@ -478,12 +486,13 @@ export const conversations: Conversation[] = [
   },
   {
     id: 'conv11', contactId: 'c10', assignedTo: 'a4', status: 'in_progress', sessionCount: 1,
-    channelId: 'ch4', departmentId: 'd3', aiHandedOff: true,
-    lastMessage: 'سيتم التحقق من الطلب وإبلاغك خلال 24 ساعة', lastMessageAt: nowMinus(day(3) - 25),
+    channelId: 'ch4', departmentId: 'd3', aiHandedOff: true, handedOffAt: nowMinus(day(3) - 26),
+    lastMessage: 'معك نور من المالية، رفعنا طلب التأجيل وسنبلغك بالنتيجة', lastMessageAt: nowMinus(day(3) - 30),
     unreadCount: 0, notes: [], activityLog: [],
     messages: [
       { id: 'm100', conversationId: 'conv11', direction: 'in', type: 'text', content: 'هل يمكن تأجيل الدفعة الشهرية؟', timestamp: nowMinus(day(3) - 20), read: true, delivered: true },
       { id: 'm101', conversationId: 'conv11', direction: 'out', type: 'text', content: 'سيتم التحقق من الطلب وإبلاغك خلال 24 ساعة', timestamp: nowMinus(day(3) - 25), read: true, delivered: true, sender: 'ai' },
+      { id: 'm102', conversationId: 'conv11', direction: 'out', type: 'text', content: 'معك نور من المالية، رفعنا طلب التأجيل وسنبلغك بالنتيجة', timestamp: nowMinus(day(3) - 30), read: true, delivered: true, sender: 'agent' },
     ],
   },
   {

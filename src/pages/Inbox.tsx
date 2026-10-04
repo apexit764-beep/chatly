@@ -1797,6 +1797,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
   const departments = useDataStore((s) => s.departments);
   const channels = useDataStore((s) => s.channels);
   const assign = useDataStore((s) => s.assignConversation);
+  const setDepartment = useDataStore((s) => s.setConversationDepartment);
   const updateContact = useDataStore((s) => s.updateContact);
   const storeTags = useDataStore((s) => s.tags);
   const addTag = useDataStore((s) => s.addTag);
@@ -1815,7 +1816,6 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
   const [newTag, setNewTag] = useState('');
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategory, setNewCategory] = useState('');
-  const [groupId, setGroupId] = useState<string>(conversation.departmentId ?? '');
   const [editingName, setEditingName] = useState(false);
   const [editName, setEditName] = useState('');
   const [tagsOpen, setTagsOpen] = useState(false);
@@ -1945,10 +1945,10 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
         />
         <AssigneeRow
           label="القسم"
-          value={groupId || null}
+          value={conversation.departmentId}
           options={departments.map((d) => ({ id: d.id, name: d.name, color: d.color }))}
           placeholder="بدون قسم"
-          onChange={(id) => { setGroupId(id ?? ''); showToast('تم تحديث القسم', 'success'); }}
+          onChange={(id) => { setDepartment(conversation.id, id); showToast('تم تحديث القسم', 'success'); }}
           renderIndicator={(opt) => opt ? (
             <span className="h-5 w-5 rounded-full flex-shrink-0" style={{ background: opt.color ?? '#9CA3AF' }} />
           ) : (

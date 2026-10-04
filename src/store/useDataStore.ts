@@ -65,6 +65,7 @@ interface DataState {
   ) => void;
   editMessage: (conversationId: string, messageId: string, newContent: string) => void;
   assignConversation: (conversationId: string, agentId: string | null) => void;
+  setConversationDepartment: (conversationId: string, departmentId: string | null) => void;
   setConversationStatus: (conversationId: string, status: Conversation['status']) => void;
   reopenConversation: (conversationId: string) => void;
   markConversationRead: (conversationId: string) => void;
@@ -288,6 +289,13 @@ export const useDataStore = create<DataState>((set, get) => ({
     set((state) => ({
       conversations: state.conversations.map((c) =>
         c.id === conversationId ? { ...c, assignedTo: agentId } : c
+      ),
+    })),
+
+  setConversationDepartment: (conversationId, departmentId) =>
+    set((state) => ({
+      conversations: state.conversations.map((c) =>
+        c.id === conversationId ? { ...c, departmentId } : c
       ),
     })),
 
