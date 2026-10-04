@@ -96,7 +96,7 @@ export function ConnectGuide({ guideKey, title }: { guideKey: string; title: str
       </div>
 
       <Modal open={expanded} onClose={() => setExpanded(false)} title={title} size="xl">
-        <video poster={poster} muted loop playsInline autoPlay controls className="w-full rounded-lg bg-black">
+        <video poster={poster} muted loop playsInline autoPlay controls className="w-full max-h-[68vh] object-contain rounded-lg bg-black">
           <source src={src} type="video/mp4" />
           {webm && <source src={webm} type="video/webm" />}
         </video>
