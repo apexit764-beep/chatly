@@ -24,6 +24,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { downloadCsv, printAsPdf } from '@/utils/csv';
 import { formatNumber } from '@/utils/format';
 import { cn } from '@/utils/cn';
+import { firstReplyCases, slaMinutesFor } from '@/utils/firstReplySla';
 
 type Range = 'today' | 'week' | 'month' | 'custom';
 
@@ -34,6 +35,7 @@ export default function Reports(): JSX.Element {
   const agents = useDataStore((s) => s.agents);
   const allConversations = useDataStore((s) => s.conversations);
   const channels = useDataStore((s) => s.channels);
+  const departments = useDataStore((s) => s.departments);
   const contacts = useDataStore((s) => s.contacts);
   const aiSettings = useAIStore((s) => s.settings);
   const showToast = useUIStore((s) => s.showToast);
@@ -42,6 +44,7 @@ export default function Reports(): JSX.Element {
   const [dateFrom, setDateFrom] = useState(() => startOfDay(addDays(new Date(), -6)));
   const [dateTo, setDateTo] = useState(() => startOfDay(new Date()));
   const [rangeKey, setRangeKey] = useState(0);
+  const [slaDept, setSlaDept] = useState<string>('all');
 
   const dayLabels = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
@@ -65,9 +68,35 @@ export default function Reports(): JSX.Element {
     }).length;
   });
 
-  // Bar chart — average first-reply hours per day, breaches = day exceeds 2h
-  const firstReplyHours: number[] = newConvsLine.map(() => +(0.5 + Math.random() * 2.2).toFixed(1));
-  const breaches: number[] = firstReplyHours.map((h) => (h > 2 ? 1 : 0));
+  // Real dates under each daily column — the fixed Sunday→Saturday names
+  // only lined up when the range happened to start on a Sunday.
+  const rangeLabels: string[] = newConvsLine.map((_, i) => {
+    const d = addDays(rangeStart, i);
+    return newConvsLine.length <= 7
+      ? d.toLocaleDateString('ar-OM-u-nu-latn', { weekday: 'long' })
+      : `${d.getDate()}/${d.getMonth() + 1}`;
+  });
+
+  // First-reply compliance — each case against its own department's target.
+  // Cases are counted, never their minutes averaged: departments with
+  // different targets do not share a scale.
+  const slaCases = firstReplyCases(conversations, departments)
+    .filter((c) => slaDept === 'all' || (slaDept === 'none' ? c.departmentId === null : c.departmentId === slaDept));
+  const slaDays: SlaDay[] = newConvsLine.map((_, i) => {
+    const from = addDays(rangeStart, i).getTime();
+    const to = addDays(rangeStart, i + 1).getTime();
+    const inDay = slaCases.filter((c) => c.startedAt >= from && c.startedAt < to);
+    return {
+      met: inDay.filter((c) => c.outcome === 'met').length,
+      breached: inDay.filter((c) => c.outcome === 'breached').length,
+      pending: inDay.filter((c) => c.outcome === 'pending').length,
+    };
+  });
+  const slaTotals = slaDays.reduce(
+    (t, d) => ({ met: t.met + d.met, breached: t.breached + d.breached }),
+    { met: 0, breached: 0 },
+  );
+  const slaMeasured = slaTotals.met + slaTotals.breached;
 
   // Heatmap — peak hours derived from all message timestamps
   const slots = ['12ص', '1ص', '2ص', '3ص', '4ص', '5ص', '6ص', '7ص', '8ص', '9ص', '10ص', '11ص', '12م', '1م', '2م', '3م', '4م', '5م', '6م', '7م', '8م', '9م', '10م', '11م'];
@@ -398,7 +427,7 @@ export default function Reports(): JSX.Element {
               </div>
             </div>
             <LineChart
-              labels={dayLabels}
+              labels={rangeLabels}
               series={[
                 { name: 'المساعد', color: '#8B5CF6', data: aiTrend },
                 { name: 'الموظفون', color: '#2563EB', data: humanTrend },
@@ -448,30 +477,51 @@ export default function Reports(): JSX.Element {
             </button>
           </div>
           <LineChart
-            labels={dayLabels}
+            labels={rangeLabels}
             series={[{ name: 'محادثات جديدة', color: '#2563EB', data: newConvsLine }]}
             height={220}
           />
         </Card>
 
         <Card className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-h3 font-bold">متوسط وقت الرد الأول</h2>
-              <p className="text-small text-muted-light dark:text-muted-dark">بالساعات — يومياً</p>
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="min-w-0">
+              <h2 className="text-h3 font-bold">الالتزام بوقت الرد الأول</h2>
+              <p className="text-small text-muted-light dark:text-muted-dark">
+                كل محادثة مقيسة بهدف قسمها — يومياً
+              </p>
             </div>
-            <div className="flex items-center gap-3 text-small">
+            <select
+              value={slaDept}
+              onChange={(e) => setSlaDept(e.target.value)}
+              aria-label="القسم"
+              className="h-9 ps-3 pe-8 rounded-xl border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-small flex-shrink-0 focus:outline-none focus:border-primary"
+            >
+              <option value="all">كل الأقسام</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>{d.name} — {slaMinutesFor(d.id, departments)} د</option>
+              ))}
+              <option value="none">بدون قسم — {slaMinutesFor(null, departments)} د</option>
+            </select>
+          </div>
+          <div className="flex items-center justify-between gap-3 mb-2 text-small">
+            <div className="flex items-center gap-3">
               <span className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-sm bg-primary" />
-                المتوسط
+                ضمن الهدف
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-sm bg-danger" />
-                تجاوز الحد
+                تجاوز الهدف
               </span>
             </div>
+            <span className="text-muted-light dark:text-muted-dark tabular-nums">
+              {slaMeasured > 0
+                ? <>الفترة: <b className="text-current">{Math.round((slaTotals.met / slaMeasured) * 100)}%</b> · {slaTotals.met} ضمن الهدف · {slaTotals.breached} متجاوزة</>
+                : 'لا توجد محادثات مقيسة'}
+            </span>
           </div>
-          <DualBarChart labels={dayLabels} primary={firstReplyHours} secondary={breaches} />
+          <SlaComplianceChart labels={rangeLabels} days={slaDays} />
         </Card>
       </div>
 
@@ -563,97 +613,108 @@ export default function Reports(): JSX.Element {
   );
 }
 
-function DualBarChart({
-  labels,
-  primary,
-  secondary,
-}: {
-  labels: string[];
-  primary: number[];
-  secondary: number[];
-}): JSX.Element {
+interface SlaDay {
+  met: number;
+  breached: number;
+  /** Unanswered but still within target — shown, not counted. */
+  pending: number;
+}
+
+/**
+ * One full-height column per day, split by share: blue the cases answered
+ * within their department's target, red the ones past it. The share is what
+ * is comparable across departments; the counts sit in the tooltip.
+ */
+function SlaComplianceChart({ labels, days }: { labels: string[]; days: SlaDay[] }): JSX.Element {
+  const [hover, setHover] = useState<number | null>(null);
   const width = 600;
   const height = 220;
-  const padding = { top: 20, right: 16, bottom: 32, left: 32 };
+  const padding = { top: 22, right: 16, bottom: 32, left: 40 };
   const innerW = width - padding.left - padding.right;
   const innerH = height - padding.top - padding.bottom;
-  const max = Math.max(...primary, 1);
-  const slot = innerW / primary.length;
-  const barW = slot * 0.4;
+  const slot = innerW / days.length;
+  const barW = Math.min(slot * 0.5, 44);
   const yGrid = [0, 0.25, 0.5, 0.75, 1];
+  const dense = days.length > 10;
 
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="relative w-full">
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full" preserveAspectRatio="xMidYMid meet">
         {yGrid.map((g) => (
-          <line
-            key={g}
-            x1={padding.left}
-            x2={width - padding.right}
-            y1={padding.top + innerH * (1 - g)}
-            y2={padding.top + innerH * (1 - g)}
-            stroke="currentColor"
-            strokeOpacity="0.08"
-            strokeDasharray="3 3"
-          />
+          <g key={g}>
+            <line
+              x1={padding.left}
+              x2={width - padding.right}
+              y1={padding.top + innerH * (1 - g)}
+              y2={padding.top + innerH * (1 - g)}
+              stroke="currentColor"
+              strokeOpacity="0.08"
+              strokeDasharray="3 3"
+            />
+            <text x={padding.left - 6} y={padding.top + innerH * (1 - g) + 4} fontSize="10" textAnchor="end" fill="currentColor" opacity="0.5">
+              {g * 100}%
+            </text>
+          </g>
         ))}
-        {yGrid.map((g) => (
-          <text
-            key={`yl-${g}`}
-            x={padding.left - 6}
-            y={padding.top + innerH * (1 - g) + 4}
-            fontSize="10"
-            textAnchor="end"
-            fill="currentColor"
-            opacity="0.5"
-          >
-            {(max * g).toFixed(1)}
-          </text>
-        ))}
-        {primary.map((v, i) => {
-          const h = (v / max) * innerH;
+        {days.map((d, i) => {
+          const total = d.met + d.breached;
           const x = padding.left + i * slot + (slot - barW) / 2;
-          const y = padding.top + innerH - h;
-          const isBreach = secondary[i] > 0;
+          const metH = total > 0 ? (d.met / total) * innerH : 0;
+          const breachH = total > 0 ? innerH - metH : 0;
+          const pct = total > 0 ? Math.round((d.met / total) * 100) : null;
           return (
-            <g key={i}>
-              <rect
-                x={x}
-                y={y}
-                width={barW}
-                height={h}
-                rx="4"
-                fill={isBreach ? '#EF4444' : '#2563EB'}
-                fillOpacity="0.9"
-              />
-              <text
-                x={x + barW / 2}
-                y={y - 4}
-                fontSize="10"
-                textAnchor="middle"
-                fill="currentColor"
-                opacity="0.8"
-                fontWeight="600"
-              >
-                {v.toFixed(1)}
-              </text>
+            <g key={i} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
+              {/* Whole-slot hit area, so empty days still answer on hover. */}
+              <rect x={padding.left + i * slot} y={padding.top} width={slot} height={innerH} fill="transparent" />
+              {total === 0 ? (
+                <rect x={x} y={padding.top} width={barW} height={innerH} rx="4" fill="currentColor" fillOpacity="0.04" />
+              ) : (
+                <>
+                  {breachH > 0 && <rect x={x} y={padding.top} width={barW} height={breachH} rx="4" fill="#EF4444" fillOpacity={hover === i ? 1 : 0.9} />}
+                  {metH > 0 && <rect x={x} y={padding.top + breachH} width={barW} height={metH} rx="4" fill="#2563EB" fillOpacity={hover === i ? 1 : 0.9} />}
+                </>
+              )}
+              {!dense && (
+                <text x={x + barW / 2} y={padding.top - 6} fontSize="10" textAnchor="middle" fill="currentColor" opacity={pct === null ? 0.4 : 0.85} fontWeight="600">
+                  {pct === null ? '—' : `${pct}%`}
+                </text>
+              )}
             </g>
           );
         })}
-        {labels.map((lbl, i) => (
-          <text
-            key={lbl + i}
-            x={padding.left + i * slot + slot / 2}
-            y={height - 8}
-            fontSize="10"
-            textAnchor="middle"
-            fill="currentColor"
-            opacity="0.6"
-          >
+        {labels.map((lbl, i) => (dense && i % 3 !== 0 ? null : (
+          <text key={lbl + i} x={padding.left + i * slot + slot / 2} y={height - 8} fontSize="10" textAnchor="middle" fill="currentColor" opacity="0.6">
             {lbl}
           </text>
-        ))}
+        )))}
       </svg>
+      {hover !== null && (() => {
+        const d = days[hover];
+        const total = d.met + d.breached;
+        const at = ((padding.left + hover * slot + slot / 2) / width) * 100;
+        return (
+          <div
+            className={cn(
+              'pointer-events-none absolute top-0 z-10 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark shadow-lg px-3 py-2 text-[12px] whitespace-nowrap',
+              // Kept inside the card: edge columns open the tooltip inward.
+              at > 70 ? '-translate-x-full' : at < 30 ? '' : '-translate-x-1/2',
+            )}
+            style={{ left: `${at}%` }}
+          >
+            <div className="font-semibold mb-1">{labels[hover]}</div>
+            {total === 0 ? (
+              <div className="text-muted-light dark:text-muted-dark">لا توجد محادثات مقيسة</div>
+            ) : (
+              <>
+                <div className="tabular-nums">الالتزام: <b>{Math.round((d.met / total) * 100)}%</b></div>
+                <div className="tabular-nums text-primary dark:text-[#60A5FA]">{d.met} ضمن الهدف</div>
+                <div className="tabular-nums text-[#B91C1C] dark:text-[#F87171]">{d.breached} متجاوزة</div>
+              </>
+            )}
+            {d.pending > 0 && <div className="tabular-nums text-muted-light dark:text-muted-dark">{d.pending} بانتظار الرد (لم يتجاوز هدفه بعد)</div>}
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -247,6 +247,12 @@ export interface Conversation {
   aiActive?: boolean;
   /** True when conversation was handed off from AI to a human agent */
   aiHandedOff?: boolean;
+  /**
+   * When the AI handed the conversation to a human. The first-reply target
+   * counts from here, not from the customer's first message: the agent is not
+   * answerable for the time the AI was handling it.
+   */
+  handedOffAt?: string;
 }
 
 export interface ActivityEvent {
