@@ -128,8 +128,6 @@ export interface Department {
   channels: string[];      // channel IDs
   agents: string[];        // agent IDs
   createdAt: string;
-  /** SLA target — minutes until first response should happen */
-  slaMinutes?: number;
   /** Keywords that auto-route incoming conversations here (case-insensitive) */
   routingKeywords?: string[];
 }

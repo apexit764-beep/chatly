@@ -31,7 +31,6 @@ export const departments: Department[] = [
     channels: ['ch1', 'ch2'],
     agents: ['a2', 'a5'],
     createdAt: nowMinus(60 * 24 * 200),
-    slaMinutes: 15,
   },
   {
     id: 'd2',
@@ -41,7 +40,6 @@ export const departments: Department[] = [
     channels: ['ch1', 'ch3'],
     agents: ['a3'],
     createdAt: nowMinus(60 * 24 * 180),
-    slaMinutes: 30,
   },
   {
     id: 'd3',
@@ -51,7 +49,6 @@ export const departments: Department[] = [
     channels: ['ch4'],
     agents: ['a4'],
     createdAt: nowMinus(60 * 24 * 150),
-    slaMinutes: 60,
   },
   {
     id: 'd4',
@@ -61,7 +58,6 @@ export const departments: Department[] = [
     channels: ['ch1', 'ch2', 'ch3', 'ch4'],
     agents: ['a1'],
     createdAt: nowMinus(60 * 24 * 365),
-    slaMinutes: 60,
   },
 ];
 

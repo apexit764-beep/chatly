@@ -38,7 +38,6 @@ export default function Departments(): JSX.Element {
     color: palette[0],
     agents: [] as string[],
     channels: [] as string[],
-    slaMinutes: 30,
   });
 
   const openCreate = (): void => {
@@ -49,7 +48,6 @@ export default function Departments(): JSX.Element {
       color: palette[0],
       agents: [],
       channels: [],
-      slaMinutes: 30,
     });
     setModalOpen(true);
   };
@@ -62,7 +60,6 @@ export default function Departments(): JSX.Element {
       color: d.color,
       agents: d.agents,
       channels: d.channels,
-      slaMinutes: d.slaMinutes ?? 30,
     });
     setModalOpen(true);
   };
@@ -79,7 +76,6 @@ export default function Departments(): JSX.Element {
         color: form.color,
         agents: editing.agents,
         channels: form.channels,
-        slaMinutes: form.slaMinutes,
       });
       // sync channels
       channels.forEach((c) => {
@@ -95,7 +91,6 @@ export default function Departments(): JSX.Element {
         color: form.color,
         agents: form.agents,
         channels: form.channels,
-        slaMinutes: form.slaMinutes,
       });
       showToast(t('تمت إضافة القسم'), 'success');
     }
@@ -241,27 +236,6 @@ export default function Departments(): JSX.Element {
               emptyText="لا قنوات متاحة"
             />
           </div>
-
-          {/* SLA target */}
-          <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">
-              هدف وقت الاستجابة (SLA) <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span>
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min={1}
-                value={form.slaMinutes}
-                onChange={(e) => setForm({ ...form, slaMinutes: Number(e.target.value) || 30 })}
-                className="w-28 h-10 px-3 rounded-input bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-              />
-              <span className="text-small text-muted-light dark:text-muted-dark">دقيقة للرد الأول</span>
-            </div>
-            <p className="text-[10px] text-muted-light dark:text-muted-dark">
-              المحادثات التي تتجاوز هذا الوقت تُعتبر متأخرة وتظهر في تقرير الانتهاكات
-            </p>
-          </div>
-
         </div>
         {/* Sticky drawer footer */}
         <div className="absolute bottom-0 inset-x-0 px-5 py-3 bg-white dark:bg-surface-dark border-t border-border-light dark:border-border-dark flex items-center justify-end gap-2">

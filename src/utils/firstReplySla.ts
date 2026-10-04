@@ -1,10 +1,7 @@
-import type { Conversation, Department, Message } from '@/types';
+import type { Conversation, Message } from '@/types';
 import { deriveSessions } from './sessions';
 
-/**
- * The target when a conversation has no department, or its department sets
- * none — the same default the department form starts from.
- */
+/** The account-wide target until one is set in company settings. */
 export const DEFAULT_SLA_MINUTES = 30;
 
 export type FirstReplyOutcome = 'met' | 'breached' | 'pending';
@@ -20,11 +17,6 @@ export interface FirstReplyCase {
   outcome: FirstReplyOutcome;
 }
 
-export function slaMinutesFor(departmentId: string | null, departments: Department[]): number {
-  const d = departmentId ? departments.find((x) => x.id === departmentId) : undefined;
-  return d?.slaMinutes ?? DEFAULT_SLA_MINUTES;
-}
-
 const ms = (iso: string): number => new Date(iso).getTime();
 
 /** An agent's reply to the customer — not the AI, not an internal note, not the rating request. */
@@ -33,11 +25,8 @@ function isAgentReply(m: Message): boolean {
 }
 
 /**
- * One case per session that a customer opened and an agent was expected to answer.
- *
- * Each case is judged against its own department's target, so cases from
- * departments with different targets can be counted together: what adds up
- * is met vs. breached, never the minutes themselves.
+ * One case per session that a customer opened and an agent was expected to answer,
+ * each judged against the one account-wide target.
  *
  * - Unanswered past its target → breached: the slowest cases must not drop out.
  * - Unanswered and still within it → pending, not counted yet.
@@ -45,7 +34,7 @@ function isAgentReply(m: Message): boolean {
  */
 export function firstReplyCases(
   conversations: Conversation[],
-  departments: Department[],
+  slaMinutes: number,
   now: number = Date.now(),
 ): FirstReplyCase[] {
   const cases: FirstReplyCase[] = [];
@@ -53,7 +42,6 @@ export function firstReplyCases(
   for (const conv of conversations) {
     const sorted = [...conv.messages].sort((a, b) => ms(a.timestamp) - ms(b.timestamp));
     const sessions = deriveSessions(conv);
-    const slaMinutes = slaMinutesFor(conv.departmentId, departments);
 
     sessions.forEach((session, i) => {
       const from = ms(session.startedAt);

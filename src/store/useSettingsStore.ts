@@ -34,6 +34,12 @@ export interface GeneralPrefs {
   country: string;
   phone: string;
   footerLinks: FooterLink[];
+  /**
+   * One target for every conversation's first agent reply. Account-wide on
+   * purpose: per-department targets put the same agent, or a conversation
+   * moved between departments, on different scales.
+   */
+  firstReplyTargetMinutes: number;
 }
 
 export interface RatingPrefs {
@@ -73,6 +79,7 @@ const defaultState: Pick<SettingsState, 'notifications' | 'security' | 'general'
     companySize: '11-50',
     country: 'OM',
     phone: '+968 9999 0000',
+    firstReplyTargetMinutes: 30,
     footerLinks: [],
   },
   rating: {
