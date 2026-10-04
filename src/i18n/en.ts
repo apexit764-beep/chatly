@@ -1101,6 +1101,7 @@ export const en: Record<string, string> = {
   'تم تعديل الرسالة': 'Message edited',
   'تم حفظ الملاحظة الصوتية': 'Voice note saved',
   'جاري التسجيل...': 'Recording…',
+  'طريقة ربط': 'How to connect',
   'حذف التسجيل': "Delete recording",
   'متابعة التسجيل': "Resume recording",
   'إيقاف مؤقت': "Pause",
