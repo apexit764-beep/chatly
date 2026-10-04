@@ -319,9 +319,10 @@ export default function Billing(): JSX.Element {
           )}
         >
           {/*
-            Two columns on wide screens: the subscription itself stacked on one
-            side exactly as on the phone, the plan's features on the other,
-            with a divider between them. On the phone the features follow below.
+            Two columns on wide screens: the subscription itself (plan, period,
+            payment) on one side; what the plan allows — its limits, then its
+            features — on the other, with a divider between. On the phone the
+            second column follows below.
           */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-5">
@@ -342,18 +343,6 @@ export default function Billing(): JSX.Element {
                 <DetailTile label="نهاية الفترة" value={formatDate(sub.currentPeriodEnd)} />
               </div>
 
-              <div>
-                <p className="text-small font-bold mb-2">حدود الباقة</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <LimitTile icon={<Users className="h-4 w-4" />} label="الموظفين" value={plan.limits.agents} />
-                  {/* One limit for every connected account, whatever its type:
-                      4 means four WhatsApp numbers or one each of four channels. */}
-                  <LimitTile icon={<Radio className="h-4 w-4" />} label="القنوات" hint="أي نوع" value={plan.limits.channels} />
-                  <LimitTile icon={<MessageSquare className="h-4 w-4" />} label="المحادثات" value={plan.limits.conversations} />
-                  <LimitTile icon={<Users2 className="h-4 w-4" />} label="جهات الاتصال" value={plan.limits.contacts} />
-                </div>
-              </div>
-
               {sub.paymentMethod && (
                 <div className="rounded-xl bg-bg-light dark:bg-bg-dark p-3 flex items-center gap-3">
                   <div className="h-8 w-12 rounded bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark flex items-center justify-center text-[10px] font-bold uppercase">
@@ -369,15 +358,29 @@ export default function Billing(): JSX.Element {
 
             {/* The divider is this column's inline-start edge: a rule above it
                 on the phone, a vertical line between the columns on desktop. */}
-            <div className="pt-5 border-t md:pt-0 md:border-t-0 md:border-s md:ps-6 border-border-light dark:border-border-dark">
-              <p className="text-small font-bold mb-3">ميزات الباقة</p>
-              <div className="space-y-2.5">
-                {plan.features.map((f, i) => (
-                  <div key={i} className="flex items-start gap-2 text-small">
-                    <Check className="h-3.5 w-3.5 text-success flex-shrink-0 mt-0.5" />
-                    <span>{f}</span>
-                  </div>
-                ))}
+            <div className="space-y-5 pt-5 border-t md:pt-0 md:border-t-0 md:border-s md:ps-6 border-border-light dark:border-border-dark">
+              <div>
+                <p className="text-small font-bold mb-2">حدود الباقة</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <LimitTile icon={<Users className="h-4 w-4" />} label="الموظفين" value={plan.limits.agents} />
+                  {/* One limit for every connected account, whatever its type:
+                      4 means four WhatsApp numbers or one each of four channels. */}
+                  <LimitTile icon={<Radio className="h-4 w-4" />} label="القنوات" hint="أي نوع" value={plan.limits.channels} />
+                  <LimitTile icon={<MessageSquare className="h-4 w-4" />} label="المحادثات" value={plan.limits.conversations} />
+                  <LimitTile icon={<Users2 className="h-4 w-4" />} label="جهات الاتصال" value={plan.limits.contacts} />
+                </div>
+              </div>
+
+              <div>
+                <p className="text-small font-bold mb-3">ميزات الباقة</p>
+                <div className="space-y-2.5">
+                  {plan.features.map((f, i) => (
+                    <div key={i} className="flex items-start gap-2 text-small">
+                      <Check className="h-3.5 w-3.5 text-success flex-shrink-0 mt-0.5" />
+                      <span>{f}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
