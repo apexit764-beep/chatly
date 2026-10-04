@@ -41,6 +41,7 @@ import WhatsAppConnectWizard from './WhatsAppConnectWizard';
 import { WidgetSettings, type WidgetSubTab } from './channelSettings/WidgetSettings';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { PlanLimitModal } from '@components/billing/PlanLimitModal';
+import { ConnectGuide } from '@components/channels/ConnectGuide';
 
 interface ChannelTab {
   key: string;
@@ -488,6 +489,11 @@ export default function ChannelDetail(): JSX.Element {
         <div className="space-y-5">
           <section className="bg-white dark:bg-surface-dark rounded-card border border-border-light dark:border-border-dark p-5 sticky top-4">
             <h2 className="text-h3 font-bold mb-4">{t('كيفية الربط')}</h2>
+            {/* WhatsApp has a clip per method: it follows the method opened below. */}
+            <ConnectGuide
+              guideKey={meta.type === 'whatsapp' ? `whatsapp-${openMethod ?? 'cloud'}` : meta.type}
+              title={`${t('طريقة ربط')} ${meta.name}`}
+            />
             {meta.methods && meta.methods.length > 0 ? (
               <div className="space-y-2">
                 {meta.methods.map((m) => {
