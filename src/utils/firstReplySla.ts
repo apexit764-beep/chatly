@@ -68,7 +68,10 @@ export function firstReplyCases(
       const isCurrent = i === sessions.length - 1;
       if (isCurrent && conv.aiActive) return; // the AI owns it; no agent reply is due
 
-      const handoff = isCurrent && conv.aiHandedOff && conv.handedOffAt ? ms(conv.handedOffAt) : null;
+      // The handoff belongs to the session it happened in — not necessarily the
+      // last one, since the customer may have written again days later.
+      const handedOff = conv.aiHandedOff && conv.handedOffAt ? ms(conv.handedOffAt) : null;
+      const handoff = handedOff !== null && handedOff >= from && handedOff < to ? handedOff : null;
       const start = handoff !== null && handoff > ms(firstIn.timestamp) ? handoff : ms(firstIn.timestamp);
       const reply = msgs.find((m) => isAgentReply(m) && ms(m.timestamp) >= start);
 
