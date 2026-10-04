@@ -1,4 +1,5 @@
 import { ReactNode, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from '@/utils/cn';
@@ -33,11 +34,16 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }: M
     };
   }, [open, onClose]);
 
-  return (
+  // Rendered at the document root, like the Drawer: a page wrapper with a
+  // transform makes `fixed` relative to that wrapper, which clipped tall
+  // modals at the bottom of the content area instead of the viewport. It sits
+  // above the support button (z-90) so that never covers a modal's actions;
+  // toasts (z-100) and confirm dialogs (z-200) stay above it.
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[95] flex items-center justify-center p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -80,6 +86,7 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }: M
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
