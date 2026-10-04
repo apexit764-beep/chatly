@@ -24,7 +24,8 @@ import { useUIStore } from '@/store/useUIStore';
 import { downloadCsv, printAsPdf } from '@/utils/csv';
 import { formatNumber } from '@/utils/format';
 import { cn } from '@/utils/cn';
-import { firstReplyCases, slaMinutesFor, type FirstReplyCase } from '@/utils/firstReplySla';
+import { firstReplyCases, type FirstReplyCase } from '@/utils/firstReplySla';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 type Range = 'today' | 'week' | 'month' | 'custom';
 
@@ -36,6 +37,7 @@ export default function Reports(): JSX.Element {
   const allConversations = useDataStore((s) => s.conversations);
   const channels = useDataStore((s) => s.channels);
   const departments = useDataStore((s) => s.departments);
+  const replyTarget = useSettingsStore((s) => s.general.firstReplyTargetMinutes);
   const contacts = useDataStore((s) => s.contacts);
   const aiSettings = useAIStore((s) => s.settings);
   const showToast = useUIStore((s) => s.showToast);
@@ -77,11 +79,11 @@ export default function Reports(): JSX.Element {
       : `${d.getDate()}/${d.getMonth() + 1}`;
   });
 
-  // First-reply compliance — each case against its own department's target.
-  // Cases are counted, never their minutes averaged: departments with
-  // different targets do not share a scale.
+  // First-reply compliance against the one account-wide target. The share,
+  // not the minutes, is what the chart and the card show; the department
+  // filter narrows the cases, the target stays the same.
   const rangeEnd = addDays(rangeStart, newConvsLine.length).getTime();
-  const rangeCases = firstReplyCases(conversations, departments)
+  const rangeCases = firstReplyCases(conversations, replyTarget)
     .filter((c) => c.startedAt >= rangeStart.getTime() && c.startedAt < rangeEnd);
   const slaCases = rangeCases
     .filter((c) => slaDept === 'all' || (slaDept === 'none' ? c.departmentId === null : c.departmentId === slaDept));
@@ -482,7 +484,7 @@ export default function Reports(): JSX.Element {
             <div className="min-w-0">
               <h2 className="text-h3 font-bold">الالتزام بوقت الرد الأول</h2>
               <p className="text-small text-muted-light dark:text-muted-dark">
-                كل محادثة مقيسة بهدف قسمها — يومياً
+                نسبة المحادثات التي رُدّ عليها خلال {replyTarget} دقيقة — يومياً
               </p>
             </div>
             <select
@@ -493,9 +495,9 @@ export default function Reports(): JSX.Element {
             >
               <option value="all">كل الأقسام</option>
               {departments.map((d) => (
-                <option key={d.id} value={d.id}>{d.name} — {slaMinutesFor(d.id, departments)} د</option>
+                <option key={d.id} value={d.id}>{d.name}</option>
               ))}
-              <option value="none">بدون قسم — {slaMinutesFor(null, departments)} د</option>
+              <option value="none">بدون قسم</option>
             </select>
           </div>
           <div className="flex items-center justify-between gap-3 mb-2 text-small">

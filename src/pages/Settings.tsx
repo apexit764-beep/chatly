@@ -139,6 +139,9 @@ function GeneralTab(): JSX.Element {
   const phoneMatch = general.phone.match(/^(\+\d{1,4})\s*(.*)$/);
   const [phoneCountryCode, setPhoneCountryCode] = useState(phoneMatch ? phoneMatch[1] : '+968');
   const [phoneDigits, setPhoneDigits] = useState(phoneMatch ? phoneMatch[2] : general.phone);
+  // Text, not a number: an emptied field stays empty while typing instead of snapping back.
+  const [replyTarget, setReplyTarget] = useState(String(general.firstReplyTargetMinutes));
+  const [replyTargetError, setReplyTargetError] = useState<string | null>(null);
 
   const onLogoChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0];
@@ -152,7 +155,12 @@ function GeneralTab(): JSX.Element {
 
   const save = (): void => {
     if (!siteName.trim()) { setSiteNameError('الاسم مطلوب'); return; }
-    setGeneral({ siteName, companyLogo, industry, companySize, country, phone: `${phoneCountryCode} ${phoneDigits}` });
+    const target = Number(replyTarget);
+    if (!replyTarget || !Number.isInteger(target) || target < 1 || target > 1440) {
+      setReplyTargetError('أدخل مدة بين 1 و1440 دقيقة');
+      return;
+    }
+    setGeneral({ siteName, companyLogo, industry, companySize, country, phone: `${phoneCountryCode} ${phoneDigits}`, firstReplyTargetMinutes: target });
     showToast('تم حفظ الإعدادات', 'success');
   };
 
@@ -235,6 +243,22 @@ function GeneralTab(): JSX.Element {
             onCountryCodeChange={setPhoneCountryCode}
             onPhoneChange={setPhoneDigits}
           />
+        </div>
+      </Row>
+      <Row
+        label="هدف وقت الرد الأول"
+        hint="المدة المتوقعة لأول رد من موظف على العميل. عليها تُقاس نسبة الالتزام في التقارير، لكل المحادثات والأقسام"
+        error={replyTargetError}
+      >
+        <div className="flex items-center gap-2">
+          <input
+            inputMode="numeric"
+            value={replyTarget}
+            onChange={(e) => { setReplyTarget(e.target.value.replace(/\D/g, '').slice(0, 4)); setReplyTargetError(null); }}
+            aria-label="هدف وقت الرد الأول بالدقائق"
+            className={cn('w-24 h-10 px-3 rounded-input bg-white dark:bg-surface-dark border text-body tabular-nums focus:outline-none', replyTargetError ? 'border-danger focus:border-danger' : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10')}
+          />
+          <span className="text-small text-muted-light dark:text-muted-dark">دقيقة</span>
         </div>
       </Row>
       <div className="flex justify-end pt-6">
