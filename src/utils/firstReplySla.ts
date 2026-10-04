@@ -20,7 +20,7 @@ export interface FirstReplyCase {
 const ms = (iso: string): number => new Date(iso).getTime();
 
 /** An agent's reply to the customer — not the AI, not an internal note, not the rating request. */
-function isAgentReply(m: Message): boolean {
+export function isAgentReply(m: Message): boolean {
   return m.direction === 'out' && m.sender !== 'ai' && !m.isInternalNote && !m.ratingToken;
 }
 

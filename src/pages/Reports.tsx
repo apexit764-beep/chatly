@@ -24,7 +24,8 @@ import { useUIStore } from '@/store/useUIStore';
 import { downloadCsv, printAsPdf } from '@/utils/csv';
 import { formatNumber } from '@/utils/format';
 import { cn } from '@/utils/cn';
-import { firstReplyCases, type FirstReplyCase } from '@/utils/firstReplySla';
+import { firstReplyCases, isAgentReply, type FirstReplyCase } from '@/utils/firstReplySla';
+import { useRatingStore, type Rating } from '@/store/useRatingStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 
 type Range = 'today' | 'week' | 'month' | 'custom';
@@ -38,6 +39,7 @@ export default function Reports(): JSX.Element {
   const channels = useDataStore((s) => s.channels);
   const departments = useDataStore((s) => s.departments);
   const replyTarget = useSettingsStore((s) => s.general.firstReplyTargetMinutes);
+  const ratings = useRatingStore((s) => s.ratings);
   const contacts = useDataStore((s) => s.contacts);
   const aiSettings = useAIStore((s) => s.settings);
   const showToast = useUIStore((s) => s.showToast);
@@ -137,8 +139,9 @@ export default function Reports(): JSX.Element {
     (s, c) => s + c.messages.filter((m) => m.direction === 'out' && m.sender === 'ai').length,
     0,
   );
+  // Agents' replies to customers — not internal notes, not the rating request.
   const humanReplies = conversations.reduce(
-    (s, c) => s + c.messages.filter((m) => m.direction === 'out' && m.sender !== 'ai').length,
+    (s, c) => s + c.messages.filter(isAgentReply).length,
     0,
   );
   const totalOutgoing = aiReplies + humanReplies;
@@ -168,7 +171,7 @@ export default function Reports(): JSX.Element {
     return conversations.reduce(
       (s, c) => s + c.messages.filter((m) => {
         const t = new Date(m.timestamp).getTime();
-        return m.direction === 'out' && m.sender !== 'ai' && t >= day.getTime() && t < next.getTime();
+        return isAgentReply(m) && t >= day.getTime() && t < next.getTime();
       }).length,
       0,
     );
@@ -197,7 +200,10 @@ export default function Reports(): JSX.Element {
       handled,
       avgReply,
       resolutionRate,
-      rating: (4 + Math.random()).toFixed(1),
+      // Customers' ratings of this agent, all time — as on the ratings page:
+      // a rating lands days after the conversation closed, so a period cut
+      // would drop most of them.
+      rating: averageAgentRating(ratings, a.id),
     };
   });
 
@@ -209,7 +215,7 @@ export default function Reports(): JSX.Element {
         'المحادثات': r.handled,
         'متوسط الرد (دقيقة)': r.avgReply.minutes === null ? '—' : Math.round(r.avgReply.minutes),
         'معدل الحل %': r.resolutionRate,
-        'التقييم': r.rating,
+        'التقييم': r.rating.value === null ? '—' : r.rating.value.toFixed(1),
       }));
       downloadCsv(`agent-performance-${new Date().toISOString().slice(0, 10)}.csv`, rows);
       showToast(`تم تصدير بيانات ${rows.length} موظف`, 'success');
@@ -217,7 +223,7 @@ export default function Reports(): JSX.Element {
     }
     // PDF: open print window with summary derived from real store data
     const totalNewConvs = newConvsLine.reduce((s, n) => s + n, 0);
-    const totalReplies = conversations.reduce((s, c) => s + c.messages.filter((m) => m.direction === 'out').length, 0);
+    const totalReplies = humanTrend.reduce((s, n) => s + n, 0);
     const all = compliance(rangeCases);
     const totalConvs = conversations.length;
     const closedConvs = conversations.filter((c) => c.status === 'closed').length;
@@ -236,7 +242,7 @@ export default function Reports(): JSX.Element {
       <table>
         <thead><tr><th>الموظف</th><th class="right">المحادثات</th><th class="right">متوسط الرد</th><th class="right">معدل الحلّ</th><th class="right">التقييم</th></tr></thead>
         <tbody>
-          ${agentRows.map((r) => `<tr><td>${r.agent.name}</td><td class="right">${r.handled}</td><td class="right">${formatMinutes(r.avgReply.minutes)}</td><td class="right">${r.resolutionRate}%</td><td class="right">⭐ ${r.rating}</td></tr>`).join('')}
+          ${agentRows.map((r) => `<tr><td>${r.agent.name}</td><td class="right">${r.handled}</td><td class="right">${formatMinutes(r.avgReply.minutes)}</td><td class="right">${r.resolutionRate}%</td><td class="right">${r.rating.value === null ? '—' : `⭐ ${r.rating.value.toFixed(1)}`}</td></tr>`).join('')}
         </tbody>
       </table>
       <h2>المحادثات حسب الوسم</h2>
@@ -323,7 +329,8 @@ export default function Reports(): JSX.Element {
         />
         <StatCard
           label="ردود الموظفين"
-          value={formatNumber(conversations.reduce((s, c) => s + c.messages.filter((m) => m.direction === 'out').length, 0))}
+          // Agents only, in the selected period — the AI's replies have their own card below.
+          value={formatNumber(humanTrend.reduce((s, n) => s + n, 0))}
           icon={<Send className="h-5 w-5" />}
           iconBg="bg-info/10"
           iconColor="text-info"
@@ -593,10 +600,14 @@ export default function Reports(): JSX.Element {
                         <span className="text-small font-medium">{resolutionRate}%</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 text-small font-medium">
-                        ⭐ {rating}
-                      </span>
+                    <td className="px-4 py-3" title={rating.count > 0 ? `من ${rating.count} ${rating.count === 1 ? 'تقييم' : 'تقييمات'}` : 'لا توجد تقييمات بعد'}>
+                      {rating.value === null ? (
+                        <span className="text-small text-muted-light dark:text-muted-dark">—</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-small font-medium tabular-nums">
+                          ⭐ {rating.value.toFixed(1)}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -617,6 +628,13 @@ function compliance(cases: FirstReplyCase[]): { met: number; breached: number; p
   const breached = cases.filter((c) => c.outcome === 'breached').length;
   const total = met + breached;
   return { met, breached, pct: total > 0 ? Math.round((met / total) * 100) : null };
+}
+
+/** Average of the customers' agent ratings that were submitted for this agent. */
+function averageAgentRating(ratings: Rating[], agentId: string): { value: number | null; count: number } {
+  const rated = ratings.filter((r) => r.agentId === agentId && r.submittedAt && r.ratingAgent != null);
+  if (rated.length === 0) return { value: null, count: 0 };
+  return { value: rated.reduce((s, r) => s + (r.ratingAgent ?? 0), 0) / rated.length, count: rated.length };
 }
 
 /** Average minutes to the first reply, over the answered cases only. */
