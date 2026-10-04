@@ -40,17 +40,16 @@ function dismissedToday(): boolean {
  * في وضع التركيز حيث يُخفى الهيدر. `className` يضبط هامشه ليحاذي حشو
  * الصفحة التي تحته.
  *
- * وهيئته هيئة تنبيه إعلاميّ فاتح: أرضية زرقاء باهتة وحدٌّ سفليّ ونصّ
- * غامق. والفاتح يقلب المنطق كلّه رأساً على عقب — فالنص الأبيض يذوب فيه،
- * والزرّ الأبيض يختفي عليه. لذا صار النص أزرق غامقاً وصار الزرّ مصمتاً
- * بأزرق الهوية: هو الآن أعلى تباين في الشريط، وهو الفعل المقصود.
+ * وهيئته بطاقة تنبيه برتقاليّة فاتحة بنصّ برتقاليّ غامق — لا زرقاء: الأزرق
+ * لون الهوية نفسه فيذوب الشريط في الواجهة ولا يُقرأ تنبيهاً. والزرّ مصمت
+ * بأزرق الهوية: هو الفعل المقصود، وأعلى تباين في الشريط.
  *
- * والتباين محسوب لا مُقدَّر: النص 9.52 والثانويّ 4.90 والزرّ 5.17
- * والحبّة 8.72، وكلّها فوق حدّ 4.5. والثانويّ عند `/75` لأن `/70` يهبط
- * إلى 4.31 فيسقط دون الحدّ.
+ * والتباين محسوب لا مُقدَّر: النص #7C2D12 على #FFF7ED بـ8.83، والثانويّ
+ * عند `/75` بـ4.71، والحبّة 6.38، والزرّ 5.17 — كلّها فوق حدّ 4.5.
+ * و#9A3412 أفتح فلا يحتمل `/75` (4.06)، لذلك النصّ بالأغمق.
  *
  * وله وجه ليليّ: الأرضية الفاتحة تحت سمة داكنة لوحٌ يبهر العين، فصارت
- * كحليّةً عميقة بنصّ أزرق فاتح.
+ * بنّيّةً عميقة بنصّ برتقاليّ فاتح.
  *
  * يختفي وحده بانتهاء المدّة — عندها تتولّى نافذة انتهاء التجربة الأمر،
  * فلا يجتمع تنبيهان على المعنى ذاته.
@@ -61,16 +60,12 @@ export function TrialBanner({ className }: { className?: string }): JSX.Element 
   const ar = useLanguageStore((s) => s.language) === 'ar';
   const [dismissed, setDismissed] = useState(dismissedToday);
 
-  // التصعيد ثلاث درجات بألوان التنبيهات المعروفة: أزرق إعلاميّ في معظم
-  // المدّة، وكهرمانيّ تحذيريّ في آخر ثلاثة أيام، وأحمر في اليوم الأخير
-  // وحده. الأحمر لا يمتدّ أكثر من يوم: صبغ الشريط به أياماً متّصلة يحرق
-  // التصعيد باكراً، فتألفه العين ويعود خلفيةً لا تنبيهاً.
-  //
-  // والكهرمانيّ لا الأصفر الصافي: النص الغامق عليه #78350F بتباين 8.75،
-  // والثانويّ عند `/75` بـ4.60، والأبيض على الحبّة #B45309 بـ5.02.
-  // الأصفر الصافي لا يحمل نصاً أبيض مقروءاً أصلاً.
+  // التصعيد ثلاث درجات: برتقاليّ في معظم المدّة بحبّة فاتحة، ثم في آخر
+  // ثلاثة أيام يبقى الشريط برتقالياً وتصير الحبّة مصمتة (#C2410C، الأبيض
+  // عليها 5.18)، ثم أحمر في اليوم الأخير وحده. الأحمر لا يمتدّ أكثر من يوم:
+  // صبغ الشريط به أياماً متّصلة يحرق التصعيد باكراً، فتألفه العين.
   const red = daysLeft <= 1;
-  const amber = !red && endingSoon;
+  const soon = !red && endingSoon;
   // اليوم الأخير لا يُغلق: بعده تتوقّف الخدمة، فلا يُخفى آخر إنذار قبلها.
   const dismissible = !red;
 
@@ -96,9 +91,7 @@ export function TrialBanner({ className }: { className?: string }): JSX.Element 
         'relative overflow-hidden rounded-card border',
         red
           ? 'bg-[#FEF2F2] border-[#FECACA] text-[#991B1B] dark:bg-[#3B1414] dark:border-[#7F1D1D] dark:text-[#FECACA]'
-          : amber
-            ? 'bg-[#FFFBEB] border-[#FDE68A] text-[#78350F] dark:bg-[#3A2A0C] dark:border-[#78350F] dark:text-[#FDE68A]'
-            : 'bg-[#EFF6FF] border-[#BFDBFE] text-[#1E3A8A] dark:bg-[#132B52] dark:border-[#1E3A8A] dark:text-[#BFDBFE]'
+          : 'bg-[#FFF7ED] border-[#FED7AA] text-[#7C2D12] dark:bg-[#3B1D0A] dark:border-[#7C2D12] dark:text-[#FED7AA]'
       )}
     >
       {/* الحبّة والرسالة على طرف، والزرّ والإغلاق على الطرف الآخر. */}
@@ -111,9 +104,9 @@ export function TrialBanner({ className }: { className?: string }): JSX.Element 
             'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] font-semibold flex-shrink-0',
             red
               ? 'qh-trial-pulse bg-[#B42318] text-white'
-              : amber
-                ? 'bg-[#B45309] text-white'
-                : 'bg-[#DBEAFE] text-[#1E40AF] dark:bg-[#1E3A8A] dark:text-[#DBEAFE]'
+              : soon
+                ? 'bg-[#C2410C] text-white'
+                : 'bg-[#FFEDD5] text-[#9A3412] dark:bg-[#7C2D12] dark:text-[#FFEDD5]'
           )}
         >
           <TrialHourglass className="h-4 w-4" />
@@ -160,7 +153,7 @@ export function TrialBanner({ className }: { className?: string }): JSX.Element 
             title={t('إخفاء الشريط لبقيّة اليوم')}
             className={cn(
               'flex-shrink-0 -me-1.5 h-8 w-8 rounded-full flex items-center justify-center opacity-70 hover:opacity-100 dark:hover:bg-white/10 transition',
-              amber ? 'hover:bg-[#78350F]/10' : 'hover:bg-[#1E3A8A]/10'
+              'hover:bg-[#7C2D12]/10'
             )}
           >
             <X className="h-[18px] w-[18px]" />
