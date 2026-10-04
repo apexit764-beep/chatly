@@ -27,6 +27,7 @@ import {
   ShieldOff,
   Smartphone,
   Mail,
+  MessageSquare,
 } from 'lucide-react';
 import { Avatar, Modal, useConfirm } from '@components/ui';
 import { PhoneField, PHONE_COUNTRIES } from '@components/ui/PhoneField';
@@ -43,6 +44,7 @@ import Billing from './Billing';
 const SETTINGS_TABS: { key: string; label: string; icon: ReactNode }[] = [
   { key: 'profile', label: 'الملف الشخصي', icon: <User className="h-4 w-4" /> },
   { key: 'general', label: 'إعدادات الشركة', icon: <Building className="h-4 w-4" /> },
+  { key: 'conversations', label: 'المحادثات', icon: <MessageSquare className="h-4 w-4" /> },
   { key: 'notifications', label: 'الإشعارات', icon: <Bell className="h-4 w-4" /> },
   { key: 'appearance', label: 'المظهر', icon: <Palette className="h-4 w-4" /> },
   { key: 'security', label: 'الأمان', icon: <Shield className="h-4 w-4" /> },
@@ -87,6 +89,7 @@ export default function Settings(): JSX.Element {
         {/* Content */}
         <div className="flex-1 min-w-0 bg-white dark:bg-surface-dark rounded-card shadow-card dark:shadow-card-dark p-6 lg:p-8">
           {tab === 'general' && <GeneralTab />}
+          {tab === 'conversations' && <ConversationsTab />}
           {tab === 'profile' && <ProfileTab />}
           {tab === 'notifications' && <NotificationsTab />}
           {tab === 'appearance' && <AppearanceTab />}
@@ -139,9 +142,6 @@ function GeneralTab(): JSX.Element {
   const phoneMatch = general.phone.match(/^(\+\d{1,4})\s*(.*)$/);
   const [phoneCountryCode, setPhoneCountryCode] = useState(phoneMatch ? phoneMatch[1] : '+968');
   const [phoneDigits, setPhoneDigits] = useState(phoneMatch ? phoneMatch[2] : general.phone);
-  // Text, not a number: an emptied field stays empty while typing instead of snapping back.
-  const [replyTarget, setReplyTarget] = useState(String(general.firstReplyTargetMinutes));
-  const [replyTargetError, setReplyTargetError] = useState<string | null>(null);
 
   const onLogoChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0];
@@ -155,12 +155,7 @@ function GeneralTab(): JSX.Element {
 
   const save = (): void => {
     if (!siteName.trim()) { setSiteNameError('الاسم مطلوب'); return; }
-    const target = Number(replyTarget);
-    if (!replyTarget || !Number.isInteger(target) || target < 1 || target > 1440) {
-      setReplyTargetError('أدخل مدة بين 1 و1440 دقيقة');
-      return;
-    }
-    setGeneral({ siteName, companyLogo, industry, companySize, country, phone: `${phoneCountryCode} ${phoneDigits}`, firstReplyTargetMinutes: target });
+    setGeneral({ siteName, companyLogo, industry, companySize, country, phone: `${phoneCountryCode} ${phoneDigits}` });
     showToast('تم حفظ الإعدادات', 'success');
   };
 
@@ -245,6 +240,34 @@ function GeneralTab(): JSX.Element {
           />
         </div>
       </Row>
+      <div className="flex justify-end pt-6">
+        <button onClick={save} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium">حفظ التغييرات</button>
+      </div>
+    </div>
+  );
+}
+
+function ConversationsTab(): JSX.Element {
+  const target = useSettingsStore((s) => s.general.firstReplyTargetMinutes);
+  const setGeneral = useSettingsStore((s) => s.setGeneral);
+  const showToast = useUIStore((s) => s.showToast);
+  // Text, not a number: an emptied field stays empty while typing instead of snapping back.
+  const [replyTarget, setReplyTarget] = useState(String(target));
+  const [replyTargetError, setReplyTargetError] = useState<string | null>(null);
+
+  const save = (): void => {
+    const minutes = Number(replyTarget);
+    if (!replyTarget || !Number.isInteger(minutes) || minutes < 1 || minutes > 1440) {
+      setReplyTargetError('أدخل مدة بين 1 و1440 دقيقة');
+      return;
+    }
+    setGeneral({ firstReplyTargetMinutes: minutes });
+    showToast('تم حفظ الإعدادات', 'success');
+  };
+
+  return (
+    <div>
+      <TabHeader icon={<MessageSquare className="h-5 w-5" />} title="المحادثات" subtitle="قواعد التعامل مع محادثات العملاء، لكل الحسابات والأقسام" />
       <Row
         label="هدف وقت الرد الأول"
         hint="المدة المتوقعة لأول رد من موظف على العميل. عليها تُقاس نسبة الالتزام في التقارير، لكل المحادثات والأقسام"
