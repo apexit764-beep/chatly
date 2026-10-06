@@ -193,7 +193,8 @@ export default function Inbox(): JSX.Element {
       })
       .filter((c) => {
         if (view === 'mine') return c.assignedTo === currentUserId;
-        if (view === 'unassigned') return c.assignedTo === null;
+        if (view === 'unassigned') return isWaitingForAgent(c);
+        if (view === 'ai') return isWithAi(c);
         if (view === 'vip') {
           const contact = contacts.find((x) => x.id === c.contactId);
           return contact?.type === 'vip';
@@ -566,7 +567,8 @@ export default function Inbox(): JSX.Element {
             setView={(v) => useInboxStore.getState().setView(v)}
             counts={{
               mine: conversations.filter((c) => c.assignedTo === currentUserId).length,
-              unassigned: conversations.filter((c) => c.assignedTo === null).length,
+              unassigned: conversations.filter(isWaitingForAgent).length,
+              ai: conversations.filter(isWithAi).length,
               mineNew: conversations.filter((c) => c.assignedTo === currentUserId && isNewStatus(c.status)).length,
             }}
             chips={assignedChips}
@@ -2358,7 +2360,7 @@ function InboxFilterButton({
       <button
         onClick={() => setFilterOpen(true)}
         className={cn(
-          'h-9 w-9 rounded-full flex items-center justify-center transition-colors relative flex-shrink-0 border',
+          'h-8 w-8 rounded-full flex items-center justify-center transition-colors relative flex-shrink-0 border',
           filterActive
             ? 'bg-primary/10 text-primary border-primary/30'
             : 'text-muted-light dark:text-muted-dark border-border-light dark:border-border-dark hover:bg-bg-light dark:hover:bg-bg-dark'
@@ -2366,7 +2368,7 @@ function InboxFilterButton({
         aria-expanded={filterOpen}
         title="فلترة"
       >
-        <SlidersHorizontal className="h-4 w-4" strokeWidth={1.75} />
+        <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={1.75} />
         {filterActive && (
           <span className="absolute -top-0.5 -end-0.5 h-3.5 min-w-3.5 px-1 bg-primary text-white text-[9px] font-bold rounded-full flex items-center justify-center">
             {activeFilterCount}
@@ -2393,12 +2395,12 @@ function InboxSortButton(): JSX.Element {
     <div className="relative">
       <button
         onClick={() => setSortOpen((v) => !v)}
-        className="h-9 w-9 rounded-full flex items-center justify-center border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex-shrink-0"
+        className="h-8 w-8 rounded-full flex items-center justify-center border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex-shrink-0"
         aria-haspopup="menu"
         aria-expanded={sortOpen}
         title={{ recent: 'الأحدث أولاً', oldest: 'الأقدم أولاً', unread: 'غير المقروءة أولاً' }[sortKey]}
       >
-        <ArrowDownUp className="h-4 w-4" strokeWidth={1.75} />
+        <ArrowDownUp className="h-3.5 w-3.5" strokeWidth={1.75} />
       </button>
       {sortOpen && (
         <>
@@ -2419,6 +2421,16 @@ function InboxSortButton(): JSX.Element {
       )}
     </div>
   );
+}
+
+/** The AI is answering it and no agent has taken it yet. */
+function isWithAi(c: Conversation): boolean {
+  return !!c.aiActive && c.assignedTo === null;
+}
+
+/** Nobody has it: no agent, and the AI is not answering (never on, or it handed off). */
+function isWaitingForAgent(c: Conversation): boolean {
+  return c.assignedTo === null && !c.aiActive;
 }
 
 /** «جديدة» covers a fresh conversation and one the customer reopened. */
@@ -2454,16 +2466,17 @@ function InboxFilters({
 }: {
   view: InboxView;
   setView: (v: InboxView) => void;
-  counts: { mine: number; unassigned: number; mineNew: number };
+  counts: { mine: number; unassigned: number; ai: number; mineNew: number };
   chips: AssignedChip[];
   toggleChip: (chip: AssignedChip) => void;
 }): JSX.Element {
-  // Views outside these three (VIP, today) come from elsewhere; «الكل» stands in for them here.
-  const activeTab: InboxView = view === 'mine' || view === 'unassigned' ? view : 'all';
-  const tabs: { key: InboxView; label: string; count: number | null }[] = [
+  // Views outside these four (VIP, today) come from elsewhere; «الكل» stands in for them here.
+  const activeTab: InboxView = view === 'mine' || view === 'unassigned' || view === 'ai' ? view : 'all';
+  const tabs: { key: InboxView; label: string; count: number | null; icon?: JSX.Element }[] = [
+    { key: 'all', label: 'الكل', count: null },
     { key: 'mine', label: 'المسندة لي', count: counts.mine },
     { key: 'unassigned', label: 'غير مسندة', count: counts.unassigned },
-    { key: 'all', label: 'الكل', count: null },
+    { key: 'ai', label: 'AI', count: counts.ai, icon: <Bot className="h-3.5 w-3.5" /> },
   ];
   const chipItems: { key: AssignedChip; label: string; badge?: number; icon?: JSX.Element }[] = [
     { key: 'new', label: 'جديدة', badge: counts.mineNew },
@@ -2474,7 +2487,7 @@ function InboxFilters({
 
   return (
     <div>
-      <div role="tablist" className="flex -mx-3 px-3 border-b border-border-light dark:border-border-dark">
+      <div role="tablist" className="flex -mx-3 px-2 border-b border-border-light dark:border-border-dark">
         {tabs.map((tab) => {
           const on = activeTab === tab.key;
           return (
@@ -2484,12 +2497,14 @@ function InboxFilters({
               aria-selected={on}
               onClick={() => setView(tab.key)}
               className={cn(
-                'flex-1 h-9 -mb-px border-b-2 flex items-center justify-center gap-1.5 text-[13px] font-semibold transition-colors whitespace-nowrap',
+                // Each tab as wide as its label: four equal tabs leave «المسندة لي» too narrow.
+                'flex-auto h-9 px-1.5 -mb-px border-b-2 flex items-center justify-center gap-1 text-[13px] font-semibold transition-colors whitespace-nowrap',
                 on
                   ? 'border-primary text-primary dark:text-[#60A5FA] dark:border-[#60A5FA]'
                   : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
               )}
             >
+              {tab.icon}
               {tab.label}
               {tab.count !== null && tab.count > 0 && (
                 <span
@@ -2535,6 +2550,12 @@ function InboxFilters({
             );
           })}
         </div>
+      )}
+
+      {activeTab === 'ai' && (
+        <p className="pt-2.5 text-[11.5px] leading-snug text-muted-light dark:text-muted-dark">
+          {'يرد عليها الـ AI الآن، وتنتقل لـ «غير مسندة» عند التحويل لموظف.'}
+        </p>
       )}
     </div>
   );
