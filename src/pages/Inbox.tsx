@@ -22,7 +22,6 @@ import {
   MoreHorizontal,
   X,
   Download,
-  SquarePen,
   MessageSquarePlus,
   MessageSquare,
   Edit2,
@@ -45,9 +44,6 @@ import {
   Maximize2,
   Minimize2,
   SlidersHorizontal,
-  Inbox as InboxIcon,
-  UserX,
-  CheckCircle2,
   ArrowDownUp,
   StickyNote,
   RotateCcw,
@@ -89,7 +85,7 @@ import { deriveSessions } from '@/utils/sessions';
 import SessionRail from '@/components/inbox/SessionRail';
 import { VoiceRecorder } from '@/components/inbox/VoiceRecorder';
 import type { Conversation, ConversationSession, ConversationStatus, Channel, Department, Contact } from '@/types';
-import type { InboxView } from '@/store/useInboxStore';
+import type { AssignedChip, InboxView } from '@/store/useInboxStore';
 
 /** About five lines of text — past this the composer scrolls rather than grow on. */
 const COMPOSER_MAX_HEIGHT = 120;
@@ -124,7 +120,7 @@ export default function Inbox(): JSX.Element {
   const setSelectedId = useInboxStore((s) => s.setSelectedId);
   const selectedChannelId = useInboxStore((s) => s.selectedChannelId);
   const selectedDepartmentId = useInboxStore((s) => s.selectedDepartmentId);
-  const selectedStatus = useInboxStore((s) => s.selectedStatus);
+  const assignedChips = useInboxStore((s) => s.assignedChips);
 
   const [search, setSearch] = useState('');
   const [draft, setDraft] = useState('');
@@ -202,7 +198,7 @@ export default function Inbox(): JSX.Element {
         return true;
       })
       .filter((c) => {
-        if (view === 'mine') return c.assignedTo === currentUserId && c.status !== 'closed';
+        if (view === 'mine') return c.assignedTo === currentUserId;
         if (view === 'unassigned') return c.assignedTo === null;
         if (view === 'vip') {
           const contact = contacts.find((x) => x.id === c.contactId);
@@ -216,17 +212,14 @@ export default function Inbox(): JSX.Element {
         }
         return true;
       })
-      .filter((c) => {
-        if (!selectedStatus) return true;
-        return c.status === selectedStatus;
-      })
+      .filter((c) => (view === 'mine' ? matchesAssignedChips(c, assignedChips, bookmarkedConvIds) : true))
       .filter((c) => {
         if (!search) return true;
         const contact = contacts.find((x) => x.id === c.contactId);
         return contact?.name.includes(search) || contact?.phone.includes(search) || c.lastMessage.includes(search);
       })
       .sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
-  }, [conversations, contacts, view, search, currentUserId, selectedChannelId, selectedDepartmentId, selectedStatus]);
+  }, [conversations, contacts, view, search, currentUserId, selectedChannelId, selectedDepartmentId, assignedChips, bookmarkedConvIds]);
 
   useEffect(() => {
     if (!selectedId || !filtered.find((c) => c.id === selectedId)) {
@@ -533,32 +526,11 @@ export default function Inbox(): JSX.Element {
               : 'flex'
         )}
       >
-        <div className="h-[56px] px-4 flex items-center justify-between border-b border-border-light dark:border-border-dark flex-shrink-0">
-          <h2 className="text-h3 font-bold">{t('المحادثات')}</h2>
+        {/* No title row: the page header already says «المحادثات», and the
+            space goes to the tabs and chips below. */}
+        <div className="px-3 pt-3 pb-2 space-y-2.5 border-b border-border-light dark:border-border-dark">
           <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setNewConvOpen(true)}
-              className="h-8 px-3 rounded-full bg-primary hover:bg-primary-dark text-white text-[12px] font-semibold flex items-center gap-1.5 shadow-sm transition-colors"
-              title={t('بدء محادثة جديدة')}
-              aria-label={t('محادثة جديدة')}
-              style={{ color: '#fff' }}
-            >
-              <SquarePen className="h-3.5 w-3.5" />
-              {t('محادثة جديدة')}
-            </button>
-            <button
-              onClick={toggleConversationList}
-              className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark flex items-center justify-center text-muted-light dark:text-muted-dark"
-              title={t('طيّ القائمة')}
-              aria-label={t('طيّ القائمة')}
-            >
-              <PanelLeftClose className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-        <div className="p-3 border-b border-border-light dark:border-border-dark space-y-2">
-          <div className="flex items-center gap-1.5">
-            <div className="relative flex-1">
+            <div className="relative flex-1 min-w-0">
               <Search className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark" />
               <input
                 type="text"
@@ -577,23 +549,34 @@ export default function Inbox(): JSX.Element {
               departments={departments}
             />
             <InboxSortButton />
+            <button
+              onClick={() => setNewConvOpen(true)}
+              className="h-9 w-9 rounded-full bg-primary hover:bg-primary-dark text-white flex items-center justify-center shadow-sm transition-colors flex-shrink-0"
+              title={t('بدء محادثة جديدة')}
+              aria-label={t('محادثة جديدة')}
+              style={{ color: '#fff' }}
+            >
+              <Plus className="h-[18px] w-[18px]" strokeWidth={2.4} />
+            </button>
+            <button
+              onClick={toggleConversationList}
+              className="hidden lg:flex h-9 w-7 -me-1 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark items-center justify-center text-muted-light dark:text-muted-dark flex-shrink-0"
+              title={t('طيّ القائمة')}
+              aria-label={t('طيّ القائمة')}
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </button>
           </div>
           <InboxFilters
             view={view}
             setView={(v) => useInboxStore.getState().setView(v)}
             counts={{
-              mine: conversations.filter((c) => c.assignedTo === currentUserId && c.status !== 'closed').length,
+              mine: conversations.filter((c) => c.assignedTo === currentUserId).length,
               unassigned: conversations.filter((c) => c.assignedTo === null).length,
-              all: conversations.length,
-              starred: conversations.filter((c) => bookmarkedConvIds.has(c.id)).length,
+              mineNew: conversations.filter((c) => c.assignedTo === currentUserId && isNewStatus(c.status)).length,
             }}
-            selectedStatus={selectedStatus}
-            setSelectedStatus={(s) => useInboxStore.getState().setSelectedStatus(s)}
-            statusCounts={{
-              open: conversations.filter((c) => c.status === 'open').length,
-              in_progress: conversations.filter((c) => c.status === 'in_progress').length,
-              closed: conversations.filter((c) => c.status === 'closed').length,
-            }}
+            chips={assignedChips}
+            toggleChip={(chip) => useInboxStore.getState().toggleAssignedChip(chip)}
           />
         </div>
         <div className="flex-1 overflow-y-auto divide-y divide-border-light dark:divide-border-dark">
@@ -2444,88 +2427,121 @@ function InboxSortButton(): JSX.Element {
   );
 }
 
+/** «جديدة» covers a fresh conversation and one the customer reopened. */
+function isNewStatus(status: ConversationStatus): boolean {
+  return status === 'open' || status === 'new';
+}
+
+/**
+ * Status chips widen (new OR in progress…); «مميزة» narrows (…AND starred).
+ * No chip on = every conversation assigned to me.
+ */
+function matchesAssignedChips(c: Conversation, chips: AssignedChip[], starred: Set<string>): boolean {
+  const statuses = chips.filter((x) => x !== 'starred');
+  if (statuses.length > 0) {
+    const hit = statuses.some((x) => (x === 'new' ? isNewStatus(c.status) : c.status === x));
+    if (!hit) return false;
+  }
+  if (chips.includes('starred') && !starred.has(c.id)) return false;
+  return true;
+}
+
+/**
+ * Tabs for whose conversations, and — under «المسندة لي» only — chips for
+ * their state. Numbers appear only where work is waiting: on the two tabs
+ * that hold it and on «جديدة»; «الكل» carries none.
+ */
 function InboxFilters({
   view,
   setView,
   counts,
-  selectedStatus,
-  setSelectedStatus,
-  statusCounts,
+  chips,
+  toggleChip,
 }: {
   view: InboxView;
   setView: (v: InboxView) => void;
-  counts: { mine: number; unassigned: number; all: number; starred: number };
-  selectedStatus: ConversationStatus | null;
-  setSelectedStatus: (s: ConversationStatus | null) => void;
-  statusCounts: { open: number; in_progress: number; closed: number };
+  counts: { mine: number; unassigned: number; mineNew: number };
+  chips: AssignedChip[];
+  toggleChip: (chip: AssignedChip) => void;
 }): JSX.Element {
-  const [viewOpen, setViewOpen] = useState(false);
-
-  type ViewItem = { key: InboxView; label: string; count: number; icon: JSX.Element };
-  const viewItems: ViewItem[] = [
-    { key: 'all', label: t('الكل'), count: counts.all, icon: <Globe className="h-4 w-4 text-slate-500" strokeWidth={2} /> },
-    { key: 'mine', label: t('صندوقي'), count: counts.mine, icon: <InboxIcon className="h-4 w-4 text-primary" strokeWidth={2} /> },
-    { key: 'unassigned', label: t('غير مسندة'), count: counts.unassigned, icon: <UserX className="h-4 w-4 text-warning" strokeWidth={2} /> },
-    { key: 'starred', label: t('مميزة'), count: counts.starred, icon: <Star className="h-4 w-4 text-warning" strokeWidth={2} /> },
+  // Views outside these three (VIP, today) come from elsewhere; «الكل» stands in for them here.
+  const activeTab: InboxView = view === 'mine' || view === 'unassigned' ? view : 'all';
+  const tabs: { key: InboxView; label: string; count: number | null }[] = [
+    { key: 'mine', label: t('المسندة لي'), count: counts.mine },
+    { key: 'unassigned', label: t('غير مسندة'), count: counts.unassigned },
+    { key: 'all', label: t('الكل'), count: null },
   ];
-  const currentView = viewItems.find((i) => i.key === view) ?? viewItems[0];
-
-  type StatusItem = { key: ConversationStatus | null; label: string; count: number; icon: JSX.Element };
-  const statusItems: StatusItem[] = [
-    { key: null, label: t('كل الحالات'), count: counts.all, icon: <Globe className="h-4 w-4 text-slate-500" strokeWidth={2} /> },
-    { key: 'open', label: t('جديدة'), count: statusCounts.open, icon: <Sparkles className="h-4 w-4 text-primary" strokeWidth={2} /> },
-    { key: 'in_progress', label: t('قيد المعالجة'), count: statusCounts.in_progress, icon: <ClockIcon className="h-4 w-4 text-warning" strokeWidth={2} /> },
-    { key: 'closed', label: t('مغلقة'), count: statusCounts.closed, icon: <CheckCircle2 className="h-4 w-4 text-success" strokeWidth={2} /> },
+  const chipItems: { key: AssignedChip; label: string; badge?: number; icon?: JSX.Element }[] = [
+    { key: 'new', label: t('جديدة'), badge: counts.mineNew },
+    { key: 'in_progress', label: t('قيد المعالجة') },
+    { key: 'closed', label: t('مغلقة') },
+    { key: 'starred', label: t('مميزة'), icon: <Star className="h-3 w-3" strokeWidth={2.2} /> },
   ];
+
   return (
-    <div className="flex items-center gap-1.5">
-      {/* View dropdown */}
-      <div className="relative flex-shrink-0">
-        <button
-          onClick={() => setViewOpen((v) => !v)}
-          className="h-7 ps-2.5 pe-2 rounded-full bg-bg-light dark:bg-bg-dark text-[12px] font-semibold flex items-center gap-1.5 hover:bg-border-light dark:hover:bg-border-dark transition-colors"
-          aria-haspopup="menu"
-          aria-expanded={viewOpen}
-        >
-          <span className="text-muted-light dark:text-muted-dark tabular-nums">{currentView.count}</span>
-          <span>{currentView.label}</span>
-          <ChevronDown className="h-3 w-3 opacity-60" />
-        </button>
-        {viewOpen && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={() => setViewOpen(false)} />
-            <div className="absolute start-0 mt-1 w-48 bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card shadow-card-hover py-1.5 z-20">
-              {viewItems.map((i) => (
-                <ViewOption key={i.key} item={i} active={view === i.key} onClick={() => { setView(i.key); setViewOpen(false); }} />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Separator */}
-      <div className="h-4 w-px bg-border-light dark:bg-border-dark flex-shrink-0" />
-
-      {/* Status chips */}
-      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-        {statusItems.map((i) => {
-          const isActive = selectedStatus === i.key;
+    <div>
+      <div role="tablist" className="flex -mx-3 px-3 border-b border-border-light dark:border-border-dark">
+        {tabs.map((tab) => {
+          const on = activeTab === tab.key;
           return (
             <button
-              key={i.key ?? 'all'}
-              onClick={() => setSelectedStatus(isActive && i.key !== null ? null : i.key)}
+              key={tab.key}
+              role="tab"
+              aria-selected={on}
+              onClick={() => setView(tab.key)}
               className={cn(
-                'h-[26px] px-2.5 rounded-full text-[11px] font-medium transition-colors whitespace-nowrap flex-shrink-0',
-                isActive
-                  ? 'bg-primary text-white'
-                  : 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark hover:bg-border-light dark:hover:bg-border-dark'
+                'flex-1 h-9 -mb-px border-b-2 flex items-center justify-center gap-1.5 text-[13px] font-semibold transition-colors whitespace-nowrap',
+                on
+                  ? 'border-primary text-primary dark:text-[#60A5FA] dark:border-[#60A5FA]'
+                  : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
               )}
             >
-              {i.label}
+              {tab.label}
+              {tab.count !== null && tab.count > 0 && (
+                <span
+                  className={cn(
+                    'min-w-[18px] h-[18px] px-1.5 rounded-full text-[10.5px] font-bold tabular-nums inline-flex items-center justify-center',
+                    on ? 'bg-primary text-white' : 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark'
+                  )}
+                >
+                  {tab.count}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
+
+      {activeTab === 'mine' && (
+        <div className="flex gap-1 pt-2.5">
+          {chipItems.map((chip) => {
+            const on = chips.includes(chip.key);
+            return (
+              <button
+                key={chip.key}
+                aria-pressed={on}
+                onClick={() => toggleChip(chip.key)}
+                className={cn(
+                  'flex-auto h-7 px-1.5 rounded-full border text-[11.5px] font-semibold flex items-center justify-center gap-1 whitespace-nowrap transition-colors',
+                  on
+                    ? 'border-primary bg-primary/10 text-primary dark:text-[#60A5FA] dark:border-[#60A5FA]'
+                    : 'border-border-light dark:border-border-dark text-[#374151] dark:text-[#D1D5DB] hover:bg-bg-light dark:hover:bg-bg-dark'
+                )}
+              >
+                {chip.icon}
+                {chip.label}
+                {chip.badge ? (
+                  <span className="min-w-[16px] h-4 px-1 rounded-full bg-primary text-white text-[10px] font-bold tabular-nums inline-flex items-center justify-center">
+                    {chip.badge}
+                  </span>
+                ) : null}
+                {/* After the label, so in RTL the tick sits on its left. */}
+                {on && <Check className="h-3 w-3 flex-shrink-0" strokeWidth={3} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -2673,28 +2689,6 @@ function FilterPanel({
         )}
       </div>
     </div>
-  );
-}
-
-function ViewOption({ item, active, onClick }: { item: { label: string; count: number; icon: JSX.Element }; active: boolean; onClick: () => void }): JSX.Element {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'w-full flex items-center gap-2 px-3 py-2 text-small text-start hover:bg-bg-light dark:hover:bg-bg-dark transition-colors',
-        active && 'font-semibold'
-      )}
-    >
-      <span className="flex-shrink-0">{item.icon}</span>
-      <span className="truncate">{t(item.label)}</span>
-      {item.count > 0 && (
-        <span className="text-[11px] font-medium text-muted-light dark:text-muted-dark tabular-nums">
-          {item.count}
-        </span>
-      )}
-      <span className="flex-1" />
-      {active && <Check className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
-    </button>
   );
 }
 
