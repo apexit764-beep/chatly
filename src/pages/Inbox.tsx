@@ -2467,9 +2467,9 @@ function InboxFilters({
   // Views outside these three (VIP, today) come from elsewhere; «الكل» stands in for them here.
   const activeTab: InboxView = view === 'mine' || view === 'unassigned' ? view : 'all';
   const tabs: { key: InboxView; label: string; count: number | null }[] = [
+    { key: 'all', label: t('الكل'), count: null },
     { key: 'mine', label: t('المسندة لي'), count: counts.mine },
     { key: 'unassigned', label: t('غير مسندة'), count: counts.unassigned },
-    { key: 'all', label: t('الكل'), count: null },
   ];
   const chipItems: { key: AssignedChip; label: string; badge?: number; icon?: JSX.Element }[] = [
     { key: 'new', label: t('جديدة'), badge: counts.mineNew },
