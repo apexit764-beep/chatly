@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { ConversationStatus } from '@/types';
 
-export type InboxView = 'mine' | 'unassigned' | 'all' | 'vip' | 'today' | 'starred';
+export type InboxView = 'mine' | 'unassigned' | 'ai' | 'all' | 'vip' | 'today' | 'starred';
 
 /**
  * The chips under «المسندة لي». Several can be on at once: the statuses widen

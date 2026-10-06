@@ -199,7 +199,8 @@ export default function Inbox(): JSX.Element {
       })
       .filter((c) => {
         if (view === 'mine') return c.assignedTo === currentUserId;
-        if (view === 'unassigned') return c.assignedTo === null;
+        if (view === 'unassigned') return isWaitingForAgent(c);
+        if (view === 'ai') return isWithAi(c);
         if (view === 'vip') {
           const contact = contacts.find((x) => x.id === c.contactId);
           return contact?.type === 'vip';
@@ -572,7 +573,8 @@ export default function Inbox(): JSX.Element {
             setView={(v) => useInboxStore.getState().setView(v)}
             counts={{
               mine: conversations.filter((c) => c.assignedTo === currentUserId).length,
-              unassigned: conversations.filter((c) => c.assignedTo === null).length,
+              unassigned: conversations.filter(isWaitingForAgent).length,
+              ai: conversations.filter(isWithAi).length,
               mineNew: conversations.filter((c) => c.assignedTo === currentUserId && isNewStatus(c.status)).length,
             }}
             chips={assignedChips}
@@ -2427,6 +2429,16 @@ function InboxSortButton(): JSX.Element {
   );
 }
 
+/** The AI is answering it and no agent has taken it yet. */
+function isWithAi(c: Conversation): boolean {
+  return !!c.aiActive && c.assignedTo === null;
+}
+
+/** Nobody has it: no agent, and the AI is not answering (never on, or it handed off). */
+function isWaitingForAgent(c: Conversation): boolean {
+  return c.assignedTo === null && !c.aiActive;
+}
+
 /** «جديدة» covers a fresh conversation and one the customer reopened. */
 function isNewStatus(status: ConversationStatus): boolean {
   return status === 'open' || status === 'new';
@@ -2460,16 +2472,17 @@ function InboxFilters({
 }: {
   view: InboxView;
   setView: (v: InboxView) => void;
-  counts: { mine: number; unassigned: number; mineNew: number };
+  counts: { mine: number; unassigned: number; ai: number; mineNew: number };
   chips: AssignedChip[];
   toggleChip: (chip: AssignedChip) => void;
 }): JSX.Element {
-  // Views outside these three (VIP, today) come from elsewhere; «الكل» stands in for them here.
-  const activeTab: InboxView = view === 'mine' || view === 'unassigned' ? view : 'all';
-  const tabs: { key: InboxView; label: string; count: number | null }[] = [
+  // Views outside these four (VIP, today) come from elsewhere; «الكل» stands in for them here.
+  const activeTab: InboxView = view === 'mine' || view === 'unassigned' || view === 'ai' ? view : 'all';
+  const tabs: { key: InboxView; label: string; count: number | null; icon?: JSX.Element }[] = [
     { key: 'all', label: t('الكل'), count: null },
     { key: 'mine', label: t('المسندة لي'), count: counts.mine },
     { key: 'unassigned', label: t('غير مسندة'), count: counts.unassigned },
+    { key: 'ai', label: 'AI', count: counts.ai, icon: <Bot className="h-3.5 w-3.5" /> },
   ];
   const chipItems: { key: AssignedChip; label: string; badge?: number; icon?: JSX.Element }[] = [
     { key: 'new', label: t('جديدة'), badge: counts.mineNew },
@@ -2480,7 +2493,7 @@ function InboxFilters({
 
   return (
     <div>
-      <div role="tablist" className="flex -mx-3 px-3 border-b border-border-light dark:border-border-dark">
+      <div role="tablist" className="flex -mx-3 px-2 border-b border-border-light dark:border-border-dark">
         {tabs.map((tab) => {
           const on = activeTab === tab.key;
           return (
@@ -2490,12 +2503,14 @@ function InboxFilters({
               aria-selected={on}
               onClick={() => setView(tab.key)}
               className={cn(
-                'flex-1 h-9 -mb-px border-b-2 flex items-center justify-center gap-1.5 text-[13px] font-semibold transition-colors whitespace-nowrap',
+                // Each tab as wide as its label: four equal tabs leave «المسندة لي» too narrow.
+                'flex-auto h-9 px-1.5 -mb-px border-b-2 flex items-center justify-center gap-1 text-[13px] font-semibold transition-colors whitespace-nowrap',
                 on
                   ? 'border-primary text-primary dark:text-[#60A5FA] dark:border-[#60A5FA]'
                   : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
               )}
             >
+              {tab.icon}
               {tab.label}
               {tab.count !== null && tab.count > 0 && (
                 <span
@@ -2541,6 +2556,12 @@ function InboxFilters({
             );
           })}
         </div>
+      )}
+
+      {activeTab === 'ai' && (
+        <p className="pt-2.5 text-[11.5px] leading-snug text-muted-light dark:text-muted-dark">
+          {t('يرد عليها الـ AI الآن، وتنتقل لـ «غير مسندة» عند التحويل لموظف.')}
+        </p>
       )}
     </div>
   );
