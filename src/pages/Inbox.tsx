@@ -2364,7 +2364,7 @@ function InboxFilterButton({
       <button
         onClick={() => setFilterOpen(true)}
         className={cn(
-          'h-9 w-9 rounded-full flex items-center justify-center transition-colors relative flex-shrink-0 border',
+          'h-8 w-8 rounded-full flex items-center justify-center transition-colors relative flex-shrink-0 border',
           filterActive
             ? 'bg-primary/10 text-primary border-primary/30'
             : 'text-muted-light dark:text-muted-dark border-border-light dark:border-border-dark hover:bg-bg-light dark:hover:bg-bg-dark'
@@ -2372,7 +2372,7 @@ function InboxFilterButton({
         aria-expanded={filterOpen}
         title={t('فلترة')}
       >
-        <SlidersHorizontal className="h-4 w-4" strokeWidth={1.75} />
+        <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={1.75} />
         {filterActive && (
           <span className="absolute -top-0.5 -end-0.5 h-3.5 min-w-3.5 px-1 bg-primary text-white text-[9px] font-bold rounded-full flex items-center justify-center">
             {activeFilterCount}
@@ -2399,12 +2399,12 @@ function InboxSortButton(): JSX.Element {
     <div className="relative">
       <button
         onClick={() => setSortOpen((v) => !v)}
-        className="h-9 w-9 rounded-full flex items-center justify-center border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex-shrink-0"
+        className="h-8 w-8 rounded-full flex items-center justify-center border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex-shrink-0"
         aria-haspopup="menu"
         aria-expanded={sortOpen}
         title={{ recent: t('الأحدث أولاً'), oldest: t('الأقدم أولاً'), unread: t('غير المقروءة أولاً') }[sortKey]}
       >
-        <ArrowDownUp className="h-4 w-4" strokeWidth={1.75} />
+        <ArrowDownUp className="h-3.5 w-3.5" strokeWidth={1.75} />
       </button>
       {sortOpen && (
         <>
