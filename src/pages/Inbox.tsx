@@ -524,38 +524,41 @@ export default function Inbox(): JSX.Element {
         {/* No title row: the page header already says «المحادثات», and the
             space goes to the tabs and chips below. */}
         <div className="px-3 pt-3 pb-2 space-y-2.5 border-b border-border-light dark:border-border-dark">
+          {/* One row, one height (32px): search with filter + sort inside it, then «+» and collapse. */}
           <div className="flex items-center gap-1.5">
-            <div className="relative flex-1 min-w-0">
-              <Search className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark" />
+            <div className="flex-1 min-w-0 h-8 flex items-center gap-1.5 ps-2.5 pe-1 rounded-[10px] bg-bg-light dark:bg-bg-dark border border-transparent focus-within:border-primary">
+              <Search className="h-3.5 w-3.5 flex-shrink-0 text-muted-light dark:text-muted-dark" />
+              {/* The box's border shows focus; the global outline would draw a second frame inside it. */}
               <input
                 type="text"
                 placeholder="ابحث عن محادثة..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-9 ps-3 pe-9 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary"
+                className="flex-1 min-w-0 h-full bg-transparent text-small focus:outline-none focus-visible:!outline-0"
               />
+              <span className="w-px h-4 bg-border-light dark:bg-border-dark flex-shrink-0" />
+              <InboxFilterButton
+                selectedChannelId={selectedChannelId}
+                setSelectedChannelId={(id) => useInboxStore.getState().setSelectedChannelId(id)}
+                selectedDepartmentId={selectedDepartmentId}
+                setSelectedDepartmentId={(id) => useInboxStore.getState().setSelectedDepartmentId(id)}
+                channels={channels}
+                departments={departments}
+              />
+              <InboxSortButton />
             </div>
-            <InboxFilterButton
-              selectedChannelId={selectedChannelId}
-              setSelectedChannelId={(id) => useInboxStore.getState().setSelectedChannelId(id)}
-              selectedDepartmentId={selectedDepartmentId}
-              setSelectedDepartmentId={(id) => useInboxStore.getState().setSelectedDepartmentId(id)}
-              channels={channels}
-              departments={departments}
-            />
-            <InboxSortButton />
             <button
               onClick={() => setNewConvOpen(true)}
-              className="h-9 w-9 rounded-full bg-primary hover:bg-primary-dark text-white flex items-center justify-center shadow-sm transition-colors flex-shrink-0"
+              className="h-8 w-8 rounded-[10px] bg-primary hover:bg-primary-dark text-white flex items-center justify-center transition-colors flex-shrink-0"
               title={'بدء محادثة جديدة'}
               aria-label={'محادثة جديدة'}
               style={{ color: '#fff' }}
             >
-              <Plus className="h-[18px] w-[18px]" strokeWidth={2.4} />
+              <Plus className="h-4 w-4" strokeWidth={2.4} />
             </button>
             <button
               onClick={toggleConversationList}
-              className="hidden lg:flex h-9 w-7 -me-1 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark items-center justify-center text-muted-light dark:text-muted-dark flex-shrink-0"
+              className="hidden lg:flex h-8 w-8 rounded-[10px] border border-border-light dark:border-border-dark hover:bg-bg-light dark:hover:bg-bg-dark items-center justify-center text-muted-light dark:text-muted-dark flex-shrink-0"
               title={'طيّ القائمة'}
               aria-label={'طيّ القائمة'}
             >
@@ -2360,10 +2363,10 @@ function InboxFilterButton({
       <button
         onClick={() => setFilterOpen(true)}
         className={cn(
-          'h-8 w-8 rounded-full flex items-center justify-center transition-colors relative flex-shrink-0 border',
+          'h-[26px] w-[26px] rounded-md flex items-center justify-center transition-colors relative flex-shrink-0',
           filterActive
-            ? 'bg-primary/10 text-primary border-primary/30'
-            : 'text-muted-light dark:text-muted-dark border-border-light dark:border-border-dark hover:bg-bg-light dark:hover:bg-bg-dark'
+            ? 'bg-primary/10 text-primary'
+            : 'text-muted-light dark:text-muted-dark hover:bg-white dark:hover:bg-surface-dark'
         )}
         aria-expanded={filterOpen}
         title="فلترة"
@@ -2395,7 +2398,7 @@ function InboxSortButton(): JSX.Element {
     <div className="relative">
       <button
         onClick={() => setSortOpen((v) => !v)}
-        className="h-8 w-8 rounded-full flex items-center justify-center border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex-shrink-0"
+        className="h-[26px] w-[26px] rounded-md flex items-center justify-center text-muted-light dark:text-muted-dark hover:bg-white dark:hover:bg-surface-dark transition-colors flex-shrink-0"
         aria-haspopup="menu"
         aria-expanded={sortOpen}
         title={{ recent: 'الأحدث أولاً', oldest: 'الأقدم أولاً', unread: 'غير المقروءة أولاً' }[sortKey]}
