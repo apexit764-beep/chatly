@@ -31,8 +31,10 @@ import {
   Select,
   Textarea,
   useConfirm,
+  InfoTip,
   type Column,
 } from '@components/ui';
+import { ContactTypeHelp, ContactTypeTip } from '@components/contacts/ContactTypeTip';
 import { useDataStore } from '@/store/useDataStore';
 import { Can } from '@/hooks/usePermission';
 import { useUIStore } from '@/store/useUIStore';
@@ -230,7 +232,7 @@ export default function Contacts(): JSX.Element {
         );
       },
     },
-    { key: 'type', header: t('النوع'), accessor: (r) => r.type, cell: (r) => <Badge className={contactTypeColor[r.type]}>{contactTypeLabel[r.type]}</Badge> },
+    { key: 'type', header: t('النوع'), hint: <ContactTypeHelp />, accessor: (r) => r.type, cell: (r) => <Badge className={contactTypeColor[r.type]}>{contactTypeLabel[r.type]}</Badge> },
     { key: 'last', header: t('آخر تواصل'), accessor: (r) => r.lastContact, hideOn: 'lg', cell: (r) => <span className="text-small text-muted-light dark:text-muted-dark">{timeAgo(r.lastContact)}</span> },
     { key: 'conv', header: t('المحادثات'), accessor: (r) => r.conversationCount, hideOn: 'lg' },
     {
@@ -385,7 +387,10 @@ export default function Contacts(): JSX.Element {
 
           {/* Channel type tag selector */}
           <div>
-            <label className="block text-small font-medium mb-1.5">{t('القناة')}<span className="text-danger ms-0.5">*</span></label>
+            <label className="text-small font-medium mb-1.5 flex items-center gap-1">
+              {t('القناة')}<span className="text-danger">*</span>
+              <InfoTip>{t('القناة التي يتواصل منها العميل، والمعرّف هو حسابه عليها.')}</InfoTip>
+            </label>
             <div className="flex flex-wrap gap-2">
               {CONTACT_CHANNEL_OPTIONS.map((opt) => (
                 <button
@@ -431,7 +436,7 @@ export default function Contacts(): JSX.Element {
             )
           )}
 
-          <Select label={<>{t('النوع')}<span className="text-danger ms-0.5">*</span></>} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as ContactType })}>
+          <Select label={<>{t('النوع')}<span className="text-danger ms-0.5">*</span><ContactTypeTip /></>} value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as ContactType })}>
             <option value="visitor">{t('زائر')}</option>
             <option value="lead">{t('محتمل')}</option>
             <option value="customer">{t('عميل')}</option>
@@ -804,7 +809,10 @@ function ImportContactsModal({
         <div className="flex items-start gap-3 p-3 rounded-card bg-info/5 border border-info/20">
           <FileText className="h-5 w-5 text-info flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="text-body font-semibold">{t('حمّل القالب أولاً')}</p>
+            <p className="text-body font-semibold flex items-center gap-1">
+              {t('حمّل القالب أولاً')}
+              <InfoTip>{t('عمود «النوع» يقبل: زائر، محتمل، عميل، عميل دائم، VIP، شركة. وفي عمود «الوسوم» افصل بين الوسوم بالرمز | مثل VIP|عربي.')}</InfoTip>
+            </p>
             <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
               {t('املأ بياناتك حسب الأعمدة المطلوبة ثم ارفع الملف')}
             </p>

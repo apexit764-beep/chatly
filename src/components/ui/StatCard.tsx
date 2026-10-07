@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { Card } from './Card';
 import { cn } from '@/utils/cn';
+import { InfoTip } from './InfoTip';
 
 interface StatCardProps {
   label: string;
@@ -10,6 +11,8 @@ interface StatCardProps {
   iconBg?: string;
   iconColor?: string;
   trend?: { value: number; positive: boolean };
+  /** What the number means or how it is counted, in an ⓘ after the label. */
+  hint?: ReactNode;
 }
 
 export function StatCard({
@@ -19,6 +22,7 @@ export function StatCard({
   iconBg = 'bg-primary/15',
   iconColor = 'text-primary',
   trend,
+  hint,
 }: StatCardProps): JSX.Element {
   return (
     <Card className="p-5 hover:shadow-card-hover transition-shadow">
@@ -39,7 +43,10 @@ export function StatCard({
         )}
       </div>
       <div className="space-y-1">
-        <p className="text-small text-muted-light dark:text-muted-dark">{label}</p>
+        <p className="text-small text-muted-light dark:text-muted-dark flex items-center gap-1">
+          {label}
+          {hint && <InfoTip>{hint}</InfoTip>}
+        </p>
         <p className="text-h1 font-bold">{value}</p>
       </div>
     </Card>

@@ -14,7 +14,7 @@ import {
   Eye,
   X,
 } from 'lucide-react';
-import { Card, StatCard, Avatar, Modal } from '@components/ui';
+import { Card, StatCard, Avatar, Modal, InfoTip } from '@components/ui';
 import { useRatingStore, type Rating } from '@/store/useRatingStore';
 import { formatDate } from '@/utils/format';
 import { cn } from '@/utils/cn';
@@ -98,6 +98,7 @@ export default function CustomerRatings(): JSX.Element {
         />
         <StatCard
           label="إجمالي الروابط"
+          hint="كل روابط التقييم المرسلة، ومنها التي لم يُرد عليها أو انتهت صلاحيتها."
           value={String(ratings.length)}
           icon={<Hash className="h-5 w-5" />}
           iconBg="bg-warning/10"
@@ -111,7 +112,10 @@ export default function CustomerRatings(): JSX.Element {
         <Card className="p-5 lg:col-span-2">
           <div className="flex items-center gap-2 mb-4">
             <BarChart3 className="h-4 w-4 text-muted-light dark:text-muted-dark" />
-            <h3 className="text-body font-bold">توزيع الرضا</h3>
+            <h3 className="text-body font-bold flex items-center gap-1">
+              توزيع الرضا
+              <InfoTip>سؤال منفصل عن النجوم في صفحة التقييم: ممتاز / جيد / سيء.</InfoTip>
+            </h3>
           </div>
           {submitted.length === 0 ? (
             <p className="text-small text-muted-light dark:text-muted-dark text-center py-8">
@@ -223,7 +227,9 @@ export default function CustomerRatings(): JSX.Element {
                 <th className="text-start font-medium px-4 py-3">الموظف</th>
                 <th className="text-start font-medium px-4 py-3">تقييم المحادثة</th>
                 <th className="text-start font-medium px-4 py-3 hidden md:table-cell">تقييم الموظف</th>
-                <th className="text-start font-medium px-4 py-3">الرضا</th>
+                <th className="text-start font-medium px-4 py-3">
+                  <span className="inline-flex items-center gap-1">الرضا<InfoTip>سؤال منفصل عن النجوم: ممتاز / جيد / سيء.</InfoTip></span>
+                </th>
                 <th className="text-start font-medium px-4 py-3 hidden lg:table-cell">التعليق</th>
                 <th className="text-start font-medium px-4 py-3 hidden md:table-cell">التاريخ</th>
                 <th className="text-start font-medium px-4 py-3 w-16"></th>

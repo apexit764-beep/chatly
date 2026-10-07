@@ -13,7 +13,7 @@ import {
   ArrowLeftRight,
   Bot,
 } from 'lucide-react';
-import { Card, StatCard, Avatar, DateRangePicker } from '@components/ui';
+import { Card, StatCard, Avatar, DateRangePicker, InfoTip } from '@components/ui';
 import { ChannelIcon } from '@components/ui/ChannelIcon';
 import { LineChart } from '@components/charts/LineChart';
 import { BarChart } from '@components/charts/BarChart';
@@ -329,6 +329,7 @@ export default function Reports(): JSX.Element {
         />
         <StatCard
           label="ردود الموظفين"
+          hint="رسائل الموظفين للعملاء في الفترة المحددة، بدون ردود المساعد الذكي والملاحظات الداخلية."
           // Agents only, in the selected period — the AI's replies have their own card below.
           value={formatNumber(humanTrend.reduce((s, n) => s + n, 0))}
           icon={<Send className="h-5 w-5" />}
@@ -337,6 +338,7 @@ export default function Reports(): JSX.Element {
         />
         <StatCard
           label="الالتزام بوقت الرد"
+          hint={`نسبة المحادثات التي ردّ عليها موظف خلال هدف وقت الرد الأول (${replyTarget} دقيقة). المحادثات التي لم يُرد عليها ولم يتجاوز وقتها الهدف بعد لا تُحسب.`}
           value={(() => {
             const all = compliance(rangeCases);
             return all.pct === null ? '—' : `${all.pct}%`;
@@ -347,6 +349,7 @@ export default function Reports(): JSX.Element {
         />
         <StatCard
           label="معدل الحلّ"
+          hint="نسبة المحادثات المغلقة من كل المحادثات، ولا يتأثر بفلتر التاريخ."
           value={(() => {
             const total = conversations.length;
             if (total === 0) return '0%';
@@ -392,6 +395,7 @@ export default function Reports(): JSX.Element {
           />
           <StatCard
             label="نسبة الردود AI"
+            hint="من كل الردود على العملاء، كم منها كتبها المساعد الذكي."
             value={`${aiHandlingPct}%`}
             icon={<Sparkles className="h-5 w-5" />}
             iconBg="bg-fuchsia-500/10"
@@ -406,6 +410,7 @@ export default function Reports(): JSX.Element {
           />
           <StatCard
             label="نسبة التحويل لموظف"
+            hint="من المحادثات التي شارك فيها المساعد الذكي، كم منها حوّلها لموظف."
             value={`${handoffRate}%`}
             icon={<ArrowLeftRight className="h-5 w-5" />}
             iconBg="bg-warning/10"
@@ -532,7 +537,10 @@ export default function Reports(): JSX.Element {
       <Card className="p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-h3 font-bold">أوقات الذروة</h2>
+            <h2 className="text-h3 font-bold flex items-center gap-1.5">
+              أوقات الذروة
+              <InfoTip>عدد الرسائل حسب اليوم والساعة. كلما غمق اللون زاد الضغط.</InfoTip>
+            </h2>
             <p className="text-small text-muted-light dark:text-muted-dark">عدد الرسائل لكل يوم وفترة (2 ساعة)</p>
           </div>
           <Calendar className="h-4 w-4 text-muted-light dark:text-muted-dark" />
@@ -543,7 +551,10 @@ export default function Reports(): JSX.Element {
       {/* Row: tag bars + agents table */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <Card className="p-5 lg:col-span-2">
-          <h2 className="text-h3 font-bold mb-1">المحادثات حسب الوسم</h2>
+          <h2 className="text-h3 font-bold mb-1 flex items-center gap-1.5">
+            المحادثات حسب الوسم
+            <InfoTip>الوسوم توضع على العملاء، والرقم هو عدد محادثات العملاء الذين يحملون الوسم.</InfoTip>
+          </h2>
           <p className="text-small text-muted-light dark:text-muted-dark mb-4">أكثر الوسوم استخداماً في محادثات عملائك</p>
           <div className="space-y-3">
             {byTag.map((t) => (
@@ -573,10 +584,18 @@ export default function Reports(): JSX.Element {
               <thead className="bg-bg-light dark:bg-bg-dark text-small text-muted-light dark:text-muted-dark">
                 <tr>
                   <th className="text-start font-medium px-4 py-2.5">الموظف</th>
-                  <th className="text-start font-medium px-4 py-2.5">المحادثات</th>
-                  <th className="text-start font-medium px-4 py-2.5" title="متوسط الوقت حتى أول رد للموظف">متوسط الرد</th>
-                  <th className="text-start font-medium px-4 py-2.5">معدل الحل</th>
-                  <th className="text-start font-medium px-4 py-2.5">التقييم</th>
+                  <th className="text-start font-medium px-4 py-2.5">
+                    <span className="inline-flex items-center gap-1">المحادثات<InfoTip>المحادثات المسندة للموظف حالياً.</InfoTip></span>
+                  </th>
+                  <th className="text-start font-medium px-4 py-2.5">
+                    <span className="inline-flex items-center gap-1">متوسط الرد<InfoTip>متوسط الوقت حتى أول رد للموظف على العميل.</InfoTip></span>
+                  </th>
+                  <th className="text-start font-medium px-4 py-2.5">
+                    <span className="inline-flex items-center gap-1">معدل الحل<InfoTip>نسبة المحادثات المغلقة من المحادثات المسندة له.</InfoTip></span>
+                  </th>
+                  <th className="text-start font-medium px-4 py-2.5">
+                    <span className="inline-flex items-center gap-1">التقييم<InfoTip>متوسط تقييم العملاء للموظف.</InfoTip></span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-light dark:divide-border-dark">

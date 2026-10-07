@@ -13,6 +13,7 @@ export { Skeleton } from './Skeleton';
 export { EmptyState } from './EmptyState';
 export { Card } from './Card';
 export { StatCard } from './StatCard';
+export { InfoTip } from './InfoTip';
 export { ChannelIcon, channelLabel, channelColor } from './ChannelIcon';
 export { DataTable } from './DataTable';
 export type { Column } from './DataTable';

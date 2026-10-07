@@ -66,7 +66,9 @@ import {
   PhoneField,
   Select,
   useConfirm,
+  InfoTip,
 } from '@components/ui';
+import { ContactTypeTip } from '@components/contacts/ContactTypeTip';
 import { useDataStore, RATING_SENT_PREVIEW } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useInboxStore } from '@/store/useInboxStore';
@@ -876,6 +878,9 @@ export default function Inbox(): JSX.Element {
                           <RotateCcw className="h-3.5 w-3.5" />
                           الدورة {cycleStart.index} · إعادة فتح · {dateLabel}
                           {cycleStart.inferred && t(' (تقديري)')}
+                          {cycleStart.inferred && (
+                            <InfoTip>{t('لم يُسجَّل وقت الإغلاق، فقدّرنا بداية الدورة من انقطاع أكثر من 24 ساعة بين الرسائل.')}</InfoTip>
+                          )}
                         </span>
                         <span className="flex-1 h-px bg-primary/25" />
                       </div>
@@ -939,6 +944,7 @@ export default function Inbox(): JSX.Element {
                 <div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-primary/5 dark:bg-primary/10 border border-primary/20 flex items-center gap-2">
                   <Edit2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
                   <span className="text-small font-medium">{t('تعديل الرسالة')}</span>
+                  <InfoTip>{t('يتغيّر النص عندك فقط، ويبقى العميل يرى الرسالة الأصلية.')}</InfoTip>
                   <button
                     type="button"
                     onClick={cancelEdit}
@@ -1049,6 +1055,7 @@ export default function Inbox(): JSX.Element {
                       onClick={() => !editingMessageId && setInputMode('note')}
                     />
                   </div>
+                  <InfoTip className="me-1.5 -ms-0.5">{t('الملاحظة داخلية لفريقك فقط، ولا تصل للعميل.')}</InfoTip>
                   {/* Zap, not Sparkles: every other Sparkles on this page means the AI
                       assistant, so quick replies read as an AI button. */}
                   <ToolBtn
@@ -1708,14 +1715,14 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
 
         {/* Template */}
         <Field
-          label={t('قالب الرسالة')}
+          label={t('رد جاهز')}
         >
           <select
             value={templateId}
             onChange={(e) => setTemplateId(e.target.value)}
             className="w-full h-10 ps-3 pe-9 rounded-lg bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
           >
-            <option value="">{t('بدون قالب (نص حر)')}</option>
+            <option value="">{t('بدون رد جاهز (نص حر)')}</option>
             {templates.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
@@ -1735,7 +1742,7 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
             <div className="mt-2 flex items-start gap-2 p-2 rounded-lg bg-info/5 border border-info/20">
               <Sparkles className="h-4 w-4 text-info flex-shrink-0 mt-0.5" />
               <p className="text-[11px] text-info">
-                {t('قالب معتمد — تعديل النص قد يغيّر المحتوى.')}
+                {t('تم تحميل الرد الجاهز — يمكنك تعديل النص قبل الإرسال.')}
               </p>
             </div>
           )}
@@ -1954,7 +1961,10 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
       {/* Tags */}
       <div className="p-4 border-b border-border-light dark:border-border-dark">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-small text-muted-light dark:text-muted-dark">{t('الوسوم')}</p>
+          <p className="text-small text-muted-light dark:text-muted-dark flex items-center gap-1">
+            {t('الوسوم')}
+            <InfoTip>{t('الوسم يُحفظ على العميل، فيظهر على كل محادثاته.')}</InfoTip>
+          </p>
           <button onClick={() => setAddingTag(true)} className="text-[11px] font-medium text-primary hover:underline flex items-center gap-0.5">
             <Plus className="h-3 w-3" /> {t('وسم جديد')}
           </button>
@@ -2032,7 +2042,10 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
       {/* Categories */}
       <div className="p-4 border-b border-border-light dark:border-border-dark">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-small text-muted-light dark:text-muted-dark">{t('التصنيف')}</p>
+          <p className="text-small text-muted-light dark:text-muted-dark flex items-center gap-1">
+            {t('التصنيف')}
+            <ContactTypeTip />
+          </p>
           <button onClick={() => setAddingCategory(true)} className="text-[11px] font-medium text-primary hover:underline flex items-center gap-0.5">
             <Plus className="h-3 w-3" /> {t('تصنيف جديد')}
           </button>
@@ -2105,7 +2118,11 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
           icon={convChannel ? <ChannelIcon type={convChannel.type} size={10} className="!h-3.5 !w-3.5" /> : undefined}
         />
         {conversation.sessionCount > 1 && (
-          <Attr label={t('الجلسات')} value={`${conversation.sessionCount} جلسات`} />
+          <Attr
+            label={t('الجلسات')}
+            hint={t('كل مرة تُغلق فيها المحادثة ويرجع العميل يكتب، تبدأ جلسة جديدة.')}
+            value={`${conversation.sessionCount} جلسات`}
+          />
         )}
       </Collapsible>
 
@@ -2181,10 +2198,13 @@ function Collapsible({ title, open, onToggle, children }: { title: string; open:
   );
 }
 
-function Attr({ label, value, valueColor, icon, tooltip }: { label: string; value: string; valueColor?: string; icon?: React.ReactNode; tooltip?: string }): JSX.Element {
+function Attr({ label, value, valueColor, icon, tooltip, hint }: { label: string; value: string; valueColor?: string; icon?: React.ReactNode; tooltip?: string; hint?: string }): JSX.Element {
   return (
     <div className="flex items-center justify-between text-small">
-      <span className="text-muted-light dark:text-muted-dark">{label}</span>
+      <span className="text-muted-light dark:text-muted-dark flex items-center gap-1">
+        {label}
+        {hint && <InfoTip>{hint}</InfoTip>}
+      </span>
       {tooltip ? (
         <span className="relative group font-medium truncate ms-2 flex items-center gap-1.5 cursor-default">
           {icon}{value}
@@ -2559,6 +2579,12 @@ function InboxFilters({
             );
           })}
         </div>
+      )}
+
+      {activeTab === 'unassigned' && (
+        <p className="pt-2.5 text-[11.5px] leading-snug text-muted-light dark:text-muted-dark">
+          {t('بانتظار موظف يستلمها — لا يرد عليها أحد الآن.')}
+        </p>
       )}
 
       {activeTab === 'ai' && (

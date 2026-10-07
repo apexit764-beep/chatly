@@ -9,6 +9,7 @@ import {
   Select,
   Textarea,
   useConfirm,
+  InfoTip,
 } from '@components/ui';
 import { useDataStore } from '@/store/useDataStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -287,8 +288,11 @@ export default function SavedReplies(): JSX.Element {
             placeholder="استخدم {{اسم_العميل}} لإدراج اسم العميل تلقائياً"
           />
           <div>
-            <p className="text-small font-medium text-muted-light dark:text-muted-dark mb-2">
+            <p className="text-small font-medium text-muted-light dark:text-muted-dark mb-2 flex items-center gap-1">
               متغيرات (انقر للإضافة):
+              <InfoTip>
+                تُستبدل عند الإرسال: {'{{اسم_العميل}}'} باسم العميل، {'{{رقم_الطلب}}'} برقم الطلب، و{'{{التاريخ}}'} بتاريخ اليوم.
+              </InfoTip>
             </p>
             <div className="flex flex-wrap gap-1.5">
               {variables.map((v) => (

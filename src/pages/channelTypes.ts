@@ -30,6 +30,8 @@ export interface ChannelTypeMeta {
   methods?: ConnectionMethodInfo[];
   identifierLabel: string;
   identifierPlaceholder: string;
+  /** Explanation of the identifier, shown in an ⓘ after its label. */
+  identifierHint?: string;
   /** Render the identifier field as a phone input with country code dropdown. */
   identifierType?: 'text' | 'phone';
   /** Extra secret fields shown in the connect modal (beyond name + identifier). */
@@ -115,6 +117,7 @@ export const CHANNEL_TYPES: ChannelTypeMeta[] = [
       'اختر القسم الذي ستذهب إليه المحادثات',
     ],
     identifierLabel: 'معرّف الصفحة',
+    identifierHint: 'اسم صفحتك على فيسبوك أو رقمها، كما يظهر في رابط الصفحة.',
     identifierPlaceholder: 'page.id أو اسم الصفحة',
     credentials: [
       { key: 'pageAccessToken', label: 'Page Access Token', placeholder: 'EAAxxxx...', type: 'textarea', hint: 'من Meta for Developers ← صلاحية الصفحة' },
@@ -185,9 +188,9 @@ export const CHANNEL_TYPES: ChannelTypeMeta[] = [
     identifierLabel: 'اسم المستخدم',
     identifierPlaceholder: '@username',
     credentials: [
-      { key: 'clientKey', label: 'Client Key', placeholder: 'aw...', type: 'text' },
-      { key: 'clientSecret', label: 'Client Secret', placeholder: 'xxxx...', type: 'password' },
-      { key: 'accessToken', label: 'Access Token', placeholder: 'act....', type: 'textarea' },
+      { key: 'clientKey', label: 'Client Key', placeholder: 'aw...', type: 'text', hint: 'من TikTok for Developers ← تطبيقك ← Client Key' },
+      { key: 'clientSecret', label: 'Client Secret', placeholder: 'xxxx...', type: 'password', hint: 'بجانب Client Key في صفحة تطبيقك على TikTok for Developers' },
+      { key: 'accessToken', label: 'Access Token', placeholder: 'act....', type: 'textarea', hint: 'رمز الوصول لحساب الأعمال بعد منح الصلاحيات للتطبيق' },
     ],
     needsWebhook: true,
   },
@@ -206,6 +209,7 @@ export const CHANNEL_TYPES: ChannelTypeMeta[] = [
       'احفظ التغييرات وافتح موقعك للتأكد — يمكنك ربط أكثر من نطاق',
     ],
     identifierLabel: 'النطاق المسموح',
+    identifierHint: 'عنوان موقعك الذي سيظهر عليه زر المحادثة، بدون https، مثل example.com.',
     identifierPlaceholder: 'example.com',
   },
   {
@@ -287,8 +291,8 @@ export const CHANNEL_TYPES: ChannelTypeMeta[] = [
     identifierLabel: 'البريد الإلكتروني',
     identifierPlaceholder: 'support@example.com',
     credentials: [
-      { key: 'smtpHost', label: 'خادم SMTP', placeholder: 'smtp.example.com', type: 'text' },
-      { key: 'smtpPort', label: 'منفذ SMTP', placeholder: '587', type: 'text' },
+      { key: 'smtpHost', label: 'خادم SMTP', placeholder: 'smtp.example.com', type: 'text', hint: 'عنوان خادم الإرسال من مزوّد بريدك، مثل smtp.gmail.com' },
+      { key: 'smtpPort', label: 'منفذ SMTP', placeholder: '587', type: 'text', hint: 'رقم المنفذ من مزوّد بريدك — غالباً 587' },
       { key: 'smtpUser', label: 'اسم المستخدم', placeholder: 'user@example.com', type: 'text' },
       { key: 'smtpPassword', label: 'كلمة المرور', placeholder: '••••••••', type: 'password', hint: 'استخدم App Password إن كان متاحاً' },
     ],
@@ -330,6 +334,7 @@ export const CHANNEL_TYPES: ChannelTypeMeta[] = [
       'اقبل الصلاحيات ليتم الربط تلقائياً',
     ],
     identifierLabel: 'معرّف المتجر',
+    identifierHint: 'رقم متجرك في زد.',
     identifierPlaceholder: 'store_id',
     credentials: [
       { key: 'apiToken', label: 'رمز API', placeholder: 'zid_xxxx...', type: 'textarea', hint: 'من زد ← السوق ← التطبيقات' },
@@ -351,6 +356,7 @@ export const CHANNEL_TYPES: ChannelTypeMeta[] = [
       'حدّد القنوات التي تريد إرسال الإشعارات منها',
     ],
     identifierLabel: 'نطاق المتجر',
+    identifierHint: 'عنوان متجرك على شوبيفاي الذي ينتهي بـ myshopify.com.',
     identifierPlaceholder: 'mystore.myshopify.com',
     credentials: [
       { key: 'adminApiToken', label: 'Admin API Access Token', placeholder: 'shpat_xxxx...', type: 'textarea', hint: 'من Shopify Admin ← Apps ← Develop apps' },
@@ -374,8 +380,8 @@ export const CHANNEL_TYPES: ChannelTypeMeta[] = [
     identifierLabel: 'رابط الموقع',
     identifierPlaceholder: 'https://mystore.com',
     credentials: [
-      { key: 'consumerKey', label: 'Consumer Key', placeholder: 'ck_xxxx...', type: 'password' },
-      { key: 'consumerSecret', label: 'Consumer Secret', placeholder: 'cs_xxxx...', type: 'password' },
+      { key: 'consumerKey', label: 'Consumer Key', placeholder: 'ck_xxxx...', type: 'password', hint: 'من لوحة ووكومرس: الإعدادات ← متقدم ← REST API' },
+      { key: 'consumerSecret', label: 'Consumer Secret', placeholder: 'cs_xxxx...', type: 'password', hint: 'يظهر مع Consumer Key عند إنشاء المفتاح' },
     ],
     needsWebhook: true,
   },
