@@ -28,7 +28,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     label: 'المحادثات',
     icon: 'MessageSquare',
     permissions: [
-      { key: 'conversations.view', label: 'عرض المحادثات', description: 'العرض وبدء محادثة جديدة والرد وإضافة ملاحظة وتغيير الحالة' },
+      { key: 'conversations.view', label: 'التعامل مع المحادثات', description: 'العرض وبدء محادثة جديدة والرد وإضافة ملاحظة وتغيير الحالة' },
       { key: 'conversations.assign_department', label: 'إضافة المحادثة إلى قسم', description: 'نقل المحادثة إلى قسم' },
       { key: 'conversations.assign_agent', label: 'إسناد المحادثة إلى موظف', description: 'إسناد المحادثة لزميل' },
       { key: 'conversations.export', label: 'تصدير المحادثة', description: 'تنزيل سجل المحادثة' },
@@ -108,7 +108,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     icon: 'Bot',
     permissions: [
       { key: 'ai.view', label: 'عرض إعدادات الذكاء الاصطناعي', description: 'الوصول لصفحة إعدادات المساعد الذكي' },
-      { key: 'ai.configure', label: 'تعديل إعدادات الذكاء الاصطناعي', description: 'تغيير سلوك البوت والردود التلقائية' },
+      { key: 'ai.configure', label: 'تعديل إعدادات الذكاء الاصطناعي', description: 'تعديل تعليمات المساعد الذكي، المواضيع الممنوعة، وشروط التحويل لموظف' },
       { key: 'knowledge_base.view', label: 'عرض قاعدة المعرفة', description: 'الوصول لمقالات وأدلة الدعم' },
       { key: 'knowledge_base.manage', label: 'إدارة قاعدة المعرفة', description: 'إنشاء/تعديل/حذف المقالات' },
     ],

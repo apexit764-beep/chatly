@@ -16,6 +16,16 @@ export const contactTypeLabel: Record<ContactType, string> = {
   company: 'شركة',
 };
 
+/** What each contact type means — shown wherever the type is picked or used to target. */
+export const contactTypeHint: Record<ContactType, string> = {
+  visitor: 'تواصل معنا بدون اهتمام واضح بعد.',
+  lead: 'مهتم ولم يشترِ بعد.',
+  customer: 'اشترى مرة واحدة.',
+  returning: 'يشتري بشكل متكرر.',
+  vip: 'عميل مهم يحتاج معاملة خاصة.',
+  company: 'حساب شركة أو جهة.',
+};
+
 export const contactTypeColor: Record<ContactType, string> = {
   visitor: 'bg-muted-light/15 text-muted-light border-muted-light/30 dark:bg-muted-dark/15 dark:text-muted-dark dark:border-muted-dark/30',
   lead: 'bg-warning/15 text-warning border-warning/30',
@@ -90,7 +100,7 @@ export const campaignTemplateTypeLabel: Record<CampaignTemplateType, string> = {
   'buttons': 'أزرار تفاعلية',
   'list': 'قائمة خيارات',
   'poll': 'استطلاع رأي',
-  'ai-prompt': 'AI Prompt',
+  'ai-prompt': 'رسالة بالمساعد الذكي',
 };
 
 export const campaignTemplateTypeDescription: Record<CampaignTemplateType, string> = {

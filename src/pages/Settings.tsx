@@ -29,7 +29,7 @@ import {
   Mail,
   MessageSquare,
 } from 'lucide-react';
-import { Avatar, Modal, useConfirm } from '@components/ui';
+import { Avatar, Modal, useConfirm, InfoTip } from '@components/ui';
 import { PhoneField, PHONE_COUNTRIES } from '@components/ui/PhoneField';
 import { QrCode } from '@components/ui/QrCode';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -1544,7 +1544,10 @@ function FinanceTab(): JSX.Element {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-small font-medium text-muted-light dark:text-muted-dark block">CVV</label>
+              <label className="text-small font-medium text-muted-light dark:text-muted-dark flex items-center gap-1">
+                CVV
+                <InfoTip>الرقم المكوّن من 3 أو 4 خانات على ظهر البطاقة.</InfoTip>
+              </label>
               <input
                 type="text"
                 placeholder="•••"

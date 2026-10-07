@@ -9,6 +9,7 @@ import {
   Input,
   Textarea,
   useConfirm,
+  InfoTip,
 } from '@components/ui';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -200,7 +201,10 @@ export default function Departments(): JSX.Element {
 
           {editing && (
             <div className="space-y-1.5">
-              <label className="text-small font-medium text-muted-light dark:text-muted-dark block">الموظفون</label>
+              <label className="text-small font-medium text-muted-light dark:text-muted-dark flex items-center gap-1">
+                الموظفون
+                <InfoTip>{t('تضيف الموظفين للقسم من صفحة فريق العمل.')}</InfoTip>
+              </label>
               {form.agents.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {form.agents.map((id) => {

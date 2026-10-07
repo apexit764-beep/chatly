@@ -21,7 +21,7 @@ import {
   Radio,
   XCircle,
 } from 'lucide-react';
-import { Card, Modal, Textarea, useConfirm } from '@components/ui';
+import { Card, Modal, Textarea, useConfirm, InfoTip } from '@components/ui';
 import { DateRangePicker } from '@components/ui/DateRangePicker';
 import { useAdminStore } from '@/store/useAdminStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -366,7 +366,7 @@ export default function Billing(): JSX.Element {
                   {/* One limit for every connected account, whatever its type:
                       4 means four WhatsApp numbers or one each of four channels. */}
                   <LimitTile icon={<Radio className="h-4 w-4" />} label="القنوات" tooltip="يشمل كل الحسابات المربوطة من أي نوع" value={plan.limits.channels} />
-                  <LimitTile icon={<MessageSquare className="h-4 w-4" />} label="المحادثات" value={plan.limits.conversations} />
+                  <LimitTile icon={<MessageSquare className="h-4 w-4" />} label="المحادثات" tooltip="عدد المحادثات المسموح بها شهرياً، يتجدد مع كل دورة فوترة. ما يزيد عنها يُحجب في صندوق المحادثات حتى التجديد أو الترقية." value={plan.limits.conversations} />
                   <LimitTile icon={<Users2 className="h-4 w-4" />} label="جهات الاتصال" value={plan.limits.contacts} />
                 </div>
               </div>
@@ -953,19 +953,16 @@ function DetailTile({ label, value, valueClass }: { label: string; value: string
 
 function LimitTile({ icon, label, value, tooltip }: { icon: ReactNode; label: string; value: number; tooltip?: string }): JSX.Element {
   // Vertical: icon over the figure over its label, so the four limits sit
-  // in a single row and read as one strip. Any explanation goes in a hover
-  // tooltip so every card keeps the same one-line label.
+  // in a single row and read as one strip. Any explanation goes in an ⓘ
+  // so every card keeps the same one-line label.
   return (
-    <div
-      title={tooltip}
-      className={cn(
-        'rounded-xl border border-border-light dark:border-border-dark px-2 py-3 flex flex-col items-center text-center gap-1.5',
-        tooltip && 'cursor-help',
-      )}
-    >
+    <div className="rounded-xl border border-border-light dark:border-border-dark px-2 py-3 flex flex-col items-center text-center gap-1.5">
       <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">{icon}</span>
       <p className="text-body font-bold tabular-nums leading-tight">{value === -1 ? 'غير محدود' : value.toLocaleString('en')}</p>
-      <p className="text-[11px] text-muted-light dark:text-muted-dark leading-tight">{label}</p>
+      <p className="text-[11px] text-muted-light dark:text-muted-dark leading-tight flex items-center gap-1">
+        {label}
+        {tooltip && <InfoTip>{tooltip}</InfoTip>}
+      </p>
     </div>
   );
 }

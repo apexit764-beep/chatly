@@ -1,17 +1,21 @@
 import { forwardRef, SelectHTMLAttributes } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { InfoTip } from './InfoTip';
 
 export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label?: React.ReactNode;
+  /** Explanation shown in an ⓘ after the label. */
+  tip?: React.ReactNode;
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, label, children, ...props }, ref) => (
+  ({ className, label, tip, children, ...props }, ref) => (
     <div className="space-y-1.5 w-full">
       {label && (
-        <label className="text-small font-medium text-muted-light dark:text-muted-dark block">
+        <label className="text-small font-medium text-muted-light dark:text-muted-dark flex items-center gap-1">
           {label}
+          {tip && <InfoTip>{tip}</InfoTip>}
         </label>
       )}
       <div className="relative">

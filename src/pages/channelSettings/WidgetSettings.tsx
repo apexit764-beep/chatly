@@ -14,7 +14,7 @@ import {
   Mail,
   HelpCircle,
 } from 'lucide-react';
-import { Card, Input, Textarea } from '@components/ui';
+import { Card, Input, Textarea, InfoTip } from '@components/ui';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { cn } from '@/utils/cn';
@@ -90,7 +90,7 @@ function AppearancePanel({ channelId }: { channelId: string }): JSX.Element {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-h3 font-bold mb-3">لون الـ Brand</h3>
+        <h3 className="text-h3 font-bold mb-3">اللون الأساسي</h3>
         <div className="flex items-center gap-2 flex-wrap">
           {presetColors.map((c) => (
             <button
@@ -117,7 +117,7 @@ function AppearancePanel({ channelId }: { channelId: string }): JSX.Element {
       </div>
 
       <div>
-        <h3 className="text-h3 font-bold mb-3">موضع الـ Widget</h3>
+        <h3 className="text-h3 font-bold mb-3">موضع زر المحادثة</h3>
         <div className="grid grid-cols-2 gap-3 max-w-md">
           <button
             onClick={() => updateConfig({ position: 'bottom-right' })}
@@ -141,7 +141,7 @@ function AppearancePanel({ channelId }: { channelId: string }): JSX.Element {
       </div>
 
       <div>
-        <h3 className="text-h3 font-bold mb-3">أيقونة الـ Bubble</h3>
+        <h3 className="text-h3 font-bold mb-3">أيقونة زر المحادثة</h3>
         <div className="flex gap-2 flex-wrap">
           {([
             { key: 'chat', icon: <MessageCircle className="h-5 w-5" /> },
@@ -176,7 +176,7 @@ function MessagesPanel({ channelId }: { channelId: string }): JSX.Element {
     <div className="space-y-5">
       <Input label={<>اسم الفريق<span className="text-danger ms-0.5">*</span></>} value={config.teamName} onChange={(e) => updateConfig({ teamName: e.target.value })} placeholder="فريق Qhub" icon={<ImageIcon className="h-4 w-4" />} />
       <Textarea label={<>رسالة الترحيب<span className="text-danger ms-0.5">*</span></>} value={config.welcomeMessage} onChange={(e) => updateConfig({ welcomeMessage: e.target.value })} rows={3} placeholder="مرحباً 👋 كيف يمكننا مساعدتك اليوم؟" />
-      <Input label={<>وقت الاستجابة المتوقع<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} value={config.responseTime} onChange={(e) => updateConfig({ responseTime: e.target.value })} placeholder="نرد عادةً خلال دقائق" />
+      <Input label={<>وقت الاستجابة المتوقع<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} tip="نص يظهر للزائر أعلى نافذة المحادثة، مثل «نرد عادةً خلال دقائق»." value={config.responseTime} onChange={(e) => updateConfig({ responseTime: e.target.value })} placeholder="نرد عادةً خلال دقائق" />
     </div>
   );
 }
@@ -252,6 +252,7 @@ QhubChat.init({ widgetId: '${widgetId}' });`;
         <h3 className="text-h3 font-bold mb-2 flex items-center gap-2">
           <Code className="h-5 w-5 text-primary" />
           Widget ID
+          <InfoTip>معرّف نافذة المحادثة الخاصة بموقعك، ويدخل في كود التثبيت.</InfoTip>
         </h3>
         <div className="flex items-center gap-2 p-3 rounded-lg bg-white dark:bg-surface-dark">
           <code className="flex-1 text-body font-mono font-semibold">{widgetId}</code>

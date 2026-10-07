@@ -29,6 +29,7 @@ import {
   PhoneField,
   Select,
   useConfirm,
+  InfoTip,
 } from '@components/ui';
 import { useDataStore } from '@/store/useDataStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -614,6 +615,7 @@ export default function ChannelDetail(): JSX.Element {
           ) : (
             <Input
               label={meta.identifierLabel}
+              tip={meta.identifierHint && t(meta.identifierHint)}
               value={form.identifier}
               onChange={(e) => setForm({ ...form, identifier: e.target.value })}
               placeholder={meta.identifierPlaceholder}
@@ -850,7 +852,10 @@ function RatingSettingsModal({
         </div>
 
         <div>
-          <p className="text-body font-medium mb-1">{t('نص الرسالة')}</p>
+          <p className="text-body font-medium mb-1 flex items-center gap-1">
+            {t('نص الرسالة')}
+            <InfoTip>{t('رابط التقييم يُضاف تلقائياً بعد النص.')}</InfoTip>
+          </p>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}

@@ -33,6 +33,7 @@ import {
   PhoneField,
   PHONE_COUNTRIES,
   useConfirm,
+  InfoTip,
 } from '@components/ui';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -684,7 +685,12 @@ export default function Team(): JSX.Element {
                     <th className="text-center font-medium px-4 py-2.5 hidden lg:table-cell">{t('الأقسام')}</th>
                     <th className="text-center font-medium px-4 py-2.5 hidden xl:table-cell">{t('القنوات')}</th>
                     <th className="text-center font-medium px-4 py-2.5 hidden sm:table-cell">{t('المحادثات المفتوحة')}</th>
-                    <th className="text-center font-medium px-4 py-2.5">{t('الحالة')}</th>
+                    <th className="text-center font-medium px-4 py-2.5">
+                      <span className="inline-flex items-center gap-1">
+                        {t('الحالة')}
+                        <InfoTip>{t('فعّال: الحساب يعمل. معطّل: الحساب موقوف (معلّق). بانتظار القبول: أُرسلت الدعوة ولم يقبلها بعد. وزر الإيقاف المؤقت بجانب التعديل يضع الموظف في وضع «مشغول».')}</InfoTip>
+                      </span>
+                    </th>
                     <th className="text-center font-medium px-4 py-2.5 hidden lg:table-cell">{t('آخر نشاط')}</th>
                     <th className="text-start font-medium px-4 py-2.5 w-1"></th>
                   </tr>
@@ -970,7 +976,7 @@ export default function Team(): JSX.Element {
             </p>
           </div>
           <div className="space-y-1.5">
-            <label className="text-small font-medium text-muted-light dark:text-muted-dark block">{t('الأقسام')}<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
+            <label className="text-small font-medium text-muted-light dark:text-muted-dark flex items-center gap-1">{t('الأقسام')}<span className="text-muted-light dark:text-muted-dark font-normal">(اختياري)</span><InfoTip>{t('الأقسام التي يعمل فيها الموظف.')}</InfoTip></label>
             <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
               {departments.map((d) => {
                 const checked = form.departments.includes(d.id);
@@ -1030,7 +1036,7 @@ export default function Team(): JSX.Element {
                   <p className="text-[10px] text-muted-light dark:text-muted-dark">{t('0 = بدون حد')}</p>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-medium text-muted-light dark:text-muted-dark block">{t('المنطقة الزمنية')}<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></label>
+                  <label className="text-[11px] font-medium text-muted-light dark:text-muted-dark flex items-center gap-1">{t('المنطقة الزمنية')}<span className="text-muted-light dark:text-muted-dark font-normal">(اختياري)</span><InfoTip>{t('لعرض الأوقات وساعات عمل الموظف حسب منطقته.')}</InfoTip></label>
                   <select
                     value={form.timezone}
                     onChange={(e) => setForm({ ...form, timezone: e.target.value })}

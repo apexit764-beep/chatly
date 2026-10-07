@@ -1,18 +1,22 @@
 import { forwardRef, InputHTMLAttributes, TextareaHTMLAttributes } from 'react';
 import { cn } from '@/utils/cn';
+import { InfoTip } from './InfoTip';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: React.ReactNode;
+  /** Explanation shown in an ⓘ after the label. */
+  tip?: React.ReactNode;
   error?: string;
   icon?: React.ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, icon, ...props }, ref) => (
+  ({ className, label, tip, error, icon, ...props }, ref) => (
     <div className="space-y-1.5 w-full">
       {label && (
-        <label className="text-small font-medium text-muted-light dark:text-muted-dark block">
+        <label className="text-small font-medium text-muted-light dark:text-muted-dark flex items-center gap-1">
           {label}
+          {tip && <InfoTip>{tip}</InfoTip>}
         </label>
       )}
       <div className="relative">
@@ -40,15 +44,18 @@ Input.displayName = 'Input';
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: React.ReactNode;
+  /** Explanation shown in an ⓘ after the label. */
+  tip?: React.ReactNode;
   error?: string;
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, label, error, ...props }, ref) => (
+  ({ className, label, tip, error, ...props }, ref) => (
     <div className="space-y-1.5 w-full">
       {label && (
-        <label className="text-small font-medium text-muted-light dark:text-muted-dark block">
+        <label className="text-small font-medium text-muted-light dark:text-muted-dark flex items-center gap-1">
           {label}
+          {tip && <InfoTip>{tip}</InfoTip>}
         </label>
       )}
       <textarea

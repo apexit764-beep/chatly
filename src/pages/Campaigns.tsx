@@ -33,8 +33,10 @@ import {
   StatCard,
   Textarea,
   useConfirm,
+  InfoTip,
   type Column,
 } from '@components/ui';
+import { ContactTypeTip } from '@components/contacts/ContactTypeTip';
 import { DateRangePicker } from '@components/ui/DateRangePicker';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -272,10 +274,10 @@ export default function Campaigns(): JSX.Element {
       key: 'message', header: 'الرسالة', hideOn: 'md',
       cell: (r) => <p className="text-muted-light dark:text-muted-dark line-clamp-1 max-w-xs">{r.message}</p>,
     },
-    { key: 'target', header: 'المستهدفون', accessor: (r) => r.targetCount, cell: (r) => formatNumber(r.targetCount) },
-    { key: 'sent', header: 'تم الإرسال', accessor: (r) => r.sentCount, hideOn: 'lg', cell: (r) => formatNumber(r.sentCount) },
+    { key: 'target', header: 'المستهدفون', hint: 'عدد العملاء الذين استهدفتهم الحملة.', accessor: (r) => r.targetCount, cell: (r) => formatNumber(r.targetCount) },
+    { key: 'sent', header: 'تم الإرسال', hint: 'عدد الرسائل التي أُرسلت فعلاً من المستهدفين.', accessor: (r) => r.sentCount, hideOn: 'lg', cell: (r) => formatNumber(r.sentCount) },
     {
-      key: 'openRate', header: 'الفتح %', accessor: (r) => r.openRate, hideOn: 'lg',
+      key: 'openRate', header: 'الفتح %', hint: 'نسبة المستلمين الذين فتحوا الرسالة.', accessor: (r) => r.openRate, hideOn: 'lg',
       cell: (r) => (
         <div className="flex items-center gap-2 w-24">
           <div className="flex-1 h-1.5 bg-bg-light dark:bg-bg-dark rounded-full overflow-hidden">
@@ -375,7 +377,7 @@ export default function Campaigns(): JSX.Element {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="إجمالي الحملات" value={stats.total} icon={<Megaphone className="h-5 w-5" />} />
         <StatCard label="رسائل مُرسلة" value={formatNumber(stats.sent)} icon={<Send className="h-5 w-5" />} iconBg="bg-success/15" iconColor="text-success" />
-        <StatCard label="متوسط الفتح" value={`${stats.avgOpen}%`} icon={<Eye className="h-5 w-5" />} iconBg="bg-info/15" iconColor="text-info" />
+        <StatCard label="متوسط الفتح" hint="متوسط نسبة فتح الرسالة في كل الحملات." value={`${stats.avgOpen}%`} icon={<Eye className="h-5 w-5" />} iconBg="bg-info/15" iconColor="text-info" />
         <StatCard label="مجدولة" value={stats.scheduled} icon={<Clock className="h-5 w-5" />} iconBg="bg-warning/15" iconColor="text-warning" />
       </div>
 
@@ -439,6 +441,7 @@ export default function Campaigns(): JSX.Element {
             <div className="space-y-1.5">
               <label className="text-small font-medium text-muted-light dark:text-muted-dark block">
                 {channelFilter === 'whatsapp' ? 'رقم الإرسال' : 'حساب الإرسال'}<span className="text-danger ms-0.5">*</span>
+                <InfoTip className="ms-1">القناة التي ستُرسل منها الحملة.</InfoTip>
               </label>
               <select
                 value={form.senderChannelId}
@@ -487,6 +490,7 @@ export default function Campaigns(): JSX.Element {
                 قوالب الرسائل
               </button>
             </div>
+            <InfoTip className="ms-1.5 mb-2">القوالب رسائل حملات جاهزة تحفظها من صفحة قوالب الرسائل.</InfoTip>
 
             {messageMode === 'template' && (
               <div className="mb-2">
@@ -517,6 +521,7 @@ export default function Campaigns(): JSX.Element {
 
             <Textarea
               label={messageMode === 'template' ? 'نص الرسالة (من القالب — قابل للتعديل)' : 'نص الرسالة'}
+              tip="اكتب {{اسم_العميل}} ليُستبدل باسم كل عميل عند الإرسال."
               value={form.message}
               onChange={(e) => { setForm({ ...form, message: e.target.value }); setErrors({ ...errors, message: undefined }); }}
               error={errors.message ?? undefined}
@@ -563,7 +568,10 @@ export default function Campaigns(): JSX.Element {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <div className="flex items-center justify-between gap-2">
-                <label className="text-small font-medium">الجمهور المستهدف</label>
+                <label className="text-small font-medium flex items-center gap-1">
+                  الجمهور المستهدف
+                  <ContactTypeTip intro="يُختار الجمهور حسب نوع العميل:" />
+                </label>
                 <span className="inline-flex items-center gap-1 text-[11px] text-muted-light dark:text-muted-dark">
                   <UsersIcon className="h-3 w-3" />
                   <span className="tabular-nums font-semibold text-primary">{formatNumber(targetCount())}</span>
@@ -593,6 +601,7 @@ export default function Campaigns(): JSX.Element {
             <Input
               type="datetime-local"
               label="تاريخ ووقت الإرسال"
+              tip="حسب توقيت جهازك."
               value={form.scheduledAt}
               onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
               icon={<Calendar className="h-4 w-4" />}
@@ -750,7 +759,7 @@ export function CampaignTemplatesSection({
   const submit = (): void => {
     if (!form.name.trim()) { showToast('اسم القالب مطلوب', 'error'); return; }
     if (form.type !== 'ai-prompt' && !form.message.trim()) { showToast('نص الرسالة مطلوب', 'error'); return; }
-    if (form.type === 'ai-prompt' && !form.aiPrompt.trim()) { showToast('AI Prompt مطلوب', 'error'); return; }
+    if (form.type === 'ai-prompt' && !form.aiPrompt.trim()) { showToast('تعليمات المساعد مطلوبة', 'error'); return; }
     const payload: Omit<CampaignTemplate, 'id' | 'usageCount' | 'createdAt'> = {
       name: form.name.trim(),
       description: form.description.trim() || undefined,
@@ -927,7 +936,7 @@ export function CampaignTemplatesSection({
               <div className="rounded-lg bg-bg-light dark:bg-bg-dark p-2.5 text-small leading-relaxed min-h-[68px] flex flex-col gap-2">
                 {t.type === 'ai-prompt' ? (
                   <p className="text-muted-light dark:text-muted-dark line-clamp-3 italic">
-                    🤖 <span className="not-italic font-medium">AI Prompt:</span> {t.aiPrompt}
+                    🤖 <span className="not-italic font-medium">تعليمات للمساعد:</span> {t.aiPrompt}
                   </p>
                 ) : (
                   <p className="text-muted-light dark:text-muted-dark line-clamp-3 whitespace-pre-line">{t.message}</p>
@@ -1031,7 +1040,8 @@ export function CampaignTemplatesSection({
           {form.type === 'ai-prompt' ? (
             <div>
               <Textarea
-                label="AI Prompt — تعليمات للذكاء الاصطناعي"
+                label="تعليمات للمساعد الذكي"
+                tip="يكتب المساعد نسخة مختلفة من الرسالة لكل عميل حسب هذه التعليمات، وتستهلك كريدت."
                 value={form.aiPrompt}
                 onChange={(e) => setForm({ ...form, aiPrompt: e.target.value })}
                 placeholder="اكتب رسالة ترحيب لـ {{اسم_العميل}} باللهجة الخليجية..."
@@ -1060,6 +1070,7 @@ export function CampaignTemplatesSection({
           {form.type === 'text-media' && (
             <Input
               label="رابط الميديا (اختياري)"
+              tip="رابط مباشر لصورة أو فيديو متاح للعامة، يبدأ بـ https."
               value={form.mediaUrl}
               onChange={(e) => setForm({ ...form, mediaUrl: e.target.value })}
               placeholder="https://example.com/image.jpg"
@@ -1068,7 +1079,10 @@ export function CampaignTemplatesSection({
 
           {form.type === 'buttons' && (
             <div>
-              <label className="text-small font-medium block mb-1.5">أزرار الرد السريع (حتى 3)</label>
+              <label className="text-small font-medium mb-1.5 flex items-center gap-1">
+                أزرار الرد السريع (حتى 3)
+                <InfoTip>تظهر للعميل كأزرار، وعند الضغط على زر يُرسل نصه كرد.</InfoTip>
+              </label>
               <div className="space-y-2">
                 {form.buttons.map((b, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -1103,7 +1117,10 @@ export function CampaignTemplatesSection({
               />
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-small font-medium">عناصر القائمة</label>
+                  <label className="text-small font-medium flex items-center gap-1">
+                    عناصر القائمة
+                    <InfoTip>خيارات يختار العميل واحداً منها.</InfoTip>
+                  </label>
                   <button
                     type="button"
                     onClick={() => setForm({ ...form, listItems: [...form.listItems, { label: '', description: '' }] })}

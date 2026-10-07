@@ -97,6 +97,7 @@ export default function Tags(): JSX.Element {
     {
       key: 'convCount',
       header: 'المحادثات',
+      hint: 'الوسوم توضع على العملاء، والرقم هو عدد محادثات العملاء الذين يحملون الوسم.',
       accessor: (r) => r.convCount,
       cell: (r) => (
         <span className="text-muted-light dark:text-muted-dark">

@@ -10,7 +10,7 @@ import {
   Send,
   Eye,
 } from 'lucide-react';
-import { Card, Drawer, Input, Textarea } from '@components/ui';
+import { Card, Drawer, Input, Textarea, InfoTip } from '@components/ui';
 import { useUIStore } from '@/store/useUIStore';
 import { useFeedbackStore } from '@/store/useFeedbackStore';
 import type { FeedbackType, FeedbackPriority, FeedbackTicket } from '@/store/useFeedbackStore';
@@ -89,7 +89,10 @@ export default function Feedback(): JSX.Element {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-h1 font-bold">الشكاوى والاقتراحات</h1>
+          <h1 className="text-h1 font-bold flex items-center gap-2">
+            الشكاوى والاقتراحات
+            <InfoTip>رسائلك أنت لفريق Qhub: مشكلة في المنصة أو اقتراح لتحسينها. ليست شكاوى عملائك.</InfoTip>
+          </h1>
           <p className="text-body text-muted-light dark:text-muted-dark mt-1">
             تواصل مع فريق Qhub — قدّم شكوى أو اقتراح لتحسين الخدمة
           </p>

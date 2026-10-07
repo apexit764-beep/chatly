@@ -9,10 +9,13 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { InfoTip } from './InfoTip';
 
 export interface Column<T> {
   key: string;
   header: string;
+  /** Explanation of the column, in an ⓘ after the header. */
+  hint?: ReactNode;
   /** value accessor used for sorting + default rendering */
   accessor?: (row: T) => string | number | undefined | null;
   /** custom cell renderer */
@@ -242,6 +245,7 @@ export function DataTable<T>({
                   >
                     <span className="inline-flex items-center gap-1">
                       {col.header}
+                      {col.hint && <InfoTip>{col.hint}</InfoTip>}
                       {isSortable && (
                         isSorted ? (
                           sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />

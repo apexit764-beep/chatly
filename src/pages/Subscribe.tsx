@@ -17,7 +17,22 @@ import {
   Clock,
   ArrowUpRight,
 } from 'lucide-react';
-import { Card, Input, Modal, Textarea, useConfirm } from '@components/ui';
+import { Card, Input, Modal, Textarea, useConfirm, InfoTip } from '@components/ui';
+
+/** Plain-language notes for plan features that use technical terms. Keyed by the feature text. */
+const FEATURE_HINTS: Record<string, string> = {
+  'الردود التلقائية والـ Webhooks وربط Zapier': 'Webhooks وZapier تربط Qhub بأنظمتك الأخرى، فتُرسل لها الأحداث مثل وصول رسالة جديدة تلقائياً.',
+  'كل التكاملات (Slack · Telegram · TikTok · Webhook)': 'ربط Qhub بأدوات أخرى ترسل لها التنبيهات والأحداث تلقائياً.',
+  'API كامل بدون حدود': 'واجهة برمجية يستخدمها مبرمجوك لربط Qhub بأنظمتكم وتبادل البيانات.',
+  'SLA مضمون 99.9% أوقات تشغيل': 'التزام مكتوب بأن تعمل المنصة 99.9% من الوقت على الأقل.',
+  'مدير حساب مخصص (CSM)': 'شخص من فريقنا مسؤول عن حسابك ويتابع معك مباشرة.',
+  'سياسات أمان مُلزمة (مصادقة ثنائية وتقييد IP)': 'تفرض على كل الفريق المصادقة الثنائية، وتسمح بالدخول من عناوين إنترنت محددة فقط (مثل شبكة المكتب).',
+  'تخصيص العلامة التجارية (White Label)': 'تظهر المنصة لعملائك وفريقك باسمك وشعارك بدل Qhub.',
+  'تسجيل دخول موحّد SSO': 'يدخل فريقك بحسابات شركتكم (مثل Google أو Microsoft) بدون كلمة مرور منفصلة.',
+  'سجلات تدقيق Audit Logs': 'سجل بكل عملية قام بها كل موظف: من غيّر ماذا ومتى.',
+  'استضافة خاصة Dedicated': 'بياناتك على خوادم مخصصة لشركتك وحدها، غير مشتركة مع عملاء آخرين.',
+  'الأقسام والتوزيع الذكي للمحادثات': 'تقسيم الفريق إلى أقسام (مبيعات، دعم…) وتوجيه كل محادثة للقسم المناسب.',
+};
 import { useAdminStore } from '@/store/useAdminStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
@@ -505,7 +520,10 @@ export default function Subscribe(): JSX.Element {
                         className="p-3 text-muted-light dark:text-muted-dark bg-white dark:bg-surface-dark sticky z-10"
                         style={{ insetInlineStart: 0 }}
                       >
-                        {f}
+                        <span className="inline-flex items-center gap-1">
+                          {f}
+                          {FEATURE_HINTS[f] && <InfoTip>{FEATURE_HINTS[f]}</InfoTip>}
+                        </span>
                       </td>
                       {rankedPlans.map((plan) => {
                         const included = featureSetFor.get(plan.id)?.has(f) ?? false;
@@ -661,7 +679,10 @@ export default function Subscribe(): JSX.Element {
               {currentPlan && (
                 <div className="flex justify-between p-4">
                   <span className="text-muted-light dark:text-muted-dark">الباقة الحالية</span>
-                  <span className="font-semibold">{currentPlan.nameAr} — تنتهي فوراً</span>
+                  <span className="font-semibold inline-flex items-center gap-1">
+                    {currentPlan.nameAr} — تنتهي فوراً
+                    <InfoTip>تبدأ الباقة الجديدة فوراً بسعرها الكامل، بدون خصم الأيام المتبقية من باقتك الحالية.</InfoTip>
+                  </span>
                 </div>
               )}
               <div className="flex justify-between p-4">
@@ -1081,7 +1102,7 @@ function CheckoutFlow({ plan, country, cycle, isUpgrade, currentPlan, onBack, on
             <Input label="اسم حامل البطاقة" value={card.name} onChange={(e) => setCard({ ...card, name: e.target.value })} placeholder="MOHAMMED AL KINDI" className="font-mono uppercase tracking-wide" />
             <div className="grid grid-cols-2 gap-3">
               <Input label="تاريخ الانتهاء" value={card.exp} onChange={(e) => setCard({ ...card, exp: e.target.value })} placeholder="MM/YY" maxLength={5} className="font-mono" />
-              <Input label="CVV" value={card.cvv} onChange={(e) => setCard({ ...card, cvv: e.target.value })} placeholder="123" maxLength={4} className="font-mono" />
+              <Input label="CVV" tip="الرقم المكوّن من 3 أو 4 خانات على ظهر البطاقة." value={card.cvv} onChange={(e) => setCard({ ...card, cvv: e.target.value })} placeholder="123" maxLength={4} className="font-mono" />
             </div>
           </div>
         )}

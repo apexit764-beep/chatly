@@ -44,7 +44,7 @@ import {
   MousePointerClick,
   Plug,
 } from 'lucide-react';
-import { Card, ChannelIcon, Select, useConfirm, Drawer } from '@components/ui';
+import { Card, ChannelIcon, Select, useConfirm, Drawer, InfoTip } from '@components/ui';
 import { OpenAIIcon, ClaudeIcon, GeminiIcon } from '@components/ui/BrandIcons';
 import {
   useAIStore,
@@ -1109,6 +1109,7 @@ export default function AISettings(): JSX.Element {
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-extrabold tabular-nums">{form.creditBalance.toLocaleString('en-US')}</span>
                     <span className="text-small text-muted-light dark:text-muted-dark font-medium">كريدت</span>
+                    <InfoTip className="self-center">وحدة استهلاك المساعد الذكي: كل ميزة تخصم عدداً من الكريدت عند استخدامها.</InfoTip>
                   </div>
                   {form.monthlyLimitEnabled && (
                     <span className="text-[11px] text-muted-light dark:text-muted-dark">
@@ -1412,11 +1413,13 @@ export default function AISettings(): JSX.Element {
                 checked={form.useKnowledgeBase ?? true}
                 onChange={(v) => update('useKnowledgeBase', v)}
                 title="التعلم من الوثائق المرفوعة"
+                hint="يجيب المساعد من الملفات التي ترفعها من زر «الوثائق»."
               />
               <RuleRow
                 checked={form.learnFromAgents ?? true}
                 onChange={(v) => update('learnFromAgents', v)}
                 title="التعلم من ردود الموظفين"
+                hint="يستفيد المساعد من ردود فريقك السابقة ليجيب بنفس المعلومات والأسلوب."
               />
             </div>
           </SectionCard>
@@ -1477,16 +1480,19 @@ export default function AISettings(): JSX.Element {
                     checked={form.transferOnFailure}
                     onChange={(v) => update('transferOnFailure', v)}
                     title="عند عجز المساعد عن الإجابة"
+                    hint="إذا لم يجد المساعد الإجابة في معرفة الشركة أو الوثائق، يحوّل المحادثة لموظف بدل أن يخمّن."
                   />
                   <RuleRow
                     checked={form.transferOnNegativeSentiment}
                     onChange={(v) => update('transferOnNegativeSentiment', v)}
                     title="عند الكشف عن انفعال سلبي"
+                    hint="إذا ظهر من كلام العميل غضب أو انزعاج، تُحوَّل المحادثة لموظف."
                   />
                   <RuleRow
                     checked={form.transferOnRepeat}
                     onChange={(v) => update('transferOnRepeat', v)}
                     title="عند تكرار نفس السؤال أكثر من مرة"
+                    hint="إذا كرّر العميل نفس السؤال لأن الإجابة لم تكفِه، تُحوَّل المحادثة لموظف."
                   />
                   <RuleRow
                     checked={form.transferOnPayment}
@@ -1497,6 +1503,7 @@ export default function AISettings(): JSX.Element {
                     checked={form.transferOnUrgent}
                     onChange={(v) => update('transferOnUrgent', v)}
                     title="عند وجود طلب عاجل أو حساس"
+                    hint="مثل الشكاوى الرسمية أو المشاكل الأمنية أو أي طلب لا يحتمل التأخير."
                   />
                 </div>
               </div>
@@ -1626,7 +1633,10 @@ export default function AISettings(): JSX.Element {
                   </div>
 
                   <div>
-                    <p className="text-small font-semibold mb-2">رسالة خارج الدوام</p>
+                    <p className="text-small font-semibold mb-2 flex items-center gap-1">
+                      رسالة خارج الدوام
+                      <InfoTip>تُرسل للعميل إذا كتب خارج ساعات العمل.</InfoTip>
+                    </p>
                     <textarea
                       value={form.offHoursMessage}
                       onChange={(e) => update('offHoursMessage', e.target.value)}
@@ -1909,14 +1919,19 @@ function RuleRow({
   checked,
   onChange,
   title,
+  hint,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
   title: string;
+  hint?: string;
 }): JSX.Element {
   return (
     <div className="flex items-center justify-between gap-3 py-2.5">
-      <p className="text-small font-semibold">{title}</p>
+      <p className="text-small font-semibold flex items-center gap-1">
+        {title}
+        {hint && <InfoTip>{hint}</InfoTip>}
+      </p>
       <Toggle checked={checked} onChange={onChange} />
     </div>
   );

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircle, Clock, Zap, UserPlus, ArrowLeft, Activity, Sparkles, Bot, ArrowLeftRight, ChevronLeft, Users, FolderOpen, FolderClosed } from 'lucide-react';
-import { Card, StatCard, Avatar } from '@components/ui';
+import { Card, StatCard, Avatar, InfoTip } from '@components/ui';
 import { LineChart } from '@components/charts/LineChart';
 import { useDataStore } from '@/store/useDataStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -215,6 +215,7 @@ export default function Overview(): JSX.Element {
         />
         <StatCard
           label={t('إجمالي المحادثات المفتوحة')}
+          hint={t('كل محادثة غير مغلقة: جديدة أو قيد المعالجة.')}
           value={openConvs}
           icon={<FolderOpen className="h-5 w-5" />}
           iconBg="bg-warning/15"
@@ -281,12 +282,14 @@ export default function Overview(): JSX.Element {
           <div className="rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-3">
             <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark mb-1">
               <ArrowLeftRight className="h-3.5 w-3.5" /> {t('إجمالي المحوّلة لموظف')}
+              <InfoTip>{t('محادثات بدأها المساعد الذكي ثم حوّلها لموظف.')}</InfoTip>
             </div>
             <p className="text-h3 font-extrabold tabular-nums">{aiHandoffs}</p>
           </div>
           <div className="rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark p-3">
             <div className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark mb-1">
               <Sparkles className="h-3.5 w-3.5" /> {t('إجمالي حلّها')} AI
+              <InfoTip>{t('محادثات أُغلقت بدون تدخل موظف.')}</InfoTip>
             </div>
             <p className="text-h3 font-extrabold tabular-nums">{aiResolved}</p>
           </div>
@@ -320,7 +323,10 @@ export default function Overview(): JSX.Element {
 
         <Card className="overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-border-light dark:border-border-dark">
-            <h2 className="text-h2 font-bold">{t('أداء الموظفين')}</h2>
+            <h2 className="text-h2 font-bold flex items-center gap-1.5">
+              {t('أداء الموظفين')}
+              <InfoTip>{t('الدائرة جنب كل موظف: نسبة المحادثات المغلقة من المحادثات المسندة له.')}</InfoTip>
+            </h2>
             <Link to="/team" className="text-small text-primary font-medium hover:underline flex items-center gap-1">
               {t('التفاصيل')} <ArrowLeft className="h-4 w-4" />
             </Link>
