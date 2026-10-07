@@ -1394,8 +1394,42 @@ function FinanceTab(): JSX.Element {
   const [cards, setCards] = useState(MOCK_CARDS);
   const [autoRenew, setAutoRenew] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
+  const [newCard, setNewCard] = useState({ number: '', expiry: '', cvv: '', holder: '' });
+  const [cardErrors, setCardErrors] = useState<Partial<Record<keyof typeof newCard, string>>>({});
   const { confirm } = useConfirm();
   const showToast = useUIStore((s) => s.showToast);
+
+  const openAddCard = (): void => {
+    setNewCard({ number: '', expiry: '', cvv: '', holder: '' });
+    setCardErrors({});
+    setAddOpen(true);
+  };
+
+  const saveCard = (): void => {
+    const digits = newCard.number.replace(/\D/g, '');
+    const [mm, yy] = newCard.expiry.split('/').map((x) => Number(x));
+    const now = new Date();
+    const expired = !mm || yy === undefined || 2000 + yy < now.getFullYear() || (2000 + yy === now.getFullYear() && mm < now.getMonth() + 1);
+    const e: typeof cardErrors = {};
+    if (digits.length < 13 || digits.length > 19) e.number = 'رقم البطاقة غير صحيح';
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(newCard.expiry)) e.expiry = 'اكتب التاريخ بصيغة MM/YY';
+    else if (expired) e.expiry = 'البطاقة منتهية';
+    if (!/^\d{3,4}$/.test(newCard.cvv)) e.cvv = '3 أو 4 أرقام';
+    if (!newCard.holder.trim()) e.holder = 'اسم حامل البطاقة مطلوب';
+    setCardErrors(e);
+    if (Object.keys(e).length > 0) return;
+    const card: SavedCard = {
+      id: `card-${Date.now()}`,
+      // Mastercard numbers start 51–55 or 22–27; the rest are shown as Visa.
+      brand: /^(5[1-5]|2[2-7])/.test(digits) ? 'Mastercard' : 'Visa',
+      last4: digits.slice(-4),
+      expiry: newCard.expiry,
+      isDefault: cards.length === 0,
+    };
+    setCards((prev) => [...prev, card]);
+    setAddOpen(false);
+    showToast('تمت إضافة البطاقة بنجاح', 'success');
+  };
 
   const setDefault = (id: string): void => {
     setCards((prev) => prev.map((c) => ({ ...c, isDefault: c.id === id })));
@@ -1432,7 +1466,7 @@ function FinanceTab(): JSX.Element {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-body font-bold">طرق الدفع المحفوظة</h3>
           <button
-            onClick={() => setAddOpen(true)}
+            onClick={openAddCard}
             className="h-9 px-4 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium transition-colors flex items-center gap-1.5"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -1526,22 +1560,34 @@ function FinanceTab(): JSX.Element {
             <label className="text-small font-medium text-muted-light dark:text-muted-dark block">رقم البطاقة</label>
             <input
               type="text"
+              inputMode="numeric"
               placeholder="0000 0000 0000 0000"
-              maxLength={19}
+              maxLength={23}
+              value={newCard.number}
+              // Grouped in fours as typed, like the number on the card.
+              onChange={(e) => setNewCard({ ...newCard, number: e.target.value.replace(/\D/g, '').slice(0, 19).replace(/(\d{4})(?=\d)/g, '$1 ') })}
               className="w-full h-10 px-3 rounded-input bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all tracking-widest"
               dir="ltr"
             />
+            {cardErrors.number && <p className="text-small text-danger">{cardErrors.number}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-small font-medium text-muted-light dark:text-muted-dark block">تاريخ الانتهاء</label>
               <input
                 type="text"
+                inputMode="numeric"
                 placeholder="MM/YY"
                 maxLength={5}
+                value={newCard.expiry}
+                onChange={(e) => {
+                  const d = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  setNewCard({ ...newCard, expiry: d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d });
+                }}
                 className="w-full h-10 px-3 rounded-input bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all tracking-widest"
                 dir="ltr"
               />
+              {cardErrors.expiry && <p className="text-small text-danger">{cardErrors.expiry}</p>}
             </div>
             <div className="space-y-1.5">
               <label className="text-small font-medium text-muted-light dark:text-muted-dark flex items-center gap-1">
@@ -1549,12 +1595,16 @@ function FinanceTab(): JSX.Element {
                 <InfoTip>الرقم المكوّن من 3 أو 4 خانات على ظهر البطاقة.</InfoTip>
               </label>
               <input
-                type="text"
+                type="password"
+                inputMode="numeric"
                 placeholder="•••"
                 maxLength={4}
+                value={newCard.cvv}
+                onChange={(e) => setNewCard({ ...newCard, cvv: e.target.value.replace(/\D/g, '') })}
                 className="w-full h-10 px-3 rounded-input bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all tracking-widest"
                 dir="ltr"
               />
+              {cardErrors.cvv && <p className="text-small text-danger">{cardErrors.cvv}</p>}
             </div>
           </div>
           <div className="space-y-1.5">
@@ -1562,9 +1612,12 @@ function FinanceTab(): JSX.Element {
             <input
               type="text"
               placeholder="كما هو مكتوب على البطاقة"
+              value={newCard.holder}
+              onChange={(e) => setNewCard({ ...newCard, holder: e.target.value })}
               className="w-full h-10 px-3 rounded-input bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
               dir="ltr"
             />
+            {cardErrors.holder && <p className="text-small text-danger">{cardErrors.holder}</p>}
           </div>
           <div className="flex items-center justify-end gap-2 pt-2">
             <button
@@ -1574,18 +1627,7 @@ function FinanceTab(): JSX.Element {
               إلغاء
             </button>
             <button
-              onClick={() => {
-                const newCard: SavedCard = {
-                  id: `card-${Date.now()}`,
-                  brand: 'Visa',
-                  last4: String(Math.floor(1000 + Math.random() * 9000)),
-                  expiry: '01/29',
-                  isDefault: cards.length === 0,
-                };
-                setCards((prev) => [...prev, newCard]);
-                setAddOpen(false);
-                showToast('تمت إضافة البطاقة بنجاح', 'success');
-              }}
+              onClick={saveCard}
               className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium"
             >
               حفظ البطاقة

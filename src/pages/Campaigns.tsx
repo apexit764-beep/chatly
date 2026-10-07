@@ -49,13 +49,17 @@ import {
 import { formatDate, formatNumber } from '@/utils/format';
 import { downloadCsv } from '@/utils/csv';
 import { cn } from '@/utils/cn';
-import type { Campaign, CampaignChannelType, CampaignStatus, CampaignTemplate, CampaignTemplateCategory, CampaignTemplateType, ContactType } from '@/types';
+import type { Campaign, CampaignChannelType, CampaignStatus, CampaignTemplate, CampaignTemplateCategory, CampaignTemplateType, ChannelType, ContactType } from '@/types';
+
+/** Channel types that send email — the campaign sender list for email campaigns. */
+const EMAIL_CHANNEL_TYPES: ChannelType[] = ['email', 'gmail', 'outlook', 'yahoo', 'smtp'];
 
 export default function Campaigns(): JSX.Element {
   const campaigns = useDataStore((s) => s.campaigns);
   const contacts = useDataStore((s) => s.contacts);
   const channels = useDataStore((s) => s.channels);
   const addCampaign = useDataStore((s) => s.addCampaign);
+  const updateCampaign = useDataStore((s) => s.updateCampaign);
   const showToast = useUIStore((s) => s.showToast);
   const { confirm } = useConfirm();
 
@@ -127,12 +131,15 @@ export default function Campaigns(): JSX.Element {
   };
 
   const targetCount = (): number => {
-    if (form.audience === 'all') return contacts.length;
-    return contacts.filter((c) => c.type === form.audience).length;
+    // A disabled contact gets no messages or campaigns, so it is never counted.
+    const reachable = contacts.filter((c) => c.active !== false);
+    if (form.audience === 'all') return reachable.length;
+    return reachable.filter((c) => c.type === form.audience).length;
   };
 
+  // Gmail, Outlook, Yahoo and SMTP accounts each have their own type; all of them send email.
   const eligibleSenders = channels.filter((c) =>
-    channelFilter === 'whatsapp' ? c.type === 'whatsapp' : c.type === 'email',
+    channelFilter === 'whatsapp' ? c.type === 'whatsapp' : EMAIL_CHANNEL_TYPES.includes(c.type),
   );
   const defaultSenderId = eligibleSenders[0]?.id ?? '';
 
@@ -193,7 +200,7 @@ export default function Campaigns(): JSX.Element {
     }
 
     const status: CampaignStatus = form.schedule === 'now' ? 'completed' : 'scheduled';
-    addCampaign({
+    const fields = {
       name: form.name,
       message: form.message,
       targetCount: targetCount(),
@@ -202,7 +209,9 @@ export default function Campaigns(): JSX.Element {
       channelType: form.channelType,
       senderChannelId: form.senderChannelId,
       attachmentName: form.attachmentName || undefined,
-    });
+    };
+    if (editing) updateCampaign(editing.id, fields);
+    else addCampaign(fields);
     showToast(form.schedule === 'now' ? `تم إرسال الحملة لـ ${targetCount()} مستلم` : 'تمت جدولة الحملة', 'success');
     setModalOpen(false);
   };

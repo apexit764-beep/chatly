@@ -8,6 +8,8 @@ export interface CredentialField {
   /** password = masked, textarea = long token, text = visible */
   type?: 'text' | 'password' | 'textarea';
   hint?: string;
+  /** Not required to connect; the label says «(اختياري)». */
+  optional?: boolean;
 }
 
 /** A discrete way to connect this channel — shown as a collapsible block in "كيفية الربط". */
@@ -166,7 +168,7 @@ export const CHANNEL_TYPES: ChannelTypeMeta[] = [
       { key: 'apiId', label: 'API ID', placeholder: '1234567', type: 'text', hint: 'من my.telegram.org/apps بعد إنشاء التطبيق' },
       { key: 'apiHash', label: 'API Hash', placeholder: 'abcdef1234567890abcdef1234567890', type: 'password', hint: 'الكود السري المرتبط بـ API ID' },
       { key: 'loginCode', label: 'كود التحقق', placeholder: '12345', type: 'text', hint: 'الكود المُرسل إلى حساب Telegram الخاص بك بعد إدخال الرقم' },
-      { key: 'twoFactorPassword', label: 'كلمة مرور التحقق بخطوتين (اختياري)', placeholder: '••••••••', type: 'password', hint: 'فقط إذا كان مفعّلاً على حسابك' },
+      { key: 'twoFactorPassword', label: 'كلمة مرور التحقق بخطوتين (اختياري)', placeholder: '••••••••', type: 'password', hint: 'فقط إذا كان مفعّلاً على حسابك', optional: true },
     ],
     docsUrl: 'https://core.telegram.org/api/obtaining_api_id',
   },

@@ -41,6 +41,11 @@ interface WizardState {
   agentIds: string[];
 }
 
+/** Where Meta sends this number's messages — the same address the channel page shows. */
+function webhookUrlFor(channelId: string): string {
+  return `https://api.apexes.click/webhooks/whatsapp/${channelId}`;
+}
+
 const initialState: WizardState = {
   method: null,
   channelName: '',
@@ -50,7 +55,7 @@ const initialState: WizardState = {
   wabaId: '',
   accessToken: '',
   graphApiVersion: 'v23.0 (latest)',
-  callbackUrl: '',
+  callbackUrl: webhookUrlFor('new'),
   verifyToken: '',
   departmentId: '',
   agentIds: [],
@@ -90,7 +95,7 @@ export default function WhatsAppConnectWizard({
       wabaId: creds.wabaId ?? '',
       accessToken: creds.accessToken ?? '',
       graphApiVersion: creds.graphApiVersion || 'v23.0 (latest)',
-      callbackUrl: creds.callbackUrl ?? '',
+      callbackUrl: creds.callbackUrl || webhookUrlFor(c.id),
       verifyToken: creds.verifyToken ?? '',
       departmentId: c.departmentId ?? '',
       agentIds: [],
@@ -184,7 +189,7 @@ export default function WhatsAppConnectWizard({
         setPlanLimitOpen(true);
         return;
       }
-      addChannel({
+      const id = addChannel({
         type: 'whatsapp',
         name: state.channelName || `${state.countryCode} ${state.phone}`,
         identifier: `${state.countryCode}${state.phone}`,
@@ -192,7 +197,9 @@ export default function WhatsAppConnectWizard({
         departmentId: state.departmentId || null,
         ...(Object.keys(credentials).length > 0 ? { credentials } : {}),
       });
-      showToast('تم بدء الربط — تحقق من حالة التفعيل خلال دقائق', 'success');
+      // The form showed «…/new»; the real address needs the channel's id, known only now.
+      if (credentials.callbackUrl) updateChannel(id, { credentials: { ...credentials, callbackUrl: webhookUrlFor(id) } });
+      showToast(t('تم بدء الربط — تحقق من حالة التفعيل خلال دقائق'), 'success');
     }
     onClose();
   };
@@ -471,11 +478,12 @@ function ConnectStep({
 
       {/* Row 5 — Callback URL + Graph API Version */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <FieldGroup label="Callback URL" hint="انسخ هذا الرابط والصقه في إعدادات Webhook بـ Meta">
+        <FieldGroup label="Callback URL" hint={t('انسخ هذا الرابط والصقه في إعدادات Webhook بـ Meta')}>
+          {/* Qhub's own address for this number — the user copies it, never types it. */}
           <FieldWithAction
             value={state.callbackUrl}
-            onChange={(v) => setState({ ...state, callbackUrl: v })}
-            placeholder="https://yourserver.com/webhook/whatsapp"
+            readOnly
+            placeholder="https://api.apexes.click/webhooks/whatsapp/new"
             actions={[
               { icon: Copy, label: 'نسخ', onClick: () => copy(state.callbackUrl, 'Callback URL') },
             ]}
@@ -523,10 +531,11 @@ function FieldGroup({ label, hint, children }: { label: React.ReactNode; hint?: 
 }
 
 function FieldWithAction({
-  value, onChange, placeholder, actions,
+  value, onChange, readOnly, placeholder, actions,
 }: {
   value: string;
-  onChange: (v: string) => void;
+  onChange?: (v: string) => void;
+  readOnly?: boolean;
   placeholder: string;
   actions: Array<{ icon: typeof Copy; label: string; onClick: () => void }>;
 }): JSX.Element {
@@ -534,7 +543,8 @@ function FieldWithAction({
     <div className="flex items-stretch gap-2">
       <input
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange?.(e.target.value)}
+        readOnly={readOnly}
         placeholder={placeholder}
         dir="ltr"
         className="flex-1 min-w-0 h-10 px-3 rounded-input bg-surface-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-mono text-[12px]"

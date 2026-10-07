@@ -30,6 +30,37 @@ export function downloadCsv<T extends Record<string, unknown>>(
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Parse CSV text into rows of cells — the inverse of `downloadCsv`: handles the
+ * Excel BOM, quoted cells (with "" for a quote, commas and line breaks inside)
+ * and CRLF line ends. Blank lines are dropped.
+ */
+export function parseCsv(text: string): string[][] {
+  const src = text.replace(/^\uFEFF/, '');
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = '';
+  let quoted = false;
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (quoted) {
+      if (ch === '"' && src[i + 1] === '"') { cell += '"'; i++; }
+      else if (ch === '"') quoted = false;
+      else cell += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ',') { row.push(cell); cell = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && src[i + 1] === '\n') i++;
+      row.push(cell); cell = '';
+      if (row.some((c) => c.trim())) rows.push(row);
+      row = [];
+    } else cell += ch;
+  }
+  row.push(cell);
+  if (row.some((c) => c.trim())) rows.push(row);
+  return rows;
+}
+
 function csvEscape(value: string): string {
   if (/[",\n]/.test(value)) {
     return `"${value.replace(/"/g, '""')}"`;
