@@ -202,7 +202,7 @@ export default function ChannelDetail(): JSX.Element {
       }
     } else {
       // Require all declared credential fields before connecting
-      const missing = (meta.credentials ?? []).filter((f) => !creds[f.key]?.trim());
+      const missing = (meta.credentials ?? []).filter((f) => !f.optional && !creds[f.key]?.trim());
       if (missing.length > 0) {
         showToast(`${t('أكمل')}: ${missing.map((m) => m.label).join('، ')}`, 'error');
         return;

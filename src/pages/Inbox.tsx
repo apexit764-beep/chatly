@@ -1324,6 +1324,7 @@ function TransferModal({ open, onClose, conversation }: { open: boolean; onClose
   const departments = useDataStore((s) => s.departments);
   const channels = useDataStore((s) => s.channels);
   const assign = useDataStore((s) => s.assignConversation);
+  const sendMessage = useDataStore((s) => s.sendMessage);
   const showToast = useUIStore((s) => s.showToast);
   const [target, setTarget] = useState(conversation.assignedTo ?? '');
   const [note, setNote] = useState('');
@@ -1340,6 +1341,8 @@ function TransferModal({ open, onClose, conversation }: { open: boolean; onClose
       return;
     }
     assign(conversation.id, target);
+    // Left in the thread as an internal note, where the new agent will read it.
+    if (note.trim()) sendMessage(conversation.id, `${t('ملاحظة التحويل:')} ${note.trim()}`, 'note');
     const agent = agents.find((a) => a.id === target);
     showToast(`${t('تم تحويل المحادثة إلى')} ${t(agent?.name ?? '')}`, 'success');
     onClose();
@@ -1500,7 +1503,9 @@ function NewConversationModal({ open, onClose, preselectedContact }: { open: boo
       contactId,
       channelId,
       initialMessage: previewMessage.trim(),
-      assignedTo: agentId || undefined,
+      // «غير مُسند» means nobody, and «AI Agent» hands it to the AI — neither falls back to you.
+      assignedTo: agentId && agentId !== '__ai__' ? agentId : null,
+      aiActive: agentId === '__ai__',
       departmentId: departmentId || null,
     });
 

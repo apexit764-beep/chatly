@@ -74,10 +74,13 @@ interface DataState {
     contactId: string;
     channelId: string;
     initialMessage: string;
+    /** Omitted = the current user; null = nobody. */
     assignedTo?: string | null;
     departmentId?: string | null;
     /** 'in' لرسالة واردة من العميل. الافتراضي 'out' لمحادثة نبدأها نحن. */
     direction?: 'in' | 'out';
+    /** The AI answers it (no agent assigned). */
+    aiActive?: boolean;
   }) => string;
   /** Simulates an incoming conversation from a client.
    *  If no contact with `phone` exists, one is auto-created as a visitor. */
@@ -90,7 +93,7 @@ interface DataState {
   }) => string;
 
   // Contact actions
-  addContact: (c: Omit<Contact, 'id' | 'conversationCount' | 'lastContact' | 'createdAt' | 'tags' | 'blocked'>) => void;
+  addContact: (c: Omit<Contact, 'id' | 'conversationCount' | 'lastContact' | 'createdAt' | 'tags' | 'blocked'> & { tags?: string[] }) => void;
   updateContact: (id: string, patch: Partial<Contact>) => void;
   deleteContact: (id: string) => void;
   addContactActivity: (contactId: string, entry: Omit<ContactActivityLogEntry, 'id' | 'timestamp'>) => void;
@@ -115,6 +118,7 @@ interface DataState {
 
   // Campaign actions
   addCampaign: (c: Omit<Campaign, 'id' | 'sentCount' | 'openRate' | 'createdAt'>) => void;
+  updateCampaign: (id: string, patch: Partial<Campaign>) => void;
 
   // Campaign template actions
   addCampaignTemplate: (t: Omit<CampaignTemplate, 'id' | 'usageCount' | 'createdAt'>) => void;
@@ -359,7 +363,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           id,
           contactId: data.contactId,
           channelId: data.channelId,
-          assignedTo: data.assignedTo ?? state.currentUserId,
+          assignedTo: data.assignedTo === undefined ? state.currentUserId : data.assignedTo,
           departmentId: data.departmentId ?? null,
           status: 'new',
           lastMessage: data.initialMessage,
@@ -369,6 +373,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           notes: [],
           activityLog: [],
           sessionCount: 1,
+          ...(data.aiActive ? { aiActive: true } : {}),
         },
         ...state.conversations,
       ],
@@ -426,7 +431,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           {
             ...c,
             id: newId(),
-            tags: [],
+            tags: c.tags ?? [],
             blocked: false,
             conversationCount: 0,
             lastContact: now,
@@ -529,6 +534,11 @@ export const useDataStore = create<DataState>((set, get) => ({
         { ...c, id: newId(), sentCount: 0, openRate: 0, createdAt: new Date().toISOString() },
         ...state.campaigns,
       ],
+    })),
+
+  updateCampaign: (id, patch) =>
+    set((state) => ({
+      campaigns: state.campaigns.map((c) => (c.id === id ? { ...c, ...patch } : c)),
     })),
 
   addCampaignTemplate: (t) =>

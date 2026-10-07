@@ -40,7 +40,7 @@ import { Can } from '@/hooks/usePermission';
 import { useUIStore } from '@/store/useUIStore';
 import { contactTypeColor, contactTypeLabel } from '@/utils/labels';
 import { formatDate, formatPhone, timeAgo } from '@/utils/format';
-import { downloadCsv } from '@/utils/csv';
+import { downloadCsv, parseCsv } from '@/utils/csv';
 import { cn } from '@/utils/cn';
 import type { ChannelType, Contact, ContactActivityAction, ContactType } from '@/types';
 
@@ -189,9 +189,43 @@ export default function Contacts(): JSX.Element {
   const handleImportFile = (file: File): void => {
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const text = String(ev.target?.result ?? '');
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      showToast(`${t('تم استيراد')} ${Math.max(0, lines.length - 1)} ${t('جهة اتصال')}`, 'success');
+      const [header = [], ...rows] = parseCsv(String(ev.target?.result ?? ''));
+      // Columns are found by name, so the order in the file doesn't matter.
+      const col = (name: string): number => header.findIndex((h) => h.trim() === name);
+      const iName = col('الاسم'), iPhone = col('الهاتف'), iType = col('النوع'), iTags = col('الوسوم'), iEmail = col('البريد'), iNotes = col('ملاحظات');
+      if (iName < 0 || iPhone < 0) {
+        showToast(t('الملف لا يطابق القالب — يلزم عمودا «الاسم» و«الهاتف»'), 'error');
+        return;
+      }
+      const typeByLabel = new Map(Object.entries(contactTypeLabel).map(([type, label]) => [label, type as ContactType]));
+      const seen = new Set(contacts.map((c) => c.phone.replace(/\s/g, '')).filter(Boolean));
+      let added = 0;
+      let skipped = 0;
+      for (const r of rows) {
+        const cell = (i: number): string => (i >= 0 ? (r[i] ?? '').trim() : '');
+        const name = cell(iName);
+        const phone = cell(iPhone).replace(/\s/g, '');
+        // A row without a name or a phone can't be a contact; one already on file would duplicate it.
+        if (!name || !phone || seen.has(phone)) { skipped++; continue; }
+        seen.add(phone);
+        const email = cell(iEmail);
+        const notes = [cell(iNotes), email && `${t('البريد')}: ${email}`].filter(Boolean).join(' — ');
+        addContact({
+          name,
+          phone,
+          type: typeByLabel.get(cell(iType)) ?? 'lead',
+          tags: cell(iTags).split('|').map((x) => x.trim()).filter(Boolean),
+          notes: notes || undefined,
+          channels: ['whatsapp'],
+        });
+        added++;
+      }
+      showToast(
+        skipped
+          ? `${t('تم استيراد')} ${added} ${t('جهة اتصال')} — ${t('تم تخطّي')} ${skipped} (${t('بدون اسم أو رقم، أو الرقم موجود')})`
+          : `${t('تم استيراد')} ${added} ${t('جهة اتصال')}`,
+        added ? 'success' : 'error',
+      );
     };
     reader.readAsText(file);
   };
