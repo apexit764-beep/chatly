@@ -376,6 +376,8 @@ export interface Notification {
   timestamp: string;
   read: boolean;
   type: 'message' | 'conversation' | 'campaign' | 'system';
+  /** Where clicking it goes, when that is more specific than its type. */
+  link?: string;
 }
 
 export interface Integration {
