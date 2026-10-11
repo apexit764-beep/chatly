@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Plus,
@@ -17,14 +17,12 @@ import {
   MoreHorizontal,
   Download,
   FileText,
-  Sparkles,
   Paperclip,
   Mail,
   Loader2,
 } from 'lucide-react';
 import {
   Badge,
-  Card,
   DataTable,
   Drawer,
   Input,
@@ -38,20 +36,18 @@ import {
 } from '@components/ui';
 import { ContactTypeTip } from '@components/contacts/ContactTypeTip';
 import { MetaPaymentDialog } from '@components/campaigns/MetaPaymentDialog';
+import { TemplatePicker } from '@components/campaigns/TemplatePicker';
+import { TemplateStatusBadge } from '@components/campaigns/TemplateStatusBadge';
+import { WhatsAppTemplatePreview } from '@components/campaigns/WhatsAppTemplatePreview';
 import { DateRangePicker } from '@components/ui/DateRangePicker';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
-import {
-  campaignStatusColor,
-  campaignStatusLabel,
-  campaignTemplateTypeDescription,
-  campaignTemplateTypeLabel,
-} from '@/utils/labels';
+import { campaignStatusColor, campaignStatusLabel } from '@/utils/labels';
 import { formatDate, formatNumber } from '@/utils/format';
 import { downloadCsv } from '@/utils/csv';
 import { META_PAYMENT_ERROR_CODE, sendWhatsAppCampaign } from '@/utils/sendCampaign';
 import { cn } from '@/utils/cn';
-import type { Campaign, CampaignChannelType, CampaignStatus, CampaignTemplate, CampaignTemplateCategory, CampaignTemplateType, ChannelType, ContactType } from '@/types';
+import type { Campaign, CampaignChannelType, CampaignStatus, CampaignTemplate, ChannelType, ContactType, TemplateButton } from '@/types';
 
 /** Channel types that send email — the campaign sender list for email campaigns. */
 const EMAIL_CHANNEL_TYPES: ChannelType[] = ['email', 'gmail', 'outlook', 'yahoo', 'smtp'];
@@ -73,7 +69,7 @@ export default function Campaigns(): JSX.Element {
   const [dateTo, setDateTo] = useState(() => { const d = new Date(); d.setHours(0,0,0,0); return d; });
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Campaign | null>(null);
-  const [preview, setPreview] = useState<{ message: string; attachmentName?: string } | null>(null);
+  const [preview, setPreview] = useState<{ message: string; attachmentName?: string; buttons?: TemplateButton[] } | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [messageMode, setMessageMode] = useState<'custom' | 'template'>('custom');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
@@ -100,18 +96,22 @@ export default function Campaigns(): JSX.Element {
   useEffect(() => {
     const tpl = (location.state as { useTemplate?: CampaignTemplate } | null)?.useTemplate;
     if (!tpl) return;
+    const sender = channels.find((c) => (tpl.channel === 'whatsapp' ? c.type === 'whatsapp' : EMAIL_CHANNEL_TYPES.includes(c.type)));
+    setChannelFilter(tpl.channel);
     setForm({
       name: '',
       message: tpl.message,
-      audience: tpl.defaultAudience,
+      audience: 'all',
       schedule: 'now',
       scheduledAt: '',
-      minDelay: tpl.defaultMinDelay,
-      maxDelay: tpl.defaultMaxDelay,
-      channelType: channelFilter,
-      senderChannelId: '',
+      minDelay: 15,
+      maxDelay: 45,
+      channelType: tpl.channel,
+      senderChannelId: sender?.id ?? '',
       attachmentName: '',
     });
+    setMessageMode('template');
+    setSelectedTemplateId(tpl.id);
     setEditing(null);
     setErrors({});
     setModalOpen(true);
@@ -124,7 +124,8 @@ export default function Campaigns(): JSX.Element {
     .filter((c) => statusFilter === 'all' || c.status === statusFilter)
     .filter((c) => {
       const t = Date.parse(c.scheduledAt ?? c.createdAt);
-      return t >= dateFrom.getTime() && t <= dateTo.getTime() + 86400000;
+      // A scheduled campaign is upcoming by nature, so the range's end never hides it.
+      return t >= dateFrom.getTime() && (c.status === 'scheduled' || t <= dateTo.getTime() + 86400000);
     });
 
   const stats = {
@@ -171,21 +172,22 @@ export default function Campaigns(): JSX.Element {
       attachmentName: c.attachmentName ?? '',
     });
     setErrors({});
-    setMessageMode('custom');
-    setSelectedTemplateId(null);
+    setMessageMode(c.templateId ? 'template' : 'custom');
+    setSelectedTemplateId(c.templateId ?? null);
     setModalOpen(true);
     setOpenMenu(null);
   };
 
+  // Campaigns may only send what can go out: approved WhatsApp templates, or any Gmail one.
+  const pickableTemplates = campaignTemplates.filter((t) =>
+    form.channelType === 'whatsapp' ? t.channel === 'whatsapp' && t.status === 'approved' : t.channel === 'email',
+  );
+  const selectedTemplate = messageMode === 'template' ? campaignTemplates.find((t) => t.id === selectedTemplateId) : undefined;
+  const lockedToTemplate = selectedTemplate?.channel === 'whatsapp';
+
   const applyTemplate = (t: CampaignTemplate): void => {
     setSelectedTemplateId(t.id);
-    setForm((prev) => ({
-      ...prev,
-      message: t.message,
-      audience: t.defaultAudience,
-      minDelay: t.defaultMinDelay,
-      maxDelay: t.defaultMaxDelay,
-    }));
+    setForm((prev) => ({ ...prev, message: t.message }));
     setErrors({ ...errors, message: undefined });
     incrementTemplateUsage(t.id);
   };
@@ -202,6 +204,15 @@ export default function Campaigns(): JSX.Element {
       const label = channelFilter === 'whatsapp' ? 'رقم الإرسال' : 'حساب الإرسال';
       showToast(`اختر ${label} أولاً`, 'error');
       return;
+    }
+    const templateId = messageMode === 'template' ? selectedTemplateId ?? undefined : undefined;
+    if (messageMode === 'template') {
+      const tpl = campaignTemplates.find((t) => t.id === templateId);
+      if (!tpl) { showToast('اختر قالبًا أولاً', 'error'); return; }
+      if (tpl.channel === 'whatsapp' && tpl.status !== 'approved') {
+        showToast('القالب لم يعد معتمدًا من Meta — اختر قالبًا معتمدًا', 'error');
+        return;
+      }
     }
 
     // Meta has to accept a WhatsApp send before the campaign counts as sent.
@@ -228,6 +239,8 @@ export default function Campaigns(): JSX.Element {
       channelType: form.channelType,
       senderChannelId: form.senderChannelId,
       attachmentName: form.attachmentName || undefined,
+      templateId,
+      failureReason: undefined,
     };
     if (editing) updateCampaign(editing.id, fields);
     else addCampaign(fields);
@@ -242,6 +255,9 @@ export default function Campaigns(): JSX.Element {
       targetCount: c.targetCount,
       status: 'draft',
       scheduledAt: null,
+      channelType: c.channelType,
+      senderChannelId: c.senderChannelId,
+      templateId: c.templateId,
     });
     showToast('تم إنشاء نسخة كمسودة', 'success');
     setOpenMenu(null);
@@ -299,6 +315,21 @@ export default function Campaigns(): JSX.Element {
       ),
     },
     {
+      key: 'template', header: 'القالب', accessor: (r) => campaignTemplates.find((t) => t.id === r.templateId)?.name ?? '',
+      cell: (r) => {
+        const tpl = campaignTemplates.find((t) => t.id === r.templateId);
+        if (!r.templateId) return <span className="text-muted-light dark:text-muted-dark">—</span>;
+        if (!tpl) return <span className="text-muted-light dark:text-muted-dark">قالب محذوف</span>;
+        return (
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="truncate">{tpl.name}</span>
+            {/* Only a status that blocks sending is worth a badge here. */}
+            {tpl.channel === 'whatsapp' && tpl.status && tpl.status !== 'approved' && <TemplateStatusBadge status={tpl.status} />}
+          </div>
+        );
+      },
+    },
+    {
       key: 'message', header: 'الرسالة', hideOn: 'md',
       cell: (r) => <p className="text-muted-light dark:text-muted-dark line-clamp-1 max-w-xs">{r.message}</p>,
     },
@@ -322,17 +353,20 @@ export default function Campaigns(): JSX.Element {
     {
       key: 'status', header: 'الحالة', accessor: (r) => r.status,
       cell: (r) => (
-        <Badge className={cn(campaignStatusColor[r.status], 'border-transparent inline-flex items-center gap-1')}>
-          {statusIcon(r.status)}
-          {campaignStatusLabel[r.status]}
-        </Badge>
+        <span className="inline-flex items-center gap-1">
+          <Badge className={cn(campaignStatusColor[r.status], 'border-transparent inline-flex items-center gap-1')}>
+            {statusIcon(r.status)}
+            {campaignStatusLabel[r.status]}
+          </Badge>
+          {r.status === 'failed' && r.failureReason && <InfoTip>لم تُرسل الحملة: {r.failureReason}.</InfoTip>}
+        </span>
       ),
     },
     {
       key: 'actions', header: '', sortable: false, width: '80px',
       cell: (r) => (
         <div className="flex items-center gap-1 justify-end">
-          <button onClick={(e) => { e.stopPropagation(); setPreview({ message: r.message, attachmentName: r.attachmentName }); }} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title="معاينة">
+          <button onClick={(e) => { e.stopPropagation(); setPreview({ message: r.message, attachmentName: r.attachmentName, buttons: campaignTemplates.find((t) => t.id === r.templateId)?.buttons }); }} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title="معاينة">
             <Eye className="h-4 w-4" />
           </button>
           <div className="relative" onClick={(e) => e.stopPropagation()}>
@@ -367,7 +401,7 @@ export default function Campaigns(): JSX.Element {
           </p>
         </div>
         <button
-          onClick={() => navigate('/campaigns/templates')}
+          onClick={() => navigate('/campaigns/templates', { state: { channel: channelFilter } })}
           className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors flex items-center gap-2"
         >
           <FileText className="h-4 w-4" /> إدارة القوالب
@@ -413,8 +447,9 @@ export default function Campaigns(): JSX.Element {
         data={filteredCampaigns}
         columns={columns}
         rowKey={(c) => c.id}
+        rowClassName={(c) => (c.status === 'failed' ? 'bg-danger/[0.04] dark:bg-danger/[0.07]' : undefined)}
         searchPlaceholder="ابحث عن حملة..."
-        searchAccessor={(c) => `${c.name} ${c.message}`}
+        searchAccessor={(c) => `${c.name} ${c.message} ${campaignTemplates.find((t) => t.id === c.templateId)?.name ?? ''}`}
         pageSize={10}
         filters={
           <select
@@ -522,36 +557,23 @@ export default function Campaigns(): JSX.Element {
 
             {messageMode === 'template' && (
               <div className="mb-2">
-                <label className="text-small font-medium text-muted-light dark:text-muted-dark block mb-1">اختر قالباً</label>
-                <select
-                  value={selectedTemplateId ?? ''}
-                  onChange={(e) => {
-                    const t = campaignTemplates.find((tpl) => tpl.id === e.target.value);
-                    if (t) applyTemplate(t);
-                  }}
-                  className="w-full h-10 ps-3 pe-9 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
-                >
-                  <option value="">— اختر قالباً —</option>
-                  {campaignTemplates.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {campaignTemplateTypeLabel[t.type]} · {t.name}
-                    </option>
-                  ))}
-                </select>
-                {selectedTemplateId && (
-                  <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1.5 flex items-center gap-1">
-                    <Sparkles className="h-3 w-3 text-primary" />
-                    تم تحميل القالب — يمكنك تعديل النص أدناه قبل الإرسال
+                <label className="text-small font-semibold block mb-1">قوالب الرسائل</label>
+                <TemplatePicker templates={pickableTemplates} value={selectedTemplateId} onChange={applyTemplate} />
+                {form.channelType === 'whatsapp' && (
+                  <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1.5">
+                    تظهر القوالب المعتمدة فقط. القوالب بأي حالة أخرى لا تظهر.
                   </p>
                 )}
               </div>
             )}
 
             <Textarea
-              label={messageMode === 'template' ? 'نص الرسالة (من القالب — قابل للتعديل)' : 'نص الرسالة'}
-              tip="اكتب {{اسم_العميل}} ليُستبدل باسم كل عميل عند الإرسال."
+              label={lockedToTemplate ? 'نص الرسالة (من القالب المعتمد)' : messageMode === 'template' ? 'نص الرسالة (من القالب — قابل للتعديل)' : 'نص الرسالة'}
+              tip={lockedToTemplate ? 'اعتمدت Meta هذا النص كما هو، فلا يُعدّل هنا. لتغييره عدّل القالب من إدارة القوالب.' : 'اكتب {{اسم_العميل}} ليُستبدل باسم كل عميل عند الإرسال.'}
               value={form.message}
               onChange={(e) => { setForm({ ...form, message: e.target.value }); setErrors({ ...errors, message: undefined }); }}
+              readOnly={lockedToTemplate}
+              className={lockedToTemplate ? 'opacity-80 cursor-default' : undefined}
               error={errors.message ?? undefined}
               placeholder={messageMode === 'template' ? 'اختر قالباً من الأعلى ليظهر النص هنا' : 'اكتب رسالتك هنا... يمكنك استخدام {{اسم_العميل}}'}
               rows={5}
@@ -648,7 +670,7 @@ export default function Campaigns(): JSX.Element {
         {/* Sticky drawer footer */}
         <div className="absolute bottom-0 inset-x-0 px-5 py-3 bg-white dark:bg-surface-dark border-t border-border-light dark:border-border-dark flex items-center justify-end gap-2 flex-wrap">
           <button
-            onClick={() => setPreview({ message: form.message || 'الرسالة فارغة', attachmentName: form.attachmentName || undefined })}
+            onClick={() => setPreview({ message: form.message || 'الرسالة فارغة', attachmentName: form.attachmentName || undefined, buttons: selectedTemplate?.buttons })}
             className="h-10 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex items-center gap-2"
           >
             <Eye className="h-4 w-4" /> معاينة
@@ -673,6 +695,10 @@ export default function Campaigns(): JSX.Element {
       <MetaPaymentDialog open={paymentIssueOpen} onClose={() => setPaymentIssueOpen(false)} />
 
       <Modal open={!!preview} onClose={() => setPreview(null)} title="معاينة الرسالة" size="sm">
+        {preview?.buttons && preview.buttons.length > 0 ? (
+          // A template with buttons: show them the way the customer gets them.
+          <WhatsAppTemplatePreview message={preview.message} buttons={preview.buttons} />
+        ) : (
         <div className="flex justify-center">
           <div className="max-w-xs w-full bg-[#0d1418] dark:bg-[#0a0f12] rounded-card p-6" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(37,211,102,0.08), transparent 60%)' }}>
             <div className="bg-[#005c4b] text-white p-1.5 rounded-card rounded-be-sm shadow-md space-y-1.5">
@@ -687,574 +713,9 @@ export default function Campaigns(): JSX.Element {
             </div>
           </div>
         </div>
+        )}
       </Modal>
     </div>
-  );
-}
-
-interface FormState {
-  name: string;
-  description: string;
-  category: CampaignTemplateCategory;
-  type: CampaignTemplateType;
-  message: string;
-  mediaUrl: string;
-  buttons: string[];
-  listTitle: string;
-  listItems: { label: string; description: string }[];
-  pollOptions: string[];
-  aiPrompt: string;
-  defaultAudience: 'all' | ContactType;
-  defaultMinDelay: number;
-  defaultMaxDelay: number;
-}
-
-/**
- * Campaign templates — reusable presets the user can apply when creating campaigns.
- * CRUD (create / edit / delete) lives here. Selecting "استخدم" calls back to the
- * parent to switch to the campaigns tab with the form pre-filled.
- */
-export function CampaignTemplatesSection({
-  onUseTemplate,
-}: {
-  onUseTemplate: (t: CampaignTemplate) => void;
-}): JSX.Element {
-  const templates = useDataStore((s) => s.campaignTemplates);
-  const addTemplate = useDataStore((s) => s.addCampaignTemplate);
-  const updateTemplate = useDataStore((s) => s.updateCampaignTemplate);
-  const deleteTemplate = useDataStore((s) => s.deleteCampaignTemplate);
-  const incrementUsage = useDataStore((s) => s.incrementCampaignTemplateUsage);
-  const showToast = useUIStore((s) => s.showToast);
-  const { confirm } = useConfirm();
-
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | CampaignTemplateType>('all');
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editing, setEditing] = useState<CampaignTemplate | null>(null);
-  const emptyForm: FormState = {
-    name: '',
-    description: '',
-    category: 'custom',
-    type: 'text-media',
-    message: '',
-    mediaUrl: '',
-    buttons: ['', '', ''],
-    listTitle: '',
-    listItems: [{ label: '', description: '' }],
-    pollOptions: ['', ''],
-    aiPrompt: '',
-    defaultAudience: 'all',
-    defaultMinDelay: 15,
-    defaultMaxDelay: 45,
-  };
-  const [form, setForm] = useState<FormState>(emptyForm);
-
-  const filtered = useMemo(() => {
-    return templates.filter((t) => {
-      if (typeFilter !== 'all' && t.type !== typeFilter) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        return t.name.toLowerCase().includes(q) || t.message.toLowerCase().includes(q);
-      }
-      return true;
-    });
-  }, [templates, typeFilter, search]);
-
-  const openCreate = (): void => {
-    setEditing(null);
-    setForm({ ...emptyForm, type: typeFilter !== 'all' ? typeFilter : 'text-media' });
-    setDrawerOpen(true);
-  };
-
-  const openEdit = (t: CampaignTemplate): void => {
-    setEditing(t);
-    setForm({
-      name: t.name,
-      description: t.description ?? '',
-      category: t.category,
-      type: t.type,
-      message: t.message,
-      mediaUrl: t.mediaUrl ?? '',
-      buttons: t.buttons ? [...t.buttons, '', '', ''].slice(0, 3) : ['', '', ''],
-      listTitle: t.listTitle ?? '',
-      listItems: t.listItems && t.listItems.length > 0 ? t.listItems.map((i) => ({ label: i.label, description: i.description ?? '' })) : [{ label: '', description: '' }],
-      pollOptions: t.pollOptions ? [...t.pollOptions] : ['', ''],
-      aiPrompt: t.aiPrompt ?? '',
-      defaultAudience: t.defaultAudience,
-      defaultMinDelay: t.defaultMinDelay,
-      defaultMaxDelay: t.defaultMaxDelay,
-    });
-    setDrawerOpen(true);
-  };
-
-  const submit = (): void => {
-    if (!form.name.trim()) { showToast('اسم القالب مطلوب', 'error'); return; }
-    if (form.type !== 'ai-prompt' && !form.message.trim()) { showToast('نص الرسالة مطلوب', 'error'); return; }
-    if (form.type === 'ai-prompt' && !form.aiPrompt.trim()) { showToast('تعليمات المساعد مطلوبة', 'error'); return; }
-    const payload: Omit<CampaignTemplate, 'id' | 'usageCount' | 'createdAt'> = {
-      name: form.name.trim(),
-      description: form.description.trim() || undefined,
-      category: form.category,
-      type: form.type,
-      message: form.message.trim(),
-      defaultAudience: form.defaultAudience,
-      defaultMinDelay: form.defaultMinDelay,
-      defaultMaxDelay: form.defaultMaxDelay,
-    };
-    if (form.type === 'text-media' && form.mediaUrl.trim()) payload.mediaUrl = form.mediaUrl.trim();
-    if (form.type === 'buttons') payload.buttons = form.buttons.map((b) => b.trim()).filter(Boolean).slice(0, 3);
-    if (form.type === 'list') {
-      payload.listTitle = form.listTitle.trim();
-      payload.listItems = form.listItems
-        .map((i) => ({ label: i.label.trim(), description: i.description.trim() || undefined }))
-        .filter((i) => i.label.length > 0);
-    }
-    if (form.type === 'poll') payload.pollOptions = form.pollOptions.map((o) => o.trim()).filter(Boolean);
-    if (form.type === 'ai-prompt') payload.aiPrompt = form.aiPrompt.trim();
-    if (editing) {
-      updateTemplate(editing.id, payload);
-      showToast('تم تحديث القالب', 'success');
-    } else {
-      addTemplate(payload);
-      showToast('تم إضافة القالب', 'success');
-    }
-    setDrawerOpen(false);
-  };
-
-  const remove = async (t: CampaignTemplate): Promise<void> => {
-    const ok = await confirm({
-      title: `حذف "${t.name}"؟`,
-      message: 'هذا القالب سيُحذف نهائياً ولن يكون متاحاً في الحملات.',
-      variant: 'danger',
-      confirmText: 'حذف',
-    });
-    if (ok) {
-      deleteTemplate(t.id);
-      showToast('تم حذف القالب', 'success');
-    }
-  };
-
-  const use = (t: CampaignTemplate): void => {
-    incrementUsage(t.id);
-    onUseTemplate(t);
-  };
-
-  const duplicate = (t: CampaignTemplate): void => {
-    addTemplate({
-      name: `${t.name} (نسخة)`,
-      description: t.description,
-      category: t.category,
-      type: t.type,
-      message: t.message,
-      mediaUrl: t.mediaUrl,
-      buttons: t.buttons,
-      listTitle: t.listTitle,
-      listItems: t.listItems,
-      pollOptions: t.pollOptions,
-      aiPrompt: t.aiPrompt,
-      defaultAudience: t.defaultAudience,
-      defaultMinDelay: t.defaultMinDelay,
-      defaultMaxDelay: t.defaultMaxDelay,
-    });
-    showToast('تم نسخ القالب', 'success');
-  };
-
-  const types: { value: 'all' | CampaignTemplateType; label: string; icon: JSX.Element }[] = [
-    { value: 'all', label: 'الكل', icon: <FileText className="h-4 w-4" /> },
-    { value: 'text-media', label: campaignTemplateTypeLabel['text-media'], icon: <FileText className="h-4 w-4" /> },
-    { value: 'buttons', label: campaignTemplateTypeLabel['buttons'], icon: <Tag className="h-4 w-4" /> },
-    { value: 'list', label: campaignTemplateTypeLabel['list'], icon: <MoreHorizontal className="h-4 w-4 rotate-90" /> },
-    { value: 'poll', label: campaignTemplateTypeLabel['poll'], icon: <Eye className="h-4 w-4" /> },
-  ];
-
-  const typeCount = (k: 'all' | CampaignTemplateType): number =>
-    k === 'all' ? templates.length : templates.filter((t) => t.type === k).length;
-
-  return (
-    <>
-      {/* Type sub-filter — clean horizontal scroll strip */}
-      <div className="overflow-x-auto -mx-1 px-1">
-        <div className="inline-flex items-center gap-1.5 min-w-full">
-          {types.map((t) => {
-            const active = typeFilter === t.value;
-            const count = typeCount(t.value);
-            return (
-              <button
-                key={t.value}
-                onClick={() => setTypeFilter(t.value)}
-                className={cn(
-                  'h-8 ps-2.5 pe-2 rounded-full text-[12px] font-medium transition-colors flex items-center gap-1.5 flex-shrink-0 border',
-                  active
-                    ? 'bg-primary text-white border-primary'
-                    : 'bg-white dark:bg-surface-dark text-current border-border-light dark:border-border-dark hover:border-primary/40 hover:text-primary',
-                )}
-                style={active ? { color: '#fff' } : undefined}
-              >
-                <span className={cn('flex-shrink-0', active ? 'opacity-90' : 'opacity-60')}>
-                  {t.icon}
-                </span>
-                <span>{t.label}</span>
-                <span className={cn(
-                  'text-[10px] font-bold px-1.5 min-w-[20px] h-[18px] rounded-full inline-flex items-center justify-center',
-                  active
-                    ? 'bg-white/25 text-white'
-                    : count > 0 ? 'bg-bg-light dark:bg-bg-dark text-current' : 'text-muted-light dark:text-muted-dark',
-                )} style={active ? { color: '#fff' } : undefined}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Search + create */}
-      <Card className="p-3 flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[200px]">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="ابحث في القوالب..."
-            className="w-full h-9 px-3 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-small focus:outline-none focus:border-primary"
-          />
-        </div>
-        <button onClick={openCreate} className="h-9 px-4 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2" style={{ color: '#fff' }}>
-          <Plus className="h-4 w-4" /> قالب جديد
-        </button>
-      </Card>
-
-      {/* Cards grid */}
-      {filtered.length === 0 ? (
-        <Card className="p-12 text-center">
-          <div className="h-12 w-12 mx-auto rounded-full bg-primary/10 text-primary flex items-center justify-center mb-2">
-            <FileText className="h-5 w-5" />
-          </div>
-          <p className="text-body font-semibold">لا توجد قوالب</p>
-          <p className="text-small text-muted-light dark:text-muted-dark mt-1">
-            {search || typeFilter !== 'all' ? 'لا نتائج مطابقة' : 'أنشئ أول قالب لتعيد استخدامه في حملاتك'}
-          </p>
-          {!search && typeFilter === 'all' && (
-            <button onClick={openCreate} className="mt-3 h-9 px-4 rounded-full bg-primary text-white text-small font-medium inline-flex items-center gap-2" style={{ color: '#fff' }}>
-              <Plus className="h-4 w-4" /> قالب جديد
-            </button>
-          )}
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-          {filtered.map((t) => (
-            <div key={t.id} className="rounded-card border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark p-4 flex flex-col gap-3 hover:border-primary/30 transition-colors">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                    <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark">
-                      {t.type === 'buttons' ? <Tag className="h-2.5 w-2.5" />
-                        : t.type === 'list' ? <MoreHorizontal className="h-2.5 w-2.5 rotate-90" />
-                        : t.type === 'poll' ? <Eye className="h-2.5 w-2.5" />
-                        : t.type === 'ai-prompt' ? <Sparkles className="h-2.5 w-2.5" />
-                        : <FileText className="h-2.5 w-2.5" />}
-                      {campaignTemplateTypeLabel[t.type]}
-                    </span>
-                    <span className="text-[10px] text-muted-light dark:text-muted-dark ms-auto">
-                      استُخدم {t.usageCount}×
-                    </span>
-                  </div>
-                  <p className="font-semibold truncate">{t.name}</p>
-                  {t.description && (
-                    <p className="text-[11px] text-muted-light dark:text-muted-dark line-clamp-1 mt-0.5">{t.description}</p>
-                  )}
-                </div>
-              </div>
-              <div className="rounded-lg bg-bg-light dark:bg-bg-dark p-2.5 text-small leading-relaxed min-h-[68px] flex flex-col gap-2">
-                {t.type === 'ai-prompt' ? (
-                  <p className="text-muted-light dark:text-muted-dark line-clamp-3 italic">
-                    🤖 <span className="not-italic font-medium">تعليمات للمساعد:</span> {t.aiPrompt}
-                  </p>
-                ) : (
-                  <p className="text-muted-light dark:text-muted-dark line-clamp-3 whitespace-pre-line">{t.message}</p>
-                )}
-                {t.type === 'buttons' && t.buttons && t.buttons.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {t.buttons.map((b, i) => (
-                      <span key={i} className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                        {b}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {t.type === 'list' && t.listItems && t.listItems.length > 0 && (
-                  <ul className="text-[11px] space-y-0.5 text-current">
-                    {t.listItems.slice(0, 3).map((i, idx) => (
-                      <li key={idx} className="flex items-start gap-1">
-                        <span className="text-muted-light dark:text-muted-dark">•</span>
-                        <span>{i.label}</span>
-                      </li>
-                    ))}
-                    {t.listItems.length > 3 && (
-                      <li className="text-[10px] text-muted-light dark:text-muted-dark">+{t.listItems.length - 3} عنصر آخر</li>
-                    )}
-                  </ul>
-                )}
-                {t.type === 'poll' && t.pollOptions && t.pollOptions.length > 0 && (
-                  <div className="space-y-0.5">
-                    {t.pollOptions.slice(0, 3).map((opt, i) => (
-                      <div key={i} className="text-[11px] flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full border border-muted-light dark:border-muted-dark flex-shrink-0" />
-                        <span>{opt}</span>
-                      </div>
-                    ))}
-                    {t.pollOptions.length > 3 && (
-                      <p className="text-[10px] text-muted-light dark:text-muted-dark">+{t.pollOptions.length - 3} خيار آخر</p>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center justify-between gap-2 pt-2 border-t border-border-light dark:border-border-dark">
-                <button
-                  onClick={() => use(t)}
-                  className="h-8 px-3 rounded-full bg-primary text-white text-[12px] font-medium flex items-center gap-1.5 hover:bg-primary-dark transition-colors"
-                  style={{ color: '#fff' }}
-                >
-                  <Send className="h-3 w-3" /> استخدم في حملة
-                </button>
-                <div className="flex items-center gap-0.5">
-                  <button onClick={() => duplicate(t)} className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-current flex items-center justify-center" title="نسخ">
-                    <Copy className="h-3.5 w-3.5" />
-                  </button>
-                  <button onClick={() => openEdit(t)} className="h-8 w-8 rounded-lg hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center" title="تعديل">
-                    <Edit2 className="h-3.5 w-3.5" />
-                  </button>
-                  <button onClick={() => remove(t)} className="h-8 w-8 rounded-lg hover:bg-danger/10 text-muted-light dark:text-muted-dark hover:text-danger flex items-center justify-center" title="حذف">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Create/Edit drawer */}
-      <Drawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        title={editing ? `تعديل: ${editing.name}` : 'قالب جديد'}
-        side="start"
-        width="w-[480px]"
-      >
-        <div className="space-y-4 pb-20">
-          <Input
-            label="اسم القالب"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="مثال: ترحيب بعملاء جدد"
-          />
-          <Input
-            label="وصف مختصر (اختياري)"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            placeholder="متى يُستخدم هذا القالب؟"
-          />
-
-          <Select label="نوع القالب" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as CampaignTemplateType })}>
-            {(Object.keys(campaignTemplateTypeLabel) as CampaignTemplateType[])
-              .filter((tt) => tt !== 'ai-prompt')
-              .map((tt) => (
-                <option key={tt} value={tt}>{campaignTemplateTypeLabel[tt]}</option>
-              ))}
-          </Select>
-          <p className="text-[11px] text-muted-light dark:text-muted-dark -mt-2 flex items-center gap-1">
-            <Sparkles className="h-3 w-3 text-primary" />
-            {campaignTemplateTypeDescription[form.type]}
-          </p>
-
-          {/* Message + type-specific fields */}
-          {form.type === 'ai-prompt' ? (
-            <div>
-              <Textarea
-                label="تعليمات للمساعد الذكي"
-                tip="يكتب المساعد نسخة مختلفة من الرسالة لكل عميل حسب هذه التعليمات، وتستهلك كريدت."
-                value={form.aiPrompt}
-                onChange={(e) => setForm({ ...form, aiPrompt: e.target.value })}
-                placeholder="اكتب رسالة ترحيب لـ {{اسم_العميل}} باللهجة الخليجية..."
-                rows={5}
-              />
-              <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1">
-                💡 AI سيولّد رسالة فريدة لكل عميل بناءً على هذه التعليمات.
-              </p>
-            </div>
-          ) : (
-            <>
-              <Textarea
-                label={form.type === 'poll' ? 'سؤال الاستطلاع' : 'نص الرسالة'}
-                value={form.message}
-                onChange={(e) => setForm({ ...form, message: e.target.value })}
-                placeholder={form.type === 'poll' ? 'كيف كانت تجربتك معنا؟' : 'مرحباً {{اسم_العميل}}...'}
-                rows={form.type === 'poll' ? 2 : 5}
-              />
-              <p className="text-[11px] text-muted-light dark:text-muted-dark -mt-3">
-                استخدم متغيرات مثل <code className="bg-bg-light dark:bg-bg-dark px-1 rounded">{'{{اسم_العميل}}'}</code> ليتم استبدالها تلقائياً.
-              </p>
-            </>
-          )}
-
-          {/* Type-specific extras */}
-          {form.type === 'text-media' && (
-            <Input
-              label="رابط الميديا (اختياري)"
-              tip="رابط مباشر لصورة أو فيديو متاح للعامة، يبدأ بـ https."
-              value={form.mediaUrl}
-              onChange={(e) => setForm({ ...form, mediaUrl: e.target.value })}
-              placeholder="https://example.com/image.jpg"
-            />
-          )}
-
-          {form.type === 'buttons' && (
-            <div>
-              <label className="text-small font-medium mb-1.5 flex items-center gap-1">
-                أزرار الرد السريع (حتى 3)
-                <InfoTip>تظهر للعميل كأزرار، وعند الضغط على زر يُرسل نصه كرد.</InfoTip>
-              </label>
-              <div className="space-y-2">
-                {form.buttons.map((b, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="h-7 w-7 rounded-full bg-primary/10 text-primary text-[11px] font-bold flex items-center justify-center flex-shrink-0">
-                      {i + 1}
-                    </span>
-                    <input
-                      value={b}
-                      onChange={(e) => {
-                        const next = [...form.buttons];
-                        next[i] = e.target.value;
-                        setForm({ ...form, buttons: next });
-                      }}
-                      placeholder={i === 0 ? 'مثال: نعم' : i === 1 ? 'مثال: لا' : 'مثال: لاحقاً'}
-                      maxLength={20}
-                      className="flex-1 h-9 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                ))}
-              </div>
-              <p className="text-[10px] text-muted-light dark:text-muted-dark mt-1.5">حد أقصى 20 حرفاً لكل زر — اترك الزر فارغاً لتجاوزه</p>
-            </div>
-          )}
-
-          {form.type === 'list' && (
-            <>
-              <Input
-                label="عنوان القائمة"
-                value={form.listTitle}
-                onChange={(e) => setForm({ ...form, listTitle: e.target.value })}
-                placeholder="مثال: اختر خدمة"
-              />
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-small font-medium flex items-center gap-1">
-                    عناصر القائمة
-                    <InfoTip>خيارات يختار العميل واحداً منها.</InfoTip>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setForm({ ...form, listItems: [...form.listItems, { label: '', description: '' }] })}
-                    className="text-[11px] font-medium text-primary hover:underline flex items-center gap-1"
-                  >
-                    <Plus className="h-3 w-3" /> إضافة عنصر
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {form.listItems.map((item, i) => (
-                    <div key={i} className="p-2 rounded-card bg-bg-light dark:bg-bg-dark space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <input
-                          value={item.label}
-                          onChange={(e) => {
-                            const next = [...form.listItems];
-                            next[i] = { ...next[i], label: e.target.value };
-                            setForm({ ...form, listItems: next });
-                          }}
-                          placeholder={`العنصر ${i + 1}`}
-                          className="flex-1 h-8 px-2 rounded bg-white dark:bg-surface-dark border border-transparent text-small focus:outline-none focus:border-primary"
-                        />
-                        {form.listItems.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => setForm({ ...form, listItems: form.listItems.filter((_, idx) => idx !== i) })}
-                            className="h-8 w-8 rounded-lg hover:bg-danger/10 text-muted-light dark:text-muted-dark hover:text-danger flex items-center justify-center"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
-                      </div>
-                      <input
-                        value={item.description}
-                        onChange={(e) => {
-                          const next = [...form.listItems];
-                          next[i] = { ...next[i], description: e.target.value };
-                          setForm({ ...form, listItems: next });
-                        }}
-                        placeholder="وصف اختياري"
-                        className="w-full h-7 px-2 rounded bg-white dark:bg-surface-dark border border-transparent text-[11px] focus:outline-none focus:border-primary"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-
-          {form.type === 'poll' && (
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-small font-medium">خيارات الاستطلاع</label>
-                <button
-                  type="button"
-                  onClick={() => setForm({ ...form, pollOptions: [...form.pollOptions, ''] })}
-                  className="text-[11px] font-medium text-primary hover:underline flex items-center gap-1"
-                  disabled={form.pollOptions.length >= 12}
-                >
-                  <Plus className="h-3 w-3" /> إضافة خيار
-                </button>
-              </div>
-              <div className="space-y-2">
-                {form.pollOptions.map((opt, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full border-2 border-muted-light dark:border-muted-dark flex-shrink-0" />
-                    <input
-                      value={opt}
-                      onChange={(e) => {
-                        const next = [...form.pollOptions];
-                        next[i] = e.target.value;
-                        setForm({ ...form, pollOptions: next });
-                      }}
-                      placeholder={`الخيار ${i + 1}`}
-                      className="flex-1 h-9 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
-                    />
-                    {form.pollOptions.length > 2 && (
-                      <button
-                        type="button"
-                        onClick={() => setForm({ ...form, pollOptions: form.pollOptions.filter((_, idx) => idx !== i) })}
-                        className="h-8 w-8 rounded-lg hover:bg-danger/10 text-muted-light dark:text-muted-dark hover:text-danger flex items-center justify-center"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <p className="text-[10px] text-muted-light dark:text-muted-dark mt-1.5">حد أدنى خياران، حد أقصى 12 خياراً</p>
-            </div>
-          )}
-
-        </div>
-        <div className="absolute bottom-0 inset-x-0 px-5 py-3 bg-white dark:bg-surface-dark border-t border-border-light dark:border-border-dark flex items-center justify-end gap-2">
-          <button onClick={() => setDrawerOpen(false)} className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">
-            إلغاء
-          </button>
-          <button onClick={submit} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium" style={{ color: '#fff' }}>
-            {editing ? 'حفظ التغييرات' : 'إضافة القالب'}
-          </button>
-        </div>
-      </Drawer>
-    </>
   );
 }
 
