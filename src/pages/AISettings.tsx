@@ -53,7 +53,7 @@ import {
   BEHAVIOR_GROUP_ORDER,
   type BehaviorGroup,
   type ChannelOverride,
-  type AISettings as AISettingsType, type AILanguage, type AITone, type AIDialect, type AIGulfCountry, type AIModel, type AIProvider, type DaySchedule,
+  type AISettings as AISettingsType, type AILanguage, type AITone, type AIDialect, type AIGulfCountry, type AIHours, type AIModel, type AIProvider, type DaySchedule,
 } from '@/store/useAIStore';
 import { useDataStore } from '@/store/useDataStore';
 import { useAIUsageStore, type AIFeature } from '@/store/useAIUsageStore';
@@ -127,6 +127,12 @@ function accountsCount(n: number): string {
   const tail = n % 100;
   return tail >= 11 && tail <= 99 ? `${n} حساباً` : `${n} حساب`;
 }
+
+const AI_HOURS_OPTIONS: { value: AIHours; label: string; desc: string }[] = [
+  { value: 'always', label: 'تشغيل كلي 24/7', desc: 'المساعد يرد في كل الأوقات، داخل دوام الموظفين وخارجه.' },
+  { value: 'off_hours', label: 'خارج دوام الموظفين', desc: 'الموظفون يردون خلال الدوام، والمساعد يرد خارجه ويسجّل الطلب.' },
+  { value: 'work_hours', label: 'خلال دوام الموظفين', desc: 'المساعد يرد مع الموظفين خلال الدوام فقط، وخارجه تُرسل رسالة خارج الدوام.' },
+];
 
 const DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
@@ -1653,20 +1659,38 @@ export default function AISettings(): JSX.Element {
           <SectionCard
             icon={<Clock className="h-5 w-5" />}
             title="ساعات عمل المساعد"
-            description="المساعد الذكي يعمل دائماً افتراضياً. حدّد دوام الموظفين البشريين — خارجه يرد المساعد ويسجّل الطلب."
+            description="اختر متى يرد المساعد الذكي على العملاء، وحدّد دوام الموظفين البشريين."
           >
             <div className="space-y-4">
-              {/* 24/7 toggle */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-bg-light dark:bg-bg-dark">
-                <div>
-                  <p className="text-small font-bold">تشغيل المساعد 24/7</p>
-                  <p className="text-[11px] text-muted-light dark:text-muted-dark">المساعد يرد في كل الأوقات بدون قيود دوام.</p>
-                </div>
-                <Toggle checked={form.alwaysOn} onChange={(v) => update('alwaysOn', v)} />
+              <div role="radiogroup" aria-label="متى يرد المساعد" className="space-y-2">
+                {AI_HOURS_OPTIONS.map((o) => {
+                  const active = form.aiHours === o.value;
+                  return (
+                    <button
+                      key={o.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => update('aiHours', o.value)}
+                      className={cn(
+                        'w-full p-3 rounded-xl border-2 text-start flex items-start gap-3 transition-colors',
+                        active ? 'border-primary bg-primary/5' : 'border-border-light dark:border-border-dark hover:border-primary/30',
+                      )}
+                    >
+                      <span className={cn('mt-0.5 h-4 w-4 rounded-full border-2 flex items-center justify-center flex-shrink-0', active ? 'border-primary' : 'border-muted-light/60')}>
+                        {active && <span className="h-2 w-2 rounded-full bg-primary" />}
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-small font-bold">{o.label}</span>
+                        <span className="block text-[11px] text-muted-light dark:text-muted-dark leading-relaxed">{o.desc}</span>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Per-day schedule (hidden when 24/7) */}
-              {!form.alwaysOn && (
+              {/* Staff hours — what the two timed options are measured against */}
+              {form.aiHours !== 'always' && (
                 <>
                   <div>
                     <p className="text-small font-semibold mb-3">دوام الموظفين البشريين</p>
@@ -1733,7 +1757,7 @@ export default function AISettings(): JSX.Element {
                   <div>
                     <p className="text-small font-semibold mb-2 flex items-center gap-1">
                       رسالة خارج الدوام
-                      <InfoTip>تُرسل للعميل إذا كتب خارج ساعات العمل.</InfoTip>
+                      <InfoTip>تُرسل للعميل إذا كتب خارج دوام الموظفين.</InfoTip>
                     </p>
                     <textarea
                       value={form.offHoursMessage}

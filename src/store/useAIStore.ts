@@ -6,6 +6,11 @@ export type AITone = 'short' | 'friendly' | 'formal' | 'luxury';
 export type AIDialect = 'msa' | 'gulf' | 'egyptian' | 'levantine';
 export type AIGulfCountry = 'sa' | 'ae' | 'om' | 'kw' | 'qa' | 'bh';
 export type AIProvider = 'openai' | 'anthropic' | 'google';
+/**
+ * When the assistant answers: around the clock, only while staff are off duty,
+ * or only during staff hours. Staff hours are `schedule`.
+ */
+export type AIHours = 'always' | 'off_hours' | 'work_hours';
 export type AIModel =
   // OpenAI
   | 'gpt-4o' | 'gpt-4o-mini' | 'gpt-4-turbo' | 'gpt-3.5-turbo'
@@ -90,7 +95,7 @@ export interface AISettings {
   transferTargetType: 'any' | 'agent' | 'department';
   transferAgentId: string;
   transferDepartmentId: string;
-  alwaysOn: boolean;
+  aiHours: AIHours;
   /** 7 entries — index 0 = Sunday, 6 = Saturday */
   schedule: DaySchedule[];
   offHoursMessage: string;
@@ -161,7 +166,7 @@ export const BEHAVIOR_GROUPS = {
     'transferTargetType',
     'transferAgentId',
     'transferDepartmentId',
-    'alwaysOn',
+    'aiHours',
     'schedule',
     'offHoursMessage',
   ],
@@ -283,7 +288,7 @@ const DEFAULT_SETTINGS: AISettings = {
   transferTargetType: 'any',
   transferAgentId: '',
   transferDepartmentId: '',
-  alwaysOn: false,
+  aiHours: 'off_hours',
   // Sun-Thu work, Fri-Sat off (Gulf default)
   schedule: [
     { ...WEEKDAY },
@@ -302,12 +307,22 @@ const OVERRIDES_KEY = 'qhub_ai_channel_overrides';
 /** الصيغة القديمة: سلوك كامل لكل حساب. تُقرأ مرة لترحيلها ولا يُكتب فيها. */
 const LEGACY_BEHAVIORS_KEY = 'qhub_ai_channel_behaviors';
 
+/** `alwaysOn` was a single switch: on = 24/7, off = only outside staff hours. */
+function migrateHours<T extends Record<string, unknown>>(values: T): T {
+  if (values.aiHours === undefined && typeof values.alwaysOn === 'boolean') {
+    const next: Record<string, unknown> = { ...values, aiHours: values.alwaysOn ? 'always' : 'off_hours' };
+    delete next.alwaysOn;
+    return next as T;
+  }
+  return values;
+}
+
 function loadInitial(): AISettings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    const stored = JSON.parse(raw) as Partial<AISettings> & Record<string, unknown>;
+    const stored = migrateHours(JSON.parse(raw) as Partial<AISettings> & Record<string, unknown>);
     // The credit fields came before usage was counted in tokens.
     for (const k of ['creditBalance', 'creditWarningEnabled', 'creditWarningThreshold', 'monthlyLimitEnabled', 'monthlyLimit']) delete stored[k];
     return { ...DEFAULT_SETTINGS, ...stored };
@@ -323,7 +338,7 @@ function loadOverrides(): Record<string, ChannelOverride> {
   const base = pickBehavior(DEFAULT_SETTINGS);
   const fill = (group: BehaviorGroup, values: Partial<AIBehavior>): Partial<AIBehavior> => ({
     ...pickGroup(base, group),
-    ...pickGroup({ ...base, ...values }, group),
+    ...pickGroup({ ...base, ...migrateHours(values as Record<string, unknown>) } as AIBehavior, group),
   });
   try {
     const raw = localStorage.getItem(OVERRIDES_KEY);
