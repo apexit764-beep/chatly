@@ -312,33 +312,59 @@ export interface Campaign {
   /** ID of the WhatsApp/Email channel used to send this campaign */
   senderChannelId?: string;
   attachmentName?: string;
+  /** The template the campaign sends, when it was built from one. */
+  templateId?: string;
+  /** Why a failed campaign was not sent. */
+  failureReason?: string;
 }
 
-export type CampaignTemplateCategory = 'welcome' | 'promo' | 'reminder' | 'followup' | 'announcement' | 'custom';
+/** Where Meta's review of a WhatsApp template stands. Meta sets it; the client never does. */
+export type WhatsAppTemplateStatus = 'pending' | 'approved' | 'rejected' | 'paused' | 'disabled' | 'appealed';
 
-export type CampaignTemplateType = 'text-media' | 'buttons' | 'list' | 'poll' | 'ai-prompt';
+/** Meta's template categories that a campaign can use. */
+export type WhatsAppTemplateCategory = 'marketing' | 'utility';
 
+export type TemplateLanguage = 'ar' | 'en';
+
+/**
+ * What a WhatsApp template button does when the customer taps it. Only a quick
+ * reply comes back to us: it lands in the inbox as the customer's message and
+ * opens a conversation, so it counts toward the plan's conversations. The other
+ * three act on the customer's phone and never reach the system.
+ */
+export type TemplateButtonType = 'quick_reply' | 'url' | 'phone' | 'copy_code';
+
+export interface TemplateButton {
+  type: TemplateButtonType;
+  /** The label on the button. */
+  text: string;
+  /** url: the page it opens. */
+  url?: string;
+  /** phone: the number it dials, with its country code (+968…). */
+  phone?: string;
+  /** copy_code: the code it copies. */
+  code?: string;
+}
+
+/**
+ * A reusable campaign message. WhatsApp templates go through Meta's review on the
+ * client's WhatsApp account and carry its status; Gmail templates don't, and are
+ * usable as soon as they are saved.
+ */
 export interface CampaignTemplate {
   id: string;
+  channel: CampaignChannelType;
+  /** WhatsApp: Meta's name — lowercase English letters, digits and _. Gmail: free text. */
   name: string;
-  description?: string;
-  category: CampaignTemplateCategory;
-  type: CampaignTemplateType;
   message: string;
-  /** For text-media type — optional image/video URL */
-  mediaUrl?: string;
-  /** For buttons type — labels of up to 3 reply buttons */
-  buttons?: string[];
-  /** For list type — title + items */
-  listTitle?: string;
-  listItems?: { label: string; description?: string }[];
-  /** For poll type — question is in `message`, options listed here */
-  pollOptions?: string[];
-  /** For ai-prompt type — the prompt to send to the LLM */
-  aiPrompt?: string;
-  defaultAudience: 'all' | ContactType;
-  defaultMinDelay: number;
-  defaultMaxDelay: number;
+  /** WhatsApp only */
+  language?: TemplateLanguage;
+  /** WhatsApp only */
+  category?: WhatsAppTemplateCategory;
+  /** WhatsApp only */
+  status?: WhatsAppTemplateStatus;
+  /** WhatsApp only */
+  buttons?: TemplateButton[];
   usageCount: number;
   createdAt: string;
 }

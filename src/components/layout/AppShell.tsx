@@ -12,6 +12,7 @@ import { TrialBanner } from '@components/billing/TrialBanner';
 import { useUIStore } from '@/store/useUIStore';
 import { useLiveSimulator } from '@/hooks/useLiveSimulator';
 import { useAutoClose } from '@/hooks/useAutoClose';
+import { useScheduledCampaigns } from '@/hooks/useScheduledCampaigns';
 import { getAppMode } from '@/utils/mode';
 import { Footer } from './Footer';
 
@@ -25,6 +26,8 @@ export function AppShell(): JSX.Element {
   useLiveSimulator();
   // Closes idle conversations on each account's own auto-close period
   useAutoClose();
+  // Sends due scheduled campaigns, failing those whose template is no longer approved
+  useScheduledCampaigns();
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg-light dark:bg-bg-dark text-[14px] text-[#111827] dark:text-[#F1F5F9]">
       <div className="flex flex-1 min-h-0">

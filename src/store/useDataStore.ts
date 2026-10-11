@@ -119,9 +119,16 @@ interface DataState {
   // Campaign actions
   addCampaign: (c: Omit<Campaign, 'id' | 'sentCount' | 'openRate' | 'createdAt'>) => void;
   updateCampaign: (id: string, patch: Partial<Campaign>) => void;
+  /**
+   * Runs every scheduled template campaign whose time has come. One whose WhatsApp
+   * template is no longer approved (paused, disabled, or gone) is not sent and is
+   * marked failed with the reason; the rest are sent.
+   */
+  settleDueCampaigns: (now?: number) => void;
 
   // Campaign template actions
-  addCampaignTemplate: (t: Omit<CampaignTemplate, 'id' | 'usageCount' | 'createdAt'>) => void;
+  /** Returns the new template's id. */
+  addCampaignTemplate: (t: Omit<CampaignTemplate, 'id' | 'usageCount' | 'createdAt'>) => string;
   updateCampaignTemplate: (id: string, patch: Partial<CampaignTemplate>) => void;
   deleteCampaignTemplate: (id: string) => void;
   incrementCampaignTemplateUsage: (id: string) => void;
@@ -541,13 +548,40 @@ export const useDataStore = create<DataState>((set, get) => ({
       campaigns: state.campaigns.map((c) => (c.id === id ? { ...c, ...patch } : c)),
     })),
 
-  addCampaignTemplate: (t) =>
+  settleDueCampaigns: (now = Date.now()) => {
+    const { campaigns, campaignTemplates } = get();
+    const due = campaigns.filter(
+      (c) => c.status === 'scheduled' && c.templateId && c.scheduledAt && Date.parse(c.scheduledAt) <= now,
+    );
+    if (due.length === 0) return;
+    const settled = new Map<string, Partial<Campaign>>();
+    for (const c of due) {
+      const tpl = campaignTemplates.find((t) => t.id === c.templateId);
+      // Gmail templates have no status; a WhatsApp one must still be approved at send time.
+      const blocked = !tpl ? 'القالب محذوف' : tpl.channel === 'whatsapp' && tpl.status !== 'approved'
+        ? tpl.status === 'paused' ? 'القالب موقوف مؤقتًا من Meta'
+          : tpl.status === 'disabled' ? 'القالب معطّل من Meta'
+          : 'القالب غير معتمد من Meta'
+        : null;
+      settled.set(c.id, blocked
+        ? { status: 'failed', sentCount: 0, failureReason: blocked }
+        : { status: 'completed', sentCount: c.targetCount });
+    }
+    set((state) => ({
+      campaigns: state.campaigns.map((c) => (settled.has(c.id) ? { ...c, ...settled.get(c.id) } : c)),
+    }));
+  },
+
+  addCampaignTemplate: (t) => {
+    const id = newId();
     set((state) => ({
       campaignTemplates: [
-        { ...t, id: newId(), usageCount: 0, createdAt: new Date().toISOString() },
+        { ...t, id, usageCount: 0, createdAt: new Date().toISOString() },
         ...state.campaignTemplates,
       ],
-    })),
+    }));
+    return id;
+  },
   updateCampaignTemplate: (id, patch) =>
     set((state) => ({
       campaignTemplates: state.campaignTemplates.map((t) => (t.id === id ? { ...t, ...patch } : t)),

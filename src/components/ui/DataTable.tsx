@@ -54,6 +54,8 @@ export interface DataTableProps<T> {
   bulkActions?: (selected: T[], clear: () => void) => ReactNode;
   /** Click row */
   onRowClick?: (row: T) => void;
+  /** Extra classes for a row, e.g. to tint failed ones. */
+  rowClassName?: (row: T) => string | undefined;
   /** Optional className for the wrapper card */
   className?: string;
 }
@@ -89,6 +91,7 @@ export function DataTable<T>({
   onSelectionChange,
   bulkActions,
   onRowClick,
+  rowClassName,
   className,
 }: DataTableProps<T>): JSX.Element {
   const [search, setSearch] = useState('');
@@ -271,7 +274,8 @@ export function DataTable<T>({
                     'transition-colors',
                     onRowClick && 'cursor-pointer',
                     'hover:bg-bg-light dark:hover:bg-bg-dark/40',
-                    isSelected && 'bg-primary/5'
+                    isSelected && 'bg-primary/5',
+                    rowClassName?.(row)
                   )}
                 >
                   {selectable && (
