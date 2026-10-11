@@ -8,7 +8,6 @@ import {
   BookOpen,
   Ban,
   Clock,
-  Timer,
   Save,
   Check,
   Zap,
@@ -60,12 +59,11 @@ import { useDataStore } from '@/store/useDataStore';
 import { useAIUsageStore, type AIFeature } from '@/store/useAIUsageStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import {
-  UNSUPPORTED_FEATURES,
   assistantStop,
   checkUsageAlert,
   cycleFor,
-  featureAverage,
   isConnected,
+  isFeatureSupported,
   tokensBetween,
 } from '@/utils/aiUsage';
 import { useUIStore } from '@/store/useUIStore';
@@ -280,8 +278,6 @@ export default function AISettings(): JSX.Element {
     { id: '3', name: 'الأسئلة الشائعة.txt', size: '120 KB', date: '2025-06-15' },
   ]);
 
-  /** Raw text of the auto-close field, so it can be cleared while typing. */
-  const [autoCloseText, setAutoCloseText] = useState(String(saved.autoCloseHours));
   const [testing, setTesting] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);
 
@@ -299,7 +295,6 @@ export default function AISettings(): JSX.Element {
   const loadForm = (): void => {
     const next = { ...saved, ...resolveBehavior(saved, scopedOverride) };
     setForm(next);
-    setAutoCloseText(String(next.autoCloseHours));
     setModes(modesOf(scopedOverride));
     setDirty(false);
   };
@@ -502,19 +497,12 @@ export default function AISettings(): JSX.Element {
         if (!ok) return;
       }
       setForm((f) => ({ ...f, ...pickGroup(saved, group) }));
-      if (group === 'transfer') setAutoCloseText(String(saved.autoCloseHours));
     }
     setModes((m) => ({ ...m, [group]: mode }));
     setDirty(true);
   };
 
   const save = async (): Promise<void> => {
-    // The switch is what turns auto-close off, so an enabled card with no hours
-    // is an unfinished entry rather than a way of disabling it.
-    if (form.autoCloseEnabled && form.autoCloseHours < 1) {
-      showToast('مدة الإغلاق التلقائي مطلوبة — أدخل ساعة واحدة على الأقل أو أطفئ الإغلاق التلقائي', 'error');
-      return;
-    }
     // مساعد «مُفعّل» بلا مفتاح حالة مكسورة: يَعِد العميل بالرد ولا يستطيع.
     // الفحص حين تتغيّر إعدادات الاتصال المشتركة فقط — حفظ نبرة حساب أو
     // معرفته لا يُمنع بسبب مفتاح لم يلمسه المستخدم في هذا الحفظ.
@@ -608,7 +596,11 @@ export default function AISettings(): JSX.Element {
   type PageTab = 'connection' | 'features' | 'behavior';
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const [tab, setTab] = useState<PageTab>(tabParam === 'features' || tabParam === 'behavior' ? tabParam : 'connection');
+  const [tabChoice, setTab] = useState<PageTab>(tabParam === 'features' || tabParam === 'behavior' ? tabParam : 'connection');
+  // Features and usage only exist once an AI provider is connected; until then
+  // the page opens on the connection tab whatever was asked for.
+  const featuresAvailable = isConnected(saved);
+  const tab: PageTab = tabChoice === 'features' && !featuresAvailable ? 'connection' : tabChoice;
   // The usage alert's notification links here with ?tab=features — also when the page is already open.
   useEffect(() => {
     if (tabParam === 'features' || tabParam === 'behavior' || tabParam === 'connection') setTab(tabParam);
@@ -696,6 +688,7 @@ export default function AISettings(): JSX.Element {
           <KeyRound className="h-4 w-4" />
           إعدادات الربط
         </button>
+        {featuresAvailable && (
         <button
           onClick={() => setTab('features')}
           className={cn(
@@ -706,6 +699,7 @@ export default function AISettings(): JSX.Element {
           <Gauge className="h-4 w-4" />
           الميزات والرصيد
         </button>
+        )}
         <button
           onClick={() => setTab('behavior')}
           className={cn(
@@ -1178,31 +1172,20 @@ export default function AISettings(): JSX.Element {
           >
             <div className="divide-y divide-border-light dark:divide-border-dark">
               {AI_FEATURES.map((f) => {
-                const supported = !UNSUPPORTED_FEATURES[form.provider].includes(f.key);
-                const avg = featureAverage(usageRows, f.key);
+                const supported = isFeatureSupported(form.model, f.key);
                 return (
                   <FeatureRow
                     key={f.key}
                     icon={<f.Icon className="h-4 w-4" />}
                     title={f.title}
                     desc={f.desc}
-                    usage={
-                      !supported
-                        ? { tone: 'unavailable', text: 'غير متاح مع المزوّد الحالي' }
-                        : avg == null
-                          ? { tone: 'none', text: 'لا يوجد استهلاك بعد' }
-                          : { tone: 'avg', text: `متوسط ${avg.toLocaleString('en-US')} توكن/${f.unit}` }
-                    }
+                    unavailable={!supported}
                     checked={supported && Boolean(form[f.field])}
-                    disabled={!supported}
                     onChange={(v) => update(f.field, v)}
                   />
                 );
               })}
             </div>
-            <p className="text-[11px] text-muted-light dark:text-muted-dark mt-3 leading-relaxed">
-              المتوسط محسوب من استهلاكك الفعلي، وليس سعرًا ثابتًا.
-            </p>
           </SectionCard>
 
           <div className="space-y-5">
@@ -1573,8 +1556,17 @@ export default function AISettings(): JSX.Element {
             icon={<UserCog className="h-5 w-5" />}
             title="التحويل لموظف بشري"
             description="متى يحوّل المساعد المحادثة لموظف بشري، ولمن تذهب المحادثة بعد التحويل."
+            headerExtra={
+              <Toggle checked={form.transferEnabled} onChange={(v) => update('transferEnabled', v)} label="التحويل لموظف بشري" />
+            }
           >
-            <div className="space-y-4">
+            {/* Off: the assistant keeps every conversation; the rules stay as set for when it is turned back on. */}
+            {!form.transferEnabled && (
+              <p className="text-[12px] text-muted-light dark:text-muted-dark mb-3 leading-relaxed">
+                التحويل موقوف — المساعد لا يحوّل أي محادثة لموظف. القواعد أدناه محفوظة وتعود عند التشغيل.
+              </p>
+            )}
+            <div className={cn('space-y-4 transition-opacity', !form.transferEnabled && 'opacity-50 pointer-events-none')} aria-disabled={!form.transferEnabled}>
               {/* When to transfer */}
               <div>
                 <div className="divide-y divide-border-light dark:divide-border-dark">
@@ -1655,8 +1647,7 @@ export default function AISettings(): JSX.Element {
           </SectionCard>
           </div>
 
-          {/* Second column: working hours, then auto-close directly under it.
-              Only the working-hours card is muted with the assistant. */}
+          {/* Second column: working hours. Auto-close now lives in Settings › Conversations. */}
           <div className="space-y-5">
           <div className={mutedIfOff} aria-disabled={!form.enabled}>
           <SectionCard
@@ -1756,47 +1747,6 @@ export default function AISettings(): JSX.Element {
           </SectionCard>
           </div>
 
-          {/* Auto-close — deliberately outside `mutedIfOff`: it closes idle
-              conversations whether or not the assistant is running. */}
-          <SectionCard
-            icon={<Timer className="h-5 w-5" />}
-            title="الإغلاق التلقائي للمحادثات"
-            description="يحدّد عدد الساعات التي يجب أن تمر بدون رد من العميل قبل إغلاق محادثته تلقائياً. يعمل سواء كان المساعد الذكي مُشغّلاً أو موقوفاً."
-            headerExtra={
-              <Toggle
-                checked={form.autoCloseEnabled}
-                onChange={(v) => update('autoCloseEnabled', v)}
-              />
-            }
-          >
-            {/* Off: nothing but the icon, title, description and the switch. */}
-            {form.autoCloseEnabled && (
-            <div>
-              <label htmlFor="auto-close-hours" className="text-small font-semibold block mb-1.5">
-                إغلاق المحادثة تلقائياً بعد (بالساعات)
-              </label>
-              <input
-                id="auto-close-hours"
-                type="text"
-                inputMode="numeric"
-                value={autoCloseText}
-                onChange={(e) => {
-                  // Integers only: strips a leading '-', decimal points and the
-                  // 'e' that a number input would otherwise accept.
-                  const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
-                  setAutoCloseText(digits);
-                  update('autoCloseHours', digits === '' ? 0 : Number(digits));
-                }}
-                placeholder="ساعة"
-                className="w-full h-11 px-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small font-bold focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-              />
-              <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1.5 leading-relaxed">
-                حقل رقمي — أرقام صحيحة فقط (مثال: 12، 24، 48). المدة تُحتسب من آخر رسالة أرسلها موظف،
-                ولا تُغلق المحادثة إذا رد العميل بعدها.
-              </p>
-            </div>
-            )}
-          </SectionCard>
           </div>
         </div>
       )}
@@ -1988,7 +1938,7 @@ function FeatureRow({
   icon,
   title,
   desc,
-  usage,
+  unavailable,
   checked,
   disabled,
   onChange,
@@ -1996,7 +1946,8 @@ function FeatureRow({
   icon: React.ReactNode;
   title: string;
   desc: string;
-  usage: { tone: 'avg' | 'none' | 'unavailable'; text: string };
+  /** The selected model can't take this kind of input. */
+  unavailable?: boolean;
   checked: boolean;
   disabled?: boolean;
   onChange: (v: boolean) => void;
@@ -2009,19 +1960,16 @@ function FeatureRow({
       )}>
         {icon}
       </span>
-      <div className={cn('flex-1 min-w-0', disabled && 'opacity-60')}>
+      <div className={cn('flex-1 min-w-0', unavailable && 'opacity-60')}>
         <p className="text-small font-semibold">{title}</p>
         <p className="text-[11px] text-muted-light dark:text-muted-dark">{desc}</p>
       </div>
-      <span className={cn(
-        'text-[10.5px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap flex-shrink-0',
-        usage.tone === 'avg' && 'bg-primary/10 text-primary',
-        usage.tone === 'none' && 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark',
-        usage.tone === 'unavailable' && 'bg-[#FEF3C7] text-[#B45309] dark:bg-warning/15 dark:text-warning',
-      )}>
-        {usage.text}
-      </span>
-      <Toggle checked={checked} onChange={onChange} disabled={disabled} label={title} />
+      {unavailable && (
+        <span className="text-[10.5px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap flex-shrink-0 bg-[#FEF3C7] text-[#B45309] dark:bg-warning/15 dark:text-warning">
+          هذه الميزة غير متاحة في النموذج الحالي
+        </span>
+      )}
+      <Toggle checked={checked} onChange={onChange} disabled={disabled || unavailable} label={title} />
     </div>
   );
 }

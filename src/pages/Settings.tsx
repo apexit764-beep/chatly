@@ -230,12 +230,15 @@ function GeneralTab(): JSX.Element {
 }
 
 function ConversationsTab(): JSX.Element {
-  const target = useSettingsStore((s) => s.general.firstReplyTargetMinutes);
+  const general = useSettingsStore((s) => s.general);
   const setGeneral = useSettingsStore((s) => s.setGeneral);
   const showToast = useUIStore((s) => s.showToast);
   // Text, not a number: an emptied field stays empty while typing instead of snapping back.
-  const [replyTarget, setReplyTarget] = useState(String(target));
+  const [replyTarget, setReplyTarget] = useState(String(general.firstReplyTargetMinutes));
   const [replyTargetError, setReplyTargetError] = useState<string | null>(null);
+  const [autoCloseEnabled, setAutoCloseEnabled] = useState(general.autoCloseEnabled);
+  const [autoCloseHours, setAutoCloseHours] = useState(String(general.autoCloseHours));
+  const [autoCloseError, setAutoCloseError] = useState<string | null>(null);
 
   const save = (): void => {
     const minutes = Number(replyTarget);
@@ -243,7 +246,17 @@ function ConversationsTab(): JSX.Element {
       setReplyTargetError('أدخل مدة بين 1 و1440 دقيقة');
       return;
     }
-    setGeneral({ firstReplyTargetMinutes: minutes });
+    // The switch is what turns auto-close off, so an enabled one with no hours is unfinished.
+    const hours = Number(autoCloseHours);
+    if (autoCloseEnabled && (!autoCloseHours || hours < 1)) {
+      setAutoCloseError('أدخل ساعة واحدة على الأقل، أو أطفئ الإغلاق التلقائي');
+      return;
+    }
+    setGeneral({
+      firstReplyTargetMinutes: minutes,
+      autoCloseEnabled,
+      ...(autoCloseEnabled ? { autoCloseHours: hours } : {}),
+    });
     showToast('تم حفظ الإعدادات', 'success');
   };
 
@@ -264,6 +277,37 @@ function ConversationsTab(): JSX.Element {
             className={cn('w-24 h-10 px-3 rounded-input bg-white dark:bg-surface-dark border text-body tabular-nums focus:outline-none', replyTargetError ? 'border-danger focus:border-danger' : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10')}
           />
           <span className="text-small text-muted-light dark:text-muted-dark">دقيقة</span>
+        </div>
+      </Row>
+      <Row
+        label="الإغلاق التلقائي للمحادثات"
+        hint="تُغلق المحادثة إذا مرّت هذه المدة على آخر رسالة من موظف بدون رد من العميل. يعمل سواء كان المساعد الذكي مُشغّلاً أو موقوفاً، ولكل الحسابات."
+        error={autoCloseError}
+      >
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={autoCloseEnabled}
+            aria-label="الإغلاق التلقائي للمحادثات"
+            onClick={() => { setAutoCloseEnabled((v) => !v); setAutoCloseError(null); }}
+            className={cn('relative h-6 w-11 rounded-full transition-colors flex-shrink-0', autoCloseEnabled ? 'bg-primary' : 'bg-border-light dark:bg-border-dark')}
+          >
+            <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all', autoCloseEnabled ? 'start-0.5' : 'end-0.5')} />
+          </button>
+          {autoCloseEnabled && (
+            <>
+              <span className="text-small text-muted-light dark:text-muted-dark">بعد</span>
+              <input
+                inputMode="numeric"
+                value={autoCloseHours}
+                onChange={(e) => { setAutoCloseHours(e.target.value.replace(/\D/g, '').slice(0, 4)); setAutoCloseError(null); }}
+                aria-label="ساعات الإغلاق التلقائي"
+                className={cn('w-24 h-10 px-3 rounded-input bg-white dark:bg-surface-dark border text-body tabular-nums focus:outline-none', autoCloseError ? 'border-danger focus:border-danger' : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10')}
+              />
+              <span className="text-small text-muted-light dark:text-muted-dark">ساعة</span>
+            </>
+          )}
         </div>
       </Row>
       <div className="flex justify-end pt-6">
