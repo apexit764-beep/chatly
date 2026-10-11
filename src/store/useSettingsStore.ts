@@ -40,6 +40,8 @@ export interface GeneralPrefs {
    * moved between departments, on different scales.
    */
   firstReplyTargetMinutes: number;
+  /** When the company details were last saved — the first setup step counts as done from then. */
+  companySavedAt?: string;
 }
 
 export interface RatingPrefs {

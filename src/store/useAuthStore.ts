@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { getAppMode } from '@/utils/mode';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { useAccountStore } from '@/store/useAccountStore';
 import { verifyBackupCode, verifyTotpCode } from '@/utils/twoFactor';
 
 interface AuthUser {
@@ -79,7 +80,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { ok: false, error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' };
     }
 
-    const user: AuthUser = { email: cleaned, name: creds.name, role: mode === 'admin' ? 'admin' : 'client' };
+    // What the user entered at sign-up (or saved on their profile) is their
+    // profile: name and mobile come from their account record.
+    const account = useAccountStore.getState().findAccount(cleaned);
+    const user: AuthUser = {
+      email: cleaned,
+      name: account?.name || creds.name,
+      ...(account?.phone ? { phone: account.phone } : {}),
+      role: mode === 'admin' ? 'admin' : 'client',
+    };
 
     // Nothing is persisted while a second factor is still owed — closing the tab
     // mid-flow must not leave a session behind.

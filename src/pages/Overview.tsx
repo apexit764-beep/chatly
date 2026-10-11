@@ -163,9 +163,11 @@ export default function Overview(): JSX.Element {
               {/* No status dot here — availability is shown on the header avatar,
                   and a second green dot on the site-name badge read as a claim
                   about the site rather than about the user. */}
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/15 backdrop-blur ring-1 ring-white/20 text-[11px] font-semibold mb-2">
-                {general.siteName}
-              </span>
+              {general.siteName && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/15 backdrop-blur ring-1 ring-white/20 text-[11px] font-semibold mb-2">
+                  {general.siteName}
+                </span>
+              )}
               <p className="text-h1 font-bold leading-tight">{t('أهلاً،')} {firstName} 👋</p>
               <p className="text-small opacity-90 mt-1">{todayConvs} {t('محادثة اليوم،')} {openConvs} {t('مفتوحة')}</p>
             </div>

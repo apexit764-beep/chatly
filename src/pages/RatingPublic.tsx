@@ -83,7 +83,7 @@ export default function RatingPublic(): JSX.Element {
               <Building className="h-8 w-8 text-white/80" />
             )}
           </div>
-          <p className="text-small opacity-90 mb-1">{general.siteName}</p>
+          {general.siteName && <p className="text-small opacity-90 mb-1">{general.siteName}</p>}
           <h1 className="text-h2 font-bold">تقييم تجربتك</h1>
         </div>
 

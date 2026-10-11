@@ -20,7 +20,7 @@ import { AuthHero } from '@components/auth/AuthHero';
 import { OtpStep } from '@components/auth/OtpStep';
 import { SocialAuthButtons } from '@components/auth/SocialAuthButtons';
 import { ProviderAuthDialog } from '@components/auth/ProviderAuthDialog';
-import { PhoneField } from '@components/ui/PhoneField';
+import { PhoneField, isValidPhone, toE164 } from '@components/ui/PhoneField';
 import { cn } from '@/utils/cn';
 
 export default function SignUp(): JSX.Element {
@@ -70,6 +70,7 @@ export default function SignUp(): JSX.Element {
     if (!email.trim()) { setEmailError('البريد مطلوب'); ok = false; }
     else if (!emailRe.test(email.trim())) { setEmailError('صيغة البريد غير صحيحة'); ok = false; }
     if (!phone.trim()) { setPhoneError('رقم الجوال مطلوب'); ok = false; }
+    else if (!isValidPhone(countryCode, phone)) { setPhoneError('رقم الجوال غير صحيح لهذه الدولة'); ok = false; }
     if (!password) { setPwdError('كلمة المرور مطلوبة'); ok = false; }
     else if (password.length < 6) { setPwdError('كلمة المرور 6 أحرف على الأقل'); ok = false; }
     return ok;
@@ -83,7 +84,8 @@ export default function SignUp(): JSX.Element {
       setLoading(false);
       // Pressing the button is the acceptance, so the moment is stamped here —
       // implicit consent still has to be provable.
-      upsertAccount(email, { name: name.trim(), termsAcceptedAt: new Date().toISOString() });
+      // Sign-up details are the user's own profile, not the company's.
+      upsertAccount(email, { name: name.trim(), phone: toE164(countryCode, phone), termsAcceptedAt: new Date().toISOString() });
       setCooldownUntil(startOtp(email, 'signup'));
       setStep('verify');
     }, 900);
@@ -103,7 +105,7 @@ export default function SignUp(): JSX.Element {
     setPickingProvider(null);
     // Signing up through a provider signs you in. Sending the user to the login
     // form here is what made the buttons look like they did nothing.
-    const result = signInAs({ email: account.email, name: account.name });
+    const result = signInAs({ email: account.email, name: account.name, ...(account.phone ? { phone: account.phone } : {}) });
     if (result.needs2FA) { navigate('/login'); return; }
     navigate('/overview', { replace: true });
   };

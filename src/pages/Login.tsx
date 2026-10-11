@@ -99,7 +99,7 @@ export default function Login(): JSX.Element {
     setPickingProvider(null);
     setError(null);
     // No password is ever seen on this path — the provider is the first factor.
-    const result = signInAs({ email: account.email, name: account.name });
+    const result = signInAs({ email: account.email, name: account.name, ...(account.phone ? { phone: account.phone } : {}) });
     // An account with 2FA on still owes its second factor: the provider proved the
     // identity, not that this is the right person at this keyboard. Staying put lets
     // the challenge panel take over, exactly as the password path does.

@@ -35,6 +35,7 @@ import { QrCode } from '@components/ui/QrCode';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useInboxStore } from '@/store/useInboxStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useAccountStore } from '@/store/useAccountStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { cn } from '@/utils/cn';
@@ -135,13 +136,8 @@ function GeneralTab(): JSX.Element {
   const showToast = useUIStore((s) => s.showToast);
   const [siteName, setSiteName] = useState(general.siteName);
   const [companyLogo, setCompanyLogo] = useState(general.companyLogo);
-  const [siteNameError, setSiteNameError] = useState<string | null>(null);
   const [industry, setIndustry] = useState(general.industry);
   const [companySize, setCompanySize] = useState(general.companySize);
-  const [country, setCountry] = useState(general.country);
-  const phoneMatch = general.phone.match(/^(\+\d{1,4})\s*(.*)$/);
-  const [phoneCountryCode, setPhoneCountryCode] = useState(phoneMatch ? phoneMatch[1] : '+968');
-  const [phoneDigits, setPhoneDigits] = useState(phoneMatch ? phoneMatch[2] : general.phone);
 
   const onLogoChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0];
@@ -153,16 +149,20 @@ function GeneralTab(): JSX.Element {
     reader.readAsDataURL(file);
   };
 
+  // Every field here is optional. The user's own name, email and mobile live on
+  // their profile, not on the company.
   const save = (): void => {
-    if (!siteName.trim()) { setSiteNameError('الاسم مطلوب'); return; }
-    setGeneral({ siteName, companyLogo, industry, companySize, country, phone: `${phoneCountryCode} ${phoneDigits}` });
+    setGeneral({ siteName: siteName.trim(), companyLogo, industry, companySize, companySavedAt: new Date().toISOString() });
     showToast('تم حفظ الإعدادات', 'success');
   };
 
+  const selectClass = 'w-full max-w-sm h-10 px-3 rounded-input bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10';
+  const clearClass = 'h-10 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed';
+
   return (
     <div>
-      <TabHeader icon={<Building className="h-5 w-5" />} title="إعدادات الشركة" subtitle="بيانات الشركة الأساسية التي تظهر للعملاء" />
-      <Row label={<>شعار الشركة <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} hint="يظهر في البانر والصفحات الأخرى (PNG/JPG, الحد الأقصى 1MB)">
+      <TabHeader icon={<Building className="h-5 w-5" />} title="إعدادات الشركة" subtitle="بيانات الشركة الأساسية التي تظهر لجهات الاتصال" />
+      <Row label="شعار الشركة" hint="يظهر في البانر والصفحات الأخرى (PNG/JPG, الحد الأقصى 1MB)">
         <div className="flex items-center gap-3">
           <div className="h-16 w-16 rounded-xl border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark flex items-center justify-center overflow-hidden flex-shrink-0">
             {companyLogo ? (
@@ -188,56 +188,38 @@ function GeneralTab(): JSX.Element {
           </div>
         </div>
       </Row>
-      <Row label={<>اسم الشركة <span className="text-danger ms-0.5">*</span></>} hint="يظهر في عنوان الصفحة والإيميلات والمحادثات" error={siteNameError}>
-        <input value={siteName} onChange={(e) => { setSiteName(e.target.value); setSiteNameError(null); }} className={cn('w-full h-10 px-3 rounded-input bg-white dark:bg-surface-dark border text-body focus:outline-none', siteNameError ? 'border-danger focus:border-danger' : 'border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10')} />
+      <Row label="اسم الشركة" hint="يظهر في عنوان الصفحة والإيميلات والمحادثات">
+        <input value={siteName} onChange={(e) => setSiteName(e.target.value)} className="w-full h-10 px-3 rounded-input bg-white dark:bg-surface-dark border text-body focus:outline-none border-border-light dark:border-border-dark focus:border-primary focus:ring-2 focus:ring-primary/10" />
       </Row>
-      <Row label={<>القطاع <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} hint="مجال عمل الشركة">
-        <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="w-full max-w-xs h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
-          <option value="real_estate">العقارات</option>
-          <option value="retail">التجزئة والتجارة</option>
-          <option value="healthcare">الرعاية الصحية</option>
-          <option value="education">التعليم</option>
-          <option value="hospitality">الضيافة والسياحة</option>
-          <option value="automotive">السيارات</option>
-          <option value="finance">المالية والبنوك</option>
-          <option value="tech">التقنية</option>
-          <option value="services">الخدمات</option>
-          <option value="other">أخرى</option>
-        </select>
+      <Row label="القطاع" hint="مجال عمل الشركة">
+        <div className="flex items-center gap-2">
+          <select value={industry} onChange={(e) => setIndustry(e.target.value)} aria-label="القطاع" className={selectClass}>
+            <option value="">اختر القطاع</option>
+            <option value="real_estate">العقارات</option>
+            <option value="retail">التجزئة والتجارة</option>
+            <option value="healthcare">الرعاية الصحية</option>
+            <option value="education">التعليم</option>
+            <option value="hospitality">الضيافة والسياحة</option>
+            <option value="automotive">السيارات</option>
+            <option value="finance">المالية والبنوك</option>
+            <option value="tech">التقنية</option>
+            <option value="services">الخدمات</option>
+            <option value="other">أخرى</option>
+          </select>
+          <button type="button" onClick={() => setIndustry('')} disabled={!industry} className={clearClass}>مسح</button>
+        </div>
       </Row>
-      <Row label={<>حجم الشركة <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} hint="عدد الموظفين التقريبي">
-        <select value={companySize} onChange={(e) => setCompanySize(e.target.value)} className="w-full max-w-xs h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
-          <option value="1-10">1 - 10 موظفين</option>
-          <option value="11-50">11 - 50 موظف</option>
-          <option value="51-200">51 - 200 موظف</option>
-          <option value="201-500">201 - 500 موظف</option>
-          <option value="500+">أكثر من 500</option>
-        </select>
-      </Row>
-      <Row label={<>الدولة <span className="text-danger ms-0.5">*</span></>} hint="موقع المقر الرئيسي">
-        <select value={country} onChange={(e) => setCountry(e.target.value)} className="w-full max-w-xs h-10 px-3 rounded-input bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-body focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
-          <option value="OM">عُمان</option>
-          <option value="AE">الإمارات</option>
-          <option value="SA">السعودية</option>
-          <option value="BH">البحرين</option>
-          <option value="KW">الكويت</option>
-          <option value="QA">قطر</option>
-          <option value="JO">الأردن</option>
-          <option value="PS">فلسطين</option>
-          <option value="EG">مصر</option>
-          <option value="IQ">العراق</option>
-          <option value="LB">لبنان</option>
-          <option value="MA">المغرب</option>
-        </select>
-      </Row>
-      <Row label={<>رقم الهاتف <span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} hint="رقم التواصل الرئيسي للشركة">
-        <div className="w-full max-w-xs">
-          <PhoneField
-            countryCode={phoneCountryCode}
-            phone={phoneDigits}
-            onCountryCodeChange={setPhoneCountryCode}
-            onPhoneChange={setPhoneDigits}
-          />
+      <Row label="حجم الشركة" hint="عدد الموظفين التقريبي">
+        <div className="flex items-center gap-2">
+          <select value={companySize} onChange={(e) => setCompanySize(e.target.value)} aria-label="حجم الشركة" className={selectClass}>
+            <option value="">اختر حجم الشركة</option>
+            <option value="1-10">1 - 10 موظفين</option>
+            <option value="11-50">11 - 50 موظف</option>
+            <option value="51-200">51 - 200 موظف</option>
+            <option value="201-500">201 - 500 موظف</option>
+            <option value="500+">أكثر من 500</option>
+          </select>
+          <button type="button" onClick={() => setCompanySize('')} disabled={!companySize} className={clearClass}>مسح</button>
         </div>
       </Row>
       <div className="flex justify-end pt-6">
@@ -405,7 +387,10 @@ function ProfileTab(): JSX.Element {
     // The mobile number is required, and must be a real number for its country.
     if (!phone.trim()) { setPhoneError('رقم الجوال مطلوب'); showToast('رقم الجوال مطلوب', 'error'); return; }
     if (!isValidPhone(phoneCode, phone)) { setPhoneError('رقم الجوال غير صحيح لهذه الدولة'); showToast('رقم الجوال غير صحيح', 'error'); return; }
-    updateUser({ name: name.trim(), phone: toE164(phoneCode, phone) });
+    const e164 = toE164(phoneCode, phone);
+    updateUser({ name: name.trim(), phone: e164 });
+    // Kept on the account too, so the next sign-in opens the same profile.
+    useAccountStore.getState().upsertAccount(user!.email, { name: name.trim(), phone: e164 });
     showToast('تم حفظ الملف الشخصي', 'success');
   };
 
