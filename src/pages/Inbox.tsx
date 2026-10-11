@@ -1337,7 +1337,7 @@ function TransferModal({ open, onClose, conversation }: { open: boolean; onClose
     }
     assign(conversation.id, target);
     // Left in the thread as an internal note, where the new agent will read it.
-    if (note.trim()) sendMessage(conversation.id, `${t('ملاحظة التحويل:')} ${note.trim()}`, 'note');
+    if (note.trim()) sendMessage(conversation.id, `${'ملاحظة التحويل:'} ${note.trim()}`, 'note');
     const agent = agents.find((a) => a.id === target);
     showToast(`تم تحويل المحادثة إلى ${agent?.name}`, 'success');
     onClose();
@@ -1832,7 +1832,7 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
   const generateSummary = (): void => {
     // The summary is a request to the client's AI provider, so it needs a running assistant.
     if (!assistantRunning()) {
-      showToast(t('المساعد الذكي متوقف — راجع إعدادات الذكاء الاصطناعي'), 'error');
+      showToast('المساعد الذكي متوقف — راجع إعدادات الذكاء الاصطناعي', 'error');
       return;
     }
     setGenerating(true);

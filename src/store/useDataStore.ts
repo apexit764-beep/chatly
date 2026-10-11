@@ -134,7 +134,7 @@ interface DataState {
   incrementCampaignTemplateUsage: (id: string) => void;
 
   // Channel actions
-  addChannel: (c: Omit<Channel, 'id' | 'createdAt' | 'unreadCount'>) => void;
+  addChannel: (c: Omit<Channel, 'id' | 'createdAt' | 'unreadCount'>) => string;
   updateChannel: (id: string, patch: Partial<Channel>) => void;
   deleteChannel: (id: string) => void;
 
@@ -591,19 +591,22 @@ export const useDataStore = create<DataState>((set, get) => ({
       ),
     })),
 
-  addChannel: (c) =>
+  addChannel: (c) => {
+    const id = newId();
     set((state) => ({
       channels: [
         ...state.channels,
         {
           ...c,
-          id: newId(),
+          id,
           unreadCount: 0,
           createdAt: new Date().toISOString(),
           ...(c.type === 'widget' && !c.widgetConfig ? { widgetConfig: { ...state.widgetConfig } } : {}),
         },
       ],
-    })),
+    }));
+    return id;
+  },
 
   updateChannel: (id, patch) =>
     set((state) => ({ channels: state.channels.map((c) => (c.id === id ? { ...c, ...patch } : c)) })),

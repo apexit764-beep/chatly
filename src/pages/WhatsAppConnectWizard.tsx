@@ -199,7 +199,7 @@ export default function WhatsAppConnectWizard({
       });
       // The form showed «…/new»; the real address needs the channel's id, known only now.
       if (credentials.callbackUrl) updateChannel(id, { credentials: { ...credentials, callbackUrl: webhookUrlFor(id) } });
-      showToast(t('تم بدء الربط — تحقق من حالة التفعيل خلال دقائق'), 'success');
+      showToast('تم بدء الربط — تحقق من حالة التفعيل خلال دقائق', 'success');
     }
     onClose();
   };
@@ -478,7 +478,7 @@ function ConnectStep({
 
       {/* Row 5 — Callback URL + Graph API Version */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <FieldGroup label="Callback URL" hint={t('انسخ هذا الرابط والصقه في إعدادات Webhook بـ Meta')}>
+        <FieldGroup label="Callback URL" hint={'انسخ هذا الرابط والصقه في إعدادات Webhook بـ Meta'}>
           {/* Qhub's own address for this number — the user copies it, never types it. */}
           <FieldWithAction
             value={state.callbackUrl}

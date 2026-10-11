@@ -147,20 +147,11 @@ export default function ChannelDetail(): JSX.Element {
     const fullIdentifier = meta?.identifierType === 'phone'
       ? `${form.countryCode}${form.identifier.replace(/^0+/, '')}`
       : form.identifier;
-    // ⚠️ مؤقّت — وضع تصوير الفيديو: الرموز تأتي من تسجيل الدخول، فالمطلوب
-    // هنا إتمام تسجيل الدخول لا ملء الحقول.
-    if (demoProvider) {
-      if (!connectedVia) {
-        showToast(`${t('سجّل الدخول عبر')} ${demoProvider.name} ${t('أولاً')}`, 'error');
-        return;
-      }
-    } else {
-      // Require all declared credential fields before connecting
-      const missing = (meta.credentials ?? []).filter((f) => !f.optional && !creds[f.key]?.trim());
-      if (missing.length > 0) {
-        showToast(`${t('أكمل')}: ${missing.map((m) => m.label).join('، ')}`, 'error');
-        return;
-      }
+    // Require all declared credential fields before connecting
+    const missing = (meta.credentials ?? []).filter((f) => !f.optional && !creds[f.key]?.trim());
+    if (missing.length > 0) {
+      showToast(`${t('أكمل')}: ${missing.map((m) => m.label).join('، ')}`, 'error');
+      return;
     }
     const hasCreds = Object.keys(creds).length > 0;
     if (editing) {

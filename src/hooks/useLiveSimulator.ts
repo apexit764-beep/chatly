@@ -4,9 +4,6 @@ import { useAIStore } from '@/store/useAIStore';
 import { useUIStore } from '@/store/useUIStore';
 import { playNotificationSound } from '@/utils/notificationSound';
 import { assistantRunning, recordAIRequest } from '@/utils/aiUsage';
-import { t } from '@/i18n/useTranslation';
-// ⚠️ مؤقّت — وضع تصوير الفيديو
-import { VIDEO_DEMO } from '@/config/videoDemo';
 
 /**
  * Simulated incoming-message pool. Picked randomly to feel like a real
