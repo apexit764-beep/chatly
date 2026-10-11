@@ -14,14 +14,13 @@ export function SocialAuthButtons({
   disabled = false,
   verb = 'المتابعة',
 }: SocialAuthButtonsProps): JSX.Element {
-  // Stacked rather than side by side: the Arabic labels carry a verb, a preposition
-  // and a brand, which two half-width buttons squeeze into an unreadable strip — and
-  // at phone width they would wrap mid-label.
+  // Icon-only, side by side: both marks are recognised on sight, and the full
+  // "{verb} بحساب …" wording stays on as the accessible name and hover title.
   const base = cn(
-    'w-full h-12 rounded-xl border border-border-light dark:border-border-dark',
-    'flex items-center justify-center gap-2.5 text-body font-semibold',
+    'h-12 rounded-xl border border-border-light dark:border-border-dark',
+    'flex items-center justify-center',
     'hover:bg-bg-light dark:hover:bg-bg-dark hover:border-muted-light/40',
-    'active:scale-[0.99] transition-all',
+    'active:scale-[0.98] transition-all',
     'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15 focus-visible:border-primary',
     'disabled:opacity-50 disabled:cursor-not-allowed',
   );
@@ -34,14 +33,26 @@ export function SocialAuthButtons({
         <span className="h-px flex-1 bg-border-light dark:bg-border-dark" />
       </div>
 
-      <div className="space-y-2.5">
-        <button type="button" onClick={() => onPick('google')} disabled={disabled} className={base}>
-          <GoogleMark />
-          <span>{verb} بحساب Google</span>
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => onPick('google')}
+          disabled={disabled}
+          className={base}
+          aria-label={`${verb} بحساب Google`}
+          title={`${verb} بحساب Google`}
+        >
+          <GoogleMark className="h-[22px] w-[22px]" />
         </button>
-        <button type="button" onClick={() => onPick('apple')} disabled={disabled} className={base}>
-          <AppleMark />
-          <span>{verb} بحساب Apple</span>
+        <button
+          type="button"
+          onClick={() => onPick('apple')}
+          disabled={disabled}
+          className={base}
+          aria-label={`${verb} بحساب Apple`}
+          title={`${verb} بحساب Apple`}
+        >
+          <AppleMark className="h-[23px] w-[23px]" />
         </button>
       </div>
     </div>
