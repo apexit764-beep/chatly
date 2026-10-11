@@ -118,6 +118,12 @@ export interface Channel {
   widgetConfig?: WidgetConfig;
   /** Per-account rating settings. Absent means "inherit the account-wide defaults". */
   ratingConfig?: RatingConfig;
+  /**
+   * Demo only: this WhatsApp number's Meta account has no valid payment method,
+   * so a campaign sent from it fails with Meta error 131042. In production that
+   * comes back from Meta at send time, not from stored data.
+   */
+  demoMetaPaymentMissing?: boolean;
 }
 
 export interface Department {
