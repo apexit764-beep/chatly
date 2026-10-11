@@ -304,9 +304,9 @@ export default function SignUp(): JSX.Element {
 
           {/* Login link */}
           <p className="text-center text-small text-muted-light dark:text-muted-dark mt-6">
-            عندك حساب؟{' '}
+            لديك حساب بالفعل؟{' '}
             <Link to="/login" className="text-primary font-semibold hover:underline">
-              سجّل دخول
+              تسجيل الدخول
             </Link>
           </p>
           </>
