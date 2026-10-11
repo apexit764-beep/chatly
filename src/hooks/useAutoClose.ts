@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useDataStore } from '@/store/useDataStore';
-import { useAIStore } from '@/store/useAIStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
 import { closeConversationWithRating } from '@/utils/closeConversation';
 import type { Message } from '@/types';
 
@@ -15,7 +15,7 @@ function isAgentMessage(m: Message): boolean {
 }
 
 /**
- * الإغلاق التلقائي للمحادثات الراكدة، بمدة كل حساب على حدة.
+ * الإغلاق التلقائي للمحادثات الراكدة، بمدة واحدة لكل الحسابات من إعدادات المحادثات.
  *
  * القاعدة: العدّاد يبدأ من آخر رسالة أرسلها موظف، والمحادثة لا تُغلق إن وصل
  * رد من العميل بعدها — فمحادثة ينتظر فيها العميل ردّاً منّا تبقى مفتوحة بدل
@@ -25,14 +25,13 @@ export function useAutoClose(): void {
   useEffect(() => {
     const tick = (): void => {
       const { conversations } = useDataStore.getState();
-      const behaviorFor = useAIStore.getState().behaviorFor;
+      // One setting for every account, in Settings › Conversations.
+      const { autoCloseEnabled, autoCloseHours } = useSettingsStore.getState().general;
+      if (!autoCloseEnabled || autoCloseHours < 1) return;
       const now = Date.now();
 
       conversations.forEach((conv) => {
         if (conv.status === 'closed') return;
-
-        const { autoCloseEnabled, autoCloseHours } = behaviorFor(conv.channelId);
-        if (!autoCloseEnabled || autoCloseHours < 1) return;
 
         let lastAgentIdx = -1;
         for (let i = conv.messages.length - 1; i >= 0; i -= 1) {

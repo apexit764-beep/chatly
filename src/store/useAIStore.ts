@@ -76,6 +76,8 @@ export interface AISettings {
   useKnowledgeBase: boolean;
   /** Learn from agent replies to improve AI responses over time */
   learnFromAgents: boolean;
+  /** Master switch for handing conversations to staff — off, no rule below applies. */
+  transferEnabled: boolean;
   /** Transfer-to-staff rules */
   transferOnRequest: boolean;
   transferOnFailure: boolean;
@@ -92,19 +94,6 @@ export interface AISettings {
   /** 7 entries — index 0 = Sunday, 6 = Saturday */
   schedule: DaySchedule[];
   offHoursMessage: string;
-  /**
-   * تفعيل الإغلاق التلقائي لهذا الحساب. مفتاح مستقل عن المدة حتى تبقى المدة
-   * محفوظة كما هي عند الإطفاء، فلا يُعاد إدخالها عند التشغيل مرة أخرى.
-   */
-  autoCloseEnabled: boolean;
-  /**
-   * ساعات السكون قبل إغلاق المحادثة تلقائياً. العدّاد يبدأ من آخر رسالة
-   * أرسلها موظف، ولا تُغلق المحادثة إن وصل رد من العميل بعدها.
-   *
-   * مقصود أن يكون هو و`autoCloseEnabled` خارج `AI_SHARED_KEYS` — الإعداد
-   * لكل حساب على حدة.
-   */
-  autoCloseHours: number;
 }
 
 /**
@@ -161,6 +150,7 @@ export const BEHAVIOR_GROUPS = {
   style: ['languages', 'tone', 'dialect', 'gulfCountry'],
   knowledge: ['prompt', 'forbiddenTopics', 'forbiddenReply', 'useKnowledgeBase', 'learnFromAgents'],
   transfer: [
+    'transferEnabled',
     'transferOnRequest',
     'transferOnFailure',
     'transferOnNegativeSentiment',
@@ -174,8 +164,6 @@ export const BEHAVIOR_GROUPS = {
     'alwaysOn',
     'schedule',
     'offHoursMessage',
-    'autoCloseEnabled',
-    'autoCloseHours',
   ],
 } as const satisfies Record<BehaviorGroup, readonly (keyof AIBehavior)[]>;
 
@@ -284,6 +272,7 @@ const DEFAULT_SETTINGS: AISettings = {
   forbiddenReply: 'عذراً، لا أستطيع المساعدة في هذا الموضوع. للحصول على إجابة دقيقة سيتواصل معك أحد موظفينا قريباً 🌷',
   useKnowledgeBase: true,
   learnFromAgents: true,
+  transferEnabled: true,
   transferOnRequest: true,
   transferOnFailure: true,
   transferOnNegativeSentiment: true,
@@ -306,8 +295,6 @@ const DEFAULT_SETTINGS: AISettings = {
     { ...WEEKEND },
   ],
   offHoursMessage: 'أهلاً! خارج ساعات الدوام حالياً، لكن سجّلت طلبك وسيتواصل معك أحد الموظفين أول الدوام. لأي استفسار سريع تقدر تعتمد عليّ.',
-  autoCloseEnabled: true,
-  autoCloseHours: 24,
 };
 
 const STORAGE_KEY = 'qhub_ai_settings';

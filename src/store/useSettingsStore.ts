@@ -40,6 +40,13 @@ export interface GeneralPrefs {
    * moved between departments, on different scales.
    */
   firstReplyTargetMinutes: number;
+  /**
+   * Close a conversation once it has sat idle this long after the last staff
+   * message — unless the customer replied since. One setting for every account;
+   * it runs whether or not the AI assistant is on.
+   */
+  autoCloseEnabled: boolean;
+  autoCloseHours: number;
   /** When the company details were last saved — the first setup step counts as done from then. */
   companySavedAt?: string;
 }
@@ -82,6 +89,8 @@ const defaultState: Pick<SettingsState, 'notifications' | 'security' | 'general'
     country: 'OM',
     phone: '+968 9999 0000',
     firstReplyTargetMinutes: 30,
+    autoCloseEnabled: true,
+    autoCloseHours: 24,
     footerLinks: [],
   },
   rating: {
@@ -92,6 +101,19 @@ const defaultState: Pick<SettingsState, 'notifications' | 'security' | 'general'
   },
 };
 
+/** Auto-close used to sit in the AI settings; carry a value set there over once. */
+function legacyAutoClose(): Partial<GeneralPrefs> {
+  try {
+    const ai = JSON.parse(localStorage.getItem('qhub_ai_settings') || '{}') as { autoCloseEnabled?: boolean; autoCloseHours?: number };
+    return {
+      ...(typeof ai.autoCloseEnabled === 'boolean' ? { autoCloseEnabled: ai.autoCloseEnabled } : {}),
+      ...(typeof ai.autoCloseHours === 'number' && ai.autoCloseHours > 0 ? { autoCloseHours: ai.autoCloseHours } : {}),
+    };
+  } catch {
+    return {};
+  }
+}
+
 function read(): Pick<SettingsState, 'notifications' | 'security' | 'general' | 'rating'> {
   if (typeof window === 'undefined') return defaultState;
   try {
@@ -101,7 +123,7 @@ function read(): Pick<SettingsState, 'notifications' | 'security' | 'general' | 
     return {
       notifications: { ...defaultState.notifications, ...parsed.notifications },
       security: { ...defaultState.security, ...parsed.security },
-      general: { ...defaultState.general, ...parsed.general },
+      general: { ...defaultState.general, ...legacyAutoClose(), ...parsed.general },
       rating: { ...defaultState.rating, ...parsed.rating },
     };
   } catch {

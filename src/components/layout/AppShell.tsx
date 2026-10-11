@@ -24,7 +24,7 @@ export function AppShell(): JSX.Element {
   const focused = isInbox && inboxFocus;
   // Drives live activity (new messages, notifications, AI replies)
   useLiveSimulator();
-  // Closes idle conversations on each account's own auto-close period
+  // Closes idle conversations after the auto-close period in Settings › Conversations
   useAutoClose();
   // Sends due scheduled campaigns, failing those whose template is no longer approved
   useScheduledCampaigns();

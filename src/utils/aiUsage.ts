@@ -1,4 +1,4 @@
-import { useAIStore, type AIProvider, type AISettings } from '@/store/useAIStore';
+import { useAIStore, type AIModel, type AISettings } from '@/store/useAIStore';
 import { useAIUsageStore, type AIFeature, type AIUsageRow } from '@/store/useAIUsageStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useDataStore } from '@/store/useDataStore';
@@ -82,12 +82,27 @@ export function totalTokens(r: ProviderUsage): number {
   return r.usage.input_tokens + r.usage.output_tokens;
 }
 
-/** Features a provider's API can't take as input — shown as unavailable and locked off. */
-export const UNSUPPORTED_FEATURES: Record<AIProvider, AIFeature[]> = {
-  openai: ['video'],
-  anthropic: ['video', 'voice'],
-  google: [],
+/**
+ * Features the selected model can't take as input — shown as «غير متاحة في النموذج
+ * الحالي» and locked off. Gemini takes every kind; Claude has no audio or video
+ * input; OpenAI's chat models take no video (audio goes through Whisper on the
+ * same key), and GPT-3.5 reads text only.
+ */
+const UNSUPPORTED_BY_MODEL: Record<AIModel, AIFeature[]> = {
+  'gpt-4o': ['video'],
+  'gpt-4o-mini': ['video'],
+  'gpt-4-turbo': ['video'],
+  'gpt-3.5-turbo': ['image', 'video', 'pdf'],
+  'claude-opus-4-6': ['video', 'voice'],
+  'claude-sonnet-4-6': ['video', 'voice'],
+  'claude-haiku-4-5': ['video', 'voice'],
+  'gemini-2.5-pro': [],
+  'gemini-2.0-flash': [],
 };
+
+export function isFeatureSupported(model: AIModel, feature: AIFeature): boolean {
+  return !(UNSUPPORTED_BY_MODEL[model] ?? []).includes(feature);
+}
 
 export function isConnected(s: Pick<AISettings, 'apiKey' | 'connectionStatus'>): boolean {
   return Boolean(s.apiKey.trim()) && s.connectionStatus === 'ok';
