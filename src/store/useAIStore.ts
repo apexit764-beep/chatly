@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { DEMO_CONNECTED_AT } from './useAIUsageStore';
 
 export type AILanguage = 'ar' | 'en';
 export type AITone = 'short' | 'friendly' | 'formal' | 'luxury';
@@ -33,6 +34,12 @@ export interface AISettings {
   connectionStatus: 'untested' | 'ok' | 'failed';
   /** ISO — وقت آخر فحص، ناجحاً كان أو فاشلاً. */
   connectionTestedAt?: string;
+  /**
+   * When the client last connected their provider. The usage cycle starts on
+   * this day and renews on it every month; disconnecting clears it, and the
+   * next connection starts a new cycle from its own date.
+   */
+  connectedAt?: string;
   /** Max tokens in the assistant's reply */
   maxResponseTokens: number;
   /** Channel IDs where the AI bot is active */
@@ -45,12 +52,16 @@ export interface AISettings {
   conversationSummary: boolean;
   smartSuggestions: boolean;
   sentimentAnalysis: boolean;
-  /** Credit management */
-  creditBalance: number;
-  creditWarningEnabled: boolean;
-  creditWarningThreshold: number;
-  monthlyLimitEnabled: boolean;
-  monthlyLimit: number;
+  /**
+   * Tokens the assistant may use in a cycle. Reaching it stops the assistant
+   * until the next cycle; null means no limit. The client pays the provider
+   * directly and the provider reports no balance, so this is the client's own number.
+   */
+  cycleTokenLimit: number | null;
+  /** In-app notification once the cycle's usage reaches usageAlertTokens — independent of the limit. */
+  usageAlertEnabled: boolean;
+  usageAlertTokens: number;
+  /** A daily summary of the tokens used. */
   dailyReportEnabled: boolean;
   languages: AILanguage[];
   tone: AITone;
@@ -108,6 +119,7 @@ export const AI_SHARED_KEYS = [
   'model',
   'connectionStatus',
   'connectionTestedAt',
+  'connectedAt',
   'maxResponseTokens',
   'enabledChannels',
   'imageAnalysis',
@@ -117,11 +129,9 @@ export const AI_SHARED_KEYS = [
   'conversationSummary',
   'smartSuggestions',
   'sentimentAnalysis',
-  'creditBalance',
-  'creditWarningEnabled',
-  'creditWarningThreshold',
-  'monthlyLimitEnabled',
-  'monthlyLimit',
+  'cycleTokenLimit',
+  'usageAlertEnabled',
+  'usageAlertTokens',
   'dailyReportEnabled',
 ] as const;
 
@@ -247,9 +257,11 @@ const WEEKEND: DaySchedule = { enabled: false, start: '09:00', end: '17:00' };
 const DEFAULT_SETTINGS: AISettings = {
   enabled: true,
   provider: 'openai',
-  apiKey: '',
+  // The demo workspace starts connected, so the assistant and its usage show.
+  apiKey: 'sk-proj-qhubDemoKey7f3a9c21',
   model: 'gpt-4o-mini',
-  connectionStatus: 'untested',
+  connectionStatus: 'ok',
+  connectedAt: DEMO_CONNECTED_AT,
   maxResponseTokens: 600,
   enabledChannels: [],
   imageAnalysis: true,
@@ -259,11 +271,9 @@ const DEFAULT_SETTINGS: AISettings = {
   conversationSummary: false,
   smartSuggestions: true,
   sentimentAnalysis: false,
-  creditBalance: 500,
-  creditWarningEnabled: true,
-  creditWarningThreshold: 100,
-  monthlyLimitEnabled: false,
-  monthlyLimit: 5000,
+  cycleTokenLimit: 2_000_000,
+  usageAlertEnabled: true,
+  usageAlertTokens: 1_000_000,
   dailyReportEnabled: false,
   languages: ['ar', 'en'],
   tone: 'friendly',
@@ -310,7 +320,10 @@ function loadInitial(): AISettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<AISettings>) };
+    const stored = JSON.parse(raw) as Partial<AISettings> & Record<string, unknown>;
+    // The credit fields came before usage was counted in tokens.
+    for (const k of ['creditBalance', 'creditWarningEnabled', 'creditWarningThreshold', 'monthlyLimitEnabled', 'monthlyLimit']) delete stored[k];
+    return { ...DEFAULT_SETTINGS, ...stored };
   } catch {
     return DEFAULT_SETTINGS;
   }

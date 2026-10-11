@@ -160,7 +160,8 @@ export function TopHeader(): JSX.Element {
               onMarkAllRead={markAllNotifsRead}
               onItemClick={(n) => {
                 markNotifRead(n.id);
-                if (n.type === 'conversation' || n.type === 'message') navigate('/inbox');
+                if (n.link) navigate(n.link);
+                else if (n.type === 'conversation' || n.type === 'message') navigate('/inbox');
                 else if (n.type === 'campaign') navigate('/campaigns');
                 setNotificationsOpen(false);
               }}
@@ -358,6 +359,7 @@ interface NotifItem {
   timestamp: string;
   read: boolean;
   type: 'conversation' | 'message' | 'campaign' | 'system';
+  link?: string;
 }
 
 function NotificationsDropdown({

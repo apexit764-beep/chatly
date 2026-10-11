@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Sparkles,
   Languages,
@@ -34,15 +34,14 @@ import {
   HeartPulse,
   Bell,
   Gauge,
-  Mail,
-  CreditCard,
-  TrendingUp,
   Loader2,
   RefreshCw,
   Bot,
   SlidersHorizontal,
   MousePointerClick,
   Plug,
+  Unplug,
+  PauseCircle,
 } from 'lucide-react';
 import { Card, ChannelIcon, Select, useConfirm, Drawer, InfoTip } from '@components/ui';
 import { OpenAIIcon, ClaudeIcon, GeminiIcon } from '@components/ui/BrandIcons';
@@ -58,6 +57,17 @@ import {
   type AISettings as AISettingsType, type AILanguage, type AITone, type AIDialect, type AIGulfCountry, type AIModel, type AIProvider, type DaySchedule,
 } from '@/store/useAIStore';
 import { useDataStore } from '@/store/useDataStore';
+import { useAIUsageStore, type AIFeature } from '@/store/useAIUsageStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import {
+  UNSUPPORTED_FEATURES,
+  assistantStop,
+  checkUsageAlert,
+  cycleFor,
+  featureAverage,
+  isConnected,
+  tokensBetween,
+} from '@/utils/aiUsage';
 import { useUIStore } from '@/store/useUIStore';
 import { cn } from '@/utils/cn';
 import { timeAgo } from '@/utils/format';
@@ -92,6 +102,8 @@ const GULF_COUNTRIES: { value: AIGulfCountry; name: string; flag: string }[] = [
 
 /** اختيار «الإعدادات الافتراضية» في قائمة سلوك المساعد — ليس معرّف قناة. */
 const DEFAULT_SCOPE = '__default__';
+
+const NO_USAGE: never[] = [];
 
 type GroupMode = 'default' | 'custom';
 
@@ -134,6 +146,8 @@ interface ProviderInfo {
   apiKeyPattern: RegExp;
   apiKeyDocsUrl: string;
   apiKeyDocsLabel: string;
+  /** The client's usage and billing at the provider — the balance lives there, not in Qhub. */
+  billingUrl: string;
   defaultModel: AIModel;
   models: { value: AIModel; label: string; hint: string }[];
 }
@@ -149,6 +163,7 @@ const PROVIDERS: ProviderInfo[] = [
     apiKeyPattern: /^sk-(?!ant-)[A-Za-z0-9_-]{16,}$/,
     apiKeyDocsUrl: 'https://platform.openai.com/api-keys',
     apiKeyDocsLabel: 'احصل على مفتاح API',
+    billingUrl: 'https://platform.openai.com/usage',
     defaultModel: 'gpt-4o-mini',
     models: [
       { value: 'gpt-4o-mini', label: 'GPT-4o mini · موصى به', hint: 'سريع واقتصادي — مناسب لمعظم الردود' },
@@ -167,6 +182,7 @@ const PROVIDERS: ProviderInfo[] = [
     apiKeyPattern: /^sk-ant-[A-Za-z0-9_-]{16,}$/,
     apiKeyDocsUrl: 'https://console.anthropic.com/settings/keys',
     apiKeyDocsLabel: 'احصل على مفتاح API',
+    billingUrl: 'https://console.anthropic.com/settings/billing',
     defaultModel: 'claude-haiku-4-5',
     models: [
       { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 · موصى به', hint: 'سريع واقتصادي — مناسب لمعظم الردود' },
@@ -184,6 +200,7 @@ const PROVIDERS: ProviderInfo[] = [
     apiKeyPattern: /^AIza[A-Za-z0-9_-]{16,}$/,
     apiKeyDocsUrl: 'https://aistudio.google.com/app/apikey',
     apiKeyDocsLabel: 'احصل على مفتاح API',
+    billingUrl: 'https://aistudio.google.com/usage',
     defaultModel: 'gemini-2.0-flash',
     models: [
       { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash · موصى به', hint: 'سريع جداً — مثالي للردود في الوقت الحقيقي' },
@@ -191,6 +208,31 @@ const PROVIDERS: ProviderInfo[] = [
     ],
   },
 ];
+
+/** The seven assistant features, each with the setting that switches it and the unit its average is per. */
+const AI_FEATURES: {
+  key: Exclude<AIFeature, 'reply'>;
+  field: 'imageAnalysis' | 'videoAnalysis' | 'pdfAnalysis' | 'voiceAnalysis' | 'conversationSummary' | 'smartSuggestions' | 'sentimentAnalysis';
+  title: string;
+  desc: string;
+  unit: string;
+  Icon: typeof Image;
+}[] = [
+  { key: 'image', field: 'imageAnalysis', title: 'تحليل الصور', desc: 'يفهم الصور المرسلة من العملاء ويرد عليها', unit: 'صورة', Icon: Image },
+  { key: 'video', field: 'videoAnalysis', title: 'تحليل الفيديو', desc: 'يحلل الفيديوهات القصيرة (حتى 30 ثانية)', unit: 'فيديو', Icon: Video },
+  { key: 'pdf', field: 'pdfAnalysis', title: 'تحليل المستندات (PDF)', desc: 'يقرأ ملفات PDF ويرد على أسئلة عنها', unit: 'ملف', Icon: FileText },
+  { key: 'voice', field: 'voiceAnalysis', title: 'تحليل الرسائل الصوتية', desc: 'يحوّل الصوت لنص ويفهمه ويرد', unit: 'رسالة', Icon: AudioLines },
+  { key: 'summary', field: 'conversationSummary', title: 'تلخيص المحادثات', desc: 'ملخص تلقائي لكل محادثة بعد إغلاقها', unit: 'محادثة', Icon: FileBarChart },
+  { key: 'suggestions', field: 'smartSuggestions', title: 'اقتراحات ذكية للموظفين', desc: 'يقترح ردود جاهزة للموظف البشري', unit: 'اقتراح', Icon: Lightbulb },
+  { key: 'sentiment', field: 'sentimentAnalysis', title: 'تحليل المشاعر', desc: 'يكشف مشاعر العميل (إيجابي/سلبي/محايد)', unit: 'محادثة', Icon: HeartPulse },
+];
+
+/** «15 سبتمبر» */
+function dayMonth(d: Date): string {
+  return d.toLocaleDateString('ar-OM-u-nu-latn', { day: 'numeric', month: 'long' });
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export default function AISettings(): JSX.Element {
   const saved = useAIStore((s) => s.settings);
@@ -203,6 +245,24 @@ export default function AISettings(): JSX.Element {
    * و`DEFAULT_SCOPE` الإعدادات الافتراضية، وإلا معرّف الحساب.
    */
   const [selection, setSelection] = useState<string | null>(null);
+
+  // Usage is read for the signed-in client only — never another client's.
+  const clientId = useAuthStore((s) => s.user?.email ?? 'anonymous');
+  const usageRows = useAIUsageStore((s) => s.byClient[clientId]) ?? NO_USAGE;
+  /** Re-read the clock every minute, so a renewed cycle or a new day shows without a reload. */
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const cycle = isConnected(saved) && saved.connectedAt ? cycleFor(saved.connectedAt, now) : null;
+  const cycleTokens = cycle ? tokensBetween(usageRows, cycle.start) : 0;
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayTokens = tokensBetween(usageRows, todayStart);
+  const cycleDays = cycle ? Math.max(1, Math.floor((todayStart.getTime() - cycle.start.getTime()) / DAY_MS) + 1) : 1;
+  const dailyAverage = Math.round(cycleTokens / cycleDays);
+  const limitShare = saved.cycleTokenLimit ? (cycleTokens / saved.cycleTokenLimit) * 100 : 0;
+  const stop = assistantStop(saved, usageRows, now);
 
   const channels = useDataStore((s) => s.channels);
   const agents = useDataStore((s) => s.agents);
@@ -315,6 +375,25 @@ export default function AISettings(): JSX.Element {
     setTestError(error);
     setTesting(false);
     showToast(error ?? `الاتصال بـ${currentProvider.name} يعمل ✓`, error ? 'error' : 'success');
+  };
+
+  /**
+   * Removes the key from Qhub and stops the assistant on every channel. The
+   * client stays on this tab and the usage history is kept; connecting again
+   * starts a new cycle.
+   */
+  const disconnect = async (): Promise<void> => {
+    const ok = await confirm({
+      title: 'فصل ربط المزوّد؟',
+      message: 'سيتوقف المساعد الذكي على كل القنوات، ويُحذف المفتاح من Qhub. سجل الاستهلاك السابق يبقى محفوظًا.',
+      variant: 'danger',
+      confirmText: 'فصل الربط',
+      cancelText: 'إلغاء',
+    });
+    if (!ok) return;
+    setSettings({ apiKey: '', connectionStatus: 'untested', connectionTestedAt: undefined, connectedAt: undefined });
+    setTestError(null);
+    showToast(`تم فصل الربط مع ${currentProvider.name} — المساعد الذكي متوقف`, 'success');
   };
 
   const toggleLanguage = (code: AILanguage): void => {
@@ -442,8 +521,12 @@ export default function AISettings(): JSX.Element {
     const sharedChanged = AI_SHARED_KEYS.some(
       (k) => JSON.stringify(form[k]) !== JSON.stringify(saved[k])
     );
-    if (sharedChanged && form.enabled && !form.apiKey.trim()) {
-      showToast('أدخل مفتاح API أو أوقف المساعد الذكي — لا يمكن تفعيله بلا مفتاح', 'error');
+    if (form.cycleTokenLimit !== null && form.cycleTokenLimit < 1) {
+      showToast('الحد الأقصى للدورة يجب أن يكون أكبر من صفر — أو اتركه فارغًا بدون حد', 'error');
+      return;
+    }
+    if (form.usageAlertEnabled && form.usageAlertTokens < 1) {
+      showToast('أدخل رقم تنبيه الاستهلاك بالتوكنز أو أوقف التنبيه', 'error');
       return;
     }
     const modelLabel = (currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '');
@@ -486,11 +569,17 @@ export default function AISettings(): JSX.Element {
       variant: 'info',
     });
     if (!ok) return;
+    // A new connection — first one, after a disconnect, or to another provider —
+    // starts a new usage cycle from today. Replacing the key keeps the cycle.
+    const toSave: AISettingsType =
+      isConnected(form) && (!isConnected(saved) || saved.provider !== form.provider || !saved.connectedAt)
+        ? { ...form, connectedAt: new Date().toISOString() }
+        : form;
     if (scopedAccount) {
       // The shared half goes to the workspace settings; each section of the
       // behavior goes to the account only if it is customised there — an
       // inherited section is dropped so it keeps following the default.
-      if (sharedChanged) setSettings(pickShared(form));
+      if (sharedChanged) setSettings(pickShared(toSave));
       setChannelGroups(
         scopedAccount.id,
         Object.fromEntries(
@@ -499,10 +588,12 @@ export default function AISettings(): JSX.Element {
       );
       showToast(`تم حفظ إعدادات المساعد لـ${scopedAccount.name}`, 'success');
     } else {
-      setSettings(form);
+      setSettings(toSave);
       showToast('تم حفظ إعدادات المساعد', 'success');
     }
     setDirty(false);
+    // A lowered alert number may already be passed.
+    checkUsageAlert();
   };
 
   const arSelected = form.languages.includes('ar');
@@ -514,7 +605,14 @@ export default function AISettings(): JSX.Element {
    */
   const mutedIfOff = cn('transition-opacity', !form.enabled && 'opacity-50 pointer-events-none');
 
-  const [tab, setTab] = useState<'connection' | 'features' | 'behavior'>('connection');
+  type PageTab = 'connection' | 'features' | 'behavior';
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [tab, setTab] = useState<PageTab>(tabParam === 'features' || tabParam === 'behavior' ? tabParam : 'connection');
+  // The usage alert's notification links here with ?tab=features — also when the page is already open.
+  useEffect(() => {
+    if (tabParam === 'features' || tabParam === 'behavior' || tabParam === 'connection') setTab(tabParam);
+  }, [tabParam]);
   /** Which section is open for the selected scope inside «سلوك المساعد». */
   const [subTab, setSubTab] = useState<BehaviorGroup>('style');
 
@@ -539,6 +637,36 @@ export default function AISettings(): JSX.Element {
           </p>
         </div>
       </div>
+
+      {/* Why the assistant is stopped. Staff keep answering in every case. */}
+      {stop && (
+        <div role="status" className="rounded-card border border-warning/40 bg-warning/10 px-4 py-3.5 flex items-start gap-3">
+          <PauseCircle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-small font-bold">
+              {stop.reason === 'limit'
+                ? `المساعد الذكي متوقف — وصل استهلاك الدورة إلى الحد الأقصى (${stop.limit.toLocaleString('en-US')} توكن)`
+                : stop.reason === 'failed'
+                  ? 'المساعد الذكي متوقف — تعذّر الاتصال بالمزوّد'
+                  : 'المساعد الذكي متوقف — لا يوجد مزوّد مربوط'}
+            </p>
+            <p className="text-[12px] text-muted-light dark:text-muted-dark mt-0.5 leading-relaxed">
+              {stop.reason === 'limit'
+                ? `يعود تلقائيًا مع بداية الدورة الجديدة في ${dayMonth(stop.renewsOn)}، أو ارفع الحد أو احذفه. `
+                : stop.reason === 'failed'
+                  ? 'تحقق من مفتاح API ثم أعد فحص الاتصال. '
+                  : 'اربط مزوّد الذكاء الاصطناعي ليعود المساعد للعمل. '}
+              المحادثات مستمرة مع الموظفين كالمعتاد.
+            </p>
+          </div>
+          <button
+            onClick={() => setTab(stop.reason === 'limit' ? 'features' : 'connection')}
+            className="h-8 px-3 rounded-full bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-[12px] font-semibold whitespace-nowrap hover:border-primary/40 hover:text-primary flex-shrink-0"
+          >
+            {stop.reason === 'limit' ? 'تعديل الحد' : stop.reason === 'failed' ? 'إعدادات الربط' : 'ربط مزوّد'}
+          </button>
+        </div>
+      )}
 
       {/* Master enable */}
       <Card className="p-5 border-l-4 border-l-primary">
@@ -901,6 +1029,16 @@ export default function AISettings(): JSX.Element {
                     {currentProvider.apiKeyDocsLabel}
                     <ExternalLink className="h-3 w-3" />
                   </a>
+                  <div className="flex items-center gap-2">
+                  {isConnected(form) && isConnected(saved) && form.apiKey === saved.apiKey && (
+                    <button
+                      type="button"
+                      onClick={() => { void disconnect(); }}
+                      className="h-9 px-3.5 rounded-full border border-danger/40 text-danger text-small font-semibold inline-flex items-center gap-1.5 hover:bg-danger/10 transition-colors whitespace-nowrap"
+                    >
+                      <Unplug className="h-3.5 w-3.5" /> فصل الربط
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => { void testConnection(); }}
@@ -911,6 +1049,7 @@ export default function AISettings(): JSX.Element {
                       ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> جارٍ الفحص…</>
                       : <><RefreshCw className="h-3.5 w-3.5" /> فحص الاتصال</>}
                   </button>
+                  </div>
                 </div>
                 {testError && (
                   <p className="text-[11px] text-danger mt-1.5 leading-relaxed">{testError}</p>
@@ -1035,182 +1174,150 @@ export default function AISettings(): JSX.Element {
           <SectionCard
             icon={<Sparkles className="h-5 w-5" />}
             title="ميزات المساعد الذكي"
-            description="فعّل أو عطّل الميزات حسب احتياجك. كل ميزة تستهلك كريدت عند الاستخدام."
+            description="فعّل أو عطّل الميزات حسب احتياجك. كل ميزة تستهلك توكنز من حسابك عند المزوّد عند الاستخدام."
           >
             <div className="divide-y divide-border-light dark:divide-border-dark">
-              <FeatureRow
-                icon={<Image className="h-4 w-4" />}
-                title="تحليل الصور"
-                desc="يفهم الصور المرسلة من العملاء ويرد عليها"
-                cost="2 كريدت/صورة"
-                checked={form.imageAnalysis}
-                onChange={(v) => update('imageAnalysis', v)}
-              />
-              <FeatureRow
-                icon={<Video className="h-4 w-4" />}
-                title="تحليل الفيديو"
-                desc="يحلل الفيديوهات القصيرة (حتى 30 ثانية)"
-                cost="5 كريدت/فيديو"
-                checked={form.videoAnalysis}
-                onChange={(v) => update('videoAnalysis', v)}
-              />
-              <FeatureRow
-                icon={<FileText className="h-4 w-4" />}
-                title="تحليل المستندات (PDF)"
-                desc="يقرأ ملفات PDF ويرد على أسئلة عنها"
-                cost="3 كريدت/ملف"
-                checked={form.pdfAnalysis}
-                onChange={(v) => update('pdfAnalysis', v)}
-              />
-              <FeatureRow
-                icon={<AudioLines className="h-4 w-4" />}
-                title="تحليل الرسائل الصوتية"
-                desc="يحوّل الصوت لنص ويفهمه ويرد"
-                cost="1 كريدت/رسالة"
-                checked={form.voiceAnalysis}
-                onChange={(v) => update('voiceAnalysis', v)}
-              />
-              <FeatureRow
-                icon={<FileBarChart className="h-4 w-4" />}
-                title="تلخيص المحادثات"
-                desc="ملخص تلقائي لكل محادثة بعد إغلاقها"
-                cost="1 كريدت/محادثة"
-                checked={form.conversationSummary}
-                onChange={(v) => update('conversationSummary', v)}
-              />
-              <FeatureRow
-                icon={<Lightbulb className="h-4 w-4" />}
-                title="اقتراحات ذكية للموظفين"
-                desc="يقترح ردود جاهزة للموظف البشري"
-                cost="0.5 كريدت/اقتراح"
-                checked={form.smartSuggestions}
-                onChange={(v) => update('smartSuggestions', v)}
-              />
-              <FeatureRow
-                icon={<HeartPulse className="h-4 w-4" />}
-                title="تحليل المشاعر"
-                desc="يكشف مشاعر العميل (إيجابي/سلبي/محايد)"
-                cost="0.5 كريدت/محادثة"
-                checked={form.sentimentAnalysis}
-                onChange={(v) => update('sentimentAnalysis', v)}
-              />
+              {AI_FEATURES.map((f) => {
+                const supported = !UNSUPPORTED_FEATURES[form.provider].includes(f.key);
+                const avg = featureAverage(usageRows, f.key);
+                return (
+                  <FeatureRow
+                    key={f.key}
+                    icon={<f.Icon className="h-4 w-4" />}
+                    title={f.title}
+                    desc={f.desc}
+                    usage={
+                      !supported
+                        ? { tone: 'unavailable', text: 'غير متاح مع المزوّد الحالي' }
+                        : avg == null
+                          ? { tone: 'none', text: 'لا يوجد استهلاك بعد' }
+                          : { tone: 'avg', text: `متوسط ${avg.toLocaleString('en-US')} توكن/${f.unit}` }
+                    }
+                    checked={supported && Boolean(form[f.field])}
+                    disabled={!supported}
+                    onChange={(v) => update(f.field, v)}
+                  />
+                );
+              })}
             </div>
+            <p className="text-[11px] text-muted-light dark:text-muted-dark mt-3 leading-relaxed">
+              المتوسط محسوب من استهلاكك الفعلي، وليس سعرًا ثابتًا.
+            </p>
           </SectionCard>
 
-          {/* Credit Management */}
           <div className="space-y-5">
+            {/* Usage in the current cycle */}
             <SectionCard
-              icon={<CreditCard className="h-5 w-5" />}
-              title="الرصيد الحالي"
-              description="رصيد كريدت الذكاء الاصطناعي المتبقي في حسابك."
+              icon={<Gauge className="h-5 w-5" />}
+              title="الاستهلاك في الدورة الحالية"
+              description={
+                cycle
+                  ? `من ${dayMonth(cycle.start)} إلى ${dayMonth(cycle.end)} · تتجدد في ${dayMonth(cycle.renewsOn)}`
+                  : 'تبدأ الدورة من يوم ربط المزوّد وتتجدد كل شهر في نفس اليوم.'
+              }
             >
-              <div className="space-y-3">
-                <div className="flex items-baseline justify-between">
+              {cycle ? (
+                <div className="space-y-3">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-extrabold tabular-nums">{form.creditBalance.toLocaleString('en-US')}</span>
-                    <span className="text-small text-muted-light dark:text-muted-dark font-medium">كريدت</span>
-                    <InfoTip className="self-center">وحدة استهلاك المساعد الذكي: كل ميزة تخصم عدداً من الكريدت عند استخدامها.</InfoTip>
+                    <span className="text-3xl font-extrabold tabular-nums">{cycleTokens.toLocaleString('en-US')}</span>
+                    <span className="text-small text-muted-light dark:text-muted-dark font-medium">توكن</span>
                   </div>
-                  {form.monthlyLimitEnabled && (
-                    <span className="text-[11px] text-muted-light dark:text-muted-dark">
-                      من أصل {form.monthlyLimit.toLocaleString('en-US')}
-                    </span>
+                  {saved.cycleTokenLimit != null ? (
+                    <div>
+                      <div className="h-2.5 w-full rounded-full bg-bg-light dark:bg-bg-dark overflow-hidden">
+                        <div
+                          className={cn('h-full rounded-full transition-all', limitShare >= 100 ? 'bg-danger' : limitShare >= 80 ? 'bg-warning' : 'bg-primary')}
+                          style={{ width: `${Math.min(100, limitShare)}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-3 mt-1.5 text-[11px] text-muted-light dark:text-muted-dark">
+                        <span>{Math.floor(limitShare)}% من الحد الأقصى</span>
+                        <span>الحد: {saved.cycleTokenLimit.toLocaleString('en-US')} توكن</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-muted-light dark:text-muted-dark">بدون حد أقصى</p>
                   )}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="rounded-xl bg-bg-light dark:bg-bg-dark px-3.5 py-2.5">
+                      <p className="text-[11px] text-muted-light dark:text-muted-dark">استهلاك اليوم</p>
+                      <p className="text-body font-bold tabular-nums">{todayTokens.toLocaleString('en-US')} توكن</p>
+                    </div>
+                    <div className="rounded-xl bg-bg-light dark:bg-bg-dark px-3.5 py-2.5">
+                      <p className="text-[11px] text-muted-light dark:text-muted-dark">متوسط يومي</p>
+                      <p className="text-body font-bold tabular-nums">{dailyAverage.toLocaleString('en-US')} توكن</p>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-muted-light dark:text-muted-dark leading-relaxed">
+                    الرصيد والفاتورة في حسابك عند المزوّد.{' '}
+                    <a
+                      href={currentProvider.billingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary font-semibold hover:underline"
+                    >
+                      فتح حساب المزوّد
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </p>
                 </div>
-                <div className="h-3 w-full rounded-full bg-bg-light dark:bg-bg-dark overflow-hidden">
-                  <div
-                    className={cn(
-                      'h-full rounded-full transition-all',
-                      form.creditBalance > form.creditWarningThreshold
-                        ? 'bg-success'
-                        : form.creditBalance > form.creditWarningThreshold * 0.5
-                          ? 'bg-warning'
-                          : 'bg-danger'
-                    )}
-                    style={{
-                      width: `${Math.min(100, form.monthlyLimitEnabled
-                        ? (form.creditBalance / form.monthlyLimit) * 100
-                        : Math.min(100, (form.creditBalance / 1000) * 100)
-                      )}%`,
-                    }}
-                  />
-                </div>
-                <div className="flex items-center gap-4 flex-wrap text-[11px] text-muted-light dark:text-muted-dark">
-                  <span className="flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3" />
-                    استهلاك اليوم: 23 كريدت
-                  </span>
-                  <span>متوسط يومي: 31 كريدت</span>
-                </div>
-              </div>
+              ) : (
+                <p className="text-small text-muted-light dark:text-muted-dark">
+                  لا توجد دورة حالية — المزوّد غير مربوط.{' '}
+                  <button onClick={() => setTab('connection')} className="text-primary font-semibold hover:underline">ربط مزوّد</button>
+                </p>
+              )}
             </SectionCard>
 
             <SectionCard
               icon={<Bell className="h-5 w-5" />}
               title="التنبيهات والحدود"
-              description="اضبط التنبيهات والحد الأقصى لاستهلاك الكريدت."
+              description="اضبط الحد الأقصى والتنبيهات لاستهلاك التوكنز."
             >
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-bg-light dark:bg-bg-dark">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-small font-bold">تنبيه قبل نفاد الرصيد</p>
-                    <p className="text-[11px] text-muted-light dark:text-muted-dark">إشعار عندما يقل الرصيد عن الحد المُحدّد</p>
+              <div className="space-y-3">
+                <div className="p-3 rounded-xl bg-bg-light dark:bg-bg-dark">
+                  <p className="text-small font-bold">الحد الأقصى للدورة</p>
+                  <p className="text-[11px] text-muted-light dark:text-muted-dark leading-relaxed">
+                    عند الوصول له يتوقف المساعد حتى بداية الدورة الجديدة. اتركه فارغًا بدون حد.
+                  </p>
+                  <div className="flex items-center gap-2 mt-2.5">
+                    <label htmlFor="cycle-limit" className="text-small font-semibold">الحد</label>
+                    <TokenField
+                      id="cycle-limit"
+                      value={form.cycleTokenLimit}
+                      onChange={(v) => update('cycleTokenLimit', v)}
+                      placeholder="بدون حد"
+                    />
                   </div>
-                  <Toggle checked={form.creditWarningEnabled} onChange={(v) => update('creditWarningEnabled', v)} />
                 </div>
-                {form.creditWarningEnabled && (
-                  <div className="ps-4">
-                    <label className="text-small font-semibold block mb-1.5">نبّهني عند</label>
-                    <div className="relative w-48">
-                      <input
-                        type="number"
-                        min={10}
-                        max={10000}
-                        step={10}
-                        value={form.creditWarningThreshold}
-                        onChange={(e) => update('creditWarningThreshold', Math.max(10, Number(e.target.value) || 100))}
-                        className="w-full h-10 ps-4 pe-16 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small font-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-                      />
-                      <span className="absolute end-3 top-1/2 -translate-y-1/2 text-[11px] text-muted-light dark:text-muted-dark font-semibold pointer-events-none">كريدت</span>
+
+                <div className="p-3 rounded-xl bg-bg-light dark:bg-bg-dark">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-small font-bold">تنبيه الاستهلاك</p>
+                      <p className="text-[11px] text-muted-light dark:text-muted-dark">إشعار داخل النظام عندما يصل استهلاك الدورة لهذا الرقم.</p>
                     </div>
+                    <Toggle checked={form.usageAlertEnabled} onChange={(v) => update('usageAlertEnabled', v)} label="تنبيه الاستهلاك" />
                   </div>
-                )}
-
-                <div className="h-px bg-border-light dark:bg-border-dark" />
-
-                <div className="flex items-center justify-between p-3 rounded-xl bg-bg-light dark:bg-bg-dark">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-small font-bold">حد أقصى شهري</p>
-                    <p className="text-[11px] text-muted-light dark:text-muted-dark">إيقاف المساعد تلقائياً عند بلوغ الحد</p>
-                  </div>
-                  <Toggle checked={form.monthlyLimitEnabled} onChange={(v) => update('monthlyLimitEnabled', v)} />
+                  {form.usageAlertEnabled && (
+                    <div className="flex items-center gap-2 mt-2.5">
+                      <label htmlFor="usage-alert" className="text-small font-semibold">نبّهني عند</label>
+                      <TokenField
+                        id="usage-alert"
+                        value={form.usageAlertTokens || null}
+                        onChange={(v) => update('usageAlertTokens', v ?? 0)}
+                        placeholder="1,000,000"
+                      />
+                    </div>
+                  )}
                 </div>
-                {form.monthlyLimitEnabled && (
-                  <div className="ps-4">
-                    <label className="text-small font-semibold block mb-1.5">الحد الشهري</label>
-                    <div className="relative w-48">
-                      <input
-                        type="number"
-                        min={100}
-                        max={100000}
-                        step={100}
-                        value={form.monthlyLimit}
-                        onChange={(e) => update('monthlyLimit', Math.max(100, Number(e.target.value) || 5000))}
-                        className="w-full h-10 ps-4 pe-16 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-small font-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-                      />
-                      <span className="absolute end-3 top-1/2 -translate-y-1/2 text-[11px] text-muted-light dark:text-muted-dark font-semibold pointer-events-none">كريدت</span>
-                    </div>
-                  </div>
-                )}
 
-                <div className="h-px bg-border-light dark:bg-border-dark" />
-
-                <div className="flex items-center justify-between p-3 rounded-xl bg-bg-light dark:bg-bg-dark">
+                <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-bg-light dark:bg-bg-dark">
                   <div className="flex-1 min-w-0">
                     <p className="text-small font-bold">تقرير يومي بالاستهلاك</p>
-                    <p className="text-[11px] text-muted-light dark:text-muted-dark">ملخص يومي بالبريد الإلكتروني يوضّح استهلاك الكريدت</p>
+                    <p className="text-[11px] text-muted-light dark:text-muted-dark">ملخص يومي بإجمالي التوكنز المستهلكة.</p>
                   </div>
-                  <Toggle checked={form.dailyReportEnabled} onChange={(v) => update('dailyReportEnabled', v)} />
+                  <Toggle checked={form.dailyReportEnabled} onChange={(v) => update('dailyReportEnabled', v)} label="تقرير يومي بالاستهلاك" />
                 </div>
               </div>
             </SectionCard>
@@ -1881,15 +1988,17 @@ function FeatureRow({
   icon,
   title,
   desc,
-  cost,
+  usage,
   checked,
+  disabled,
   onChange,
 }: {
   icon: React.ReactNode;
   title: string;
   desc: string;
-  cost: string;
+  usage: { tone: 'avg' | 'none' | 'unavailable'; text: string };
   checked: boolean;
+  disabled?: boolean;
   onChange: (v: boolean) => void;
 }): JSX.Element {
   return (
@@ -1900,17 +2009,50 @@ function FeatureRow({
       )}>
         {icon}
       </span>
-      <div className="flex-1 min-w-0">
+      <div className={cn('flex-1 min-w-0', disabled && 'opacity-60')}>
         <p className="text-small font-semibold">{title}</p>
         <p className="text-[11px] text-muted-light dark:text-muted-dark">{desc}</p>
       </div>
       <span className={cn(
-        'text-[10px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap flex-shrink-0',
-        checked ? 'bg-primary/10 text-primary' : 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark'
+        'text-[10.5px] px-2 py-0.5 rounded-full font-bold whitespace-nowrap flex-shrink-0',
+        usage.tone === 'avg' && 'bg-primary/10 text-primary',
+        usage.tone === 'none' && 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark',
+        usage.tone === 'unavailable' && 'bg-[#FEF3C7] text-[#B45309] dark:bg-warning/15 dark:text-warning',
       )}>
-        {cost}
+        {usage.text}
       </span>
-      <Toggle checked={checked} onChange={onChange} />
+      <Toggle checked={checked} onChange={onChange} disabled={disabled} label={title} />
+    </div>
+  );
+}
+
+/** A token count typed with thousands separators; empty means none. */
+function TokenField({
+  id,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string;
+  value: number | null;
+  onChange: (v: number | null) => void;
+  placeholder?: string;
+}): JSX.Element {
+  return (
+    <div className="relative w-48">
+      <input
+        id={id}
+        inputMode="numeric"
+        dir="ltr"
+        value={value == null ? '' : value.toLocaleString('en-US')}
+        onChange={(e) => {
+          const digits = e.target.value.replace(/\D/g, '').slice(0, 12);
+          onChange(digits ? Number(digits) : null);
+        }}
+        placeholder={placeholder}
+        className="w-full h-10 ps-3 pe-12 rounded-xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-small font-mono text-end focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+      />
+      <span className="absolute end-3 top-1/2 -translate-y-1/2 text-[11px] text-muted-light dark:text-muted-dark font-semibold pointer-events-none">توكن</span>
     </div>
   );
 }
@@ -2071,11 +2213,26 @@ function ConnectionBadge({ status, hasKey }: { status: AISettingsType['connectio
   );
 }
 
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }): JSX.Element {
+function Toggle({
+  checked,
+  onChange,
+  disabled,
+  label,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+  label?: string;
+}): JSX.Element {
   return (
     <button
       onClick={() => onChange(!checked)}
-      className={cn('relative h-6 w-11 rounded-full transition-colors flex-shrink-0', checked ? 'bg-primary' : 'bg-border-light dark:bg-border-dark')}
+      disabled={disabled}
+      aria-label={label}
+      className={cn(
+        'relative h-6 w-11 rounded-full transition-colors flex-shrink-0 disabled:cursor-not-allowed disabled:opacity-50',
+        checked ? 'bg-primary' : 'bg-border-light dark:bg-border-dark'
+      )}
       role="switch"
       aria-checked={checked}
     >

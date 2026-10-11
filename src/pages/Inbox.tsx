@@ -80,6 +80,7 @@ import { useSettingsStore } from '@/store/useSettingsStore';
 import { useAIStore, resolveBehavior } from '@/store/useAIStore';
 import { contactTypeLabel } from '@/utils/labels';
 import { transcribeAudio, getAIResponse } from '@/utils/ai';
+import { assistantRunning, recordAIRequest } from '@/utils/aiUsage';
 import { formatPhone, formatTime, timeAgo } from '@/utils/format';
 import { downloadCsv } from '@/utils/csv';
 import { cn } from '@/utils/cn';
@@ -1835,8 +1836,14 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
   if (collapsed) return <></>;
 
   const generateSummary = (): void => {
+    // The summary is a request to the client's AI provider, so it needs a running assistant.
+    if (!assistantRunning()) {
+      showToast(t('المساعد الذكي متوقف — راجع إعدادات الذكاء الاصطناعي'), 'error');
+      return;
+    }
     setGenerating(true);
     setTimeout(() => {
+      recordAIRequest('summary', 530);
       const last3 = conversation.messages.slice(-3).map(staffText).join(' ');
       setSummary(
         `محادثة مع ${contact.name} (${contactTypeLabel[contact.type]}). آخر طلب: ${last3.slice(0, 120)}${last3.length > 120 ? '...' : ''}`

@@ -3,6 +3,7 @@ import { useDataStore } from '@/store/useDataStore';
 import { useAIStore } from '@/store/useAIStore';
 import { useUIStore } from '@/store/useUIStore';
 import { playNotificationSound } from '@/utils/notificationSound';
+import { assistantRunning, recordAIRequest } from '@/utils/aiUsage';
 import { t } from '@/i18n/useTranslation';
 // ⚠️ مؤقّت — وضع تصوير الفيديو
 import { VIDEO_DEMO } from '@/config/videoDemo';
@@ -108,7 +109,10 @@ export function useLiveSimulator(): void {
         playNotificationSound();
 
         // Notification — 50% message, 25% conversation, 25% AI rendered when applicable
-        const variantPool = conv.aiActive && aiSettings.enabled
+        // A stopped assistant (no provider, connection failed, or the cycle's
+        // limit reached) makes no requests; the staff carry the conversation.
+        const aiRunning = assistantRunning();
+        const variantPool = conv.aiActive && aiRunning
           ? NOTIFICATION_VARIANTS
           : NOTIFICATION_VARIANTS.filter((v) => v.type !== 'system');
         const variant = pick(variantPool);
@@ -121,12 +125,16 @@ export function useLiveSimulator(): void {
         useUIStore.getState().showToast(`${t('رسالة جديدة من')} ${t(name)}`, 'info');
 
         // If conversation is AI-owned and AI enabled, schedule an AI reply.
-        if (conv.aiActive && aiSettings.enabled) {
+        if (conv.aiActive && aiRunning) {
           const reply = pick(AI_REPLIES);
           setTimeout(() => {
-            if (cancelled) return;
+            if (cancelled || !assistantRunning()) return;
+            recordAIRequest('reply', 620);
             useDataStore.getState().simulateAIReply(conv.id, reply);
           }, delay(AI_REPLY_DELAY[0], AI_REPLY_DELAY[1]));
+        } else if (!conv.aiActive && aiRunning && aiSettings.smartSuggestions) {
+          // A staff conversation gets reply suggestions for the agent.
+          recordAIRequest('suggestions', 310);
         }
       }
 
