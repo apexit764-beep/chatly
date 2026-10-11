@@ -5,6 +5,8 @@ export type AuthProvider = 'google' | 'apple';
 export interface AccountRecord {
   email: string;
   name: string;
+  /** The user's mobile, E.164, from sign-up or the profile — the user's, never the company's. */
+  phone?: string;
   /** Identity providers linked to this one account. */
   providers: AuthProvider[];
   /** Set once, when the account is created. Never overwritten. */
@@ -117,6 +119,7 @@ export const useAccountStore = create<AccountState>((set, get) => ({
     const next: AccountRecord = {
       email: key,
       name: patch.name?.trim() || existing?.name || '',
+      phone: patch.phone || existing?.phone,
       providers: patch.providers ?? existing?.providers ?? [],
       // Consent is a fact about a moment; re-signing must not move its timestamp.
       termsAcceptedAt: existing?.termsAcceptedAt ?? patch.termsAcceptedAt,

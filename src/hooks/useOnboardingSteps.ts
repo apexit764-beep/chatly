@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useDataStore } from '@/store/useDataStore';
+import { useSettingsStore } from '@/store/useSettingsStore';
 
 export interface OnboardingStep {
   key: string;
@@ -7,8 +8,10 @@ export interface OnboardingStep {
   description: string;
   /** Route the step links to */
   to: string;
+  /** The settings tab to open, for a step that lives inside /settings */
+  settingsTab?: string;
   /** Lucide icon name resolved by the component */
-  icon: 'channels' | 'departments' | 'team' | 'replies' | 'widget';
+  icon: 'company' | 'channels' | 'departments' | 'team' | 'replies' | 'widget';
   done: boolean;
 }
 
@@ -26,9 +29,20 @@ export function useOnboardingSteps(): {
   const channels = useDataStore((s) => s.channels);
   const departments = useDataStore((s) => s.departments);
   const agents = useDataStore((s) => s.agents);
+  const companySavedAt = useSettingsStore((s) => s.general.companySavedAt);
 
   return useMemo(() => {
     const steps: OnboardingStep[] = [
+      {
+        key: 'company',
+        title: 'أكمل بيانات الشركة',
+        description: 'الشعار والاسم والقطاع وحجم الشركة — كل الحقول اختيارية',
+        to: '/settings',
+        settingsTab: 'general',
+        icon: 'company',
+        // Every field is optional, so saving the company settings once is what completes it.
+        done: Boolean(companySavedAt),
+      },
       {
         key: 'channels',
         title: 'اربط قنوات التواصل',
@@ -64,5 +78,5 @@ export function useOnboardingSteps(): {
       allComplete: doneCount === total,
       progress: Math.round((doneCount / total) * 100),
     };
-  }, [channels, departments, agents]);
+  }, [channels, departments, agents, companySavedAt]);
 }

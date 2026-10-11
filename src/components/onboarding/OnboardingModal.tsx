@@ -10,19 +10,25 @@ import {
   ArrowLeft,
   X,
   Rocket,
+  Briefcase,
 } from 'lucide-react';
 import { SekaaLogo } from '@components/ui';
 import { useOnboardingStore } from '@/store/useOnboardingStore';
+import { useInboxStore } from '@/store/useInboxStore';
 import { useOnboardingSteps, type OnboardingStep } from '@/hooks/useOnboardingSteps';
 import { cn } from '@/utils/cn';
 
 const ICONS = {
+  company: Briefcase,
   channels: Smartphone,
   departments: Building2,
   team: UsersRound,
   replies: MessageSquareQuote,
   widget: Globe,
 } as const;
+
+/** «أربع خطوات» — the count written out, as the sentence reads. */
+const STEP_COUNT_WORDS: Record<number, string> = { 3: 'ثلاث خطوات', 4: 'أربع خطوات', 5: 'خمس خطوات', 6: 'ست خطوات' };
 
 export function OnboardingModal(): JSX.Element | null {
   const navigate = useNavigate();
@@ -35,6 +41,7 @@ export function OnboardingModal(): JSX.Element | null {
 
   const goToStep = (step: OnboardingStep): void => {
     skip(); // hide modal, keep the sidebar reminder so they can return
+    if (step.settingsTab) useInboxStore.getState().setSettingsTab(step.settingsTab);
     navigate(step.to);
   };
 
@@ -55,7 +62,7 @@ export function OnboardingModal(): JSX.Element | null {
           </div>
           <h2 className="text-h2 font-extrabold">أهلاً بك في Qhub 👋</h2>
           <p className="text-body opacity-90 mt-1">
-            خمس خطوات سريعة تجهّز نظامك بالكامل. أكمِلها متى ما ناسبك.
+            {STEP_COUNT_WORDS[total] ?? `${total} خطوات`} سريعة تجهّز نظامك بالكامل. أكمِلها متى ما ناسبك.
           </p>
 
           {/* Progress */}

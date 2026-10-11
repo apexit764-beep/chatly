@@ -9,7 +9,7 @@ export function Footer(): JSX.Element {
 
   return (
     <footer className="flex-shrink-0 border-t border-border-light dark:border-border-dark px-6 py-3 flex items-center justify-between text-[11px] text-muted-light dark:text-muted-dark">
-      <span>© {year} {siteName}. {t('جميع الحقوق محفوظة')}</span>
+      <span>© {year} {siteName || 'Qhub'}. {t('جميع الحقوق محفوظة')}</span>
       {footerLinks.length > 0 && (
         <nav className="flex items-center gap-4">
           {footerLinks.map((link) => (
