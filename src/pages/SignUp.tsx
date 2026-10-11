@@ -268,6 +268,14 @@ export default function SignUp(): JSX.Element {
               </motion.div>
             )}
 
+            {/* Consent is the click itself — stated right above the control that gives it, so it is read before the press. */}
+            <p className="text-center text-[12px] leading-relaxed text-muted-light dark:text-muted-dark">
+              بالنقر على إنشاء حساب فأنت توافق على{' '}
+              <a href="#" className="text-primary hover:underline">الشروط والأحكام</a>
+              {' '}و{' '}
+              <a href="#" className="text-primary hover:underline">سياسة الخصوصية</a>.
+            </p>
+
             <button
               type="submit"
               disabled={loading}
@@ -283,19 +291,11 @@ export default function SignUp(): JSX.Element {
                 <span className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
               ) : (
                 <>
-                  ابدأ مجاناً
+                  إنشاء حساب
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
             </button>
-
-            {/* Consent is the click itself — stated next to the control that gives it. */}
-            <p className="text-center text-[12px] leading-relaxed text-muted-light dark:text-muted-dark">
-              بضغطك على «ابدأ مجاناً» فأنت توافق على{' '}
-              <a href="#" className="text-primary hover:underline">الشروط والأحكام</a>
-              {' '}و{' '}
-              <a href="#" className="text-primary hover:underline">سياسة الخصوصية</a>.
-            </p>
           </form>
 
           <div className="mt-6">
