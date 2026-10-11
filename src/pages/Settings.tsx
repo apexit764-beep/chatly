@@ -30,7 +30,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { Avatar, Modal, useConfirm, InfoTip } from '@components/ui';
-import { PhoneField, PHONE_COUNTRIES } from '@components/ui/PhoneField';
+import { PhoneField, PHONE_COUNTRIES, isValidPhone, toE164 } from '@components/ui/PhoneField';
 import { QrCode } from '@components/ui/QrCode';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useInboxStore } from '@/store/useInboxStore';
@@ -312,6 +312,7 @@ function ProfileTab(): JSX.Element {
       : undefined;
     return dial ? user!.phone!.slice(dial.code.length) : '';
   });
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   // Email change modal
   const [emailModalOpen, setEmailModalOpen] = useState(false);
@@ -401,10 +402,10 @@ function ProfileTab(): JSX.Element {
   const updateUser = useAuthStore((s) => s.updateUser);
   const saveProfile = (): void => {
     if (!name.trim()) { showToast('اسم العرض مطلوب', 'error'); return; }
-    // Only store a number when one was actually typed, so clearing the field
-    // does not leave a bare dial code behind pretending to be a phone number.
-    const trimmed = phone.trim();
-    updateUser({ name: name.trim(), phone: trimmed ? `${phoneCode}${trimmed}` : undefined });
+    // The mobile number is required, and must be a real number for its country.
+    if (!phone.trim()) { setPhoneError('رقم الجوال مطلوب'); showToast('رقم الجوال مطلوب', 'error'); return; }
+    if (!isValidPhone(phoneCode, phone)) { setPhoneError('رقم الجوال غير صحيح لهذه الدولة'); showToast('رقم الجوال غير صحيح', 'error'); return; }
+    updateUser({ name: name.trim(), phone: toE164(phoneCode, phone) });
     showToast('تم حفظ الملف الشخصي', 'success');
   };
 
@@ -455,14 +456,15 @@ function ProfileTab(): JSX.Element {
       </Row>
 
       <Row
-        label={<>رقم الجوال<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>}
+        label={<>رقم الجوال <span className="text-danger ms-0.5">*</span></>}
         hint="للتواصل معك عند وجود مشكلة في الحساب"
       >
         <PhoneField
           countryCode={phoneCode}
           phone={phone}
-          onCountryCodeChange={setPhoneCode}
-          onPhoneChange={setPhone}
+          onCountryCodeChange={(c) => { setPhoneCode(c); setPhoneError(null); }}
+          onPhoneChange={(v) => { setPhone(v); setPhoneError(null); }}
+          error={phoneError ?? undefined}
         />
       </Row>
 
