@@ -37,6 +37,7 @@ import {
   type Column,
 } from '@components/ui';
 import { ContactTypeTip } from '@components/contacts/ContactTypeTip';
+import { MetaPaymentDialog } from '@components/campaigns/MetaPaymentDialog';
 import { DateRangePicker } from '@components/ui/DateRangePicker';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -48,6 +49,7 @@ import {
 } from '@/utils/labels';
 import { formatDate, formatNumber } from '@/utils/format';
 import { downloadCsv } from '@/utils/csv';
+import { META_PAYMENT_ERROR_CODE, sendWhatsAppCampaign } from '@/utils/sendCampaign';
 import { cn } from '@/utils/cn';
 import type { Campaign, CampaignChannelType, CampaignStatus, CampaignTemplate, CampaignTemplateCategory, CampaignTemplateType, ChannelType, ContactType } from '@/types';
 
@@ -91,6 +93,8 @@ export default function Campaigns(): JSX.Element {
     attachmentName: string;
   }>({ name: '', message: '', audience: 'all', schedule: 'now', scheduledAt: '', minDelay: 15, maxDelay: 45, channelType: 'whatsapp', senderChannelId: '', attachmentName: '' });
   const [errors, setErrors] = useState<{ name?: string; message?: string }>({});
+  const [sending, setSending] = useState(false);
+  const [paymentIssueOpen, setPaymentIssueOpen] = useState(false);
 
   // Pre-fill from a template that the user picked on /campaigns/templates
   useEffect(() => {
@@ -186,7 +190,8 @@ export default function Campaigns(): JSX.Element {
     incrementTemplateUsage(t.id);
   };
 
-  const submit = (): void => {
+  const submit = async (): Promise<void> => {
+    if (sending) return;
     const e: typeof errors = {};
     if (!form.name.trim()) e.name = 'اسم الحملة مطلوب';
     if (!form.message.trim()) e.message = 'نص الرسالة مطلوب';
@@ -197,6 +202,20 @@ export default function Campaigns(): JSX.Element {
       const label = channelFilter === 'whatsapp' ? 'رقم الإرسال' : 'حساب الإرسال';
       showToast(`اختر ${label} أولاً`, 'error');
       return;
+    }
+
+    // Meta has to accept a WhatsApp send before the campaign counts as sent.
+    // On a refusal nothing is saved and the drawer stays open with the form
+    // untouched, so the user can fix the cause and press send again.
+    if (form.channelType === 'whatsapp' && form.schedule === 'now') {
+      setSending(true);
+      const result = await sendWhatsAppCampaign(channels.find((c) => c.id === form.senderChannelId));
+      setSending(false);
+      if (!result.ok) {
+        if (result.code === META_PAYMENT_ERROR_CODE) setPaymentIssueOpen(true);
+        else showToast(`تعذّر إرسال الحملة (خطأ ${result.code} من ميتا)`, 'error');
+        return;
+      }
     }
 
     const status: CampaignStatus = form.schedule === 'now' ? 'completed' : 'scheduled';
@@ -641,14 +660,17 @@ export default function Campaigns(): JSX.Element {
             إلغاء
           </button>
           <button
-            onClick={submit}
-            className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2"
+            onClick={() => void submit()}
+            disabled={sending}
+            className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2 disabled:opacity-70 disabled:cursor-wait"
           >
-            <Send className="h-4 w-4" />
-            {form.schedule === 'now' ? 'إرسال الآن' : 'جدولة'}
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {sending ? 'جاري الإرسال...' : form.schedule === 'now' ? 'إرسال الآن' : 'جدولة'}
           </button>
         </div>
       </Drawer>
+
+      <MetaPaymentDialog open={paymentIssueOpen} onClose={() => setPaymentIssueOpen(false)} />
 
       <Modal open={!!preview} onClose={() => setPreview(null)} title="معاينة الرسالة" size="sm">
         <div className="flex justify-center">

@@ -104,6 +104,8 @@ export const channels: Channel[] = [
     name: 'الفواتير والدفع',
     identifier: '+968 9999 3333',
     status: 'connected',
+    // Demo: Meta has no valid payment method for this number → campaigns fail with 131042.
+    demoMetaPaymentMissing: true,
     departmentId: 'd3',
     unreadCount: 0,
     color: '#25D366',
