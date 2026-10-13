@@ -9,8 +9,19 @@ import { useAIStore } from '@/store/useAIStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { Building, Smartphone, UsersRound } from 'lucide-react';
 import { useTranslation } from '@/i18n/useTranslation';
+import { usePermission } from '@/hooks/usePermission';
+import { AgentOverview } from '@components/overview/AgentOverview';
 
+/**
+ * The company-wide view is for whoever may see the team's performance — the same
+ * line the reports draw. Everyone else gets their own numbers only.
+ */
 export default function Overview(): JSX.Element {
+  const { has } = usePermission();
+  return has('reports.view') ? <TeamOverview /> : <AgentOverview />;
+}
+
+function TeamOverview(): JSX.Element {
   const conversations = useDataStore((s) => s.conversations);
   const contacts = useDataStore((s) => s.contacts);
   const agents = useDataStore((s) => s.agents);

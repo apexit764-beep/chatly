@@ -11,6 +11,12 @@ interface AuthUser {
   role: 'admin' | 'client';
   /** Full international number, dial code included. Absent until the user adds one. */
   phone?: string;
+  /**
+   * The staff record this login acts as. The sign-in email need not match the
+   * staff email (the demo agent logs in as agent@qhub.com but is فاطمة), so the
+   * link is explicit. Absent: the account owner.
+   */
+  agentId?: string;
 }
 
 interface AuthState {
@@ -57,6 +63,8 @@ const initial = readInitial();
 
 const CLIENT_CREDS = { email: 'admin@qhub.com', password: 'admin123', name: 'سالم الرواحي' };
 const ADMIN_CREDS = { email: 'admin@apexes.click', password: 'admin123', name: 'محمد الكندي' };
+/** Demo staff login: a «وكيل» seat, to see the panel as a staff member sees it. */
+const AGENT_CREDS = { email: 'agent@qhub.com', password: 'agent123', name: 'فاطمة البلوشي', agentId: 'a2' };
 
 /** Refuse further attempts for this long once the allowance is spent. */
 const LOCKOUT_MS = 5 * 60 * 1000;
@@ -75,8 +83,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: (email, password) => {
     const mode = getAppMode();
     const cleaned = email.trim().toLowerCase();
-    const creds = mode === 'admin' ? ADMIN_CREDS : CLIENT_CREDS;
-    if (cleaned !== creds.email || password !== creds.password) {
+    const options: { email: string; password: string; name: string; agentId?: string }[] =
+      mode === 'admin' ? [ADMIN_CREDS] : [CLIENT_CREDS, AGENT_CREDS];
+    const creds = options.find((c) => c.email === cleaned && c.password === password);
+    if (!creds) {
       return { ok: false, error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' };
     }
 
@@ -87,6 +97,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       email: cleaned,
       name: account?.name || creds.name,
       ...(account?.phone ? { phone: account.phone } : {}),
+      ...(creds.agentId ? { agentId: creds.agentId } : {}),
       role: mode === 'admin' ? 'admin' : 'client',
     };
 

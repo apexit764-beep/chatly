@@ -23,6 +23,7 @@ export function usePermission(): {
 
   // Locate the agent record: prefer authenticated user by email if available, else currentUserId
   const agent =
+    (authUser?.agentId ? agents.find((a) => a.id === authUser.agentId) : undefined) ??
     (authUser && agents.find((a) => a.email === authUser.email)) ??
     agents.find((a) => a.id === currentUserId) ??
     null;

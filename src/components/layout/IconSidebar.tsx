@@ -22,6 +22,8 @@ import {
 
 import { useTranslation } from '@/i18n/useTranslation';
 import { useDataStore } from '@/store/useDataStore';
+import { usePermission } from '@/hooks/usePermission';
+import type { PermissionKey } from '@/types';
 import { useUIStore } from '@/store/useUIStore';
 import { SekaaLogo } from '@components/ui';
 import { OnboardingReminder } from '@components/onboarding/OnboardingModal';
@@ -33,24 +35,26 @@ interface NavItem {
   icon: typeof InboxIcon;
   badgeKey?: 'inboxUnread';
   group: 'main' | 'manage' | 'system';
+  /** Shown only to roles holding this permission. Absent: everyone (the settings hold each user's own profile). */
+  permission?: PermissionKey;
 }
 
 const mainNav: NavItem[] = [
-  { to: '/overview', label: 'نظرة عامة', icon: LayoutDashboard, group: 'main' },
-  { to: '/inbox', label: 'المحادثات', icon: InboxIcon, badgeKey: 'inboxUnread', group: 'main' },
-  { to: '/contacts', label: 'العملاء', icon: Users, group: 'main' },
-  { to: '/reports', label: 'التقارير', icon: BarChart3, group: 'main' },
-  { to: '/channels', label: 'الحسابات والربط', icon: Smartphone, group: 'manage' },
-  { to: '/departments', label: 'الأقسام', icon: Building2, group: 'manage' },
-  { to: '/team', label: 'فريق العمل', icon: UsersRound, group: 'manage' },
-  { to: '/campaigns', label: 'الحملات التسويقية', icon: Megaphone, group: 'manage' },
-  { to: '/saved-replies', label: 'الردود السريعة', icon: MessageSquareQuote, group: 'manage' },
-  { to: '/tags', label: 'الوسوم', icon: Tag, group: 'manage' },
-  { to: '/ai-settings', label: 'إعدادات الذكاء الاصطناعي', icon: Sparkles, group: 'manage' },
-  { to: '/knowledge-base', label: 'قاعدة المعرفة', icon: BookOpen, group: 'manage' },
-  { to: '/feedback', label: 'الشكاوى والاقتراحات', icon: MessageSquareWarning, group: 'system' },
-  { to: '/rating', label: 'تقييمات العملاء', icon: Star, group: 'system' },
-  { to: '/billing', label: 'الباقات والاشتراك', icon: CreditCard, group: 'system' },
+  { to: '/overview', label: 'نظرة عامة', icon: LayoutDashboard, group: 'main', permission: 'overview.view' },
+  { to: '/inbox', label: 'المحادثات', icon: InboxIcon, badgeKey: 'inboxUnread', group: 'main', permission: 'conversations.view' },
+  { to: '/contacts', label: 'العملاء', icon: Users, group: 'main', permission: 'contacts.view' },
+  { to: '/reports', label: 'التقارير', icon: BarChart3, group: 'main', permission: 'reports.view' },
+  { to: '/channels', label: 'الحسابات والربط', icon: Smartphone, group: 'manage', permission: 'channels.view' },
+  { to: '/departments', label: 'الأقسام', icon: Building2, group: 'manage', permission: 'departments.view' },
+  { to: '/team', label: 'فريق العمل', icon: UsersRound, group: 'manage', permission: 'team.view' },
+  { to: '/campaigns', label: 'الحملات التسويقية', icon: Megaphone, group: 'manage', permission: 'campaigns.view' },
+  { to: '/saved-replies', label: 'الردود السريعة', icon: MessageSquareQuote, group: 'manage', permission: 'templates.view' },
+  { to: '/tags', label: 'الوسوم', icon: Tag, group: 'manage', permission: 'tags.view' },
+  { to: '/ai-settings', label: 'إعدادات الذكاء الاصطناعي', icon: Sparkles, group: 'manage', permission: 'ai.view' },
+  { to: '/knowledge-base', label: 'قاعدة المعرفة', icon: BookOpen, group: 'manage', permission: 'knowledge_base.view' },
+  { to: '/feedback', label: 'الشكاوى والاقتراحات', icon: MessageSquareWarning, group: 'system', permission: 'feedback.view' },
+  { to: '/rating', label: 'تقييمات العملاء', icon: Star, group: 'system', permission: 'feedback.view' },
+  { to: '/billing', label: 'الباقات والاشتراك', icon: CreditCard, group: 'system', permission: 'billing.view' },
   { to: '/settings', label: 'الإعدادات', icon: Settings, group: 'system' },
 ];
 
@@ -68,6 +72,7 @@ export function IconSidebar(): JSX.Element {
   const conversations = useDataStore((s) => s.conversations);
   const collapsed = useUIStore((s) => s.iconSidebarCollapsed);
   const toggleCollapsed = useUIStore((s) => s.toggleIconSidebar);
+  const { has } = usePermission();
   const inboxUnread = conversations.reduce((acc, c) => acc + (c.unreadCount > 0 ? 1 : 0), 0);
 
   const renderItem = (item: NavItem): JSX.Element => {
@@ -142,7 +147,7 @@ export function IconSidebar(): JSX.Element {
 
   const groupedNav = (['main', 'manage', 'system'] as const).map((g) => ({
     group: g,
-    items: mainNav.filter((i) => i.group === g),
+    items: mainNav.filter((i) => i.group === g && (!i.permission || has(i.permission))),
   }));
 
   // === COLLAPSED ===
@@ -183,7 +188,7 @@ export function IconSidebar(): JSX.Element {
         </nav>
 
         <div className="flex flex-col items-center gap-1 mt-auto w-full flex-shrink-0">
-          <OnboardingReminder collapsed />
+          {has('settings.edit') && <OnboardingReminder collapsed />}
         </div>
       </aside>
     );
@@ -234,7 +239,7 @@ export function IconSidebar(): JSX.Element {
 
       {/* Onboarding reminder */}
       <div className="px-3 pb-3 empty:hidden">
-        <OnboardingReminder />
+        {has('settings.edit') && <OnboardingReminder />}
       </div>
     </aside>
   );
