@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '@/i18n/useTranslation';
 import {
   Edit2,
@@ -219,6 +219,22 @@ export default function Team(): JSX.Element {
       hidePhoneNumbers: a.hidePhoneNumbers ?? false,
     });
     setInviteOpen(true);
+  };
+  // The agent page sends «تعديل» here as ?edit=<id>; open that agent's form once.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editParam = searchParams.get('edit');
+  useEffect(() => {
+    if (!editParam) return;
+    const target = agents.find((a) => a.id === editParam);
+    setSearchParams({}, { replace: true });
+    if (target) openEdit(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editParam]);
+  // An invitation has nothing to show yet, so it keeps the quick view; everyone else has a page.
+  const navigate = useNavigate();
+  const openAgent = (a: Agent): void => {
+    if (a.invitationStatus === 'pending') setDrawer(a);
+    else navigate(`/team/${a.id}`);
   };
   const submit = (): void => {
     if (!form.name.trim()) { showToast(t('أدخل اسم الموظف'), 'error'); return; }
@@ -549,7 +565,7 @@ export default function Team(): JSX.Element {
 
                     {/* Identity: avatar + name + email */}
                     <button
-                      onClick={() => setDrawer(a)}
+                      onClick={() => openAgent(a)}
                       className="flex items-center gap-3 text-start mb-4"
                     >
                       <div className="relative flex-shrink-0">
@@ -720,7 +736,7 @@ export default function Team(): JSX.Element {
                           />
                         </td>
                         <td className="px-4 py-3">
-                          <button onClick={() => setDrawer(a)} className="flex items-center gap-3 hover:text-primary text-start">
+                          <button onClick={() => openAgent(a)} className="flex items-center gap-3 hover:text-primary text-start">
                             <div className="relative">
                               <Avatar name={a.name} size="sm" status={isPending || isSuspended ? 'offline' : a.status} />
                               {isPending && (

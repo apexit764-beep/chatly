@@ -17,6 +17,7 @@ const Campaigns = lazy(() => import('@pages/Campaigns'));
 const CampaignTemplates = lazy(() => import('@pages/CampaignTemplates'));
 const SavedReplies = lazy(() => import('@pages/SavedReplies'));
 const Team = lazy(() => import('@pages/Team'));
+const AgentDetail = lazy(() => import('@pages/AgentDetail'));
 const Roles = lazy(() => import('@pages/Roles'));
 const Channels = lazy(() => import('@pages/Channels'));
 const ChannelDetail = lazy(() => import('@pages/ChannelDetail'));
@@ -115,6 +116,7 @@ export default function App(): JSX.Element {
           <Route path="/templates" element={<Navigate to="/saved-replies" replace />} />
           <Route path="/team" element={<Team />} />
           <Route path="/team/roles" element={<Roles />} />
+          <Route path="/team/:agentId" element={<AgentDetail />} />
           <Route path="/integrations" element={<Navigate to="/channels" replace />} />
           <Route path="/widget" element={<Navigate to="/channels/widget" replace />} />
           <Route path="/reports" element={<Reports />} />
