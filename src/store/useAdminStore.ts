@@ -47,6 +47,14 @@ function persistRequests(list: PlanRequest[]): void {
   try { localStorage.setItem(REQUESTS_KEY, JSON.stringify(list)); } catch {/*ignore*/}
 }
 
+export interface RetentionOffer {
+  enabled: boolean;
+  /** Discount on the current plan's price. */
+  percent: number;
+  /** Billing periods it covers. */
+  periods: number;
+}
+
 interface AdminState {
   countries: Country[];
   plans: Plan[];
@@ -57,6 +65,10 @@ interface AdminState {
   paymob: PaymobConfig;
   adminUsers: AdminUser[];
   planRequests: PlanRequest[];
+  /** Shown first when a client starts a downgrade: stay on the plan at a discount. */
+  retentionOffer: RetentionOffer;
+  /** Clients who already took the retention offer — it is offered once per account. */
+  retentionOfferUsedBy: string[];
 
   // Client actions
   addClient: (c: Omit<Client, 'id' | 'joinedAt' | 'lastActiveAt' | 'subscriptionId' | 'mrr' | 'agentCount' | 'channelCount' | 'conversationCount'>) => Client;
@@ -82,7 +94,15 @@ interface AdminState {
    * جدولة تخفيض: الباقة الجديدة تبدأ عند انتهاء الفترة الحالية، ويُصدَر لها
    * فاتورة مجدولة تُسحب في ذلك التاريخ. الاشتراك الحالي يكمل طبيعياً حتى ثَمّ.
    */
-  schedulePlanChange: (clientId: string, planId: string, billingCycle: 'monthly' | 'yearly') => void;
+  schedulePlanChange: (
+    clientId: string,
+    planId: string,
+    billingCycle: 'monthly' | 'yearly',
+    keep?: { agentIds: string[]; channelIds: string[] },
+  ) => void;
+  /** The client keeps the current plan with the retention discount; any scheduled downgrade is dropped. */
+  acceptRetentionOffer: (clientId: string) => void;
+  updateRetentionOffer: (patch: Partial<RetentionOffer>) => void;
 
   // Invoice / payment actions
   recordPayment: (clientId: string, planId: string, amount: number, currency: string, last4: string) => { invoice: Invoice; transaction: Transaction };
@@ -117,6 +137,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
   paymob: initialPaymobConfig,
   adminUsers: initialAdminUsers,
   planRequests: readRequests(),
+  retentionOffer: { enabled: true, percent: 30, periods: 3 },
+  retentionOfferUsedBy: [],
 
   addClient: (c) => {
     const client: Client = {
@@ -243,7 +265,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       }),
     })),
 
-  schedulePlanChange: (clientId, planId, billingCycle) => {
+  schedulePlanChange: (clientId, planId, billingCycle, keep) => {
     const client = get().clients.find((c) => c.id === clientId);
     const plan = get().plans.find((p) => p.id === planId);
     const current = get().subscriptions.find((s) => s.clientId === clientId && s.status === 'active');
@@ -278,11 +300,41 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
     set((s) => ({
       subscriptions: s.subscriptions.map((sub) =>
-        sub.id === current.id ? { ...sub, scheduledChange: { planId, billingCycle, effectiveAt } } : sub
+        sub.id === current.id
+          ? {
+              ...sub,
+              scheduledChange: {
+                planId,
+                billingCycle,
+                effectiveAt,
+                ...(keep ? { keepAgentIds: keep.agentIds, keepChannelIds: keep.channelIds } : {}),
+              },
+            }
+          : sub
       ),
       invoices: [invoice, ...s.invoices],
     }));
   },
+
+  acceptRetentionOffer: (clientId) => {
+    const { retentionOffer } = get();
+    set((s) => ({
+      subscriptions: s.subscriptions.map((sub) =>
+        sub.clientId === clientId && sub.status === 'active'
+          ? {
+              ...sub,
+              scheduledChange: undefined,
+              discount: { percent: retentionOffer.percent, periods: retentionOffer.periods, acceptedAt: new Date().toISOString() },
+            }
+          : sub
+      ),
+      // A downgrade dropped for the offer leaves no invoice behind.
+      invoices: s.invoices.filter((inv) => !(inv.clientId === clientId && inv.status === 'scheduled')),
+      retentionOfferUsedBy: [...s.retentionOfferUsedBy, clientId],
+    }));
+  },
+
+  updateRetentionOffer: (patch) => set((s) => ({ retentionOffer: { ...s.retentionOffer, ...patch } })),
 
   recordPayment: (clientId, planId, amount, currency, last4) => {
     const client = get().clients.find((c) => c.id === clientId);
