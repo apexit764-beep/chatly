@@ -275,7 +275,12 @@ export default function Team(): JSX.Element {
   };
   const toggleSuspend = (a: Agent): void => {
     const newStatus: InvitationStatus = a.invitationStatus === 'suspended' ? 'active' : 'suspended';
-    updateAgent(a.id, { invitationStatus: newStatus });
+    // Bringing someone back takes a seat, so it is held to the plan like an invitation.
+    if (newStatus === 'active' && agentsReached) {
+      setPlanLimitOpen(true);
+      return;
+    }
+    updateAgent(a.id, { invitationStatus: newStatus, planSuspended: undefined });
     showToast(newStatus === 'suspended' ? t('تم تعطيل الحساب') : t('تم إعادة التفعيل'), 'success');
   };
 

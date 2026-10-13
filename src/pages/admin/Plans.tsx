@@ -13,6 +13,7 @@ import {
   Globe2,
   Power,
   Copy,
+  Gift,
 } from 'lucide-react';
 import {
   Card,
@@ -346,6 +347,8 @@ export default function AdminPlans(): JSX.Element {
         </div>
       </Card>
 
+      <RetentionOfferCard />
+
       {/* Modal */}
       <Modal
         open={modalOpen}
@@ -444,5 +447,96 @@ function LimitChip({ icon, value, label }: { icon: React.ReactNode; value: strin
       <span className="font-bold">{isInfinite ? <InfinityIcon className="h-3.5 w-3.5 inline" /> : value}</span>
       <span className="text-muted-light dark:text-muted-dark">{label}</span>
     </div>
+  );
+}
+
+/**
+ * The offer a client sees the moment they start a downgrade: stay on the current
+ * plan at a discount. Once per account; a client who took it never sees it again.
+ */
+function RetentionOfferCard(): JSX.Element {
+  const offer = useAdminStore((s) => s.retentionOffer);
+  const usedBy = useAdminStore((s) => s.retentionOfferUsedBy);
+  const updateOffer = useAdminStore((s) => s.updateRetentionOffer);
+  const showToast = useUIStore((s) => s.showToast);
+  const [percent, setPercent] = useState(String(offer.percent));
+  const [periods, setPeriods] = useState(String(offer.periods));
+
+  const p = Number(percent);
+  const n = Number(periods);
+  const valid = Number.isInteger(p) && p >= 1 && p <= 90 && Number.isInteger(n) && n >= 1 && n <= 12;
+  const dirty = p !== offer.percent || n !== offer.periods;
+
+  const save = (): void => {
+    if (!valid) {
+      showToast('النسبة من 1 إلى 90، والمدة من 1 إلى 12 فترة', 'error');
+      return;
+    }
+    updateOffer({ percent: p, periods: n });
+    showToast('تم حفظ عرض الاحتفاظ', 'success');
+  };
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="h-10 w-10 rounded-full bg-success/15 text-success flex items-center justify-center flex-shrink-0">
+            <Gift className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-h3 font-bold">عرض الاحتفاظ عند التخفيض</h3>
+            <p className="text-small text-muted-light dark:text-muted-dark mt-0.5 leading-relaxed">
+              أول ما يضغط العميل «تخفيض» يظهر له خصم على باقته الحالية بدل ما ينزل. يظهر مرة واحدة لكل حساب.
+              {usedBy.length > 0 && ` استفاد منه ${usedBy.length} ${usedBy.length === 1 ? 'عميل' : 'عملاء'} حتى الآن.`}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            updateOffer({ enabled: !offer.enabled });
+            showToast(offer.enabled ? 'تم إيقاف العرض' : 'تم تفعيل العرض', 'success');
+          }}
+          className={cn(
+            'relative h-6 w-11 rounded-full transition-colors flex-shrink-0',
+            offer.enabled ? 'bg-primary' : 'bg-border-light dark:bg-border-dark',
+          )}
+          role="switch"
+          aria-checked={offer.enabled}
+          aria-label="تفعيل عرض الاحتفاظ"
+        >
+          <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all', offer.enabled ? 'start-0.5' : 'end-0.5')} />
+        </button>
+      </div>
+
+      <div className={cn('mt-4 grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end', !offer.enabled && 'opacity-50 pointer-events-none')}>
+        <Input
+          label="نسبة الخصم (%)"
+          type="number"
+          min={1}
+          max={90}
+          dir="ltr"
+          value={percent}
+          onChange={(e) => setPercent(e.target.value)}
+        />
+        <Input
+          label="المدة (عدد فترات الفوترة)"
+          tip="شهور للاشتراك الشهري وسنوات للسنوي، تبدأ من الفاتورة التالية."
+          type="number"
+          min={1}
+          max={12}
+          dir="ltr"
+          value={periods}
+          onChange={(e) => setPeriods(e.target.value)}
+        />
+        <button
+          onClick={save}
+          disabled={!dirty}
+          className="h-11 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ color: '#fff' }}
+        >
+          حفظ
+        </button>
+      </div>
+    </Card>
   );
 }

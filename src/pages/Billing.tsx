@@ -24,6 +24,9 @@ import {
 import { Card, Modal, Textarea, useConfirm, InfoTip } from '@components/ui';
 import { DateRangePicker } from '@components/ui/DateRangePicker';
 import { useAdminStore } from '@/store/useAdminStore';
+import { useDataStore } from '@/store/useDataStore';
+import { DowngradeDialog } from '@components/billing/DowngradeDialog';
+import { downgradeOverflow, lostFeatures } from '@/utils/planDowngrade';
 import { useUIStore } from '@/store/useUIStore';
 import { usePermission } from '@/hooks/usePermission';
 import { formatMoney } from '@/utils/money';
@@ -75,6 +78,10 @@ export default function Billing(): JSX.Element {
   const countries = useAdminStore((s) => s.countries);
   const cancelSubscription = useAdminStore((s) => s.cancelSubscription);
   const renewSubscription = useAdminStore((s) => s.renewSubscription);
+  const cancelPlanChange = useAdminStore((s) => s.cancelPlanChange);
+  const agents = useDataStore((s) => s.agents);
+  const channels = useDataStore((s) => s.channels);
+  const [editKeepOpen, setEditKeepOpen] = useState(false);
   const { has } = usePermission();
   const showToast = useUIStore((s) => s.showToast);
   const navigate = useNavigate();
@@ -178,6 +185,24 @@ export default function Billing(): JSX.Element {
     showToast('تم تجديد الاشتراك', 'success');
   };
 
+  const scheduledPlan = sub?.scheduledChange ? allPlans.find((p) => p.id === sub.scheduledChange!.planId) : undefined;
+  // Only a downgrade past the lower plan's limits has a choice to revisit.
+  const scheduledOverflow = scheduledPlan ? downgradeOverflow(scheduledPlan, agents, channels).any : false;
+
+  const handleCancelDowngrade = async (): Promise<void> => {
+    if (!scheduledPlan) return;
+    const ok = await confirm({
+      title: 'إلغاء التخفيض؟',
+      message: `تبقى على باقة ${plan?.nameAr ?? ''} ويتجدد اشتراكك فيها كالمعتاد، ولن يتوقف أي موظف أو قناة.`,
+      variant: 'info',
+      confirmText: 'إلغاء التخفيض',
+      cancelText: 'تراجع',
+    });
+    if (!ok) return;
+    cancelPlanChange(CURRENT_CLIENT_ID);
+    showToast(`تم إلغاء التخفيض، وتبقى على باقة ${plan?.nameAr ?? ''}`, 'success');
+  };
+
   const goToCheckout = (p: Plan): void => {
     if (p.id === client?.planId) return;
     navigate('/subscribe');
@@ -230,6 +255,13 @@ export default function Billing(): JSX.Element {
               <p className="text-display font-extrabold">{formatMoney(sub.amount, sub.currency)}</p>
               <span className="text-body opacity-90">/{sub.billingCycle === 'monthly' ? 'شهر' : 'سنة'}</span>
             </div>
+            {sub.discount && (
+              <p className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur text-[11px] font-semibold">
+                <Sparkles className="h-3 w-3" />
+                خصم {sub.discount.percent}% على {sub.discount.periods === 1 ? 'الفترة القادمة' : `الـ${sub.discount.periods} فترات القادمة`}
+                {' '}· {formatMoney(Math.round(sub.amount * (1 - sub.discount.percent / 100) * 1000) / 1000, sub.currency)}
+              </p>
+            )}
           </div>
           {/* One row: the two actions carry their labels, and the details — a
               read-only view — shrinks to its icon so it stops competing with them. */}
@@ -289,9 +321,47 @@ export default function Billing(): JSX.Element {
               <strong className="text-current">{allPlans.find((p) => p.id === sub.scheduledChange!.planId)?.nameAr ?? '—'}</strong>{' '}
               اعتباراً من <strong className="text-current">{formatDate(sub.scheduledChange.effectiveAt)}</strong>.
               باقتك الحالية ومزاياها مستمرة حتى ذلك التاريخ.
+              {scheduledOverflow && ' ما زاد عن حدود الباقة الجديدة يتوقف يومها بدون حذف، ويرجع إذا رقّيت.'}
             </p>
           </div>
+          <div className="ms-auto flex items-center gap-2 flex-shrink-0 self-center">
+            {scheduledOverflow && (
+              <button
+                onClick={() => setEditKeepOpen(true)}
+                className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark inline-flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <Pencil className="h-3.5 w-3.5" /> تعديل ما يبقى شغّالًا
+              </button>
+            )}
+            <button
+              onClick={() => void handleCancelDowngrade()}
+              className="h-9 px-4 rounded-full border border-danger/30 text-danger text-small font-medium hover:bg-danger/10 inline-flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <XCircle className="h-3.5 w-3.5" /> إلغاء التخفيض
+            </button>
+          </div>
         </div>
+      )}
+
+      {sub?.scheduledChange && scheduledPlan && (
+        <DowngradeDialog
+          mode="edit"
+          open={editKeepOpen}
+          onClose={() => setEditKeepOpen(false)}
+          clientId={CURRENT_CLIENT_ID}
+          currentPlan={plan}
+          newPlan={scheduledPlan}
+          cycle={sub.scheduledChange.billingCycle}
+          effectiveAt={sub.scheduledChange.effectiveAt}
+          currentPrice={sub.amount}
+          newPrice={(() => {
+            const price = scheduledPlan.pricesPerCountry[client.country] ?? { monthly: 0, yearly: 0 };
+            return sub.scheduledChange.billingCycle === 'yearly' ? price.yearly : price.monthly;
+          })()}
+          currency={sub.currency}
+          lostFeatures={lostFeatures(activePlans, plan, scheduledPlan)}
+          initialKeep={{ agentIds: sub.scheduledChange.keepAgentIds, channelIds: sub.scheduledChange.keepChannelIds }}
+        />
       )}
 
       {/* Subscription details modal */}

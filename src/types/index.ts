@@ -124,6 +124,8 @@ export interface Channel {
    * comes back from Meta at send time, not from stored data.
    */
   demoMetaPaymentMissing?: boolean;
+  /** Stopped by a downgrade to a plan with fewer channels; restored on upgrade. */
+  planSuspended?: boolean;
 }
 
 export interface Department {
@@ -171,6 +173,8 @@ export interface Agent {
   departments: string[];   // departments this agent belongs to
   /** Max simultaneous open conversations this agent can handle. 0 = unlimited */
   maxConcurrent?: number;
+  /** Suspended by a downgrade to a plan with fewer seats; restored on upgrade. */
+  planSuspended?: boolean;
   /** Agent's preferred timezone (e.g., 'Asia/Muscat') */
   timezone?: string;
   /** Working hours — used for routing + status display */
@@ -534,6 +538,8 @@ export interface Subscription {
      */
     keepAgentIds?: string[];
     keepChannelIds?: string[];
+    /** Set once the three-days-before reminder has gone out. */
+    remindedAt?: string;
   };
   /** A retention discount the client took instead of downgrading. */
   discount?: {

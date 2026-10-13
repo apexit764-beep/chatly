@@ -115,6 +115,14 @@ interface DataState {
   inviteAgent: (data: { email: string; name: string; roleId: string; departments: string[]; channels: string[]; phone?: string }) => void;
   resendInvitation: (id: string) => void;
   cancelInvitation: (id: string) => void;
+  /**
+   * A downgrade took effect: staff and channels not in `keep` stop. Nothing is
+   * deleted — suspended staff and stopped channels come back on upgrade — except
+   * pending invitations, which are simply withdrawn.
+   */
+  suspendForPlan: (keep: { agentIds: string[]; channelIds: string[] }) => void;
+  /** An upgrade made room: bring back what a downgrade stopped, oldest first, up to the new limits. */
+  restoreFromPlan: (limits: { agents: number; channels: number }, channelAllowed: (c: Channel) => boolean) => void;
 
   // Campaign actions
   addCampaign: (c: Omit<Campaign, 'id' | 'sentCount' | 'openRate' | 'createdAt'>) => void;
@@ -504,6 +512,45 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   deleteAgent: (id) =>
     set((state) => ({ agents: state.agents.filter((a) => a.id !== id) })),
+
+  suspendForPlan: (keep) =>
+    set((state) => ({
+      agents: state.agents
+        .filter((a) => keep.agentIds.includes(a.id) || a.invitationStatus !== 'pending')
+        .map((a) =>
+          keep.agentIds.includes(a.id) || a.invitationStatus === 'suspended'
+            ? a
+            : { ...a, invitationStatus: 'suspended' as const, planSuspended: true, status: 'offline' as const }
+        ),
+      channels: state.channels.map((c) =>
+        keep.channelIds.includes(c.id) || c.planSuspended
+          ? c
+          : { ...c, status: 'disconnected' as const, planSuspended: true }
+      ),
+    })),
+
+  restoreFromPlan: (limits, channelAllowed) =>
+    set((state) => {
+      const seated = state.agents.filter((a) => a.invitationStatus !== 'suspended').length;
+      let agentRoom = limits.agents === -1 ? Infinity : limits.agents - seated;
+      const agents = state.agents.map((a) => {
+        if (!a.planSuspended || agentRoom <= 0) return a;
+        agentRoom -= 1;
+        return { ...a, invitationStatus: 'active' as const, planSuspended: undefined };
+      });
+      const running = state.channels.filter((c) => !c.planSuspended).length;
+      let channelRoom = limits.channels === -1 ? Infinity : limits.channels - running;
+      const channels = [...state.channels]
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        .map((c) => {
+          if (!c.planSuspended || channelRoom <= 0 || !channelAllowed(c)) return c;
+          channelRoom -= 1;
+          return { ...c, status: 'connected' as const, planSuspended: undefined };
+        });
+      const order = new Map(state.channels.map((c, i) => [c.id, i]));
+      channels.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+      return { agents, channels };
+    }),
   inviteAgent: (data) =>
     set((state) => {
       const id = 'a_' + newId();
