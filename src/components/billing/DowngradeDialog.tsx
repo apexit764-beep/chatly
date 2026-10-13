@@ -13,12 +13,11 @@ import { formatDate } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import type { Channel, Plan } from '@/types';
 
-type StepKey = 'offer' | 'keep' | 'confirm';
+type StepKey = 'offer' | 'review';
 
 const STEP_LABEL: Record<StepKey, string> = {
   offer: 'عرض خاص',
-  keep: 'ما يبقى مفعّلًا',
-  confirm: 'تأكيد',
+  review: 'المراجعة والتأكيد',
 };
 
 interface Props {
@@ -57,9 +56,9 @@ function periodsLabel(n: number, cycle: 'monthly' | 'yearly'): string {
 const countLabel = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
 
 /**
- * تخفيض الباقة على خطوات: عرض الاحتفاظ أولًا، ثم اختيار ما يبقى شغّالًا إن كان
- * الاستخدام الحالي أكبر من حدود الباقة الأقل، ثم التأكيد. ما لا يُختار يتوقف في
- * تاريخ التخفيض ويبقى محفوظًا بدون حذف.
+ * تخفيض الباقة: شاشة واحدة تجمع ملخص التخفيض واختيار ما يبقى مفعّلًا (إن كان
+ * الاستخدام أكبر من حدود الباقة الأقل) والتأكيد. عرض الاحتفاظ يسبقها حين يُفعَّل،
+ * وهو معطّل حاليًا. ما لا يُختار يتوقف في تاريخ التخفيض ويبقى محفوظًا دون حذف.
  */
 export function DowngradeDialog({
   open,
@@ -108,11 +107,15 @@ export function DowngradeDialog({
   const channelsToKeep = channelLimit === -1 ? eligibleChannels.length : Math.min(channelLimit, eligibleChannels.length);
 
   const editing = mode === 'edit';
-  const offerAvailable = !editing && retentionOffer.enabled && retentionOffer.percent > 0 && !retentionOfferUsedBy.includes(clientId);
+  // ⚠️ معطّل مؤقتًا: عرض الاحتفاظ (خصم للبقاء على الباقة) غير مطلوب حاليًا.
+  // لإعادته: احذف السطر `= false` وأعد السطر المعلّق تحته.
+  const offerAvailable = false;
+  // const offerAvailable = !editing && retentionOffer.enabled && retentionOffer.percent > 0 && !retentionOfferUsedBy.includes(clientId);
   const needsKeep = agentsOver || channelsOver || blockedTypes;
 
   const steps: StepKey[] = useMemo(
-    () => [...(offerAvailable ? (['offer'] as const) : []), ...(needsKeep ? (['keep'] as const) : []), 'confirm'],
+    // Choosing what stays and confirming are one screen; the offer, when on, comes first.
+    () => [...(offerAvailable ? (['offer'] as const) : []), 'review'],
     // The step list is fixed for one opening — accepting the offer closes the dialog anyway.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [open],
@@ -264,116 +267,7 @@ export function DowngradeDialog({
             </div>
           )}
 
-          {key === 'keep' && (
-            <div className="space-y-4">
-              <div className="rounded-card border border-border-light dark:border-border-dark overflow-hidden">
-                <table className="w-full text-small">
-                  <thead className="bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark">
-                    <tr>
-                      <th className="text-start font-medium px-4 py-2">الحد</th>
-                      <th className="text-start font-medium px-4 py-2">الباقة الحالية</th>
-                      <th className="text-start font-medium px-4 py-2">{newPlan.nameAr}</th>
-                      <th className="text-start font-medium px-4 py-2">يتوقف</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                    {agentsOver && (
-                      <tr>
-                        <td className="px-4 py-2.5">الموظفون</td>
-                        <td className="px-4 py-2.5">{candidateAgents.length}</td>
-                        <td className="px-4 py-2.5">{limitText(agentLimit)}</td>
-                        <td className="px-4 py-2.5">
-                          <Pill className="bg-warning/10 text-warning border-warning/20">{candidateAgents.length - agentsToKeep}</Pill>
-                        </td>
-                      </tr>
-                    )}
-                    {(channelsOver || blockedTypes) && (
-                      <tr>
-                        <td className="px-4 py-2.5">القنوات</td>
-                        <td className="px-4 py-2.5">{channels.length}</td>
-                        <td className="px-4 py-2.5">{limitText(channelLimit)}</td>
-                        <td className="px-4 py-2.5">
-                          <Pill className="bg-warning/10 text-warning border-warning/20">{channels.length - channelsToKeep}</Pill>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              <p className="text-small text-muted-light dark:text-muted-dark">
-                حدّد ما يبقى مفعّلًا بعد {formatDate(effectiveAt)}. يتوقف الباقي دون حذف، ويعود تلقائيًا عند الترقية.
-              </p>
-
-              <div className={cn('grid gap-4', agentsOver && (channelsOver || blockedTypes) && 'md:grid-cols-2')}>
-                {agentsOver && (
-                  <KeepPanel title="الموظفون" selected={keepAgents.length} required={agentsToKeep}>
-                    {candidateAgents.map((a) => {
-                      const locked = isOwner(a);
-                      const checked = keepAgents.includes(a.id);
-                      const full = !checked && keepAgents.length >= agentsToKeep;
-                      return (
-                        <KeepRow
-                          key={a.id}
-                          checked={checked}
-                          disabled={locked || full}
-                          onToggle={() => !locked && toggle(keepAgents, setKeepAgents, a.id, agentsToKeep)}
-                          icon={<Avatar name={a.name} size="sm" />}
-                          title={a.name}
-                          subtitle={a.email}
-                          tag={
-                            locked ? (
-                              <span className="inline-flex items-center gap-1 text-[11px] text-muted-light dark:text-muted-dark">
-                                <Lock className="h-3 w-3" /> المالك
-                              </span>
-                            ) : !checked ? (
-                              <Pill className="bg-danger/10 text-danger border-danger/20">
-                                {a.invitationStatus === 'pending' ? 'تُلغى الدعوة' : 'يتوقف'}
-                              </Pill>
-                            ) : a.invitationStatus === 'pending' ? (
-                              <Pill className="bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark border-border-light dark:border-border-dark">دعوة معلّقة</Pill>
-                            ) : null
-                          }
-                        />
-                      );
-                    })}
-                  </KeepPanel>
-                )}
-
-                {(channelsOver || blockedTypes) && (
-                  <KeepPanel title="القنوات" selected={keepChannels.length} required={channelsToKeep}>
-                    {sortedChannels.map((c: Channel) => {
-                      const allowed = channelTypeAllowed(newPlan.tier, c.type);
-                      const checked = keepChannels.includes(c.id);
-                      const full = !checked && keepChannels.length >= channelsToKeep;
-                      return (
-                        <KeepRow
-                          key={c.id}
-                          checked={checked}
-                          disabled={!allowed || full}
-                          onToggle={() => allowed && toggle(keepChannels, setKeepChannels, c.id, channelsToKeep)}
-                          icon={<ChannelIcon type={c.type} size={16} />}
-                          title={c.name}
-                          subtitle={c.identifier}
-                          tag={
-                            !allowed ? (
-                              <Pill className="bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark border-border-light dark:border-border-dark">
-                                غير متاحة في {newPlan.nameAr}
-                              </Pill>
-                            ) : !checked ? (
-                              <Pill className="bg-danger/10 text-danger border-danger/20">يتوقف</Pill>
-                            ) : null
-                          }
-                        />
-                      );
-                    })}
-                  </KeepPanel>
-                )}
-              </div>
-            </div>
-          )}
-
-          {key === 'confirm' && (
+          {key === 'review' && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-4 rounded-card border border-border-light dark:border-border-dark divide-x divide-x-reverse divide-border-light dark:divide-border-dark overflow-hidden">
                 <SummaryTile label="الباقة الجديدة" value={newPlan.nameAr} />
@@ -395,6 +289,89 @@ export function DowngradeDialog({
                   ].filter(Boolean).join(' · ') || 'لا يوجد'}
                 />
               </div>
+
+              {needsKeep && (
+                <>
+                  <p className="text-small text-muted-light dark:text-muted-dark">
+                    حدّد ما يبقى مفعّلًا بعد {formatDate(effectiveAt)}. يتوقف الباقي دون حذف، ويعود تلقائيًا عند الترقية.
+                  </p>
+                  <div className={cn('grid gap-4', agentsOver && (channelsOver || blockedTypes) && 'md:grid-cols-2')}>
+                    {agentsOver && (
+                      <KeepPanel
+                        title="الموظفون"
+                        hint={`الحد في ${newPlan.nameAr}: ${limitText(agentLimit)} · المستخدم حاليًا: ${candidateAgents.length}`}
+                        selected={keepAgents.length}
+                        required={agentsToKeep}
+                      >
+                        {candidateAgents.map((a) => {
+                          const locked = isOwner(a);
+                          const checked = keepAgents.includes(a.id);
+                          const full = !checked && keepAgents.length >= agentsToKeep;
+                          return (
+                            <KeepRow
+                              key={a.id}
+                              checked={checked}
+                              disabled={locked || full}
+                              onToggle={() => !locked && toggle(keepAgents, setKeepAgents, a.id, agentsToKeep)}
+                              icon={<Avatar name={a.name} size="sm" />}
+                              title={a.name}
+                              subtitle={a.email}
+                              tag={
+                                locked ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] text-muted-light dark:text-muted-dark">
+                                    <Lock className="h-3 w-3" /> المالك
+                                  </span>
+                                ) : !checked ? (
+                                  <Pill className="bg-danger/10 text-danger border-danger/20">
+                                    {a.invitationStatus === 'pending' ? 'تُلغى الدعوة' : 'يتوقف'}
+                                  </Pill>
+                                ) : a.invitationStatus === 'pending' ? (
+                                  <Pill className="bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark border-border-light dark:border-border-dark">دعوة معلّقة</Pill>
+                                ) : null
+                              }
+                            />
+                          );
+                        })}
+                      </KeepPanel>
+                    )}
+
+                    {(channelsOver || blockedTypes) && (
+                      <KeepPanel
+                        title="القنوات"
+                        hint={`الحد في ${newPlan.nameAr}: ${limitText(channelLimit)} · المستخدم حاليًا: ${channels.length}`}
+                        selected={keepChannels.length}
+                        required={channelsToKeep}
+                      >
+                        {sortedChannels.map((c: Channel) => {
+                          const allowed = channelTypeAllowed(newPlan.tier, c.type);
+                          const checked = keepChannels.includes(c.id);
+                          const full = !checked && keepChannels.length >= channelsToKeep;
+                          return (
+                            <KeepRow
+                              key={c.id}
+                              checked={checked}
+                              disabled={!allowed || full}
+                              onToggle={() => allowed && toggle(keepChannels, setKeepChannels, c.id, channelsToKeep)}
+                              icon={<ChannelIcon type={c.type} size={16} />}
+                              title={c.name}
+                              subtitle={c.identifier}
+                              tag={
+                                !allowed ? (
+                                  <Pill className="bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark border-border-light dark:border-border-dark">
+                                    غير متاحة في {newPlan.nameAr}
+                                  </Pill>
+                                ) : !checked ? (
+                                  <Pill className="bg-danger/10 text-danger border-danger/20">يتوقف</Pill>
+                                ) : null
+                              }
+                            />
+                          );
+                        })}
+                      </KeepPanel>
+                    )}
+                  </div>
+                </>
+              )}
 
               {lostFeatures.length > 0 && (
                 <div>
@@ -449,11 +426,11 @@ export function DowngradeDialog({
               </button>
               <button
                 onClick={isLast ? confirm : () => setStep(step + 1)}
-                disabled={key === 'keep' && !keepValid}
+                disabled={key === 'review' && needsKeep && !keepValid}
                 className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ color: '#fff' }}
               >
-                {isLast ? (editing ? 'حفظ الاختيار' : 'تأكيد التخفيض') : 'التالي'}
+                {isLast ? (editing ? 'حفظ التعديلات' : 'تأكيد التخفيض') : 'التالي'}
                 {!isLast && <ArrowLeft className="h-4 w-4" />}
               </button>
             </>
@@ -490,17 +467,20 @@ function LimitLine({ label, limit, used }: { label: string; limit: number; used?
   );
 }
 
-function KeepPanel({ title, selected, required, children }: { title: string; selected: number; required: number; children: ReactNode }): JSX.Element {
+function KeepPanel({ title, hint, selected, required, children }: { title: string; hint: string; selected: number; required: number; children: ReactNode }): JSX.Element {
   const done = selected === required;
   return (
     <div className="rounded-card border border-border-light dark:border-border-dark overflow-hidden">
-      <div className="px-4 py-2.5 bg-bg-light dark:bg-bg-dark flex items-center justify-between">
-        <span className="text-small font-semibold">{title}</span>
+      <div className="px-4 py-2.5 bg-bg-light dark:bg-bg-dark flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-small font-semibold">{title}</p>
+          <p className="text-[11px] text-muted-light dark:text-muted-dark">{hint}</p>
+        </div>
         <span className={cn('text-small font-semibold', done ? 'text-success' : 'text-warning')}>
           {selected} / {required}
         </span>
       </div>
-      <div className="divide-y divide-border-light dark:divide-border-dark max-h-72 overflow-y-auto">{children}</div>
+      <div className="divide-y divide-border-light dark:divide-border-dark max-h-56 overflow-y-auto">{children}</div>
     </div>
   );
 }
