@@ -486,8 +486,8 @@ function RetentionOfferCard(): JSX.Element {
           <div className="min-w-0">
             <h3 className="text-h3 font-bold">عرض الاحتفاظ عند التخفيض</h3>
             <p className="text-small text-muted-light dark:text-muted-dark mt-0.5 leading-relaxed">
-              أول ما يضغط العميل «تخفيض» يظهر له خصم على باقته الحالية بدل ما ينزل. يظهر مرة واحدة لكل حساب.
-              {usedBy.length > 0 && ` استفاد منه ${usedBy.length} ${usedBy.length === 1 ? 'عميل' : 'عملاء'} حتى الآن.`}
+              عند اختيار العميل «تخفيض» يُعرض عليه خصم على باقته الحالية بدلًا من التخفيض. يظهر العرض مرة واحدة لكل حساب.
+              {usedBy.length > 0 && ` عدد المستفيدين حتى الآن: ${usedBy.length}.`}
             </p>
           </div>
         </div>
@@ -520,7 +520,7 @@ function RetentionOfferCard(): JSX.Element {
         />
         <Input
           label="المدة (عدد فترات الفوترة)"
-          tip="شهور للاشتراك الشهري وسنوات للسنوي، تبدأ من الفاتورة التالية."
+          tip="أشهر للاشتراك الشهري وسنوات للاشتراك السنوي، تبدأ من الفاتورة التالية."
           type="number"
           min={1}
           max={12}

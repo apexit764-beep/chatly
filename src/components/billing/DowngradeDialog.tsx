@@ -17,7 +17,7 @@ type StepKey = 'offer' | 'keep' | 'confirm';
 
 const STEP_LABEL: Record<StepKey, string> = {
   offer: 'عرض خاص',
-  keep: 'ما يبقى شغّالًا',
+  keep: 'ما يبقى مفعّلًا',
   confirm: 'تأكيد',
 };
 
@@ -161,7 +161,7 @@ export function DowngradeDialog({
   const confirm = (): void => {
     if (editing) {
       updatePlanChangeKeep(clientId, { agentIds: keepAgents, channelIds: keepChannels });
-      showToast('تم حفظ اختيارك', 'success');
+      showToast('تم حفظ التعديلات', 'success');
       onClose();
       return;
     }
@@ -176,8 +176,8 @@ export function DowngradeDialog({
   };
 
   const title = key === 'offer'
-    ? 'قبل ما تخفّض باقتك'
-    : editing ? 'تعديل ما يبقى شغّالًا' : `تخفيض إلى باقة ${newPlan.nameAr}`;
+    ? 'قبل تخفيض باقتك'
+    : editing ? 'تعديل ما يبقى مفعّلًا' : `تخفيض إلى باقة ${newPlan.nameAr}`;
   const limitText = (n: number): string => (n === -1 ? 'بدون حد' : n.toLocaleString('en'));
 
   return createPortal(
@@ -221,12 +221,12 @@ export function DowngradeDialog({
                 <div className="h-10 w-10 rounded-full bg-success/15 text-success flex items-center justify-center mb-3">
                   <Gift className="h-5 w-5" />
                 </div>
-                <p className="text-small text-muted-light dark:text-muted-dark">عرض لك</p>
+                <p className="text-small text-muted-light dark:text-muted-dark">عرض خاص لك</p>
                 <p className="text-h2 font-bold mt-1">
                   خصم {retentionOffer.percent}% لمدة {offerDuration}
                 </p>
                 <p className="text-body text-muted-light dark:text-muted-dark mt-1 leading-relaxed">
-                  خليك على باقة {currentPlan.nameAr} بكل مزاياها وحدودها، بسعر أقل.
+                  استمر على باقة {currentPlan.nameAr} بجميع مزاياها وحدودها، بسعر أقل.
                 </p>
                 <div className="mt-auto pt-5 flex items-baseline gap-2">
                   <span className="text-h2 font-bold text-success">{formatMoney(discountedPrice, currency)}</span>
@@ -236,12 +236,12 @@ export function DowngradeDialog({
                   </span>
                 </div>
                 <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1">
-                  يرجع السعر العادي بعد {offerDuration}. العرض متاح مرة واحدة لكل حساب.
+                  يعود السعر المعتاد بعد انتهاء المدة. العرض متاح مرة واحدة لكل حساب.
                 </p>
               </div>
 
               <div className="rounded-card border border-border-light dark:border-border-dark p-5">
-                <p className="text-body font-semibold mb-3">تحتفظ بكل اللي عندك الآن</p>
+                <p className="text-body font-semibold mb-3">ما تحتفظ به في باقتك الحالية</p>
                 <ul className="space-y-2 text-small">
                   <LimitLine label="موظفين" limit={currentPlan.limits.agents} used={candidateAgents.length} />
                   <LimitLine label="قنوات" limit={currentPlan.limits.channels} used={channels.length} />
@@ -255,7 +255,7 @@ export function DowngradeDialog({
                 </ul>
                 {lostFeatures.length > 0 && (
                   <p className="text-[11px] text-muted-light dark:text-muted-dark mt-3">
-                    هذه المزايا غير موجودة في باقة {newPlan.nameAr}.
+                    هذه المزايا غير متوفرة في باقة {newPlan.nameAr}.
                   </p>
                 )}
               </div>
@@ -300,7 +300,7 @@ export function DowngradeDialog({
               </div>
 
               <p className="text-small text-muted-light dark:text-muted-dark">
-                اختر ما يبقى شغّالًا بعد {formatDate(effectiveAt)}. الباقي يتوقف بدون حذف، ويرجع إذا رقّيت.
+                حدّد ما يبقى مفعّلًا بعد {formatDate(effectiveAt)}. يتوقف الباقي دون حذف، ويعود تلقائيًا عند الترقية.
               </p>
 
               <div className={cn('grid gap-4', agentsOver && (channelsOver || blockedTypes) && 'md:grid-cols-2')}>
@@ -326,7 +326,7 @@ export function DowngradeDialog({
                               </span>
                             ) : !checked ? (
                               <Pill className="bg-danger/10 text-danger border-danger/20">
-                                {a.invitationStatus === 'pending' ? 'دعوة تُلغى' : 'يتوقف'}
+                                {a.invitationStatus === 'pending' ? 'تُلغى الدعوة' : 'يتوقف'}
                               </Pill>
                             ) : a.invitationStatus === 'pending' ? (
                               <Pill className="bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark border-border-light dark:border-border-dark">دعوة معلّقة</Pill>
@@ -390,7 +390,7 @@ export function DowngradeDialog({
                   value={[
                     stoppedAgents.length > 0 ? countLabel(stoppedAgents.length, 'موظف', 'موظفين') : null,
                     stoppedChannels.length > 0 ? countLabel(stoppedChannels.length, 'قناة', 'قنوات') : null,
-                  ].filter(Boolean).join(' · ') || 'لا شيء'}
+                  ].filter(Boolean).join(' · ') || 'لا يوجد'}
                 />
               </div>
 
@@ -410,9 +410,9 @@ export function DowngradeDialog({
               <div className="rounded-card bg-primary/5 border border-primary/20 p-4 flex gap-3 text-small leading-relaxed">
                 <Info className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                 <p>
-                  تكمل باقتك الحالية طبيعيًا حتى {formatDate(effectiveAt)}. المحادثات وجهات الاتصال الفعّالة يبدأ
-                  عدّها من جديد فور التخفيض. كل ما يتوقف يبقى محفوظًا بدون حذف ويرجع إذا رقّيت، وتقدر تعدّل
-                  اختيارك أو تلغي التخفيض لحد {formatDate(effectiveAt)}.
+                  تستمر باقتك الحالية كالمعتاد حتى {formatDate(effectiveAt)}. يُعاد احتساب المحادثات وجهات الاتصال
+                  النشطة من الصفر عند التخفيض. جميع العناصر الموقوفة تبقى محفوظة دون حذف وتعود عند الترقية، ويمكنك
+                  تعديل اختيارك أو إلغاء التخفيض حتى {formatDate(effectiveAt)}.
                 </p>
               </div>
             </div>
@@ -434,7 +434,7 @@ export function DowngradeDialog({
                 className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold transition-colors"
                 style={{ color: '#fff' }}
               >
-                خذ الخصم وابقَ على {currentPlan.nameAr}
+                احصل على الخصم واستمر على {currentPlan.nameAr}
               </button>
             </>
           ) : (
@@ -482,7 +482,7 @@ function LimitLine({ label, limit, used }: { label: string; limit: number; used?
       <Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
       <span>
         {limit === -1 ? `${label} بدون حد` : `${limit.toLocaleString('en')} ${label}`}
-        {used !== undefined && <span className="text-muted-light dark:text-muted-dark"> (عندك {used})</span>}
+        {used !== undefined && <span className="text-muted-light dark:text-muted-dark"> (المستخدم حاليًا: {used})</span>}
       </span>
     </li>
   );

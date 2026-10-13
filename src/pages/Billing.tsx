@@ -193,14 +193,14 @@ export default function Billing(): JSX.Element {
     if (!scheduledPlan) return;
     const ok = await confirm({
       title: 'إلغاء التخفيض؟',
-      message: `تبقى على باقة ${plan?.nameAr ?? ''} ويتجدد اشتراكك فيها كالمعتاد، ولن يتوقف أي موظف أو قناة.`,
+      message: `ستستمر على باقة ${plan?.nameAr ?? ''} ويتجدد اشتراكك كالمعتاد، ولن يتم إيقاف أي موظف أو قناة.`,
       variant: 'info',
       confirmText: 'إلغاء التخفيض',
       cancelText: 'تراجع',
     });
     if (!ok) return;
     cancelPlanChange(CURRENT_CLIENT_ID);
-    showToast(`تم إلغاء التخفيض، وتبقى على باقة ${plan?.nameAr ?? ''}`, 'success');
+    showToast(`تم إلغاء التخفيض، وستستمر على باقة ${plan?.nameAr ?? ''}`, 'success');
   };
 
   const goToCheckout = (p: Plan): void => {
@@ -321,7 +321,7 @@ export default function Billing(): JSX.Element {
               <strong className="text-current">{allPlans.find((p) => p.id === sub.scheduledChange!.planId)?.nameAr ?? '—'}</strong>{' '}
               اعتباراً من <strong className="text-current">{formatDate(sub.scheduledChange.effectiveAt)}</strong>.
               باقتك الحالية ومزاياها مستمرة حتى ذلك التاريخ.
-              {scheduledOverflow && ' ما زاد عن حدود الباقة الجديدة يتوقف يومها بدون حذف، ويرجع إذا رقّيت.'}
+              {scheduledOverflow && ' في ذلك التاريخ يتوقف ما يتجاوز حدود الباقة الجديدة دون حذف، ويعود تلقائيًا عند الترقية.'}
             </p>
           </div>
           <div className="ms-auto flex items-center gap-2 flex-shrink-0 self-center">
@@ -330,7 +330,7 @@ export default function Billing(): JSX.Element {
                 onClick={() => setEditKeepOpen(true)}
                 className="h-9 px-4 rounded-full border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark inline-flex items-center gap-1.5 whitespace-nowrap"
               >
-                <Pencil className="h-3.5 w-3.5" /> تعديل ما يبقى شغّالًا
+                <Pencil className="h-3.5 w-3.5" /> تعديل ما يبقى مفعّلًا
               </button>
             )}
             <button

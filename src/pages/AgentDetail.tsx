@@ -8,8 +8,10 @@ import {
   MessageSquare,
   Pencil,
   Power,
+  ShieldCheck,
   Star,
   Timer,
+  UserRound,
   UserX,
 } from 'lucide-react';
 import { Avatar, Card, ChannelIcon, DateRangePicker, EmptyState, StatCard, useConfirm } from '@components/ui';
@@ -84,7 +86,7 @@ export default function AgentDetail(): JSX.Element {
           <EmptyState
             icon={<UserX className="h-8 w-8" />}
             title="الموظف غير موجود"
-            description="ربما حُذف أو أُلغيت دعوته."
+            description="قد يكون الحساب محذوفًا أو أُلغيت دعوته."
             action={
               <Link to="/team" className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold inline-flex items-center" style={{ color: '#fff' }}>
                 العودة لفريق العمل
@@ -150,7 +152,7 @@ export default function AgentDetail(): JSX.Element {
     }
     const ok = await confirm({
       title: `إيقاف حساب ${agent.name}؟`,
-      message: 'لن يتمكن من الدخول أو استلام محادثات حتى تعيد تفعيله. محادثاته وسجلّه يبقيان كما هما.',
+      message: 'لن يتمكن من تسجيل الدخول أو استقبال المحادثات حتى تتم إعادة تفعيل حسابه. تبقى محادثاته وسجلّه دون تغيير.',
       variant: 'warning',
       confirmText: 'إيقاف الحساب',
       cancelText: 'تراجع',
@@ -159,10 +161,6 @@ export default function AgentDetail(): JSX.Element {
     updateAgent(agent.id, { invitationStatus: 'suspended', status: 'offline' });
     showToast('تم إيقاف الحساب', 'success');
   };
-
-  const workingHours = agent.workingHours?.enabled
-    ? `${agent.workingHours.days.map((d) => DAY_NAMES[d]).join('، ')} · ${agent.workingHours.start}–${agent.workingHours.end}${agent.timezone ? ` (${agent.timezone})` : ''}`
-    : 'غير محددة — يستلم في أي وقت';
 
   return (
     <div className="p-4 lg:p-6 page-fade space-y-5">
@@ -204,12 +202,29 @@ export default function AgentDetail(): JSX.Element {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => navigate(`/team?edit=${agent.id}`)}
-            className="h-10 px-4 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark inline-flex items-center gap-2"
-          >
-            <Pencil className="h-4 w-4" /> تعديل
-          </button>
+          <div className="flex items-center gap-2">
+            {/* The owner's account is the company's — it is never suspended from here. */}
+            {!isOwner && !isPending && (
+              <button
+                onClick={() => void toggleSuspend()}
+                className={cn(
+                  'h-10 px-4 rounded-full border text-small font-medium inline-flex items-center gap-2 transition-colors',
+                  isSuspended
+                    ? 'border-success/30 text-success hover:bg-success/10'
+                    : 'border-danger/30 text-danger hover:bg-danger/10',
+                )}
+              >
+                <Power className="h-4 w-4" /> {isSuspended ? 'إعادة تفعيل الحساب' : 'إيقاف الحساب'}
+              </button>
+            )}
+            <button
+              onClick={() => navigate(`/team?edit=${agent.id}`)}
+              className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold inline-flex items-center gap-2 transition-colors"
+              style={{ color: '#fff' }}
+            >
+              <Pencil className="h-4 w-4" /> تعديل البيانات
+            </button>
+          </div>
         </div>
       </Card>
 
@@ -256,7 +271,7 @@ export default function AgentDetail(): JSX.Element {
               icon={<CheckCircle2 className="h-5 w-5" />}
               iconBg="bg-success/15"
               iconColor="text-success"
-              hint={`${closed} مغلقة من ${inRange.length} مسندة في الفترة.`}
+              hint={`${closed} محادثة مغلقة من أصل ${inRange.length} محادثة مسندة خلال الفترة.`}
             />
             <StatCard
               label="متوسط أول رد"
@@ -335,7 +350,7 @@ export default function AgentDetail(): JSX.Element {
                                 <Clock className="h-3 w-3" /> بانتظار الرد · {timeAgo(last.timestamp)}
                               </span>
                             ) : (
-                              <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-success/15 text-success text-[11px] font-semibold">ردّ</span>
+                              <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-success/15 text-success text-[11px] font-semibold">تم الرد</span>
                             )}
                           </td>
                         </tr>
@@ -350,24 +365,38 @@ export default function AgentDetail(): JSX.Element {
       )}
 
       {tab === 'details' && (
-        <Card className="overflow-hidden">
-          {/* Two columns of label/value rows on wide screens, one on the phone. */}
-          <div className="grid grid-cols-1 md:grid-cols-2 text-body">
-            <DetailRow label="الاسم">{agent.name}</DetailRow>
-            <DetailRow label="البريد الإلكتروني"><span dir="ltr">{agent.email}</span></DetailRow>
-            <DetailRow label="الجوال">{agent.phone ? <span dir="ltr">{agent.phone}</span> : <Muted>غير مضاف</Muted>}</DetailRow>
-            <DetailRow label="الدور">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <Section icon={<UserRound className="h-4 w-4" />} title="معلومات الحساب">
+            <Field label="الاسم">{agent.name}</Field>
+            <Field label="البريد الإلكتروني"><span dir="ltr">{agent.email}</span></Field>
+            <Field label="الجوال">{agent.phone ? <span dir="ltr">{agent.phone}</span> : <Muted>غير مُضاف</Muted>}</Field>
+            <Field label="حالة الحساب">
+              <span className="inline-flex items-center gap-2 flex-wrap">
+                <span className={cn(
+                  'text-[11px] font-semibold px-2 py-0.5 rounded-full',
+                  isSuspended ? 'bg-danger/10 text-danger' : isPending ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success',
+                )}>
+                  {isSuspended ? 'موقوف' : isPending ? 'بانتظار قبول الدعوة' : 'نشط'}
+                </span>
+                {isPending && agent.invitedAt && <Muted>أُرسلت الدعوة في {formatDate(agent.invitedAt)}</Muted>}
+                {agent.planSuspended && <Muted>أُوقف بسبب تخفيض الباقة</Muted>}
+              </span>
+            </Field>
+          </Section>
+
+          <Section icon={<ShieldCheck className="h-4 w-4" />} title="الدور والوصول">
+            <Field label="الدور">
               <span className="inline-flex items-center gap-2">
                 {role?.name ?? '—'}
-                <Link to="/team/roles" className="text-small text-primary hover:underline">الصلاحيات من «الأدوار»</Link>
+                <Link to="/team/roles" className="text-small font-normal text-primary hover:underline">عرض الصلاحيات</Link>
               </span>
-            </DetailRow>
-            <DetailRow label="الأقسام">
+            </Field>
+            <Field label="الأقسام">
               {agentDepts.length > 0 ? (
                 <Chips items={agentDepts.map((d) => ({ key: d.id, label: d.name }))} />
-              ) : <Muted>بدون قسم</Muted>}
-            </DetailRow>
-            <DetailRow label="القنوات المسموحة">
+              ) : <Muted>غير مرتبط بأي قسم</Muted>}
+            </Field>
+            <Field label="القنوات المسموحة">
               {agentChannels.length > 0 ? (
                 <Chips
                   items={agentChannels.map((c) => ({
@@ -376,48 +405,40 @@ export default function AgentDetail(): JSX.Element {
                     icon: <ChannelIcon type={c.type} size={12} plain />,
                   }))}
                 />
-              ) : <Muted>بدون قنوات</Muted>}
-            </DetailRow>
-            <DetailRow label="الحد الأقصى للمحادثات المتزامنة">{cap > 0 ? `${cap} محادثات` : 'بدون حد'}</DetailRow>
-            <DetailRow label="ساعات العمل">{workingHours}</DetailRow>
-            <DetailRow label="إخفاء أرقام العملاء">{agent.hidePhoneNumbers ? 'نعم' : 'لا'}</DetailRow>
-            <DetailRow label="حالة الحساب">
-              <span className="inline-flex items-center gap-2">
-                <span className={cn(
-                  'text-[11px] font-semibold px-2 py-0.5 rounded-full',
-                  isSuspended ? 'bg-danger/10 text-danger' : isPending ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success',
-                )}>
-                  {isSuspended ? 'موقوف' : isPending ? 'بانتظار قبول الدعوة' : 'نشط'}
-                </span>
-                {isPending && agent.invitedAt && <Muted>دُعي في {formatDate(agent.invitedAt)}</Muted>}
-                {agent.planSuspended && <Muted>أوقفه تخفيض الباقة</Muted>}
-              </span>
-            </DetailRow>
-          </div>
-          <div className="px-5 py-4 flex items-center gap-2">
-            <button
-              onClick={() => navigate(`/team?edit=${agent.id}`)}
-              className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold inline-flex items-center gap-2 transition-colors"
-              style={{ color: '#fff' }}
-            >
-              <Pencil className="h-4 w-4" /> تعديل البيانات
-            </button>
-            {/* The owner's account is the company's — it is never suspended from here. */}
-            {!isOwner && !isPending && (
-              <button
-                onClick={() => void toggleSuspend()}
-                className={cn(
-                  'h-10 px-4 rounded-full border text-small font-medium inline-flex items-center gap-2 transition-colors',
-                  isSuspended
-                    ? 'border-success/30 text-success hover:bg-success/10'
-                    : 'border-danger/30 text-danger hover:bg-danger/10',
-                )}
-              >
-                <Power className="h-4 w-4" /> {isSuspended ? 'إعادة تفعيل الحساب' : 'إيقاف الحساب'}
-              </button>
-            )}
-          </div>
-        </Card>
+              ) : <Muted>لا توجد قنوات مسموحة</Muted>}
+            </Field>
+          </Section>
+
+          <Section icon={<Clock className="h-4 w-4" />} title="العمل والتوزيع">
+            <Field label="ساعات العمل">
+              {agent.workingHours?.enabled ? (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-1">
+                    {DAY_NAMES.map((d, i) => (
+                      <span
+                        key={d}
+                        className={cn(
+                          'h-7 px-2 rounded-md text-[11px] font-semibold inline-flex items-center',
+                          agent.workingHours!.days.includes(i)
+                            ? 'bg-primary/10 text-primary'
+                            : 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark',
+                        )}
+                      >
+                        {d}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-small">
+                    {to12h(agent.workingHours.start)} – {to12h(agent.workingHours.end)}
+                    {agent.timezone && <Muted> · {agent.timezone}</Muted>}
+                  </p>
+                </div>
+              ) : <Muted>غير محددة، ويستقبل المحادثات في أي وقت</Muted>}
+            </Field>
+            <Field label="الحد الأقصى للمحادثات المتزامنة">{cap > 0 ? `${cap} محادثات` : 'بدون حد'}</Field>
+            <Field label="إخفاء أرقام العملاء">{agent.hidePhoneNumbers ? 'مُفعّل' : 'غير مُفعّل'}</Field>
+          </Section>
+        </div>
       )}
 
       {tab === 'ratings' && (
@@ -426,7 +447,7 @@ export default function AgentDetail(): JSX.Element {
             <EmptyState
               icon={<Star className="h-8 w-8" />}
               title="لا توجد تقييمات بعد"
-              description="تظهر هنا تقييمات العملاء له بعد إغلاق محادثاتهم وإرسال رابط التقييم."
+              description="تظهر هنا تقييمات العملاء بعد إغلاق محادثاتهم وإرسال رابط التقييم إليهم."
             />
           </Card>
         ) : (
@@ -482,13 +503,33 @@ export default function AgentDetail(): JSX.Element {
   );
 }
 
-function DetailRow({ label, children }: { label: string; children: ReactNode }): JSX.Element {
+function Section({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }): JSX.Element {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-1 sm:gap-4 px-5 py-3.5 border-b border-border-light dark:border-border-dark md:odd:border-e">
-      <span className="text-small text-muted-light dark:text-muted-dark">{label}</span>
-      <div className="font-medium">{children}</div>
+    <Card className="p-5">
+      <div className="flex items-center gap-2.5 mb-4">
+        <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">{icon}</span>
+        <h3 className="text-body font-bold">{title}</h3>
+      </div>
+      <div className="space-y-4">{children}</div>
+    </Card>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }): JSX.Element {
+  return (
+    <div>
+      <p className="text-[11px] text-muted-light dark:text-muted-dark mb-1">{label}</p>
+      <div className="text-body font-medium">{children}</div>
     </div>
   );
+}
+
+/** "14:30" → "2:30 م": the stored 24h time, read the way the rest of the panel shows it. */
+function to12h(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  const period = h < 12 ? 'ص' : 'م';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`;
 }
 
 function Muted({ children }: { children: ReactNode }): JSX.Element {
