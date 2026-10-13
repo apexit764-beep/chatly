@@ -100,6 +100,17 @@ interface AdminState {
     billingCycle: 'monthly' | 'yearly',
     keep?: { agentIds: string[]; channelIds: string[] },
   ) => void;
+  /** Drops the scheduled downgrade and its invoice; the current plan simply renews. */
+  cancelPlanChange: (clientId: string) => void;
+  /** Changes what stays running on the lower plan, up to the day it takes effect. */
+  updatePlanChangeKeep: (clientId: string, keep: { agentIds: string[]; channelIds: string[] }) => void;
+  markPlanChangeReminded: (clientId: string) => void;
+  /**
+   * The scheduled day has come: the subscription moves to the lower plan for a new
+   * period and the scheduled invoice is charged. Suspending staff and channels is
+   * the data store's half, done by the caller.
+   */
+  applyPlanChange: (clientId: string) => void;
   /** The client keeps the current plan with the retention discount; any scheduled downgrade is dropped. */
   acceptRetentionOffer: (clientId: string) => void;
   updateRetentionOffer: (patch: Partial<RetentionOffer>) => void;
@@ -261,6 +272,10 @@ export const useAdminStore = create<AdminState>((set, get) => ({
           ...(sub.scheduledChange
             ? { scheduledChange: { ...sub.scheduledChange, effectiveAt: end.toISOString() } }
             : {}),
+          // Each new period uses up one period of a retention discount.
+          discount: sub.discount && sub.discount.periods > 1
+            ? { ...sub.discount, periods: sub.discount.periods - 1 }
+            : undefined,
         };
       }),
     })),
@@ -312,7 +327,80 @@ export const useAdminStore = create<AdminState>((set, get) => ({
             }
           : sub
       ),
-      invoices: [invoice, ...s.invoices],
+      // Rescheduling replaces the earlier schedule, so its invoice goes with it.
+      invoices: [invoice, ...s.invoices.filter((inv) => !(inv.subscriptionId === current.id && inv.status === 'scheduled'))],
+    }));
+  },
+
+  cancelPlanChange: (clientId) => {
+    const current = get().subscriptions.find((s) => s.clientId === clientId && s.status === 'active');
+    if (!current?.scheduledChange) return;
+    set((s) => ({
+      subscriptions: s.subscriptions.map((sub) => (sub.id === current.id ? { ...sub, scheduledChange: undefined } : sub)),
+      invoices: s.invoices.filter((inv) => !(inv.subscriptionId === current.id && inv.status === 'scheduled')),
+    }));
+  },
+
+  updatePlanChangeKeep: (clientId, keep) =>
+    set((s) => ({
+      subscriptions: s.subscriptions.map((sub) =>
+        sub.clientId === clientId && sub.status === 'active' && sub.scheduledChange
+          ? { ...sub, scheduledChange: { ...sub.scheduledChange, keepAgentIds: keep.agentIds, keepChannelIds: keep.channelIds } }
+          : sub
+      ),
+    })),
+
+  markPlanChangeReminded: (clientId) =>
+    set((s) => ({
+      subscriptions: s.subscriptions.map((sub) =>
+        sub.clientId === clientId && sub.status === 'active' && sub.scheduledChange
+          ? { ...sub, scheduledChange: { ...sub.scheduledChange, remindedAt: new Date().toISOString() } }
+          : sub
+      ),
+    })),
+
+  applyPlanChange: (clientId) => {
+    const client = get().clients.find((c) => c.id === clientId);
+    const current = get().subscriptions.find((s) => s.clientId === clientId && s.status === 'active');
+    const change = current?.scheduledChange;
+    const plan = change ? get().plans.find((p) => p.id === change.planId) : undefined;
+    if (!client || !current || !change || !plan) return;
+
+    const price = plan.pricesPerCountry[client.country] ?? { monthly: 0, yearly: 0 };
+    const amount = change.billingCycle === 'yearly' ? price.yearly : price.monthly;
+    const start = new Date(change.effectiveAt);
+    const end = new Date(start);
+    if (change.billingCycle === 'yearly') end.setFullYear(end.getFullYear() + 1);
+    else end.setMonth(end.getMonth() + 1);
+
+    set((s) => ({
+      subscriptions: s.subscriptions.map((sub) =>
+        sub.id === current.id
+          ? {
+              ...sub,
+              planId: plan.id,
+              billingCycle: change.billingCycle,
+              amount,
+              currentPeriodStart: start.toISOString(),
+              currentPeriodEnd: end.toISOString(),
+              scheduledChange: undefined,
+              // A retention discount belonged to the plan the client left.
+              discount: undefined,
+            }
+          : sub
+      ),
+      // The card on file is charged on the day, as the schedule promised.
+      invoices: s.invoices.map((inv) =>
+        inv.subscriptionId === current.id && inv.status === 'scheduled'
+          ? { ...inv, status: 'paid' as const, paidAt: new Date().toISOString() }
+          : inv
+      ),
+      clients: s.clients.map((c) =>
+        c.id === clientId
+          // Paid on the day, so the account is a paying one from here, as after any purchase.
+          ? { ...c, planId: plan.id, status: 'active' as const, mrr: change.billingCycle === 'monthly' ? amount : amount / 12 }
+          : c
+      ),
     }));
   },
 

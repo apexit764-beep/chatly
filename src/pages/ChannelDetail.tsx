@@ -42,6 +42,8 @@ import WhatsAppConnectWizard from './WhatsAppConnectWizard';
 import { WidgetSettings, type WidgetSubTab } from './channelSettings/WidgetSettings';
 import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { PlanLimitModal } from '@components/billing/PlanLimitModal';
+import { useAdminStore } from '@/store/useAdminStore';
+import { channelTypeAllowed } from '@/utils/planChannels';
 import { ConnectGuide } from '@components/channels/ConnectGuide';
 
 interface ChannelTab {
@@ -63,6 +65,19 @@ export default function ChannelDetail(): JSX.Element {
   const addChannel = useDataStore((s) => s.addChannel);
   const { channelsReached } = usePlanLimits();
   const [planLimitOpen, setPlanLimitOpen] = useState(false);
+  const currentTier = useAdminStore((s) => s.plans.find((p) => p.id === s.clients.find((c) => c.id === 'client_1')?.planId)?.tier);
+  /**
+   * A channel a downgrade stopped holds no slot, so turning it back on is linking it
+   * again: it has to fit the plan's count and be a type the plan offers.
+   */
+  const canResume = (c: Channel): boolean => {
+    if (!c.planSuspended) return true;
+    if (channelsReached || (currentTier && !channelTypeAllowed(currentTier, c.type))) {
+      setPlanLimitOpen(true);
+      return false;
+    }
+    return true;
+  };
   const updateChannel = useDataStore((s) => s.updateChannel);
   const deleteChannel = useDataStore((s) => s.deleteChannel);
   const setChannelRatingConfig = useDataStore((s) => s.setChannelRatingConfig);
@@ -358,12 +373,14 @@ export default function ChannelDetail(): JSX.Element {
                               'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
                               channel.status === 'connected' && 'bg-success/15 text-success',
                               channel.status === 'pending' && 'bg-warning/15 text-warning',
-                              channel.status === 'disconnected' && 'bg-danger/15 text-danger'
+                              channel.status === 'disconnected' && !channel.planSuspended && 'bg-danger/15 text-danger',
+                              channel.planSuspended && 'bg-warning/15 text-warning'
                             )}
                           >
                             {channel.status === 'connected' && t('متصل')}
                             {channel.status === 'pending' && t('في الانتظار')}
-                            {channel.status === 'disconnected' && t('غير متصل')}
+                            {channel.status === 'disconnected' && !channel.planSuspended && t('غير متصل')}
+                            {channel.planSuspended && t('متوقفة — حد الباقة')}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 text-[11px] text-muted-light dark:text-muted-dark mt-0.5">
@@ -423,10 +440,11 @@ export default function ChannelDetail(): JSX.Element {
                                 icon={<RefreshCw className="h-4 w-4" />}
                                 label={t('تجربة الاتصال')}
                                 onClick={() => {
-                                  showToast(t('جارٍ اختبار الاتصال...'), 'info');
                                   setOpenMenu(null);
+                                  if (!canResume(channel)) return;
+                                  showToast(t('جارٍ اختبار الاتصال...'), 'info');
                                   setTimeout(() => {
-                                    updateChannel(channel.id, { status: 'connected' });
+                                    updateChannel(channel.id, { status: 'connected', planSuspended: undefined });
                                     showToast(t('الاتصال يعمل بنجاح ✓'), 'success');
                                   }, 1200);
                                 }}
@@ -443,13 +461,15 @@ export default function ChannelDetail(): JSX.Element {
                                 icon={<Power className="h-4 w-4" />}
                                 label={channel.status === 'connected' ? t('فصل') : t('اتصال')}
                                 onClick={() => {
+                                  setOpenMenu(null);
+                                  if (channel.status !== 'connected' && !canResume(channel)) return;
                                   updateChannel(channel.id, {
                                     status:
                                       channel.status === 'connected'
                                         ? 'disconnected'
                                         : 'connected',
+                                    planSuspended: undefined,
                                   });
-                                  setOpenMenu(null);
                                 }}
                               />
                               <div className="h-px bg-border-light dark:bg-border-dark my-1" />

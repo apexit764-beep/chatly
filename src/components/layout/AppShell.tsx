@@ -13,6 +13,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { useLiveSimulator } from '@/hooks/useLiveSimulator';
 import { useAutoClose } from '@/hooks/useAutoClose';
 import { useScheduledCampaigns } from '@/hooks/useScheduledCampaigns';
+import { usePlanChangeScheduler } from '@/hooks/usePlanChangeScheduler';
 import { getAppMode } from '@/utils/mode';
 import { Footer } from './Footer';
 
@@ -28,6 +29,8 @@ export function AppShell(): JSX.Element {
   useAutoClose();
   // Sends due scheduled campaigns, failing those whose template is no longer approved
   useScheduledCampaigns();
+  // Reminds before a scheduled downgrade and carries it out on the day
+  usePlanChangeScheduler();
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg-light dark:bg-bg-dark text-[14px] text-[#111827] dark:text-[#F1F5F9]">
       <div className="flex flex-1 min-h-0">

@@ -7,10 +7,11 @@ import { useAdminStore } from '@/store/useAdminStore';
 import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { channelTypeAllowed } from '@/utils/planChannels';
+import { isOwner, resolveKeep, runningChannels, seatedAgents } from '@/utils/planDowngrade';
 import { formatMoney } from '@/utils/money';
 import { formatDate } from '@/utils/format';
 import { cn } from '@/utils/cn';
-import type { Agent, Channel, Plan } from '@/types';
+import type { Channel, Plan } from '@/types';
 
 type StepKey = 'offer' | 'keep' | 'confirm';
 
@@ -34,6 +35,13 @@ interface Props {
   currency: string;
   /** Features the current plan has and the new one does not. */
   lostFeatures: string[];
+  /**
+   * `edit` reopens an already scheduled downgrade to change what stays running:
+   * no offer, and saving updates the schedule instead of creating one.
+   */
+  mode?: 'schedule' | 'edit';
+  /** The choice saved with the schedule, when editing it. */
+  initialKeep?: { agentIds?: string[]; channelIds?: string[] };
 }
 
 /** Arabic counted noun: 1 شهر، 2 شهرين، 3–10 أشهر، 11+ شهرًا. */
@@ -47,8 +55,6 @@ function periodsLabel(n: number, cycle: 'monthly' | 'yearly'): string {
 }
 
 const countLabel = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
-
-const isOwner = (a: Agent): boolean => a.roleId === 'role_owner';
 
 /**
  * تخفيض الباقة على خطوات: عرض الاحتفاظ أولًا، ثم اختيار ما يبقى شغّالًا إن كان
@@ -67,18 +73,23 @@ export function DowngradeDialog({
   newPrice,
   currency,
   lostFeatures,
+  mode = 'schedule',
+  initialKeep,
 }: Props): JSX.Element | null {
   const retentionOffer = useAdminStore((s) => s.retentionOffer);
   const retentionOfferUsedBy = useAdminStore((s) => s.retentionOfferUsedBy);
   const schedulePlanChange = useAdminStore((s) => s.schedulePlanChange);
   const acceptRetentionOffer = useAdminStore((s) => s.acceptRetentionOffer);
+  const updatePlanChangeKeep = useAdminStore((s) => s.updatePlanChangeKeep);
   const agents = useDataStore((s) => s.agents);
-  const channels = useDataStore((s) => s.channels);
+  const allChannels = useDataStore((s) => s.channels);
+  // A channel an earlier downgrade already stopped is not in play.
+  const channels = useMemo(() => runningChannels(allChannels), [allChannels]);
   const showToast = useUIStore((s) => s.showToast);
   const navigate = useNavigate();
 
   // Suspended staff are already off and stay that way, so they are not candidates.
-  const candidateAgents = useMemo(() => agents.filter((a) => a.invitationStatus !== 'suspended'), [agents]);
+  const candidateAgents = useMemo(() => seatedAgents(agents), [agents]);
   const sortedChannels = useMemo(
     () => [...channels].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
     [channels],
@@ -96,7 +107,8 @@ export function DowngradeDialog({
   const agentsToKeep = agentLimit === -1 ? candidateAgents.length : Math.min(agentLimit, candidateAgents.length);
   const channelsToKeep = channelLimit === -1 ? eligibleChannels.length : Math.min(channelLimit, eligibleChannels.length);
 
-  const offerAvailable = retentionOffer.enabled && retentionOffer.percent > 0 && !retentionOfferUsedBy.includes(clientId);
+  const editing = mode === 'edit';
+  const offerAvailable = !editing && retentionOffer.enabled && retentionOffer.percent > 0 && !retentionOfferUsedBy.includes(clientId);
   const needsKeep = agentsOver || channelsOver || blockedTypes;
 
   const steps: StepKey[] = useMemo(
@@ -107,22 +119,16 @@ export function DowngradeDialog({
   );
   const [step, setStep] = useState(0);
 
-  // The oldest stay by default; the owner always does.
-  const defaultAgents = (): string[] => {
-    const owners = candidateAgents.filter(isOwner);
-    const rest = candidateAgents.filter((a) => !isOwner(a));
-    return [...owners, ...rest].slice(0, Math.max(agentsToKeep, owners.length)).map((a) => a.id);
-  };
-  const defaultChannels = (): string[] => eligibleChannels.slice(0, channelsToKeep).map((c) => c.id);
-
   const [keepAgents, setKeepAgents] = useState<string[]>([]);
   const [keepChannels, setKeepChannels] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open) return;
     setStep(0);
-    setKeepAgents(defaultAgents());
-    setKeepChannels(defaultChannels());
+    // The saved choice when editing; otherwise the oldest, with the owner always in.
+    const keep = resolveKeep(newPlan, agents, allChannels, initialKeep);
+    setKeepAgents(keep.agentIds);
+    setKeepChannels(keep.channelIds);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -153,6 +159,12 @@ export function DowngradeDialog({
   };
 
   const confirm = (): void => {
+    if (editing) {
+      updatePlanChangeKeep(clientId, { agentIds: keepAgents, channelIds: keepChannels });
+      showToast('تم حفظ اختيارك', 'success');
+      onClose();
+      return;
+    }
     schedulePlanChange(
       clientId,
       newPlan.id,
@@ -163,7 +175,9 @@ export function DowngradeDialog({
     navigate('/billing');
   };
 
-  const title = key === 'offer' ? 'قبل ما تخفّض باقتك' : `تخفيض إلى باقة ${newPlan.nameAr}`;
+  const title = key === 'offer'
+    ? 'قبل ما تخفّض باقتك'
+    : editing ? 'تعديل ما يبقى شغّالًا' : `تخفيض إلى باقة ${newPlan.nameAr}`;
   const limitText = (n: number): string => (n === -1 ? 'بدون حد' : n.toLocaleString('en'));
 
   return createPortal(
@@ -437,7 +451,7 @@ export function DowngradeDialog({
                 className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ color: '#fff' }}
               >
-                {isLast ? 'تأكيد التخفيض' : 'التالي'}
+                {isLast ? (editing ? 'حفظ الاختيار' : 'تأكيد التخفيض') : 'التالي'}
                 {!isLast && <ArrowLeft className="h-4 w-4" />}
               </button>
             </>
