@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Calendar,
@@ -25,7 +26,8 @@ import { downloadCsv, printAsPdf } from '@/utils/csv';
 import { formatNumber } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import { firstReplyCases, isAgentReply, type FirstReplyCase } from '@/utils/firstReplySla';
-import { useRatingStore, type Rating } from '@/store/useRatingStore';
+import { useRatingStore } from '@/store/useRatingStore';
+import { averageAgentRating, averageReply, formatMinutes } from '@/utils/agentStats';
 import { useSettingsStore } from '@/store/useSettingsStore';
 
 type Range = 'today' | 'week' | 'month' | 'custom';
@@ -603,10 +605,10 @@ export default function Reports(): JSX.Element {
                 {agentRows.map(({ agent, handled, avgReply, resolutionRate, rating }) => (
                   <tr key={agent.id} className="hover:bg-bg-light dark:hover:bg-bg-dark transition-colors">
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
+                      <Link to={`/team/${agent.id}`} className="flex items-center gap-2.5 hover:text-primary">
                         <Avatar name={agent.name} size="sm" status={agent.status} />
                         <span className="font-medium">{agent.name}</span>
-                      </div>
+                      </Link>
                     </td>
                     <td className="px-4 py-3">{handled}</td>
                     <td className="px-4 py-3 tabular-nums" title={avgReply.count > 0 ? `من ${avgReply.count} ${avgReply.count === 1 ? 'رد' : 'ردود'}` : 'لا توجد ردود في الفترة'}>
@@ -648,28 +650,6 @@ function compliance(cases: FirstReplyCase[]): { met: number; breached: number; p
   const breached = cases.filter((c) => c.outcome === 'breached').length;
   const total = met + breached;
   return { met, breached, pct: total > 0 ? Math.round((met / total) * 100) : null };
-}
-
-/** Average of the customers' agent ratings that were submitted for this agent. */
-function averageAgentRating(ratings: Rating[], agentId: string): { value: number | null; count: number } {
-  const rated = ratings.filter((r) => r.agentId === agentId && r.submittedAt && r.ratingAgent != null);
-  if (rated.length === 0) return { value: null, count: 0 };
-  return { value: rated.reduce((s, r) => s + (r.ratingAgent ?? 0), 0) / rated.length, count: rated.length };
-}
-
-/** Average minutes to the first reply, over the answered cases only. */
-function averageReply(cases: FirstReplyCase[]): { minutes: number | null; count: number } {
-  const answered = cases.map((c) => c.replyMinutes).filter((m): m is number => m !== null);
-  if (answered.length === 0) return { minutes: null, count: 0 };
-  return { minutes: answered.reduce((s, n) => s + n, 0) / answered.length, count: answered.length };
-}
-
-function formatMinutes(minutes: number | null): string {
-  if (minutes === null) return '—';
-  const m = Math.round(minutes);
-  if (m < 60) return `${m} د`;
-  const h = Math.floor(m / 60);
-  return m % 60 === 0 ? `${h} س` : `${h} س ${m % 60} د`;
 }
 
 interface SlaDay {
