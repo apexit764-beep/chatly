@@ -15,6 +15,10 @@ import { useAutoClose } from '@/hooks/useAutoClose';
 import { useScheduledCampaigns } from '@/hooks/useScheduledCampaigns';
 import { usePlanChangeScheduler } from '@/hooks/usePlanChangeScheduler';
 import { getAppMode } from '@/utils/mode';
+import { useEffect } from 'react';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useDataStore } from '@/store/useDataStore';
+import { usePermission } from '@/hooks/usePermission';
 import { Footer } from './Footer';
 
 export function AppShell(): JSX.Element {
@@ -31,6 +35,13 @@ export function AppShell(): JSX.Element {
   useScheduledCampaigns();
   // Reminds before a scheduled downgrade and carries it out on the day
   usePlanChangeScheduler();
+  // The signed-in staff member is "me" across the panel (assigned to me, closed by me).
+  const agentId = useAuthStore((s) => s.user?.agentId);
+  useEffect(() => {
+    useDataStore.setState({ currentUserId: agentId ?? 'a1' });
+  }, [agentId]);
+  // The trial and subscription are the account owner's business, not every seat's.
+  const { has } = usePermission();
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg-light dark:bg-bg-dark text-[14px] text-[#111827] dark:text-[#F1F5F9]">
       <div className="flex flex-1 min-h-0">
@@ -42,7 +53,7 @@ export function AppShell(): JSX.Element {
             {/* داخل المحتوى أعلى عنوان الصفحة، خارج انتقال الصفحات فلا يومض
                 مع كل تنقّل. هامشه بحشو الصفحات نفسه، وحشو الصفحة العلويّ هو
                 الفاصل بينه وبين العنوان. */}
-            {getAppMode() === 'client' && <TrialBanner className={isInbox ? 'px-2 pt-2' : 'px-4 lg:px-6 pt-4 lg:pt-6'} />}
+            {getAppMode() === 'client' && has('billing.view') && <TrialBanner className={isInbox ? 'px-2 pt-2' : 'px-4 lg:px-6 pt-4 lg:pt-6'} />}
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
@@ -59,7 +70,8 @@ export function AppShell(): JSX.Element {
           {!isInbox && getAppMode() === 'client' && <Footer />}
         </div>
       </div>
-      <OnboardingModal />
+      {/* Setting up the company is the owner's job, not every seat's. */}
+      {has('settings.edit') && <OnboardingModal />}
       <Toast />
       {getAppMode() === 'client' && !isInbox && <SupportChat />}
       {getAppMode() === 'client' && <SubscriptionExpiredModal />}
