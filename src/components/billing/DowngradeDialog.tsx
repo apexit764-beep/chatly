@@ -358,51 +358,48 @@ export function DowngradeDialog({
           )}
 
           {key === 'confirm' && (
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="rounded-card border border-border-light dark:border-border-dark divide-y divide-border-light dark:divide-border-dark text-small h-fit">
-                <SummaryRow label="الباقة الجديدة" value={newPlan.nameAr} />
-                <SummaryRow label="تبدأ في" value={formatDate(effectiveAt)} />
-                <SummaryRow
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 rounded-card border border-border-light dark:border-border-dark divide-x divide-x-reverse divide-border-light dark:divide-border-dark overflow-hidden">
+                <SummaryTile label="الباقة الجديدة" value={newPlan.nameAr} />
+                <SummaryTile label="تبدأ في" value={formatDate(effectiveAt)} />
+                <SummaryTile
                   label="السعر الجديد"
                   value={
-                    <span className="font-bold text-primary">
+                    <span className="text-primary">
                       {formatMoney(newPrice, currency)}
-                      <span className="font-normal text-muted-light dark:text-muted-dark"> / {cycleWord}</span>
+                      <span className="text-small font-normal text-muted-light dark:text-muted-dark"> / {cycleWord}</span>
                     </span>
                   }
                 />
-                {needsKeep && (
-                  <SummaryRow
-                    label="يتوقف"
-                    value={[
-                      stoppedAgents.length > 0 ? countLabel(stoppedAgents.length, 'موظف', 'موظفين') : null,
-                      stoppedChannels.length > 0 ? countLabel(stoppedChannels.length, 'قناة', 'قنوات') : null,
-                    ].filter(Boolean).join(' · ') || 'لا شيء'}
-                  />
-                )}
+                <SummaryTile
+                  label="يتوقف"
+                  value={[
+                    stoppedAgents.length > 0 ? countLabel(stoppedAgents.length, 'موظف', 'موظفين') : null,
+                    stoppedChannels.length > 0 ? countLabel(stoppedChannels.length, 'قناة', 'قنوات') : null,
+                  ].filter(Boolean).join(' · ') || 'لا شيء'}
+                />
               </div>
 
-              <div className="space-y-4">
-                {lostFeatures.length > 0 && (
-                  <div>
-                    <p className="text-small font-semibold mb-2">مزايا تتوقف</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {lostFeatures.map((f) => (
-                        <Pill key={f} className="bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark border-border-light dark:border-border-dark">
-                          {f}
-                        </Pill>
-                      ))}
-                    </div>
+              {lostFeatures.length > 0 && (
+                <div>
+                  <p className="text-small font-semibold mb-2">مزايا تتوقف</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {lostFeatures.map((f) => (
+                      <Pill key={f} className="bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark border-border-light dark:border-border-dark">
+                        {f}
+                      </Pill>
+                    ))}
                   </div>
-                )}
-                <div className="rounded-card bg-primary/5 border border-primary/20 p-4 flex gap-3 text-small leading-relaxed">
-                  <Info className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                  <p>
-                    تكمل باقتك الحالية طبيعيًا حتى {formatDate(effectiveAt)}. المحادثات وجهات الاتصال الفعّالة يبدأ
-                    عدّها من جديد فور التخفيض. كل ما يتوقف يبقى محفوظًا بدون حذف ويرجع إذا رقّيت، وتقدر تعدّل
-                    اختيارك أو تلغي التخفيض لحد {formatDate(effectiveAt)}.
-                  </p>
                 </div>
+              )}
+
+              <div className="rounded-card bg-primary/5 border border-primary/20 p-4 flex gap-3 text-small leading-relaxed">
+                <Info className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                <p>
+                  تكمل باقتك الحالية طبيعيًا حتى {formatDate(effectiveAt)}. المحادثات وجهات الاتصال الفعّالة يبدأ
+                  عدّها من جديد فور التخفيض. كل ما يتوقف يبقى محفوظًا بدون حذف ويرجع إذا رقّيت، وتقدر تعدّل
+                  اختيارك أو تلغي التخفيض لحد {formatDate(effectiveAt)}.
+                </p>
               </div>
             </div>
           )}
@@ -528,11 +525,11 @@ function KeepRow({
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: ReactNode }): JSX.Element {
+function SummaryTile({ label, value }: { label: string; value: ReactNode }): JSX.Element {
   return (
-    <div className="flex justify-between gap-3 p-4">
-      <span className="text-muted-light dark:text-muted-dark">{label}</span>
-      <span className="font-semibold text-end">{value}</span>
+    <div className="p-4">
+      <p className="text-[11px] text-muted-light dark:text-muted-dark mb-1">{label}</p>
+      <p className="text-body font-semibold">{value}</p>
     </div>
   );
 }
