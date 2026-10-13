@@ -347,7 +347,8 @@ export default function AdminPlans(): JSX.Element {
         </div>
       </Card>
 
-      <RetentionOfferCard />
+      {/* ⚠️ معطّل مؤقتًا مع عرض الاحتفاظ في نافذة التخفيض — أعده بإزالة التعليق. */}
+      {/* <RetentionOfferCard /> */}
 
       {/* Modal */}
       <Modal
