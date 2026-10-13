@@ -38,15 +38,15 @@ export function usePlanChangeScheduler(): void {
         data.pushNotification({
           type: 'system',
           title: `تم تحويل باقتك إلى ${plan.nameAr}`,
-          body: 'ما زاد عن حدود الباقة توقّف بدون حذف، ويرجع إذا رقّيت.',
+          body: 'تم إيقاف ما يتجاوز حدود الباقة دون حذف، وسيعود تلقائيًا عند الترقية.',
           link: '/billing',
         });
       } else if (now >= due - REMIND_BEFORE_MS && !change.remindedAt) {
         admin.markPlanChangeReminded(CURRENT_CLIENT_ID);
         data.pushNotification({
           type: 'system',
-          title: `باقتك تتحوّل إلى ${plan.nameAr} في ${formatDate(change.effectiveAt)}`,
-          body: 'راجع الموظفين والقنوات اللي تبقى شغّالة، أو ألغِ التخفيض قبل الموعد.',
+          title: `سيتم تحويل باقتك إلى ${plan.nameAr} في ${formatDate(change.effectiveAt)}`,
+          body: 'راجع الموظفين والقنوات التي ستبقى مفعّلة، أو ألغِ التخفيض قبل الموعد.',
           link: '/billing',
         });
       }
