@@ -527,6 +527,20 @@ export interface Subscription {
     planId: string;
     billingCycle: 'monthly' | 'yearly';
     effectiveAt: string;
+    /**
+     * What stays running on the lower plan when it is over that plan's limits —
+     * chosen by the client, editable until effectiveAt. Everything else is
+     * suspended (not deleted) on that day. Absent: nothing was over the limit.
+     */
+    keepAgentIds?: string[];
+    keepChannelIds?: string[];
+  };
+  /** A retention discount the client took instead of downgrading. */
+  discount?: {
+    percent: number;
+    /** Billing periods it covers, from the next invoice. */
+    periods: number;
+    acceptedAt: string;
   };
   paymentMethod?: {
     brand: 'visa' | 'mastercard';

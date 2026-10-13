@@ -13,7 +13,6 @@ import {
   ChevronDown,
   Plus,
   MessageCircle,
-  Calendar,
   Clock,
   ArrowUpRight,
 } from 'lucide-react';
@@ -34,6 +33,7 @@ const FEATURE_HINTS: Record<string, string> = {
   'الأقسام والتوزيع الذكي للمحادثات': 'تقسيم الفريق إلى أقسام (مبيعات، دعم…) وتوجيه كل محادثة للقسم المناسب.',
 };
 import { useAdminStore } from '@/store/useAdminStore';
+import { DowngradeDialog } from '@/components/billing/DowngradeDialog';
 import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
 import { formatDate } from '@/utils/format';
@@ -58,7 +58,6 @@ export default function Subscribe(): JSX.Element {
   const subscriptions = useAdminStore((s) => s.subscriptions);
   const paymob = useAdminStore((s) => s.paymob);
   const createSubscription = useAdminStore((s) => s.createSubscription);
-  const schedulePlanChange = useAdminStore((s) => s.schedulePlanChange);
   const recordPayment = useAdminStore((s) => s.recordPayment);
   const createPlanRequest = useAdminStore((s) => s.createPlanRequest);
   const planRequests = useAdminStore((s) => s.planRequests);
@@ -701,65 +700,23 @@ export default function Subscribe(): JSX.Element {
         )}
       </Modal>
 
-      <Modal
-        open={step === 'confirm-downgrade' && !!selectedPlan && !!sub}
-        onClose={() => { setStep('select'); setSelectedPlan(null); }}
-        title="تأكيد تخفيض الباقة"
-        size="md"
-        footer={
-          <>
-            <button
-              onClick={() => { setStep('select'); setSelectedPlan(null); }}
-              className="h-11 px-6 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark transition-colors"
-            >
-              إلغاء
-            </button>
-            <button
-              onClick={() => {
-                if (!selectedPlan || !sub) return;
-                schedulePlanChange(CURRENT_CLIENT_ID, selectedPlan.id, cycle);
-                showToast(`تمت جدولة باقة ${selectedPlan.nameAr} في ${formatDate(sub.currentPeriodEnd)}`, 'success');
-                navigate('/billing');
-              }}
-              className="h-11 px-6 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold transition-colors"
-            >
-              تأكيد
-            </button>
-          </>
-        }
-      >
-        {selectedPlan && sub && (
-          <>
-            <div className="flex items-start gap-3 mb-5">
-              <div className="h-10 w-10 shrink-0 rounded-full bg-warning/15 text-warning flex items-center justify-center">
-                <Calendar className="h-5 w-5" />
-              </div>
-              <p className="text-body text-muted-light dark:text-muted-dark leading-relaxed">
-                سيتم جدولة الاشتراك لحين انتهاء الباقة الحالية بتاريخ{' '}
-                <strong className="text-current">{formatDate(sub.currentPeriodEnd)}</strong>.
-                تكمل باقتك الحالية طبيعياً حتى ذلك التاريخ، ويُسحب المستحق عندها.
-              </p>
-            </div>
-            <div className="rounded-card border border-border-light dark:border-border-dark divide-y divide-border-light dark:divide-border-dark text-small">
-              <div className="flex justify-between p-4">
-                <span className="text-muted-light dark:text-muted-dark">الباقة الجديدة</span>
-                <span className="font-semibold">{selectedPlan.nameAr}</span>
-              </div>
-              <div className="flex justify-between p-4">
-                <span className="text-muted-light dark:text-muted-dark">تاريخ التفعيل المتوقع</span>
-                <span className="font-semibold">{formatDate(sub.currentPeriodEnd)}</span>
-              </div>
-              <div className="flex justify-between p-4">
-                <span className="text-muted-light dark:text-muted-dark">السعر الجديد</span>
-                <span className="font-bold text-primary">
-                  {formatMoney(amountFor(selectedPlan), selectedCountry.currency)}
-                  <span className="font-normal text-muted-light dark:text-muted-dark"> / {cycle === 'yearly' ? 'سنة' : 'شهر'}</span>
-                </span>
-              </div>
-            </div>
-          </>
-        )}
-      </Modal>
+      {selectedPlan && currentPlan && sub && (
+        <DowngradeDialog
+          open={step === 'confirm-downgrade'}
+          onClose={() => { setStep('select'); setSelectedPlan(null); }}
+          clientId={CURRENT_CLIENT_ID}
+          currentPlan={currentPlan}
+          newPlan={selectedPlan}
+          cycle={cycle}
+          effectiveAt={sub.currentPeriodEnd}
+          currentPrice={amountFor(currentPlan)}
+          newPrice={amountFor(selectedPlan)}
+          currency={selectedCountry.currency}
+          lostFeatures={[...(featureSetFor.get(currentPlan.id) ?? [])].filter(
+            (f) => !(featureSetFor.get(selectedPlan.id)?.has(f) ?? false),
+          )}
+        />
+      )}
 
       <ContactSalesModal
         open={contactOpen}
