@@ -228,14 +228,16 @@ export function DowngradeDialog({
                 <p className="text-body text-muted-light dark:text-muted-dark mt-1 leading-relaxed">
                   استمر على باقة {currentPlan.nameAr} بجميع مزاياها وحدودها، بسعر أقل.
                 </p>
-                <div className="mt-auto pt-5 flex items-baseline gap-2">
-                  <span className="text-h2 font-bold text-success">{formatMoney(discountedPrice, currency)}</span>
-                  <span className="text-small text-muted-light dark:text-muted-dark">/ {cycleWord}</span>
-                  <span className="text-small text-muted-light dark:text-muted-dark line-through ms-2">
-                    {formatMoney(currentPrice, currency)}
-                  </span>
+                <div className="mt-auto pt-6">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-[40px] leading-none font-extrabold text-success tabular-nums">{formatMoney(discountedPrice, currency)}</span>
+                    <span className="text-body text-muted-light dark:text-muted-dark">/ {cycleWord}</span>
+                  </div>
+                  <p className="text-body text-muted-light dark:text-muted-dark mt-2">
+                    بدلًا من <span className="line-through tabular-nums">{formatMoney(currentPrice, currency)}</span>
+                  </p>
                 </div>
-                <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1">
+                <p className="text-[11px] text-muted-light dark:text-muted-dark mt-3">
                   يعود السعر المعتاد بعد انتهاء المدة. العرض متاح مرة واحدة لكل حساب.
                 </p>
               </div>
