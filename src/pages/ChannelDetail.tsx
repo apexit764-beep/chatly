@@ -112,7 +112,7 @@ export default function ChannelDetail(): JSX.Element {
             `${t('اضغط')} «${t('تسجيل الدخول عبر')} ${demoProvider.name}»`,
             `${t('سجّل الدخول بحساب')} ${demoProvider.name} ${t('الذي يملك الصلاحية')}`,
             t('وافق على الأذونات التي تطلبها QHub'),
-            t('اختر الحساب المراد ربطه — ويكتمل الربط فوراً'),
+            t('اضغط «العودة إلى QHub» — ويكتمل الربط فورًا'),
           ],
         },
         // في واتساب تبقى الطريقة الرسمية اليدوية متاحة إلى جانب تسجيل الدخول.
@@ -125,7 +125,8 @@ export default function ChannelDetail(): JSX.Element {
   const [qrOpen, setQrOpen] = useState(false);
   const [whatsappWizardOpen, setWhatsappWizardOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('overview');
-  const [openMethod, setOpenMethod] = useState<string | null>(meta?.methods?.[0]?.key ?? null);
+  // The first method listed opens first — in the demo that is the login, not the method under it.
+  const [openMethod, setOpenMethod] = useState<string | null>(howToMethods?.[0]?.key ?? null);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
 
   const selectedAccount = selectedAccountId
@@ -564,9 +565,14 @@ export default function ChannelDetail(): JSX.Element {
         <div className="space-y-5">
           <section className="bg-white dark:bg-surface-dark rounded-card border border-border-light dark:border-border-dark p-5 sticky top-4">
             <h2 className="text-h3 font-bold mb-4">{t('كيفية الربط')}</h2>
-            {/* WhatsApp has a clip per method: it follows the method opened below. */}
+            {/* WhatsApp has a clip per method: it follows the method opened below.
+                ⚠️ مؤقّت — وضع تصوير الفيديو: القنوات التي تُربط بتسجيل الدخول لها مقطع `<type>-oauth`. */}
             <ConnectGuide
-              guideKey={meta.type === 'whatsapp' ? `whatsapp-${openMethod ?? 'cloud'}` : meta.type}
+              guideKey={
+                meta.type === 'whatsapp'
+                  ? `whatsapp-${openMethod ?? 'cloud'}`
+                  : demoProvider ? `${meta.type}-oauth` : meta.type
+              }
               title={`${t('طريقة ربط')} ${meta.name}`}
             />
             {howToMethods && howToMethods.length > 0 ? (

@@ -1047,7 +1047,7 @@ export const en: Record<string, string> = {
   'سجّل الدخول بحساب': 'Log in with the',
   'الذي يملك الصلاحية': 'account that holds the permission',
   'وافق على الأذونات التي تطلبها QHub': 'Approve the permissions QHub requests',
-  'اختر الحساب المراد ربطه — ويكتمل الربط فوراً': 'Pick the account to connect — the link completes immediately',
+  'اضغط «العودة إلى QHub» — ويكتمل الربط فورًا': 'Click “Back to QHub” — the link completes immediately',
 
   // ── الهيدر والفوتر ──
   'جميع الحقوق محفوظة': 'All rights reserved',
