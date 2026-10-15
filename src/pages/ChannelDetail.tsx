@@ -24,6 +24,7 @@ import {
 import {
   Avatar,
   ChannelIcon,
+  channelColor,
   Input,
   Modal,
   PhoneField,
@@ -224,11 +225,9 @@ export default function ChannelDetail(): JSX.Element {
           style={{ background: `${meta.brandColor}10` }}
         >
           <div className="px-6 py-6 flex items-start gap-4">
-            <div
-              className="h-16 w-16 rounded-xl flex items-center justify-center text-white flex-shrink-0"
-              style={{ background: meta.brandColor }}
-            >
-              <ChannelIcon type={meta.type} size={32} plain className="text-white" />
+            {/* White tile: the logos are drawn in their own colours, which a brand-coloured tile drowns out. */}
+            <div className="h-16 w-16 rounded-xl flex items-center justify-center bg-white border border-border-light dark:border-border-dark shadow-sm flex-shrink-0">
+              <ChannelIcon type={meta.type} size={32} plain className={channelColor(meta.type)} />
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-h1 font-bold">{meta.name}</h1>
