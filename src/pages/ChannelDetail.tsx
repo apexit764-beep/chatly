@@ -47,6 +47,9 @@ import { useAdminStore } from '@/store/useAdminStore';
 import { channelTypeAllowed } from '@/utils/planChannels';
 import { ConnectGuide } from '@components/channels/ConnectGuide';
 
+/** Channels whose «كيفية الربط» clip shows signing in with the provider. */
+const LOGIN_CLIPS: string[] = ['instagram', 'messenger', 'tiktok'];
+
 interface ChannelTab {
   key: string;
   label: string;
@@ -509,9 +512,14 @@ export default function ChannelDetail(): JSX.Element {
         <div className="space-y-5">
           <section className="bg-white dark:bg-surface-dark rounded-card border border-border-light dark:border-border-dark p-5 sticky top-4">
             <h2 className="text-h3 font-bold mb-4">{t('كيفية الربط')}</h2>
-            {/* WhatsApp has a clip per method: it follows the method opened below. */}
+            {/* WhatsApp has a clip per method: it follows the method opened below.
+                Instagram, Messenger and TikTok show the sign-in clip (`<type>-oauth`). */}
             <ConnectGuide
-              guideKey={meta.type === 'whatsapp' ? `whatsapp-${openMethod ?? 'cloud'}` : meta.type}
+              guideKey={
+                meta.type === 'whatsapp'
+                  ? `whatsapp-${openMethod ?? 'cloud'}`
+                  : LOGIN_CLIPS.includes(meta.type) ? `${meta.type}-oauth` : meta.type
+              }
               title={`${t('طريقة ربط')} ${meta.name}`}
             />
             {meta.methods && meta.methods.length > 0 ? (
