@@ -1,0 +1,1 @@
+import{aB as n,ap as s}from"./index-OLYl0DIR.js";function r({className:e,...a}){return n.jsx("span",{className:s("inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-small font-medium border",e),...a})}export{r as B};
