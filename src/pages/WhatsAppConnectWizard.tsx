@@ -25,7 +25,7 @@ import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { PlanLimitModal } from '@components/billing/PlanLimitModal';
 import type { Channel } from '@/types';
 // ⚠️ مؤقّت — وضع تصوير الفيديو
-import { VIDEO_DEMO, DEMO_OAUTH } from '@/config/videoDemo';
+import { VIDEO_DEMO, DEMO_OAUTH, WHATSAPP_META_LOGIN } from '@/config/videoDemo';
 import OAuthLoginDialog from '@components/demo/OAuthLoginDialog';
 
 // 'oauth' مؤقّت — وضع تصوير الفيديو، انظر src/config/videoDemo.ts
@@ -317,7 +317,7 @@ export default function WhatsAppConnectWizard({
 
       {/* ⚠️ مؤقّت — وضع تصوير الفيديو: تدفّق تسجيل الدخول المحاكى عبر Meta.
           عند نجاحه يملأ اسم القناة والرقم والرموز، ثم ينتقل إلى التخصيص. */}
-      {VIDEO_DEMO && (
+      {(VIDEO_DEMO || WHATSAPP_META_LOGIN) && (
         <OAuthLoginDialog
           open={oauthOpen}
           provider={DEMO_OAUTH.whatsapp}
@@ -357,6 +357,14 @@ export default function WhatsAppConnectWizard({
 function MethodStep({
   state, setState,
 }: { state: WizardState; setState: (s: WizardState) => void }): JSX.Element {
+  const metaLogin = {
+    key: 'oauth' as const,
+    title: t('تسجيل الدخول عبر Meta'),
+    subtitle: t('ربط بنقرة واحدة دون نسخ رموز'),
+    pros: [t('بدون Access Token يدوي'), t('اختيار الرقم من حسابك مباشرةً'), t('الأذونات واضحة وقابلة للسحب')],
+    cons: [t('يتطلّب صلاحية على حساب الأعمال')],
+    icon: Cloud,
+  };
   const options: { key: ConnectionMethod; title: string; subtitle: string; pros: string[]; cons: string[]; icon: typeof Cloud; badge?: { label: string; cls: string } }[] = [
     {
       key: 'cloud',
@@ -370,18 +378,10 @@ function MethodStep({
     // ⚠️ مؤقّت — وضع تصوير الفيديو: تُخفى الطريقتان غير الرسميتين
     // (كود الاقتران وQR) ويحلّ محلّهما تسجيل الدخول عبر Meta.
     ...(VIDEO_DEMO
-      ? [
-          {
-            key: 'oauth' as const,
-            title: t('تسجيل الدخول عبر Meta'),
-            subtitle: t('ربط بنقرة واحدة دون نسخ رموز'),
-            pros: [t('بدون Access Token يدوي'), t('اختيار الرقم من حسابك مباشرةً'), t('الأذونات واضحة وقابلة للسحب')],
-            cons: [t('يتطلّب صلاحية على حساب الأعمال')],
-            icon: Cloud,
-            badge: { label: t('الأسهل'), cls: 'bg-primary/15 text-primary' },
-          },
-        ]
+      ? [{ ...metaLogin, badge: { label: t('الأسهل'), cls: 'bg-primary/15 text-primary' } }]
       : [
+          // خارج وضع التصوير تُضاف بلا شارة: «الأسهل» لكود الاقتران.
+          ...(WHATSAPP_META_LOGIN ? [metaLogin] : []),
           {
             key: 'pairing' as const,
             title: t('كود الاقتران'),
@@ -405,7 +405,7 @@ function MethodStep({
   return (
     <div className="space-y-3">
       {/* الأعمدة تتبع عدد الطرق المعروضة، فلا يبقى عمود فارغ حين تُخفى طريقة. */}
-      <div className={cn('grid gap-2.5', options.length === 2 ? 'grid-cols-2' : 'grid-cols-3')}>
+      <div className={cn('grid gap-2.5', options.length % 2 === 0 ? 'grid-cols-2' : 'grid-cols-3')}>
         {options.map((o) => {
           const Icon = o.icon;
           const selected = state.method === o.key;

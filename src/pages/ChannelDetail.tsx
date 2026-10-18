@@ -47,7 +47,7 @@ import { useAdminStore } from '@/store/useAdminStore';
 import { channelTypeAllowed } from '@/utils/planChannels';
 import { ConnectGuide } from '@components/channels/ConnectGuide';
 // ⚠️ مؤقّت — وضع تصوير الفيديو
-import { demoOAuthFor } from '@/config/videoDemo';
+import { demoOAuthFor, DEMO_OAUTH, WHATSAPP_META_LOGIN, type DemoOAuthProvider } from '@/config/videoDemo';
 import OAuthLoginDialog from '@components/demo/OAuthLoginDialog';
 
 /** Channels whose «كيفية الربط» clip shows signing in with the provider. */
@@ -105,23 +105,27 @@ export default function ChannelDetail(): JSX.Element {
 
   // ⚠️ مؤقّت — وضع تصوير الفيديو: لوحة «كيفية الربط» يجب أن تصف الطرق المعروضة
   // فعلاً، وإلا شرحت للمشاهد طريقة لا يجدها في النافذة.
+  const loginMethod = (p: DemoOAuthProvider) => ({
+    key: 'oauth',
+    name: `${t('تسجيل الدخول عبر')} ${p.name}`,
+    badge: { label: t('موصى به ★'), cls: 'bg-success/15 text-success' },
+    steps: [
+      `${t('اضغط')} «${t('تسجيل الدخول عبر')} ${p.name}»`,
+      `${t('سجّل الدخول بحساب')} ${p.name} ${t('الذي يملك الصلاحية')}`,
+      t('وافق على الأذونات التي تطلبها QHub'),
+      t('اضغط «العودة إلى QHub» — ويكتمل الربط فورًا'),
+    ],
+  });
   const howToMethods = demoProvider
     ? [
-        {
-          key: 'oauth',
-          name: `${t('تسجيل الدخول عبر')} ${demoProvider.name}`,
-          badge: { label: t('موصى به ★'), cls: 'bg-success/15 text-success' },
-          steps: [
-            `${t('اضغط')} «${t('تسجيل الدخول عبر')} ${demoProvider.name}»`,
-            `${t('سجّل الدخول بحساب')} ${demoProvider.name} ${t('الذي يملك الصلاحية')}`,
-            t('وافق على الأذونات التي تطلبها QHub'),
-            t('اضغط «العودة إلى QHub» — ويكتمل الربط فورًا'),
-          ],
-        },
+        loginMethod(demoProvider),
         // في واتساب تبقى الطريقة الرسمية اليدوية متاحة إلى جانب تسجيل الدخول.
         ...(type === 'whatsapp' ? (meta?.methods ?? []).filter((m) => m.key === 'cloud') : []),
       ]
-    : meta?.methods;
+    : type === 'whatsapp' && WHATSAPP_META_LOGIN
+      // خارج وضع التصوير: تسجيل الدخول عبر Meta أولاً، ثم طرق واتساب كلها كما هي.
+      ? [loginMethod(DEMO_OAUTH.whatsapp), ...(meta?.methods ?? [])]
+      : meta?.methods;
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const [ratingFor, setRatingFor] = useState<Channel | null>(null);
