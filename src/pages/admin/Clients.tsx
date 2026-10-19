@@ -28,6 +28,7 @@ import {
 import { useAdminStore } from '@/store/useAdminStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
+import { planAmount } from '@/utils/planPricing';
 import { formatDate, timeAgo } from '@/utils/format';
 import { downloadCsv } from '@/utils/csv';
 import { cn } from '@/utils/cn';
@@ -371,7 +372,7 @@ export default function AdminClients(): JSX.Element {
           </Select>
           <Select label={<>الباقة<span className="text-danger ms-0.5">*</span></>} value={form.planId} onChange={(e) => setForm({ ...form, planId: e.target.value })}>
             <option value="">بدون باقة</option>
-            {plans.map((p) => (<option key={p.id} value={p.id}>{p.nameAr} — {formatMoney(p.pricesPerCountry[form.country]?.monthly ?? 0, countries.find((c) => c.code === form.country)?.currency ?? 'USD')}/شهر</option>))}
+            {plans.map((p) => (<option key={p.id} value={p.id}>{p.nameAr} — {formatMoney(planAmount(p, form.country, 'monthly') ?? 0, countries.find((c) => c.code === form.country)?.currency ?? 'USD')}/شهر</option>))}
           </Select>
         </div>
       </Modal>
