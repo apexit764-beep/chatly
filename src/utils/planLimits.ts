@@ -4,7 +4,7 @@ import { CUSTOM_LIMIT, UNLIMITED, type PlanLimits } from '@/types';
 export const LIMIT_FIELDS: Array<{ key: keyof PlanLimits; label: string; hint?: string }> = [
   { key: 'conversations', label: 'المحادثات / شهر', hint: 'الوحدة = عميل × قناة × شهر ميلادي' },
   { key: 'messages', label: 'الرسائل', hint: 'الرسائل داخل المحادثة' },
-  { key: 'accounts', label: 'الحسابات والأرقام', hint: 'عدد الحسابات لا أنواع القنوات' },
+  { key: 'accounts', label: 'الحسابات والأرقام المربوطة', hint: 'عدد الحسابات لا أنواع القنوات' },
   { key: 'agents', label: 'الموظفين', hint: 'لا يشمل المالك' },
   { key: 'contacts', label: 'العملاء' },
   { key: 'departments', label: 'الأقسام' },

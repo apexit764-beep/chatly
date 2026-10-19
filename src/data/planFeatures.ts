@@ -69,7 +69,6 @@ export const FEATURE_CATALOG: FeatureGroup[] = [
       { key: 'ai_knowledge_base', label: "مدرَّب على بياناتك (قاعدة المعرفة)" },
       { key: 'ai_vision', label: "تحليل الصور والملفات" },
       { key: 'ai_voice_analysis', label: "تحليل الرسائل الصوتية" },
-      { key: 'ai_reply_suggestions', label: "يقترح الردود لموظفيك" },
       { key: 'ai_sentiment', label: "تحليل مشاعر العميل (راضي / غاضب)" },
       { key: 'ai_tone', label: "تخصيص أسلوب ونبرة الرد" },
       { key: 'ai_summary', hasValue: true, label: "تلخيص المحادثة" },

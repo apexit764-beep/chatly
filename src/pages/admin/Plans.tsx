@@ -27,9 +27,9 @@ import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
 import { cn } from '@/utils/cn';
 import { ALL_FEATURE_KEYS, FEATURE_CATALOG, FEATURE_LABELS, isGranted } from '@/data/planFeatures';
-import { LIMIT_FIELDS, limitShort, limitText } from '@/utils/planLimits';
+import { LIMIT_FIELDS, limitShort } from '@/utils/planLimits';
 import { planPrice } from '@/utils/planPricing';
-import type { FeatureValue, Plan, PlanLimits, PlanTier } from '@/types';
+import { CUSTOM_LIMIT, UNLIMITED, type FeatureValue, type Plan, type PlanLimits, type PlanTier } from '@/types';
 
 /** A new plan starts with every allowance at zero; the editor fills them in. */
 const BLANK_LIMITS: PlanLimits = {
@@ -384,17 +384,44 @@ export default function AdminPlans(): JSX.Element {
               `-2` is «مخصّص» — both are sentinels, so the figure beside each
               field says how the value will actually read. */}
           <div>
-            <p className="text-small font-semibold mb-2">الحدود <span className="font-normal text-muted-light dark:text-muted-dark">(-1 = غير محدود، -2 = مخصّص)</span></p>
+            <p className="text-small font-semibold mb-2">الحدود <span className="font-normal text-muted-light dark:text-muted-dark">اختر «مخصّص» للحدّ الذي يُتَّفق عليه في كل صفقة</span></p>
+            {/*
+                الحدّ ثلاث حالات لا رقم واحد، فيُختار نوعه ثم يُكتب الرقم إن لزم.
+                الصياغة السابقة كانت حقلاً رقمياً و«‎-1‎ غير محدود، ‎-2‎ مخصّص» بجانبه:
+                الرقمان سالبان لأنهما علامتان لا كمّيات، فكان على المحرّر أن يحفظ
+                أيّهما أيّ — ويقرأ «‎-2‎» في الحقل بعد الحفظ.
+            */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {LIMIT_FIELDS.map((f) => (
-                <Input
-                  key={f.key}
-                  label={<>{f.label}<span className="text-muted-light dark:text-muted-dark font-normal ms-1">({limitText(form.limits[f.key])})</span></>}
-                  type="number"
-                  value={form.limits[f.key]}
-                  onChange={(e) => setLimit(f.key, Number(e.target.value))}
-                />
-              ))}
+              {LIMIT_FIELDS.map((f) => {
+                const v = form.limits[f.key];
+                const kind = v === UNLIMITED ? 'unlimited' : v === CUSTOM_LIMIT ? 'custom' : 'number';
+                return (
+                  <div key={f.key} className="space-y-1.5">
+                    <Select
+                      label={f.label}
+                      value={kind}
+                      onChange={(e) =>
+                        setLimit(
+                          f.key,
+                          e.target.value === 'unlimited' ? UNLIMITED : e.target.value === 'custom' ? CUSTOM_LIMIT : 0,
+                        )
+                      }
+                    >
+                      <option value="number">رقم محدد</option>
+                      <option value="unlimited">غير محدود</option>
+                      <option value="custom">مخصّص</option>
+                    </Select>
+                    {kind === 'number' && (
+                      <Input
+                        type="number"
+                        min={0}
+                        value={v}
+                        onChange={(e) => setLimit(f.key, Math.max(0, Number(e.target.value) || 0))}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
