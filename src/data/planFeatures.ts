@@ -40,8 +40,9 @@ export const FEATURE_CATALOG: FeatureGroup[] = [
       { key: 'ch_instagram', label: "إنستغرام" },
       { key: 'ch_messenger', label: "ماسنجر" },
       { key: 'ch_telegram', label: "تيليجرام" },
-      { key: 'ch_tiktok', label: "تيك توك" },
       { key: 'ch_live_chat', label: "المحادثة المباشرة من موقعك الإلكتروني" },
+      // آخر القائمة: معلنة ولم تُطلق بعد، فلا تتصدّر القنوات العاملة
+      { key: 'ch_tiktok', label: "تيك توك" },
     ],
   },
   {
