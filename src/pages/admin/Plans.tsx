@@ -27,9 +27,9 @@ import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
 import { cn } from '@/utils/cn';
 import { ALL_FEATURE_KEYS, FEATURE_CATALOG, FEATURE_LABELS, isGranted } from '@/data/planFeatures';
-import { LIMIT_FIELDS, limitShort } from '@/utils/planLimits';
+import { LIMIT_FIELDS, limitShort, limitText } from '@/utils/planLimits';
 import { planPrice } from '@/utils/planPricing';
-import { CUSTOM_LIMIT, UNLIMITED, type FeatureValue, type Plan, type PlanLimits, type PlanTier } from '@/types';
+import type { FeatureValue, Plan, PlanLimits, PlanTier } from '@/types';
 
 /** A new plan starts with every allowance at zero; the editor fills them in. */
 const BLANK_LIMITS: PlanLimits = {
@@ -65,6 +65,8 @@ export default function AdminPlans(): JSX.Element {
     features: Record<string, FeatureValue>;
     limits: PlanLimits;
     pricesPerCountry: Record<string, { monthly: number; yearly: number }>;
+    /** باقة تُطلب بالتواصل: حدودها مخصّصة وتأتي من الباك إند */
+    requiresContact: boolean;
     popular: boolean;
     active: boolean;
   }>({
@@ -75,6 +77,7 @@ export default function AdminPlans(): JSX.Element {
     features: {},
     limits: BLANK_LIMITS,
     pricesPerCountry: {},
+    requiresContact: false,
     popular: false,
     active: true,
   });
@@ -93,7 +96,7 @@ export default function AdminPlans(): JSX.Element {
     setForm({
       tier: 'pro', name: '', nameAr: '', tagline: '', features: {},
       limits: BLANK_LIMITS,
-      pricesPerCountry: defaults, popular: false, active: true,
+      pricesPerCountry: defaults, requiresContact: false, popular: false, active: true,
     });
     setModalOpen(true);
   };
@@ -108,6 +111,7 @@ export default function AdminPlans(): JSX.Element {
       features: { ...p.features },
       limits: { ...p.limits },
       pricesPerCountry: { ...p.pricesPerCountry },
+      requiresContact: p.requiresContact ?? false,
       popular: p.popular ?? false,
       active: p.active,
     });
@@ -123,6 +127,7 @@ export default function AdminPlans(): JSX.Element {
       features: { ...p.features },
       limits: { ...p.limits },
       pricesPerCountry: { ...p.pricesPerCountry },
+      requiresContact: p.requiresContact,
       active: false,
     });
     showToast(`تم إنشاء نسخة: ${newPlan.nameAr}`, 'success');
@@ -141,6 +146,7 @@ export default function AdminPlans(): JSX.Element {
       features: form.features,
       limits: form.limits,
       pricesPerCountry: form.pricesPerCountry,
+      requiresContact: form.requiresContact,
       popular: form.popular,
       active: form.active,
     };
@@ -380,48 +386,29 @@ export default function AdminPlans(): JSX.Element {
             </Select>
           </div>
           <Input label={<>وصف قصير (Tagline)<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="للشركات النامية" />
-          {/* The eight allowances of the approved sheet. `-1` is unlimited and
-              `-2` is «مخصّص» — both are sentinels, so the figure beside each
-              field says how the value will actually read. */}
+          {/* The eight allowances of the approved sheet. */}
           <div>
-            <p className="text-small font-semibold mb-2">الحدود <span className="font-normal text-muted-light dark:text-muted-dark">اختر «مخصّص» للحدّ الذي يُتَّفق عليه في كل صفقة</span></p>
+            <p className="text-small font-semibold mb-2">الحدود <span className="font-normal text-muted-light dark:text-muted-dark">{form.requiresContact ? 'حدود مخصّصة تأتي من الباك إند' : '(-1 = غير محدود)'}</span></p>
             {/*
-                الحدّ ثلاث حالات لا رقم واحد، فيُختار نوعه ثم يُكتب الرقم إن لزم.
-                الصياغة السابقة كانت حقلاً رقمياً و«‎-1‎ غير محدود، ‎-2‎ مخصّص» بجانبه:
-                الرقمان سالبان لأنهما علامتان لا كمّيات، فكان على المحرّر أن يحفظ
-                أيّهما أيّ — ويقرأ «‎-2‎» في الحقل بعد الحفظ.
+                «مخصّص» ليست حالة تُختار لكل حدّ، بل صفة الباقة التي تُطلب
+                بالتواصل: حدودها تُتَّفق عليها مع كل عميل وتأتي من الباك إند،
+                فحقولها معطّلة ولا تُحرَّر هنا.
             */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {LIMIT_FIELDS.map((f) => {
-                const v = form.limits[f.key];
-                const kind = v === UNLIMITED ? 'unlimited' : v === CUSTOM_LIMIT ? 'custom' : 'number';
-                return (
-                  <div key={f.key} className="space-y-1.5">
-                    <Select
-                      label={f.label}
-                      value={kind}
-                      onChange={(e) =>
-                        setLimit(
-                          f.key,
-                          e.target.value === 'unlimited' ? UNLIMITED : e.target.value === 'custom' ? CUSTOM_LIMIT : 0,
-                        )
-                      }
-                    >
-                      <option value="number">رقم محدد</option>
-                      <option value="unlimited">غير محدود</option>
-                      <option value="custom">مخصّص</option>
-                    </Select>
-                    {kind === 'number' && (
-                      <Input
-                        type="number"
-                        min={0}
-                        value={v}
-                        onChange={(e) => setLimit(f.key, Math.max(0, Number(e.target.value) || 0))}
-                      />
-                    )}
-                  </div>
-                );
-              })}
+              {LIMIT_FIELDS.map((f) => (
+                form.requiresContact ? (
+                  <Input key={f.key} label={f.label} value="مخصّص" disabled readOnly />
+                ) : (
+                  <Input
+                    key={f.key}
+                    label={<>{f.label}<span className="text-muted-light dark:text-muted-dark font-normal ms-1">({limitText(form.limits[f.key])})</span></>}
+                    type="number"
+                    min={-1}
+                    value={form.limits[f.key]}
+                    onChange={(e) => setLimit(f.key, Number(e.target.value) || 0)}
+                  />
+                )
+              ))}
             </div>
           </div>
 
