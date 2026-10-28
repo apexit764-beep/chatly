@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Fragment, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Check,
@@ -18,28 +18,29 @@ import {
 } from 'lucide-react';
 import { Card, Input, Modal, Textarea, useConfirm, InfoTip } from '@components/ui';
 
-/** Plain-language notes for plan features that use technical terms. Keyed by the feature text. */
+/** Plain-language notes for the catalogue features that use technical terms. Keyed by feature key. */
 const FEATURE_HINTS: Record<string, string> = {
-  'الردود التلقائية والـ Webhooks وربط Zapier': 'Webhooks وZapier تربط Qhub بأنظمتك الأخرى، فتُرسل لها الأحداث مثل وصول رسالة جديدة تلقائياً.',
-  'كل التكاملات (Slack · Telegram · TikTok · Webhook)': 'ربط Qhub بأدوات أخرى ترسل لها التنبيهات والأحداث تلقائياً.',
-  'API كامل بدون حدود': 'واجهة برمجية يستخدمها مبرمجوك لربط Qhub بأنظمتكم وتبادل البيانات.',
-  'SLA مضمون 99.9% أوقات تشغيل': 'التزام مكتوب بأن تعمل المنصة 99.9% من الوقت على الأقل.',
-  'مدير حساب مخصص (CSM)': 'شخص من فريقنا مسؤول عن حسابك ويتابع معك مباشرة.',
-  'سياسات أمان مُلزمة (مصادقة ثنائية وتقييد IP)': 'تفرض على كل الفريق المصادقة الثنائية، وتسمح بالدخول من عناوين إنترنت محددة فقط (مثل شبكة المكتب).',
-  'تخصيص العلامة التجارية (White Label)': 'تظهر المنصة لعملائك وفريقك باسمك وشعارك بدل Qhub.',
-  'تسجيل دخول موحّد SSO': 'يدخل فريقك بحسابات شركتكم (مثل Google أو Microsoft) بدون كلمة مرور منفصلة.',
-  'سجلات تدقيق Audit Logs': 'سجل بكل عملية قام بها كل موظف: من غيّر ماذا ومتى.',
-  'استضافة خاصة Dedicated': 'بياناتك على خوادم مخصصة لشركتك وحدها، غير مشتركة مع عملاء آخرين.',
-  'الأقسام والتوزيع الذكي للمحادثات': 'تقسيم الفريق إلى أقسام (مبيعات، دعم…) وتوجيه كل محادثة للقسم المناسب.',
+  ai_knowledge_base: 'ترفع مستنداتك وأسعارك وسياساتك، فيجيب المساعد من داخلها لا من معلومات عامة.',
+  ai_guardrails: 'يمتنع المساعد عن الخوض في مواضيع تحددها أنت، ويحوّل السؤال إلى موظف بدلاً من الاجتهاد.',
+  ai_sentiment: 'يقرأ نبرة العميل في رسائله، فتظهر المحادثات الغاضبة أولاً في الصندوق.',
+  mk_safe_sending: 'توزيع الإرسال على فترات وبمعدلات آمنة، لتقليل احتمال حظر الرقم.',
+  team_auto_routing: 'تقسيم الفريق إلى أقسام (مبيعات، دعم…) وتوجيه كل محادثة إلى القسم المناسب تلقائياً.',
+  team_sla: 'قياس زمن الاستجابة مقابل مدة تحددها أنت، والتنبيه عند تجاوزها.',
+  cust_csat: 'يُسأل العميل عن تقييم المحادثة بعد انتهائها، فتظهر النتيجة في تقارير الموظفين.',
+  sup_whitelabel: 'تظهر المنصة لعملائك وفريقك باسمك وشعارك بدل Qhub.',
 };
 import { useAdminStore } from '@/store/useAdminStore';
 import { DowngradeDialog } from '@/components/billing/DowngradeDialog';
+import { lostFeatures } from '@/utils/planDowngrade';
+import { planAmount, planPrice } from '@/utils/planPricing';
+import { FEATURE_CATALOG } from '@/data/planFeatures';
+import { LIMIT_FIELDS, limitText } from '@/utils/planLimits';
 import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
 import { formatDate } from '@/utils/format';
 import { isEditable } from '@/utils/planRequest';
 import { cn } from '@/utils/cn';
-import type { Plan } from '@/types';
+import { CUSTOM_LIMIT, UNLIMITED, type Plan } from '@/types';
 
 const CURRENT_CLIENT_ID = 'client_1';
 
@@ -70,7 +71,8 @@ export default function Subscribe(): JSX.Element {
   const client = clients.find((c) => c.id === CURRENT_CLIENT_ID);
   const selectedCountry = countries.find((c) => c.code === client?.country) ?? countries[0];
   const country = selectedCountry.code;
-  const activePlans = plans.filter((p) => p.active);
+  // The trial is granted at sign-up, never bought, so it is no column here.
+  const activePlans = plans.filter((p) => p.active && !p.isTrial);
   const currentPlanId = client?.planId ?? null;
   const currentPlan = activePlans.find((p) => p.id === currentPlanId) ?? null;
   const sub = subscriptions.find((s) => s.clientId === CURRENT_CLIENT_ID && s.status === 'active');
@@ -91,7 +93,8 @@ export default function Subscribe(): JSX.Element {
       .forEach((p) => {
         stops.push({ conversations: p.limits.conversations, label: (p.limits.conversations / 1000).toFixed(0) + 'K', planId: p.id });
       });
-    stops.push({ conversations: -1, label: 'غير محدود', planId: activePlans.find((p) => p.tier === 'enterprise')?.id ?? '' });
+    // المؤسسات حصّتها «مخصّص» لا «غير محدود» — تُتَّفق عليها، فلا تُعرض رقماً.
+    stops.push({ conversations: CUSTOM_LIMIT, label: 'مخصّص', planId: activePlans.find((p) => p.tier === 'enterprise')?.id ?? '' });
     return stops;
   }, [activePlans]);
 
@@ -124,13 +127,13 @@ export default function Subscribe(): JSX.Element {
     setStep('checkout');
   }, [requestedPlanId, activePlans, currentPlanId, setSearchParams]);
 
-  const currentPlanPrice = currentPlan ? (currentPlan.pricesPerCountry[country] ?? { monthly: 0, yearly: 0 }) : { monthly: 0, yearly: 0 };
+  const currentPlanPrice = (currentPlan && planPrice(currentPlan, country)) ?? { monthly: 0, yearly: 0 };
 
   // Every column in the comparison table needs its own price and its own
   // upgrade/downgrade verdict, so these take a plan rather than reading the
   // slider — the slider only recommends, it no longer decides what you buy.
   const priceOf = (plan: Plan | null): { monthly: number; yearly: number } =>
-    plan ? (plan.pricesPerCountry[country] ?? { monthly: 0, yearly: 0 }) : { monthly: 0, yearly: 0 };
+    (plan && planPrice(plan, country)) ?? { monthly: 0, yearly: 0 };
 
   const amountFor = (plan: Plan | null): number => {
     const p = priceOf(plan);
@@ -155,60 +158,39 @@ export default function Subscribe(): JSX.Element {
 
   const TIER_RANK: Record<string, number> = { starter: 0, pro: 1, business: 2, enterprise: 3 };
 
-  /**
-   * Each tier lists only what it adds, behind a "كل مزايا باقة X" pointer to the
-   * tier below. That reads fine as prose but is useless as a table row, and a
-   * plain `features.includes()` matrix would wrongly mark the inherited ones as
-   * missing. So the pointers are dropped and inheritance is resolved into real
-   * ticks — the table then states the inheritance instead of alluding to it.
-   */
-  const isInheritPointer = (f: string): boolean => f.startsWith('كل مزايا');
-
   const rankedPlans = useMemo(
     () => [...activePlans].sort((a, b) => (TIER_RANK[a.tier] ?? 0) - (TIER_RANK[b.tier] ?? 0)),
     [activePlans],
   );
 
-  const allFeatures: string[] = useMemo(() => {
-    const seen = new Set<string>();
-    const result: string[] = [];
-    rankedPlans.forEach((p) => {
-      p.features.filter((f) => !isInheritPointer(f)).forEach((f) => {
-        if (!seen.has(f)) { seen.add(f); result.push(f); }
-      });
-    });
-    return result;
-  }, [rankedPlans]);
-
-  const featureSetFor = useMemo(() => {
-    const map = new Map<string, Set<string>>();
-    rankedPlans.forEach((plan) => {
-      const rank = TIER_RANK[plan.tier] ?? 0;
-      const included = new Set<string>();
-      rankedPlans.forEach((p) => {
-        if ((TIER_RANK[p.tier] ?? 0) <= rank) {
-          p.features.filter((f) => !isInheritPointer(f)).forEach((f) => included.add(f));
-        }
-      });
-      map.set(plan.id, included);
-    });
-    return map;
-  }, [rankedPlans]);
-
-  /** -1 is the sentinel for "no ceiling" across every limit. */
-  const limitLabel = (n: number): string => (n === -1 ? 'غير محدود' : n.toLocaleString('en'));
+  /**
+   * The table draws its rows from the approved catalogue, not from the plans:
+   * every plan carries a value for every feature, so a row is never missing and
+   * inheritance between tiers no longer has to be guessed at. A group with no
+   * plan granting anything in it is dropped, so an all-dashes band never shows.
+   */
+  const featureGroups = useMemo(
+    () =>
+      FEATURE_CATALOG.map((g) => ({
+        ...g,
+        items: g.items.filter((it) => rankedPlans.some((p) => p.features[it.key] !== undefined && p.features[it.key] !== false)),
+      })).filter((g) => g.items.length > 0),
+    [rankedPlans],
+  );
 
   /** What the bubble above the active stop says — a ceiling, not a bare number. */
   const stopHint = (s: SliderStop | undefined): string =>
-    !s ? '' : s.conversations === -1
+    !s ? '' : s.conversations === UNLIMITED
       ? 'محادثات غير محدودة'
-      : `حتى ${s.conversations.toLocaleString('en')} محادثة / شهر`;
+      : s.conversations === CUSTOM_LIMIT
+        ? 'حصّة محادثات تُتَّفق عليها'
+        : `حتى ${s.conversations.toLocaleString('en')} محادثة / شهر`;
 
   /** Yearly is billed as ten months, so the discount is derived, never typed in. */
   const yearlySavingPct = useMemo(() => {
     const ref = rankedPlans.find((p) => p.tier === 'pro') ?? rankedPlans[0];
     if (!ref) return 0;
-    const p = ref.pricesPerCountry[country];
+    const p = planPrice(ref, country);
     if (!p || !p.monthly) return 0;
     return Math.round((1 - p.yearly / (p.monthly * 12)) * 100);
   }, [rankedPlans, country]);
@@ -429,7 +411,7 @@ export default function Subscribe(): JSX.Element {
                             )}
                           </div>
                           <p className="text-[11px] text-muted-light dark:text-muted-dark h-4 mb-2">
-                            {limitLabel(plan.limits.conversations)} محادثة / شهر
+                            {limitText(plan.limits.conversations)} محادثة / شهر
                           </p>
 
                           {isEnt ? (
@@ -484,19 +466,18 @@ export default function Subscribe(): JSX.Element {
                 </thead>
 
                 <tbody>
-                  <SectionRow title="الأساسيات" span={rankedPlans.length + 1} />
-                  {([
-                    ['القنوات المتصلة', (p: Plan) => limitLabel(p.limits.channels)],
-                    ['عدد الموظفين', (p: Plan) => limitLabel(p.limits.agents)],
-                    ['المحادثات شهرياً', (p: Plan) => limitLabel(p.limits.conversations)],
-                    ['جهات الاتصال', (p: Plan) => limitLabel(p.limits.contacts)],
-                  ] as [string, (p: Plan) => string][]).map(([label, valueOf]) => (
-                    <tr key={label} className="border-b border-border-light dark:border-border-dark">
+                  {/* The eight allowances, in the order the approved sheet lists them. */}
+                  <SectionRow title="الحدود والحصص" span={rankedPlans.length + 1} />
+                  {LIMIT_FIELDS.map((field) => (
+                    <tr key={field.key} className="border-b border-border-light dark:border-border-dark">
                       <td
                         className="p-3 text-muted-light dark:text-muted-dark bg-white dark:bg-surface-dark sticky z-10"
                         style={{ insetInlineStart: 0 }}
                       >
-                        {label}
+                        <span className="inline-flex items-center gap-1">
+                          {field.label}
+                          {field.hint && <InfoTip>{field.hint}</InfoTip>}
+                        </span>
                       </td>
                       {rankedPlans.map((plan) => (
                         <td
@@ -506,43 +487,53 @@ export default function Subscribe(): JSX.Element {
                             plan.id === recommendedPlanId && 'bg-primary/[0.04]',
                           )}
                         >
-                          {valueOf(plan)}
+                          {limitText(plan.limits[field.key])}
                         </td>
                       ))}
                     </tr>
                   ))}
 
-                  <SectionRow title="المزايا" span={rankedPlans.length + 1} />
-                  {allFeatures.map((f) => (
-                    <tr key={f} className="border-b border-border-light dark:border-border-dark">
-                      <td
-                        className="p-3 text-muted-light dark:text-muted-dark bg-white dark:bg-surface-dark sticky z-10"
-                        style={{ insetInlineStart: 0 }}
-                      >
-                        <span className="inline-flex items-center gap-1">
-                          {f}
-                          {FEATURE_HINTS[f] && <InfoTip>{FEATURE_HINTS[f]}</InfoTip>}
-                        </span>
-                      </td>
-                      {rankedPlans.map((plan) => {
-                        const included = featureSetFor.get(plan.id)?.has(f) ?? false;
-                        return (
+                  {featureGroups.map((group) => (
+                    <Fragment key={group.label}>
+                      <SectionRow title={group.label} span={rankedPlans.length + 1} />
+                      {group.items.map((it) => (
+                        <tr key={it.key} className="border-b border-border-light dark:border-border-dark">
                           <td
-                            key={plan.id}
-                            className={cn(
-                              'p-3 text-center',
-                              plan.id === recommendedPlanId && 'bg-primary/[0.04]',
-                            )}
+                            className="p-3 text-muted-light dark:text-muted-dark bg-white dark:bg-surface-dark sticky z-10"
+                            style={{ insetInlineStart: 0 }}
                           >
-                            {included ? (
-                              <Check className="h-4 w-4 text-primary mx-auto" aria-label="مشمولة" />
-                            ) : (
-                              <span className="text-muted-light dark:text-muted-dark" aria-label="غير مشمولة">—</span>
-                            )}
+                            <span className="inline-flex items-center gap-1">
+                              {it.label}
+                              {FEATURE_HINTS[it.key] && <InfoTip>{FEATURE_HINTS[it.key]}</InfoTip>}
+                            </span>
                           </td>
-                        );
-                      })}
-                    </tr>
+                          {rankedPlans.map((plan) => {
+                            const value = plan.features[it.key];
+                            return (
+                              <td
+                                key={plan.id}
+                                className={cn(
+                                  'p-3 text-center',
+                                  plan.id === recommendedPlanId && 'bg-primary/[0.04]',
+                                )}
+                              >
+                                {/* A plain ✔ becomes the icon; an announced-not-yet-launched
+                                    feature and a written allowance both read as words. */}
+                                {value === true ? (
+                                  <Check className="h-4 w-4 text-primary mx-auto" aria-label="مشمولة" />
+                                ) : value === 'soon' ? (
+                                  <span className="text-[11px] font-semibold text-warning">قريباً</span>
+                                ) : typeof value === 'string' ? (
+                                  <span className="text-[12px] font-medium">{value}</span>
+                                ) : (
+                                  <span className="text-muted-light dark:text-muted-dark" aria-label="غير مشمولة">—</span>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
@@ -583,8 +574,7 @@ export default function Subscribe(): JSX.Element {
           onProcessing={() => setStep('processing')}
           onSuccess={() => {
             createSubscription(CURRENT_CLIENT_ID, selectedPlan.id, cycle);
-            const price = selectedPlan.pricesPerCountry[country];
-            const amount = cycle === 'monthly' ? price.monthly : price.yearly;
+            const amount = planAmount(selectedPlan, country, cycle) ?? 0;
             recordPayment(CURRENT_CLIENT_ID, selectedPlan.id, amount, selectedCountry.currency, '4242');
             setStep('success');
           }}
@@ -712,9 +702,7 @@ export default function Subscribe(): JSX.Element {
           currentPrice={amountFor(currentPlan)}
           newPrice={amountFor(selectedPlan)}
           currency={selectedCountry.currency}
-          lostFeatures={[...(featureSetFor.get(currentPlan.id) ?? [])].filter(
-            (f) => !(featureSetFor.get(selectedPlan.id)?.has(f) ?? false),
-          )}
+          lostFeatures={lostFeatures(currentPlan, selectedPlan)}
         />
       )}
 
@@ -979,9 +967,9 @@ interface CheckoutFlowProps {
 }
 
 function CheckoutFlow({ plan, country, cycle, isUpgrade, currentPlan, onBack, onProcessing, onSuccess, onFailure, testMode }: CheckoutFlowProps): JSX.Element {
-  const price = plan.pricesPerCountry[country.code];
-  // السعر الكامل دائماً — لا مقاصة مع الباقة المنتهية.
-  const baseAmount = cycle === 'monthly' ? price.monthly : price.yearly;
+  // السعر الكامل دائماً — لا مقاصة مع الباقة المنتهية. والباقة التي لا سعر لها
+  // (المؤسسات بالتواصل) لا تصل هذه الشاشة إلا بعد اتفاق، فتُقرأ صفراً لا NaN.
+  const baseAmount = planAmount(plan, country.code, cycle) ?? 0;
   const tax = Math.round(baseAmount * 5) / 100;
   const total = Math.round((baseAmount + tax) * 100) / 100;
 
