@@ -45,6 +45,8 @@ interface AuthState {
 
 const STORAGE_KEY_CLIENT = 'sekaa_auth';
 const STORAGE_KEY_ADMIN = 'apex_admin_auth';
+/** The client-mode session key, exported so admin impersonation can seed a client session. */
+export const CLIENT_AUTH_STORAGE_KEY = STORAGE_KEY_CLIENT;
 const storageKey = (): string => (getAppMode() === 'admin' ? STORAGE_KEY_ADMIN : STORAGE_KEY_CLIENT);
 
 function readInitial(): { isAuthenticated: boolean; user: AuthUser | null } {
