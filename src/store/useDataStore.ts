@@ -122,7 +122,7 @@ interface DataState {
    */
   suspendForPlan: (keep: { agentIds: string[]; channelIds: string[] }) => void;
   /** An upgrade made room: bring back what a downgrade stopped, oldest first, up to the new limits. */
-  restoreFromPlan: (limits: { agents: number; channels: number }, channelAllowed: (c: Channel) => boolean) => void;
+  restoreFromPlan: (limits: { agents: number; accounts: number }, channelAllowed: (c: Channel) => boolean) => void;
 
   // Campaign actions
   addCampaign: (c: Omit<Campaign, 'id' | 'sentCount' | 'openRate' | 'createdAt'>) => void;
@@ -539,7 +539,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         return { ...a, invitationStatus: 'active' as const, planSuspended: undefined };
       });
       const running = state.channels.filter((c) => !c.planSuspended).length;
-      let channelRoom = limits.channels === -1 ? Infinity : limits.channels - running;
+      let channelRoom = limits.accounts === -1 ? Infinity : limits.accounts - running;
       const channels = [...state.channels]
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
         .map((c) => {

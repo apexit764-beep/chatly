@@ -196,10 +196,10 @@ export default function AdminPlanRequests(): JSX.Element {
     },
     {
       key: 'channels', header: 'القنوات', align: 'center', hideOn: 'xl',
-      accessor: (r) => r.requestedChannels ?? planOf(r.planId)?.limits.channels,
+      accessor: (r) => r.requestedChannels ?? planOf(r.planId)?.limits.accounts,
       cell: (r) => (
         <span className={cn('font-semibold', r.requestedChannels !== null && 'text-primary')}>
-          {askedLabel(r.requestedChannels, planOf(r.planId)?.limits.channels)}
+          {askedLabel(r.requestedChannels, planOf(r.planId)?.limits.accounts)}
         </span>
       ),
     },
@@ -360,7 +360,7 @@ export default function AdminPlanRequests(): JSX.Element {
                 label="حد القنوات المطلوب"
                 value={drawer.requestedChannels !== null ? drawer.requestedChannels.toLocaleString('en') : 'لم يُحدَّد'}
               />
-              <DetailRow label="حدود الباقة الحالية" value={`الموظفين ${limitLabel(planOf(drawer.planId)?.limits.agents)} · القنوات ${limitLabel(planOf(drawer.planId)?.limits.channels)}`} />
+              <DetailRow label="حدود الباقة الحالية" value={`الموظفين ${limitLabel(planOf(drawer.planId)?.limits.agents)} · القنوات ${limitLabel(planOf(drawer.planId)?.limits.accounts)}`} />
               <DetailRow label="تاريخ الطلب" value={`${formatDate(drawer.createdAt)} · ${timeAgo(drawer.createdAt)}`} />
             </div>
 

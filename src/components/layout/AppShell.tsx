@@ -9,6 +9,7 @@ import { SupportChat } from '@components/support/SupportChat';
 import { SubscriptionExpiredModal } from '@components/billing/SubscriptionExpiredModal';
 import { TrialExpiredModal } from '@components/billing/TrialExpiredModal';
 import { TrialBanner } from '@components/billing/TrialBanner';
+import { ImpersonationBanner } from './ImpersonationBanner';
 import { useUIStore } from '@/store/useUIStore';
 import { useLiveSimulator } from '@/hooks/useLiveSimulator';
 import { useAutoClose } from '@/hooks/useAutoClose';
@@ -44,6 +45,7 @@ export function AppShell(): JSX.Element {
   const { has } = usePermission();
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg-light dark:bg-bg-dark text-[14px] text-[#111827] dark:text-[#F1F5F9]">
+      <ImpersonationBanner />
       <div className="flex flex-1 min-h-0">
         {!focused && <IconSidebar />}
         {!focused && <SectionSidebar />}

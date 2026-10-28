@@ -3,7 +3,7 @@ import {
   Plus,
   Download,
   MoreHorizontal,
-  ExternalLink,
+  LogIn,
   Eye,
   Edit2,
   Trash2,
@@ -28,8 +28,10 @@ import {
 import { useAdminStore } from '@/store/useAdminStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
+import { planAmount } from '@/utils/planPricing';
 import { formatDate, timeAgo } from '@/utils/format';
 import { downloadCsv } from '@/utils/csv';
+import { startImpersonation } from '@/utils/impersonation';
 import { cn } from '@/utils/cn';
 import type { Client, ClientStatus } from '@/types';
 
@@ -189,6 +191,15 @@ export default function AdminClients(): JSX.Element {
     }
   };
 
+  const handleImpersonate = async (c: Client): Promise<void> => {
+    const ok = await confirm({
+      title: `الدخول إلى لوحة ${c.companyName}؟`,
+      message: 'ستدخل إلى لوحة تحكم هذه الشركة كمسؤول لمعاينتها. يمكنك العودة في أي وقت من الشريط العلوي.',
+      confirmText: 'دخول',
+    });
+    if (ok) startImpersonation(c);
+  };
+
   const handleExport = (rows: Client[]): void => {
     downloadCsv(
       `clients-${new Date().toISOString().slice(0, 10)}.csv`,
@@ -260,9 +271,9 @@ export default function AdminClients(): JSX.Element {
       key: 'actions', header: '', sortable: false, width: '100px', align: 'end',
       cell: (r) => (
         <div className="flex items-center gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-          <a href={r.dashboardUrl} target="_blank" rel="noreferrer" title="فتح داشبورد العميل" className="h-8 w-8 rounded-full hover:bg-primary/10 text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center">
-            <ExternalLink className="h-4 w-4" />
-          </a>
+          <button onClick={() => handleImpersonate(r)} title="الدخول إلى لوحة الشركة" aria-label="الدخول إلى لوحة الشركة" className="h-8 w-8 rounded-full hover:bg-primary/10 text-muted-light dark:text-muted-dark hover:text-primary flex items-center justify-center">
+            <LogIn className="h-4 w-4" />
+          </button>
           <div className="relative">
             <button onClick={() => setOpenMenu(openMenu === r.id ? null : r.id)} className="h-8 w-8 rounded-full hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark flex items-center justify-center" aria-label="المزيد">
               <MoreHorizontal className="h-4 w-4" />
@@ -371,19 +382,19 @@ export default function AdminClients(): JSX.Element {
           </Select>
           <Select label={<>الباقة<span className="text-danger ms-0.5">*</span></>} value={form.planId} onChange={(e) => setForm({ ...form, planId: e.target.value })}>
             <option value="">بدون باقة</option>
-            {plans.map((p) => (<option key={p.id} value={p.id}>{p.nameAr} — {formatMoney(p.pricesPerCountry[form.country]?.monthly ?? 0, countries.find((c) => c.code === form.country)?.currency ?? 'USD')}/شهر</option>))}
+            {plans.map((p) => (<option key={p.id} value={p.id}>{p.nameAr} — {formatMoney(planAmount(p, form.country, 'monthly') ?? 0, countries.find((c) => c.code === form.country)?.currency ?? 'USD')}/شهر</option>))}
           </Select>
         </div>
       </Modal>
 
       <Drawer open={!!drawer} onClose={() => setDrawer(null)} title="تفاصيل العميل" side="start" width="w-[460px]">
-        {drawer && <ClientDrawerBody client={drawer} onEdit={() => { openEdit(drawer); setDrawer(null); }} onDelete={() => remove(drawer)} />}
+        {drawer && <ClientDrawerBody client={drawer} onEnter={() => handleImpersonate(drawer)} onEdit={() => { openEdit(drawer); setDrawer(null); }} onDelete={() => remove(drawer)} />}
       </Drawer>
     </div>
   );
 }
 
-function ClientDrawerBody({ client, onEdit, onDelete }: { client: Client; onEdit: () => void; onDelete: () => void }): JSX.Element {
+function ClientDrawerBody({ client, onEnter, onEdit, onDelete }: { client: Client; onEnter: () => void; onEdit: () => void; onDelete: () => void }): JSX.Element {
   const plans = useAdminStore((s) => s.plans);
   const subscriptions = useAdminStore((s) => s.subscriptions);
   const invoices = useAdminStore((s) => s.invoices);
@@ -404,10 +415,10 @@ function ClientDrawerBody({ client, onEdit, onDelete }: { client: Client; onEdit
         </span>
       </div>
 
-      <a href={client.dashboardUrl} target="_blank" rel="noreferrer" className="w-full h-11 rounded-full bg-primary hover:bg-primary-dark text-white text-body font-semibold flex items-center justify-center gap-2 transition-colors">
-        <ExternalLink className="h-4 w-4" />
-        فتح داشبورد {client.companyName}
-      </a>
+      <button onClick={onEnter} className="w-full h-11 rounded-full bg-primary hover:bg-primary-dark text-white text-body font-semibold flex items-center justify-center gap-2 transition-colors">
+        <LogIn className="h-4 w-4" />
+        الدخول إلى لوحة {client.companyName}
+      </button>
 
       <div className="grid grid-cols-3 gap-3 text-center">
         <div className="p-3 rounded-card bg-bg-light dark:bg-bg-dark">

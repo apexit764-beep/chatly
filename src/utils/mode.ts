@@ -1,6 +1,8 @@
 export type AppMode = 'admin' | 'client';
 
 const STORAGE_KEY = 'sekaa_app_mode_override';
+/** Same key as STORAGE_KEY, exported for callers that flip the mode directly (e.g. impersonation). */
+export const MODE_STORAGE_KEY = STORAGE_KEY;
 const CLIENT_PATH_PREFIX = '/client';
 
 function pathStartsWithClient(path: string): boolean {

@@ -22,6 +22,7 @@ import {
   subscriptions as initialSubscriptions,
   transactions as initialTransactions,
 } from './adminMockData';
+import { planAmount } from '@/utils/planPricing';
 
 /**
  * Plan requests are the one slice a *client* writes and an *admin* reads, so unlike
@@ -200,8 +201,8 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     const client = get().clients.find((c) => c.id === clientId);
     const plan = get().plans.find((p) => p.id === planId);
     if (!client || !plan) throw new Error('client or plan not found');
-    const price = plan.pricesPerCountry[client.country];
-    const amount = billingCycle === 'yearly' ? price.yearly : price.monthly;
+    // الباقة التجريبية والمؤسسات لا تحملان سعراً في أي دولة، فتُقرأ صفراً.
+    const amount = planAmount(plan, client.country, billingCycle) ?? 0;
     const sub: Subscription = {
       id: newId('sub'),
       clientId,
@@ -287,8 +288,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     if (!client || !plan || !current) return;
 
     const effectiveAt = current.currentPeriodEnd;
-    const price = plan.pricesPerCountry[client.country];
-    const amount = billingCycle === 'yearly' ? price.yearly : price.monthly;
+    const amount = planAmount(plan, client.country, billingCycle) ?? 0;
     const tax = Math.round(amount * 0.05);
     const number = `INV-2026-${String(get().invoices.length + 1).padStart(5, '0')}`;
     // مستحقّة في تاريخ الجدولة لا الآن: العميل لا يُخصم منه شيء اليوم.
@@ -366,8 +366,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     const plan = change ? get().plans.find((p) => p.id === change.planId) : undefined;
     if (!client || !current || !change || !plan) return;
 
-    const price = plan.pricesPerCountry[client.country] ?? { monthly: 0, yearly: 0 };
-    const amount = change.billingCycle === 'yearly' ? price.yearly : price.monthly;
+    const amount = planAmount(plan, client.country, change.billingCycle) ?? 0;
     const start = new Date(change.effectiveAt);
     const end = new Date(start);
     if (change.billingCycle === 'yearly') end.setFullYear(end.getFullYear() + 1);

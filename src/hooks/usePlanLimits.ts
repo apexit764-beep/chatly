@@ -100,7 +100,7 @@ export function usePlanLimits(): PlanLimitState {
       // ⚠️ مؤقّت — وضع تصوير الفيديو: البيانات التجريبية تحمل ٨ قنوات بينما
       // حدّ الباقة ٣، فكل ربط جديد يصطدم بنافذة «انتهت حدود الباقة» ويقطع
       // اللقطة. يُرفع الحاجز أثناء التصوير فقط. انظر src/config/videoDemo.ts
-      channelsReached: VIDEO_DEMO ? false : reached(runningChannels(channels).length, plan.limits.channels),
+      channelsReached: VIDEO_DEMO ? false : reached(runningChannels(channels).length, plan.limits.accounts),
       // Staff and channels a downgrade stopped hold no seat until an upgrade brings them back.
       agentsReached: reached(seatedAgents(agents).length, plan.limits.agents),
       lockedConversationIds: new Set(overQuota.map((c) => c.id)),

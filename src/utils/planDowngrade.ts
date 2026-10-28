@@ -1,4 +1,5 @@
 import type { Agent, Channel, Plan } from '@/types';
+import { ALL_FEATURE_KEYS, FEATURE_LABELS, isGranted } from '@/data/planFeatures';
 import { channelTypeAllowed } from '@/utils/planChannels';
 
 export const isOwner = (a: Agent): boolean => a.roleId === 'role_owner';
@@ -21,7 +22,7 @@ export function downgradeOverflow(plan: Plan, agents: Agent[], channels: Channel
   const seated = seatedAgents(agents);
   const running = runningChannels(channels);
   const a = plan.limits.agents !== -1 && seated.length > plan.limits.agents;
-  const c = plan.limits.channels !== -1 && running.length > plan.limits.channels;
+  const c = plan.limits.accounts !== -1 && running.length > plan.limits.accounts;
   const t = running.some((ch) => !channelTypeAllowed(plan.tier, ch.type));
   return { agents: a, channels: c, blockedTypes: t, any: a || c || t };
 }
@@ -47,7 +48,7 @@ export function resolveKeep(
     .map((a) => a.id);
 
   const eligible = runningChannels(channels).filter((c) => channelTypeAllowed(plan.tier, c.type)).sort(byAge);
-  const channelCap = plan.limits.channels === -1 ? eligible.length : plan.limits.channels;
+  const channelCap = plan.limits.accounts === -1 ? eligible.length : plan.limits.accounts;
   const pickedCh = chosen?.channelIds ? eligible.filter((c) => chosen.channelIds!.includes(c.id)) : [];
   const restCh = eligible.filter((c) => !pickedCh.includes(c));
   const channelIds = [...pickedCh, ...restCh].slice(0, channelCap).map((c) => c.id);
@@ -55,19 +56,12 @@ export function resolveKeep(
   return { agentIds, channelIds };
 }
 
-const TIER_RANK: Record<string, number> = { starter: 0, pro: 1, business: 2, enterprise: 3 };
-
 /**
- * Features `from` has and `to` lacks. Each plan lists only what it adds over the
- * tier below (behind a «كل مزايا …» pointer), so a plan's full set is everything
- * listed at its tier and under.
+ * Labels of the features `from` grants and `to` does not. Every plan carries its
+ * own full record, so there is no tier to walk up — the two records compare directly.
  */
-export function lostFeatures(plans: Plan[], from: Plan, to: Plan): string[] {
-  const setFor = (plan: Plan): string[] =>
-    plans
-      .filter((p) => (TIER_RANK[p.tier] ?? 0) <= (TIER_RANK[plan.tier] ?? 0))
-      .sort((a, b) => (TIER_RANK[a.tier] ?? 0) - (TIER_RANK[b.tier] ?? 0))
-      .flatMap((p) => p.features.filter((f) => !f.startsWith('كل مزايا')));
-  const kept = new Set(setFor(to));
-  return [...new Set(setFor(from))].filter((f) => !kept.has(f));
+export function lostFeatures(from: Plan, to: Plan): string[] {
+  return ALL_FEATURE_KEYS.filter((k) => isGranted(from.features[k]) && !isGranted(to.features[k])).map(
+    (k) => FEATURE_LABELS[k],
+  );
 }

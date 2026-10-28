@@ -20,14 +20,22 @@ import {
   Input,
   Modal,
   Select,
-  Textarea,
   useConfirm,
 } from '@components/ui';
 import { useAdminStore } from '@/store/useAdminStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
 import { cn } from '@/utils/cn';
-import type { Plan, PlanTier } from '@/types';
+import { ALL_FEATURE_KEYS, FEATURE_CATALOG, FEATURE_LABELS, isGranted } from '@/data/planFeatures';
+import { LIMIT_FIELDS, limitShort, limitText } from '@/utils/planLimits';
+import { planPrice } from '@/utils/planPricing';
+import type { FeatureValue, Plan, PlanLimits, PlanTier } from '@/types';
+
+/** A new plan starts with every allowance at zero; the editor fills them in. */
+const BLANK_LIMITS: PlanLimits = {
+  conversations: 0, messages: 0, accounts: 0, agents: 0,
+  contacts: 0, departments: 0, whatsappCampaigns: 0, emailCampaigns: 0,
+};
 
 const tierStyle: Record<PlanTier, { bg: string; ring: string; text: string }> = {
   starter: { bg: 'from-cyan-50 to-cyan-100/50 dark:from-cyan-900/20 dark:to-cyan-900/10', ring: 'ring-cyan-300 dark:ring-cyan-700', text: 'text-cyan-700 dark:text-cyan-300' },
@@ -54,12 +62,11 @@ export default function AdminPlans(): JSX.Element {
     name: string;
     nameAr: string;
     tagline: string;
-    features: string;
-    limitAgents: number;
-    limitChannels: number;
-    limitConversations: number;
-    limitContacts: number;
+    features: Record<string, FeatureValue>;
+    limits: PlanLimits;
     pricesPerCountry: Record<string, { monthly: number; yearly: number }>;
+    /** باقة تُطلب بالتواصل: حدودها مخصّصة وتأتي من الباك إند */
+    requiresContact: boolean;
     popular: boolean;
     active: boolean;
   }>({
@@ -67,24 +74,29 @@ export default function AdminPlans(): JSX.Element {
     name: '',
     nameAr: '',
     tagline: '',
-    features: '',
-    limitAgents: 5,
-    limitChannels: 2,
-    limitConversations: 5000,
-    limitContacts: 1000,
+    features: {},
+    limits: BLANK_LIMITS,
     pricesPerCountry: {},
+    requiresContact: false,
     popular: false,
     active: true,
   });
+
+  const toggleFeature = (key: string, on: boolean): void =>
+    setForm((f) => ({ ...f, features: { ...f.features, [key]: on } }));
+  const setFeatureText = (key: string, text: string): void =>
+    setForm((f) => ({ ...f, features: { ...f.features, [key]: text.trim() === '' ? true : text } }));
+  const setLimit = (key: keyof PlanLimits, v: number): void =>
+    setForm((f) => ({ ...f, limits: { ...f.limits, [key]: v } }));
 
   const openCreate = (): void => {
     setEditing(null);
     const defaults: Record<string, { monthly: number; yearly: number }> = {};
     countries.forEach((c) => { defaults[c.code] = { monthly: 0, yearly: 0 }; });
     setForm({
-      tier: 'pro', name: '', nameAr: '', tagline: '', features: '',
-      limitAgents: 5, limitChannels: 2, limitConversations: 5000, limitContacts: 1000,
-      pricesPerCountry: defaults, popular: false, active: true,
+      tier: 'pro', name: '', nameAr: '', tagline: '', features: {},
+      limits: BLANK_LIMITS,
+      pricesPerCountry: defaults, requiresContact: false, popular: false, active: true,
     });
     setModalOpen(true);
   };
@@ -96,12 +108,10 @@ export default function AdminPlans(): JSX.Element {
       name: p.name,
       nameAr: p.nameAr,
       tagline: p.tagline,
-      features: p.features.join('\n'),
-      limitAgents: p.limits.agents,
-      limitChannels: p.limits.channels,
-      limitConversations: p.limits.conversations,
-      limitContacts: p.limits.contacts,
+      features: { ...p.features },
+      limits: { ...p.limits },
       pricesPerCountry: { ...p.pricesPerCountry },
+      requiresContact: p.requiresContact ?? false,
       popular: p.popular ?? false,
       active: p.active,
     });
@@ -114,9 +124,10 @@ export default function AdminPlans(): JSX.Element {
       name: `${p.name} (Copy)`,
       nameAr: `${p.nameAr} (نسخة)`,
       tagline: p.tagline,
-      features: [...p.features],
+      features: { ...p.features },
       limits: { ...p.limits },
       pricesPerCountry: { ...p.pricesPerCountry },
+      requiresContact: p.requiresContact,
       active: false,
     });
     showToast(`تم إنشاء نسخة: ${newPlan.nameAr}`, 'success');
@@ -127,20 +138,15 @@ export default function AdminPlans(): JSX.Element {
       showToast('الاسم بالعربية والإنجليزية مطلوبان', 'error');
       return;
     }
-    const features = form.features.split('\n').map((f) => f.trim()).filter(Boolean);
     const payload = {
       tier: form.tier,
       name: form.name,
       nameAr: form.nameAr,
       tagline: form.tagline,
-      features,
-      limits: {
-        agents: form.limitAgents,
-        channels: form.limitChannels,
-        conversations: form.limitConversations,
-        contacts: form.limitContacts,
-      },
+      features: form.features,
+      limits: form.limits,
       pricesPerCountry: form.pricesPerCountry,
+      requiresContact: form.requiresContact,
       popular: form.popular,
       active: form.active,
     };
@@ -196,7 +202,7 @@ export default function AdminPlans(): JSX.Element {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {plans.map((p) => {
           const style = tierStyle[p.tier];
-          const price = p.pricesPerCountry[previewCountry] ?? { monthly: 0, yearly: 0 };
+          const price = planPrice(p, previewCountry) ?? { monthly: 0, yearly: 0 };
           const clientCount = clients.filter((c) => c.planId === p.id).length;
           const totalMrr = clients
             .filter((c) => c.planId === p.id && c.status === 'active')
@@ -237,26 +243,31 @@ export default function AdminPlans(): JSX.Element {
 
               {/* Limits */}
               <div className="grid grid-cols-2 gap-2 mb-3 text-small">
-                <LimitChip icon={<Users className="h-3.5 w-3.5" />} value={p.limits.agents === -1 ? '∞' : p.limits.agents} label="موظف" />
-                <LimitChip icon={<MessageSquare className="h-3.5 w-3.5" />} value={p.limits.channels === -1 ? '∞' : p.limits.channels} label="قناة" />
-                <LimitChip icon={<MessageSquare className="h-3.5 w-3.5" />} value={p.limits.conversations === -1 ? '∞' : (p.limits.conversations / 1000) + 'K'} label="محادثة" />
-                <LimitChip icon={<Database className="h-3.5 w-3.5" />} value={p.limits.contacts === -1 ? '∞' : p.limits.contacts} label="جهة اتصال" />
+                <LimitChip icon={<Users className="h-3.5 w-3.5" />} value={limitShort(p.limits.agents)} label="موظف" />
+                <LimitChip icon={<MessageSquare className="h-3.5 w-3.5" />} value={limitShort(p.limits.accounts)} label="حساب" />
+                <LimitChip icon={<MessageSquare className="h-3.5 w-3.5" />} value={limitShort(p.limits.conversations)} label="محادثة" />
+                <LimitChip icon={<Database className="h-3.5 w-3.5" />} value={limitShort(p.limits.contacts)} label="عميل" />
               </div>
 
-              {/* Features */}
-              <ul className="space-y-1.5 mb-4 text-small">
-                {p.features.slice(0, 6).map((f, i) => (
-                  <li key={i} className="flex items-start gap-1.5">
-                    <Check className="h-3.5 w-3.5 text-success flex-shrink-0 mt-0.5" />
-                    <span>{f}</span>
-                  </li>
-                ))}
-                {p.features.length > 6 && (
-                  <li className="text-small text-muted-light dark:text-muted-dark">
-                    +{p.features.length - 6} ميزة أخرى
-                  </li>
-                )}
-              </ul>
+              {/* Features — the first six the plan grants, out of the approved catalogue */}
+              {(() => {
+                const granted = ALL_FEATURE_KEYS.filter((k) => isGranted(p.features[k]));
+                return (
+                  <ul className="space-y-1.5 mb-4 text-small">
+                    {granted.slice(0, 6).map((k) => (
+                      <li key={k} className="flex items-start gap-1.5">
+                        <Check className="h-3.5 w-3.5 text-success flex-shrink-0 mt-0.5" />
+                        <span>{FEATURE_LABELS[k]}</span>
+                      </li>
+                    ))}
+                    {granted.length > 6 && (
+                      <li className="text-small text-muted-light dark:text-muted-dark">
+                        +{granted.length - 6} ميزة أخرى
+                      </li>
+                    )}
+                  </ul>
+                );
+              })()}
 
               {/* Stats */}
               <div className="pt-3 border-t border-border-light/60 dark:border-border-dark/60 flex items-center justify-between mb-3">
@@ -375,13 +386,69 @@ export default function AdminPlans(): JSX.Element {
             </Select>
           </div>
           <Input label={<>وصف قصير (Tagline)<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="للشركات النامية" />
-          <Textarea label={<>الميزات (كل ميزة في سطر)<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} rows={6} placeholder={'حتى 10 موظفين\n3 أرقام واتساب\n...'} />
+          {/* The eight allowances of the approved sheet. */}
+          <div>
+            <p className="text-small font-semibold mb-2">الحدود <span className="font-normal text-muted-light dark:text-muted-dark">{form.requiresContact ? 'حدود مخصّصة تأتي من الباك إند' : '(-1 = غير محدود)'}</span></p>
+            {/*
+                «مخصّص» ليست حالة تُختار لكل حدّ، بل صفة الباقة التي تُطلب
+                بالتواصل: حدودها تُتَّفق عليها مع كل عميل وتأتي من الباك إند،
+                فحقولها معطّلة ولا تُحرَّر هنا.
+            */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {LIMIT_FIELDS.map((f) => (
+                form.requiresContact ? (
+                  <Input key={f.key} label={f.label} value="مخصّص" disabled readOnly />
+                ) : (
+                  <Input
+                    key={f.key}
+                    label={<>{f.label}<span className="text-muted-light dark:text-muted-dark font-normal ms-1">({limitText(form.limits[f.key])})</span></>}
+                    type="number"
+                    min={-1}
+                    value={form.limits[f.key]}
+                    onChange={(e) => setLimit(f.key, Number(e.target.value) || 0)}
+                  />
+                )
+              ))}
+            </div>
+          </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Input label={<>حد الموظفين (-1 = ∞)<span className="text-danger ms-0.5">*</span></>} type="number" value={form.limitAgents} onChange={(e) => setForm({ ...form, limitAgents: Number(e.target.value) })} />
-            <Input label={<>حد القنوات (-1 = ∞)<span className="text-danger ms-0.5">*</span></>} type="number" value={form.limitChannels} onChange={(e) => setForm({ ...form, limitChannels: Number(e.target.value) })} />
-            <Input label={<>محادثات/شهر (-1 = ∞)<span className="text-danger ms-0.5">*</span></>} type="number" value={form.limitConversations} onChange={(e) => setForm({ ...form, limitConversations: Number(e.target.value) })} />
-            <Input label={<>جهات اتصال (-1 = ∞)<span className="text-danger ms-0.5">*</span></>} type="number" value={form.limitContacts} onChange={(e) => setForm({ ...form, limitContacts: Number(e.target.value) })} />
+          {/* Features come from one catalogue, so no plan can invent a line the
+              comparison table has no row for. Four of them carry a written
+              allowance instead of a plain ✔. */}
+          <div>
+            <p className="text-small font-semibold mb-2">المزايا</p>
+            <div className="space-y-3 max-h-80 overflow-y-auto p-1">
+              {FEATURE_CATALOG.map((group) => (
+                <div key={group.label} className="rounded-lg border border-border-light dark:border-border-dark p-3">
+                  <p className="text-[11px] font-bold text-muted-light dark:text-muted-dark mb-2 flex items-center gap-1.5">
+                    <group.icon className="h-3.5 w-3.5" />
+                    {group.label}
+                  </p>
+                  <div className="space-y-2">
+                    {group.items.map((it) => {
+                      const value = form.features[it.key];
+                      const on = isGranted(value);
+                      return (
+                        <div key={it.key}>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-small flex-1">{it.label}</span>
+                            <Toggle checked={on} onChange={(v) => toggleFeature(it.key, v)} />
+                          </div>
+                          {on && it.hasValue && (
+                            <Input
+                              value={value === true ? '' : String(value)}
+                              onChange={(e) => setFeatureText(it.key, e.target.value)}
+                              placeholder="قيمة محددة (اختياري) — مثال: شات بأولوية"
+                              className="h-7 text-xs mt-1.5"
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -448,6 +515,14 @@ function LimitChip({ icon, value, label }: { icon: React.ReactNode; value: strin
       <span className="font-bold">{isInfinite ? <InfinityIcon className="h-3.5 w-3.5 inline" /> : value}</span>
       <span className="text-muted-light dark:text-muted-dark">{label}</span>
     </div>
+  );
+}
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }): JSX.Element {
+  return (
+    <button onClick={() => onChange(!checked)} className={cn('relative h-6 w-11 rounded-full transition-colors flex-shrink-0', checked ? 'bg-primary' : 'bg-border-light dark:bg-border-dark')} role="switch" aria-checked={checked}>
+      <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all', checked ? 'start-0.5' : 'end-0.5')} />
+    </button>
   );
 }
 

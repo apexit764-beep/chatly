@@ -18,6 +18,10 @@ import {
   Users,
   Users2,
   MessageSquare,
+  MessagesSquare,
+  Megaphone,
+  Mail,
+  Building2,
   Radio,
   XCircle,
 } from 'lucide-react';
@@ -27,6 +31,9 @@ import { useAdminStore } from '@/store/useAdminStore';
 import { useDataStore } from '@/store/useDataStore';
 import { DowngradeDialog } from '@components/billing/DowngradeDialog';
 import { downgradeOverflow, lostFeatures } from '@/utils/planDowngrade';
+import { FEATURE_CATALOG, isGranted } from '@/data/planFeatures';
+import { LIMIT_FIELDS, limitText } from '@/utils/planLimits';
+import { planAmount } from '@/utils/planPricing';
 import { useUIStore } from '@/store/useUIStore';
 import { usePermission } from '@/hooks/usePermission';
 import { formatMoney } from '@/utils/money';
@@ -355,11 +362,10 @@ export default function Billing(): JSX.Element {
           effectiveAt={sub.scheduledChange.effectiveAt}
           currentPrice={sub.amount}
           newPrice={(() => {
-            const price = scheduledPlan.pricesPerCountry[client.country] ?? { monthly: 0, yearly: 0 };
-            return sub.scheduledChange.billingCycle === 'yearly' ? price.yearly : price.monthly;
+            return planAmount(scheduledPlan, client.country, sub.scheduledChange.billingCycle) ?? 0;
           })()}
           currency={sub.currency}
-          lostFeatures={lostFeatures(activePlans, plan, scheduledPlan)}
+          lostFeatures={lostFeatures(plan, scheduledPlan)}
           initialKeep={{ agentIds: sub.scheduledChange.keepAgentIds, channelIds: sub.scheduledChange.keepChannelIds }}
         />
       )}
@@ -431,25 +437,40 @@ export default function Billing(): JSX.Element {
             <div className="space-y-5 pt-5 border-t md:pt-0 md:border-t-0 md:border-s md:ps-6 border-border-light dark:border-border-dark">
               <div>
                 <p className="text-small font-bold mb-2">حدود الباقة</p>
+                {/* All eight allowances of the approved sheet, in its order. One
+                    «الحسابات والأرقام» covers every connected account whatever its
+                    type: 4 means four WhatsApp numbers or one each of four channels. */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <LimitTile icon={<Users className="h-4 w-4" />} label="الموظفين" value={plan.limits.agents} />
-                  {/* One limit for every connected account, whatever its type:
-                      4 means four WhatsApp numbers or one each of four channels. */}
-                  <LimitTile icon={<Radio className="h-4 w-4" />} label="القنوات" tooltip="يشمل كل الحسابات المربوطة من أي نوع" value={plan.limits.channels} />
-                  <LimitTile icon={<MessageSquare className="h-4 w-4" />} label="المحادثات" tooltip="عدد المحادثات المسموح بها شهرياً، يتجدد مع كل دورة فوترة. ما يزيد عنها يُحجب في صندوق المحادثات حتى التجديد أو الترقية." value={plan.limits.conversations} />
-                  <LimitTile icon={<Users2 className="h-4 w-4" />} label="جهات الاتصال" value={plan.limits.contacts} />
+                  {LIMIT_FIELDS.map((f) => (
+                    <LimitTile key={f.key} icon={LIMIT_ICONS[f.key]} label={f.label} tooltip={f.hint} value={plan.limits[f.key]} />
+                  ))}
                 </div>
               </div>
 
               <div>
                 <p className="text-small font-bold mb-3">ميزات الباقة</p>
                 <div className="space-y-2.5">
-                  {plan.features.map((f, i) => (
-                    <div key={i} className="flex items-start gap-2 text-small">
-                      <Check className="h-3.5 w-3.5 text-success flex-shrink-0 mt-0.5" />
-                      <span>{f}</span>
-                    </div>
-                  ))}
+                  {FEATURE_CATALOG.map((group) => {
+                    const granted = group.items.filter((it) => isGranted(plan.features[it.key]));
+                    if (granted.length === 0) return null;
+                    return (
+                      <div key={group.label}>
+                        <p className="text-[11px] font-bold text-muted-light dark:text-muted-dark mb-1.5">{group.label}</p>
+                        <div className="space-y-2">
+                          {granted.map((it) => {
+                            const value = plan.features[it.key];
+                            return (
+                              <div key={it.key} className="flex items-start gap-2 text-small">
+                                <Check className="h-3.5 w-3.5 text-success flex-shrink-0 mt-0.5" />
+                                {/* A written allowance («شات بأولوية») replaces the plain label. */}
+                                <span>{typeof value === 'string' ? `${it.label} — ${value}` : it.label}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -860,7 +881,7 @@ function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
                     {r.requestedAgents !== null ? r.requestedAgents.toLocaleString('en') : planLimit(plan?.limits.agents)}
                   </td>
                   <td className="px-4 py-3 text-center hidden md:table-cell">
-                    {r.requestedChannels !== null ? r.requestedChannels.toLocaleString('en') : planLimit(plan?.limits.channels)}
+                    {r.requestedChannels !== null ? r.requestedChannels.toLocaleString('en') : planLimit(plan?.limits.accounts)}
                   </td>
                   <td className="px-4 py-3 hidden lg:table-cell text-small text-muted-light dark:text-muted-dark max-w-[280px]">
                     {r.message ? <span className="line-clamp-2">{r.message}</span> : '—'}
@@ -962,7 +983,7 @@ function RequestsPanel({ clientId }: { clientId: string }): JSX.Element {
               <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1.5">
                 حد المحادثات {planLimit(planOf(editPlanId)?.limits.conversations)} ·
                 {' '}الموظفين {planLimit(planOf(editPlanId)?.limits.agents)} ·
-                {' '}القنوات {planLimit(planOf(editPlanId)?.limits.channels)}
+                {' '}القنوات {planLimit(planOf(editPlanId)?.limits.accounts)}
               </p>
             )}
           </div>
@@ -1021,14 +1042,26 @@ function DetailTile({ label, value, valueClass }: { label: string; value: string
   );
 }
 
+/** One icon per allowance, keyed the same way `LIMIT_FIELDS` is. */
+const LIMIT_ICONS: Record<string, ReactNode> = {
+  conversations: <MessageSquare className="h-4 w-4" />,
+  messages: <MessagesSquare className="h-4 w-4" />,
+  accounts: <Radio className="h-4 w-4" />,
+  agents: <Users className="h-4 w-4" />,
+  contacts: <Users2 className="h-4 w-4" />,
+  departments: <Building2 className="h-4 w-4" />,
+  whatsappCampaigns: <Megaphone className="h-4 w-4" />,
+  emailCampaigns: <Mail className="h-4 w-4" />,
+};
+
 function LimitTile({ icon, label, value, tooltip }: { icon: ReactNode; label: string; value: number; tooltip?: string }): JSX.Element {
-  // Vertical: icon over the figure over its label, so the four limits sit
-  // in a single row and read as one strip. Any explanation goes in an ⓘ
-  // so every card keeps the same one-line label.
+  // Vertical: icon over the figure over its label, so the limits sit in rows
+  // of four and read as one strip. Any explanation goes in an ⓘ so every card
+  // keeps the same one-line label.
   return (
     <div className="rounded-xl border border-border-light dark:border-border-dark px-2 py-3 flex flex-col items-center text-center gap-1.5">
       <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">{icon}</span>
-      <p className="text-body font-bold tabular-nums leading-tight">{value === -1 ? 'غير محدود' : value.toLocaleString('en')}</p>
+      <p className="text-body font-bold tabular-nums leading-tight">{limitText(value)}</p>
       <p className="text-[11px] text-muted-light dark:text-muted-dark leading-tight flex items-center gap-1">
         {label}
         {tooltip && <InfoTip>{tooltip}</InfoTip>}

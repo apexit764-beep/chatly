@@ -99,7 +99,7 @@ export function DowngradeDialog({
   );
 
   const agentLimit = newPlan.limits.agents;
-  const channelLimit = newPlan.limits.channels;
+  const channelLimit = newPlan.limits.accounts;
   const agentsOver = agentLimit !== -1 && candidateAgents.length > agentLimit;
   const channelsOver = channelLimit !== -1 && channels.length > channelLimit;
   const blockedTypes = eligibleChannels.length < channels.length;
@@ -249,7 +249,7 @@ export function DowngradeDialog({
                 <p className="text-body font-semibold mb-3">ما تحتفظ به في باقتك الحالية</p>
                 <ul className="space-y-2 text-small">
                   <LimitLine label="موظفين" limit={currentPlan.limits.agents} used={candidateAgents.length} />
-                  <LimitLine label="قنوات" limit={currentPlan.limits.channels} used={channels.length} />
+                  <LimitLine label="قنوات" limit={currentPlan.limits.accounts} used={channels.length} />
                   <LimitLine label="محادثة شهريًا" limit={currentPlan.limits.conversations} />
                   {lostFeatures.map((f) => (
                     <li key={f} className="flex items-start gap-2">
