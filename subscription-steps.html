@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aroma TV - خطوات الاشتراك</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-1: #050d28;
+    --bg-2: #0a1638;
+    --text: #f5f1e8;
+    --muted: #9aa4bf;
+    --accent: #4fd1e0;        /* soft cyan */
+    --accent-bright: #7fe3ef;
+    --accent-soft: rgba(79,209,224,0.14);
+    --line-dim: rgba(79,209,224,0.18);
+    --pill: #1a2547;
+    --pill-border: rgba(79,209,224,0.35);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Alexandria', system-ui, sans-serif;
+    background:
+      radial-gradient(900px 500px at 80% -10%, rgba(79,209,224,0.07), transparent 60%),
+      radial-gradient(700px 400px at -10% 110%, rgba(79,209,224,0.05), transparent 60%),
+      linear-gradient(180deg, var(--bg-1), var(--bg-2));
+    color: var(--text);
+    min-height: 100vh;
+    padding: 72px 20px;
+    overflow-x: hidden;
+  }
+
+  .section { max-width: 1200px; margin: 0 auto; }
+
+  /* Logo */
+  .logo-wrap { display: flex; justify-content: center; margin-bottom: 32px; }
+  .logo {
+    display: inline-flex; align-items: baseline; gap: 2px;
+    font-weight: 800; font-size: 44px; letter-spacing: -1px; position: relative;
+  }
+  .logo .a { color: #e02424; }
+  .logo .rest { color: #fff; }
+  .logo .iptv {
+    position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; font-weight: 600; color: #fff; letter-spacing: 2px;
+  }
+  .logo::after {
+    content: ""; position: absolute; bottom: -6px; right: 0; left: 0;
+    height: 2px; background: #e02424; border-radius: 2px;
+  }
+
+  /* Top pill */
+  .top-pill-wrap { text-align: center; margin-bottom: 32px; }
+  .top-pill {
+    display: inline-block; background: var(--pill); color: var(--accent);
+    padding: 8px 28px; border-radius: 999px; font-size: 13px; font-weight: 500;
+    border: 1px solid var(--pill-border); cursor: pointer; font-family: inherit;
+    transition: background .2s ease, transform .2s ease;
+  }
+  .top-pill:hover { background: var(--accent-soft); transform: translateY(-1px); }
+
+  /* Header */
+  .section-header { text-align: center; margin-bottom: 84px; }
+  h2 {
+    font-size: clamp(22px, 3vw, 32px); font-weight: 700; color: var(--text);
+    margin-bottom: 14px; letter-spacing: -0.3px;
+  }
+  .underline-dot {
+    display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 22px;
+  }
+  .underline-dot::before, .underline-dot::after {
+    content: ""; height: 1px; width: 60px; background: var(--line-dim);
+  }
+  .underline-dot span {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 12px rgba(79,209,224,0.7);
+  }
+  .subtitle {
+    color: var(--muted); font-size: clamp(14px, 1.4vw, 16px); line-height: 2;
+    max-width: 720px; margin: 0 auto; font-weight: 300;
+  }
+
+  /* ===== Timeline ===== */
+  .timeline {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    padding-top: 22px;
+  }
+
+  /* Card */
+  .step {
+    position: relative;
+    background: linear-gradient(165deg, rgba(20,32,68,0.55), rgba(8,18,46,0.55));
+    border: 1px solid rgba(79,209,224,0.22);
+    border-radius: 18px;
+    padding: 34px 24px 30px;
+    text-align: center;
+    z-index: 1;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(26px);
+    animation: rise .8s cubic-bezier(.22,.61,.36,1) forwards;
+    transition: transform .4s ease, border-color .4s ease, box-shadow .4s ease, background .4s ease;
+  }
+  .step:nth-child(1) { animation-delay: .25s; }
+  .step:nth-child(2) { animation-delay: .45s; }
+  .step:nth-child(3) { animation-delay: .65s; }
+  .step:nth-child(4) { animation-delay: .85s; }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+
+  .step:hover {
+    transform: translateY(-8px);
+    border-color: rgba(79,209,224,0.65);
+    background: linear-gradient(165deg, rgba(26,40,82,0.7), rgba(10,22,54,0.7));
+    box-shadow: 0 22px 44px rgba(0,0,0,0.45), 0 0 0 1px rgba(79,209,224,0.25);
+  }
+
+  /* Large watermark number as focal element */
+  .num {
+    font-size: 56px;
+    font-weight: 800;
+    line-height: 1;
+    background: linear-gradient(160deg, var(--accent-bright), var(--accent));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 18px;
+    position: relative;
+    display: inline-block;
+    transition: transform .4s cubic-bezier(.34,1.56,.64,1);
+  }
+  /* underline accent below the number */
+  .num::after {
+    content: "";
+    position: absolute;
+    bottom: -8px; left: 50%;
+    transform: translateX(-50%);
+    width: 26px; height: 3px;
+    border-radius: 3px;
+    background: var(--accent);
+    opacity: .5;
+    transition: width .4s ease, opacity .4s ease;
+  }
+  .step:hover .num { transform: scale(1.08); }
+  .step:hover .num::after { width: 42px; opacity: 1; }
+
+  .step h3 {
+    font-size: 16px; font-weight: 600; color: var(--text);
+    margin-bottom: 12px;
+    transition: color .3s ease;
+  }
+  .step:hover h3 { color: var(--accent-bright); }
+  .step p {
+    color: var(--muted); font-size: 13.5px; line-height: 1.95; font-weight: 300;
+    margin: 0 auto;
+  }
+
+  /* Chat bubble */
+  .chat-bubble {
+    position: fixed; bottom: 22px; left: 22px;
+    background: var(--accent); color: var(--bg-1);
+    padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 8px;
+    box-shadow: 0 8px 20px rgba(79,209,224,0.25); cursor: pointer;
+    font-family: inherit; z-index: 10;
+  }
+
+  @media (max-width: 900px) {
+    .timeline { grid-template-columns: repeat(2, 1fr); gap: 48px 22px; }
+    .timeline::before, .timeline::after { display: none; }
+  }
+  @media (max-width: 520px) {
+    .timeline { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .step, .timeline::after, .num::after { animation: none; opacity: 1; transform: none; }
+    .timeline::after { width: 76%; }
+  }
+
+  /* ============================================================
+     SECTION 2 — Vertical zig-zag timeline (نسخة أرقى)
+     ============================================================ */
+  .section-2 { margin-top: 120px; }
+
+  .section-divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--line-dim), transparent);
+    margin: 0 auto 80px;
+    max-width: 1200px;
+  }
+
+  .vtimeline {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 22px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .vstep {
+    position: relative;
+    opacity: 0;
+    transform: translateY(26px);
+    animation: vrise .8s cubic-bezier(.22,.61,.36,1) forwards;
+  }
+  @keyframes vrise { to { opacity: 1; transform: translateY(0); } }
+  .vstep:nth-child(1) { animation-delay: .3s; }
+  .vstep:nth-child(2) { animation-delay: .5s; }
+  .vstep:nth-child(3) { animation-delay: .7s; }
+  .vstep:nth-child(4) { animation-delay: .9s; }
+
+  .vcard {
+    position: relative;
+    height: 100%;
+    background: linear-gradient(165deg, rgba(20,32,68,0.6), rgba(8,18,46,0.6));
+    border: 1px solid rgba(79,209,224,0.22);
+    border-radius: 18px;
+    padding: 30px 24px 28px;
+    overflow: hidden;
+    transition: transform .4s ease, border-color .4s ease, box-shadow .4s ease;
+  }
+  /* gradient top accent bar */
+  .vcard::before {
+    content: "";
+    position: absolute;
+    top: 0; right: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(to left, var(--accent-bright), var(--accent), transparent);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform .45s ease;
+  }
+  .vcard:hover {
+    transform: translateY(-8px);
+    border-color: rgba(79,209,224,0.55);
+    box-shadow: 0 22px 44px rgba(0,0,0,0.45);
+  }
+  .vcard:hover::before { transform: scaleX(1); }
+
+  /* large faded watermark number in the background */
+  .vcard .ghost-no {
+    position: absolute;
+    top: -18px; left: 6px;
+    font-size: 110px;
+    font-weight: 800;
+    line-height: 1;
+    color: rgba(79,209,224,0.07);
+    pointer-events: none;
+    transition: color .4s ease;
+  }
+  .vcard:hover .ghost-no { color: rgba(79,209,224,0.13); }
+
+  .vcard .vstep-no {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .vcard h3 {
+    font-size: 16px; font-weight: 600; color: var(--text);
+    margin-bottom: 10px; position: relative;
+  }
+  .vcard p {
+    color: var(--muted); font-size: 13.5px; line-height: 1.95; font-weight: 300;
+    position: relative;
+  }
+
+  @media (max-width: 900px) {
+    .vtimeline { grid-template-columns: repeat(2, 1fr); gap: 22px; }
+  }
+  @media (max-width: 520px) {
+    .vtimeline { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .vstep { animation: none; opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<section class="section">
+
+  <div class="logo-wrap">
+    <div class="logo">
+      <span class="iptv">IPTV</span>
+      <span class="a">A</span><span class="rest">roma</span>
+    </div>
+  </div>
+
+  <div class="top-pill-wrap">
+    <button class="top-pill">المزيد</button>
+  </div>
+
+  <div class="section-header">
+    <h2>أروما TV-عالم الترفيه بين يديك</h2>
+    <div class="underline-dot"><span></span></div>
+    <p class="subtitle">
+      استمتع بتجربة مشاهدة غير محدودة بأفضل جودة واستقرار… اشترك الآن
+      في Aroma TV واستمتع بمكتبة ضخمة من القنوات، الأفلام، والمسلسلات
+      على جميع أجهزتك. سهولة الاشتراك، أسعار تنافسية، ومحتوى متجدد يوميًا.
+    </p>
+  </div>
+
+  <div class="timeline">
+
+    <!-- Step 1 -->
+    <div class="step">
+      <div class="num">1</div>
+      <h3>اختيار الباقة المناسبة</h3>
+      <p>اختر الباقة التي تناسب احتياجاتك من حيث المدة وعدد الأجهزة.</p>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step">
+      <div class="num">2</div>
+      <h3>إتمام عملية الدفع</h3>
+      <p>اختر وسيلة الدفع المناسبة لك من بين الخيارات المتاحة وأتمم العملية بأمان عبر الإنترنت.</p>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step">
+      <div class="num">3</div>
+      <h3>استلام بيانات الاشتراك</h3>
+      <p>ستتلقى بيانات الاشتراك عبر البريد الإلكتروني أو واتساب، وتشمل رابط التحميل وكود التفعيل.</p>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="step">
+      <div class="num">4</div>
+      <h3>تحميل التطبيق وتفعيل الاشتراك</h3>
+      <p>نزّل تطبيق Aroma TV على جهازك (تلفزيون، هاتف، أو كمبيوتر)، أدخل البيانات وابدأ المشاهدة فورًا.</p>
+    </div>
+
+  </div>
+
+  <!-- ===== Section 2: vertical zig-zag timeline ===== -->
+  <div class="section-2">
+    <div class="section-divider"></div>
+
+    <div class="section-header" style="margin-bottom:56px;">
+      <h2>اشترك في 4 خطوات بسيطة</h2>
+      <div class="underline-dot"><span></span></div>
+      <p class="subtitle">رحلتك من الاختيار حتى المشاهدة… واضحة وسريعة وآمنة.</p>
+    </div>
+
+    <div class="vtimeline">
+
+      <div class="vstep">
+        <div class="vcard">
+          <span class="ghost-no">1</span>
+          <span class="vstep-no">الخطوة 01</span>
+          <h3>اختيار الباقة المناسبة</h3>
+          <p>اختر الباقة التي تناسب احتياجاتك من حيث المدة وعدد الأجهزة.</p>
+        </div>
+      </div>
+
+      <div class="vstep">
+        <div class="vcard">
+          <span class="ghost-no">2</span>
+          <span class="vstep-no">الخطوة 02</span>
+          <h3>إتمام عملية الدفع</h3>
+          <p>اختر وسيلة الدفع المناسبة لك من بين الخيارات المتاحة وأتمم العملية بأمان عبر الإنترنت.</p>
+        </div>
+      </div>
+
+      <div class="vstep">
+        <div class="vcard">
+          <span class="ghost-no">3</span>
+          <span class="vstep-no">الخطوة 03</span>
+          <h3>استلام بيانات الاشتراك</h3>
+          <p>ستتلقى بيانات الاشتراك عبر البريد الإلكتروني أو واتساب، وتشمل رابط التحميل وكود التفعيل.</p>
+        </div>
+      </div>
+
+      <div class="vstep">
+        <div class="vcard">
+          <span class="ghost-no">4</span>
+          <span class="vstep-no">الخطوة 04</span>
+          <h3>تحميل التطبيق وتفعيل الاشتراك</h3>
+          <p>نزّل تطبيق Aroma TV على جهازك (تلفزيون، هاتف، أو كمبيوتر)، أدخل البيانات وابدأ المشاهدة فورًا.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</section>
+
+<div class="chat-bubble">
+  <span>👋</span>
+  <span>تواصل الآن</span>
+</div>
+
+</body>
+</html>
