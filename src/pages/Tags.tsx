@@ -10,7 +10,8 @@ interface TagRow {
   convCount: number;
 }
 
-export default function Tags(): JSX.Element {
+/** `embedded`: rendered inside another page (no page padding, section-level heading). */
+export default function Tags({ embedded = false }: { embedded?: boolean }): JSX.Element {
   const tags = useDataStore((s) => s.tags);
   const contacts = useDataStore((s) => s.contacts);
   const addTag = useDataStore((s) => s.addTag);
@@ -129,9 +130,9 @@ export default function Tags(): JSX.Element {
   ];
 
   return (
-    <div className="p-4 lg:p-6 space-y-5 page-fade">
+    <div className={embedded ? 'space-y-5' : 'p-4 lg:p-6 space-y-5 page-fade'}>
       <div>
-        <h1 className="text-h1 font-bold">الوسوم</h1>
+        <h1 className={embedded ? 'text-h2 font-bold' : 'text-h1 font-bold'}>الوسوم</h1>
         <p className="text-body text-muted-light dark:text-muted-dark mt-1">
           أنشئ وسوم لتنظيم وتصنيف جهات الاتصال والمحادثات
         </p>

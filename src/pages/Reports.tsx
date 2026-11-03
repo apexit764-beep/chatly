@@ -29,6 +29,8 @@ import { firstReplyCases, isAgentReply, type FirstReplyCase } from '@/utils/firs
 import { useRatingStore } from '@/store/useRatingStore';
 import { averageAgentRating, averageReply, formatMinutes } from '@/utils/agentStats';
 import { useSettingsStore } from '@/store/useSettingsStore';
+import { usePermission } from '@/hooks/usePermission';
+import CustomerRatings from './CustomerRatings';
 
 type Range = 'today' | 'week' | 'month' | 'custom';
 
@@ -45,6 +47,7 @@ export default function Reports(): JSX.Element {
   const contacts = useDataStore((s) => s.contacts);
   const aiSettings = useAIStore((s) => s.settings);
   const showToast = useUIStore((s) => s.showToast);
+  const { has } = usePermission();
   const [channelFilter, setChannelFilter] = useState<string>('all');
   const [range, setRange] = useState<Range>('week');
   const [dateFrom, setDateFrom] = useState(() => startOfDay(addDays(new Date(), -6)));
@@ -640,6 +643,13 @@ export default function Reports(): JSX.Element {
       </div>
 
       </motion.div>
+
+      {/* Ratings live here now, as in production (`/rating` redirects to `#ratings`). */}
+      {has('feedback.view') && (
+        <div className="pt-5 border-t border-border-light dark:border-border-dark">
+          <CustomerRatings embedded />
+        </div>
+      )}
     </div>
   );
 }

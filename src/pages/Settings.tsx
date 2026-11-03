@@ -1,4 +1,5 @@
 import { ReactNode, useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Bell,
   User,
@@ -28,6 +29,8 @@ import {
   Smartphone,
   Mail,
   MessageSquare,
+  Tag,
+  MessageSquareQuote,
 } from 'lucide-react';
 import { Avatar, Modal, useConfirm, InfoTip } from '@components/ui';
 import { PhoneField, PHONE_COUNTRIES, isValidPhone, toE164 } from '@components/ui/PhoneField';
@@ -40,9 +43,14 @@ import { useThemeStore } from '@/store/useThemeStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { cn } from '@/utils/cn';
 import { DEMO_BACKUP_CODES, DEMO_TOTP_SECRET, otpAuthUri, verifyBackupCode, verifyTotpCode } from '@/utils/twoFactor';
+import { usePermission } from '@/hooks/usePermission';
+import type { PermissionKey } from '@/types';
 import Billing from './Billing';
+import Tags from './Tags';
+import SavedReplies from './SavedReplies';
 
-const SETTINGS_TABS: { key: string; label: string; icon: ReactNode }[] = [
+/** `permission`: tab shown only to roles holding it (tags and saved replies moved here from the sidebar, as in production). */
+const SETTINGS_TABS: { key: string; label: string; icon: ReactNode; permission?: PermissionKey }[] = [
   { key: 'profile', label: 'الملف الشخصي', icon: <User className="h-4 w-4" /> },
   { key: 'general', label: 'إعدادات الشركة', icon: <Building className="h-4 w-4" /> },
   { key: 'conversations', label: 'المحادثات', icon: <MessageSquare className="h-4 w-4" /> },
@@ -50,12 +58,28 @@ const SETTINGS_TABS: { key: string; label: string; icon: ReactNode }[] = [
   { key: 'appearance', label: 'المظهر', icon: <Palette className="h-4 w-4" /> },
   { key: 'security', label: 'الأمان', icon: <Shield className="h-4 w-4" /> },
   { key: 'language', label: 'اللغة والمنطقة', icon: <Languages className="h-4 w-4" /> },
+  { key: 'tags', label: 'الوسوم', icon: <Tag className="h-4 w-4" />, permission: 'tags.view' },
+  { key: 'savedReplies', label: 'الردود السريعة', icon: <MessageSquareQuote className="h-4 w-4" />, permission: 'templates.view' },
   { key: 'finance', label: 'المالية', icon: <Wallet className="h-4 w-4" /> },
 ];
 
 export default function Settings(): JSX.Element {
   const tab = useInboxStore((s) => s.settingsTab);
   const setTab = useInboxStore((s) => s.setSettingsTab);
+  const { has } = usePermission();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab');
+  const tabs = SETTINGS_TABS.filter((it) => !it.permission || has(it.permission));
+
+  // `?tab=` opens a tab directly — `/tags` and `/saved-replies` redirect here.
+  useEffect(() => {
+    if (urlTab) setTab(urlTab);
+  }, [urlTab, setTab]);
+
+  const openTab = (key: string): void => {
+    setTab(key);
+    setSearchParams({ tab: key }, { replace: true });
+  };
 
   if (tab === 'billing') {
     return <Billing />;
@@ -70,10 +94,10 @@ export default function Settings(): JSX.Element {
       <div className="flex gap-6 items-start">
         {/* Sidebar tabs */}
         <nav className="w-[200px] flex-shrink-0 bg-white dark:bg-surface-dark rounded-card shadow-card dark:shadow-card-dark p-3 space-y-1 sticky top-4">
-          {SETTINGS_TABS.map((it) => (
+          {tabs.map((it) => (
             <button
               key={it.key}
-              onClick={() => setTab(it.key)}
+              onClick={() => openTab(it.key)}
               className={cn(
                 'flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-body font-medium transition-colors',
                 tab === it.key
@@ -97,6 +121,8 @@ export default function Settings(): JSX.Element {
           {tab === 'security' && <SecurityTab />}
           {tab === 'language' && <LanguageTab />}
           {tab === 'finance' && <FinanceTab />}
+          {tab === 'tags' && has('tags.view') && <Tags embedded />}
+          {tab === 'savedReplies' && has('templates.view') && <SavedReplies embedded />}
         </div>
       </div>
     </div>

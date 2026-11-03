@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Star,
   Smile,
@@ -25,7 +26,14 @@ const SATISFACTION_MAP = {
   bad: { label: 'سيء', icon: Frown, color: '#EF4444', bg: 'bg-danger/10' },
 } as const;
 
-export default function CustomerRatings(): JSX.Element {
+/** `embedded`: rendered inside another page (no page padding, section-level heading). */
+export default function CustomerRatings({ embedded = false }: { embedded?: boolean }): JSX.Element {
+  const location = useLocation();
+  const sectionRef = useRef<HTMLDivElement>(null);
+  // `/rating` now redirects to `/reports#ratings`; bring the section into view.
+  useEffect(() => {
+    if (embedded && location.hash === '#ratings') sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [embedded, location.hash]);
   const ratings = useRatingStore((s) => s.ratings);
   const submitted = ratings.filter((r) => r.submittedAt);
 
@@ -68,12 +76,12 @@ export default function CustomerRatings(): JSX.Element {
   const expired = pending.filter((r) => new Date(r.expiresAt) < new Date());
 
   return (
-    <div className="p-4 lg:p-6 space-y-5 page-fade">
+    <div id="ratings" ref={sectionRef} className={embedded ? 'space-y-5 scroll-mt-4' : 'p-4 lg:p-6 space-y-5 page-fade'}>
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
           <Star className="h-5 w-5 text-warning fill-warning" />
-          <h1 className="text-h1 font-bold">تقييمات العملاء</h1>
+          <h1 className={embedded ? 'text-h2 font-bold' : 'text-h1 font-bold'}>تقييمات جهات الاتصال</h1>
         </div>
         <p className="text-body text-muted-light dark:text-muted-dark mt-1">
           تابع رضا العملاء وتقييمات المحادثات والموظفين

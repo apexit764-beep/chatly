@@ -13,6 +13,8 @@ export const en: Record<string, string> = {
   'الحملات التسويقية': 'Marketing Campaigns',
   'الردود السريعة': 'Quick Replies',
   'الوسوم': 'Tags',
+  'جهات الاتصال': 'Contacts',
+  'تقييمات جهات الاتصال': 'Contact Ratings',
   'إعدادات الذكاء الاصطناعي': 'AI Settings',
   'الشكاوى والاقتراحات': 'Complaints & Suggestions',
   'الباقات والاشتراك': 'Plans & Subscription',

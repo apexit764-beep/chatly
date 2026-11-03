@@ -45,7 +45,8 @@ const meta = (id: string): { owner: string; shared: boolean } => {
   };
 };
 
-export default function SavedReplies(): JSX.Element {
+/** `embedded`: rendered inside another page (no page padding, section-level heading). */
+export default function SavedReplies({ embedded = false }: { embedded?: boolean }): JSX.Element {
   const templates = useDataStore((s) => s.templates);
   const addTemplate = useDataStore((s) => s.addTemplate);
   const updateTemplate = useDataStore((s) => s.updateTemplate);
@@ -110,10 +111,10 @@ export default function SavedReplies(): JSX.Element {
   };
 
   return (
-    <div className="p-4 lg:p-6 space-y-5 page-fade">
+    <div className={embedded ? 'space-y-5' : 'p-4 lg:p-6 space-y-5 page-fade'}>
       {/* Page header */}
       <div>
-        <h1 className="text-h1 font-bold">الردود السريعة</h1>
+        <h1 className={embedded ? 'text-h2 font-bold' : 'text-h1 font-bold'}>الردود السريعة</h1>
         <p className="text-body text-muted-light dark:text-muted-dark mt-1">
           جهّز قوالب جاهزة يستخدمها فريقك للرد بسرعة داخل المحادثات
         </p>

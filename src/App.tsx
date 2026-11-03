@@ -15,7 +15,6 @@ const Inbox = lazy(() => import('@pages/Inbox'));
 const Contacts = lazy(() => import('@pages/Contacts'));
 const Campaigns = lazy(() => import('@pages/Campaigns'));
 const CampaignTemplates = lazy(() => import('@pages/CampaignTemplates'));
-const SavedReplies = lazy(() => import('@pages/SavedReplies'));
 const Team = lazy(() => import('@pages/Team'));
 const AgentDetail = lazy(() => import('@pages/AgentDetail'));
 const Roles = lazy(() => import('@pages/Roles'));
@@ -30,8 +29,6 @@ const Notifications = lazy(() => import('@pages/Notifications'));
 const AISettings = lazy(() => import('@pages/AISettings'));
 const KnowledgeBase = lazy(() => import('@pages/KnowledgeBase'));
 const Feedback = lazy(() => import('@pages/Feedback'));
-const Tags = lazy(() => import('@pages/Tags'));
-const CustomerRatings = lazy(() => import('@pages/CustomerRatings'));
 const RatingPublic = lazy(() => import('@pages/RatingPublic'));
 
 // Admin pages
@@ -112,8 +109,8 @@ export default function App(): JSX.Element {
           <Route path="/departments" element={<Departments />} />
           <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/campaigns/templates" element={<CampaignTemplates />} />
-          <Route path="/saved-replies" element={<SavedReplies />} />
-          <Route path="/templates" element={<Navigate to="/saved-replies" replace />} />
+          <Route path="/saved-replies" element={<Navigate to="/settings?tab=savedReplies" replace />} />
+          <Route path="/templates" element={<Navigate to="/settings?tab=savedReplies" replace />} />
           <Route path="/team" element={<Team />} />
           <Route path="/team/roles" element={<Roles />} />
           <Route path="/team/:agentId" element={<AgentDetail />} />
@@ -127,8 +124,8 @@ export default function App(): JSX.Element {
           <Route path="/ai-settings" element={<AISettings />} />
           <Route path="/knowledge-base" element={<KnowledgeBase />} />
           <Route path="/feedback" element={<Feedback />} />
-          <Route path="/rating" element={<CustomerRatings />} />
-          <Route path="/tags" element={<Tags />} />
+          <Route path="/rating" element={<Navigate to="/reports#ratings" replace />} />
+          <Route path="/tags" element={<Navigate to="/settings?tab=tags" replace />} />
           <Route path="*" element={<Navigate to="/overview" replace />} />
         </Route>
       </Routes>

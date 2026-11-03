@@ -6,7 +6,6 @@ import {
   BarChart3,
   Megaphone,
   UsersRound,
-  MessageSquareQuote,
   Settings,
   Building2,
   Smartphone,
@@ -14,10 +13,7 @@ import {
   Sparkles,
   PanelRightClose,
   PanelRightOpen,
-  BookOpen,
   MessageSquareWarning,
-  Star,
-  Tag,
 } from 'lucide-react';
 
 import { useTranslation } from '@/i18n/useTranslation';
@@ -42,18 +38,14 @@ interface NavItem {
 const mainNav: NavItem[] = [
   { to: '/overview', label: 'نظرة عامة', icon: LayoutDashboard, group: 'main', permission: 'overview.view' },
   { to: '/inbox', label: 'المحادثات', icon: InboxIcon, badgeKey: 'inboxUnread', group: 'main', permission: 'conversations.view' },
-  { to: '/contacts', label: 'العملاء', icon: Users, group: 'main', permission: 'contacts.view' },
+  { to: '/contacts', label: 'جهات الاتصال', icon: Users, group: 'main', permission: 'contacts.view' },
   { to: '/reports', label: 'التقارير', icon: BarChart3, group: 'main', permission: 'reports.view' },
   { to: '/channels', label: 'الحسابات والربط', icon: Smartphone, group: 'manage', permission: 'channels.view' },
   { to: '/departments', label: 'الأقسام', icon: Building2, group: 'manage', permission: 'departments.view' },
   { to: '/team', label: 'فريق العمل', icon: UsersRound, group: 'manage', permission: 'team.view' },
   { to: '/campaigns', label: 'الحملات التسويقية', icon: Megaphone, group: 'manage', permission: 'campaigns.view' },
-  { to: '/saved-replies', label: 'الردود السريعة', icon: MessageSquareQuote, group: 'manage', permission: 'templates.view' },
-  { to: '/tags', label: 'الوسوم', icon: Tag, group: 'manage', permission: 'tags.view' },
   { to: '/ai-settings', label: 'إعدادات الذكاء الاصطناعي', icon: Sparkles, group: 'manage', permission: 'ai.view' },
-  { to: '/knowledge-base', label: 'قاعدة المعرفة', icon: BookOpen, group: 'manage', permission: 'knowledge_base.view' },
   { to: '/feedback', label: 'الشكاوى والاقتراحات', icon: MessageSquareWarning, group: 'system', permission: 'feedback.view' },
-  { to: '/rating', label: 'تقييمات العملاء', icon: Star, group: 'system', permission: 'feedback.view' },
   { to: '/billing', label: 'الباقات والاشتراك', icon: CreditCard, group: 'system', permission: 'billing.view' },
   { to: '/settings', label: 'الإعدادات', icon: Settings, group: 'system' },
 ];
