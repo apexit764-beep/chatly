@@ -210,7 +210,7 @@ export default function AIBalancePanel(): JSX.Element {
             يعمل المساعد بنموذج {BALANCE_SETTINGS.modelName} من خلال Qhub، ويُخصم الاستهلاك من رصيدك. لا تحتاج مفتاح API.
           </p>
         </div>
-        <Button onClick={openTopUp}>
+        <Button className="text-white" onClick={openTopUp}>
           <Plus className="h-4 w-4" /> شحن الرصيد
         </Button>
       </div>
@@ -222,7 +222,7 @@ export default function AIBalancePanel(): JSX.Element {
             <p className="text-small font-bold">نفد رصيدك وتوقف المساعد عن الرد</p>
             <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">تصل المحادثات الجديدة إلى الموظفين بشكل طبيعي. اشحن رصيدك ليعود المساعد للعمل.</p>
           </div>
-          <Button size="sm" onClick={openTopUp}>اشحن الآن</Button>
+          <Button size="sm" className="text-white" onClick={openTopUp}>اشحن الآن</Button>
         </div>
       )}
 
@@ -448,7 +448,7 @@ export default function AIBalancePanel(): JSX.Element {
         footer={
           <>
             <Button variant="secondary" onClick={() => setTopUpOpen(false)}>إلغاء</Button>
-            <Button onClick={submitTopUp}>دفع</Button>
+            <Button className="text-white" onClick={submitTopUp}>دفع</Button>
           </>
         }
       >
@@ -471,7 +471,7 @@ export default function AIBalancePanel(): JSX.Element {
         footer={
           <>
             <Button variant="secondary" onClick={() => setAutoOpen(false)}>إلغاء</Button>
-            <Button onClick={submitAuto}>تفعيل</Button>
+            <Button className="text-white" onClick={submitAuto}>تفعيل</Button>
           </>
         }
       >
@@ -512,7 +512,7 @@ export default function AIBalancePanel(): JSX.Element {
           invoice && (
             <>
               <Button variant="secondary" onClick={() => setInvoice(null)}>إغلاق</Button>
-              <Button onClick={() => downloadInvoice(invoice)}>
+              <Button className="text-white" onClick={() => downloadInvoice(invoice)}>
                 <Download className="h-4 w-4" /> تحميل الفاتورة PDF
               </Button>
             </>

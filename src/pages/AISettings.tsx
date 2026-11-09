@@ -16,6 +16,7 @@ import {
   Briefcase,
   Crown,
   KeyRound,
+  Wallet,
   Eye,
   EyeOff,
   Radio,
@@ -612,7 +613,7 @@ export default function AISettings(): JSX.Element {
   const [tabChoice, setTab] = useState<PageTab>(tabParam === 'features' || tabParam === 'behavior' ? tabParam : 'connection');
   // Features and usage only exist once an AI provider is connected; until then
   // the page opens on the connection tab whatever was asked for.
-  const featuresAvailable = isConnected(saved);
+  const featuresAvailable = isConnected(saved) || connSource === 'balance';
   const tab: PageTab = tabChoice === 'features' && !featuresAvailable ? 'connection' : tabChoice;
   // The usage alert's notification links here with ?tab=features — also when the page is already open.
   useEffect(() => {
@@ -707,7 +708,7 @@ export default function AISettings(): JSX.Element {
       </div>
 
       {/* Why the assistant is stopped. Staff keep answering in every case. */}
-      {stop && (
+      {stop && connSource === 'api' && (
         <div role="status" className="rounded-card border border-warning/40 bg-warning/10 px-4 py-3.5 flex items-start gap-3">
           <PauseCircle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
@@ -752,6 +753,27 @@ export default function AISettings(): JSX.Element {
         </div>
       </Card>
 
+      {/* مصدر المساعد: API العميل نفسه أو رصيد من خلال Qhub */}
+      <div role="tablist" aria-label="مصدر المساعد الذكي" className="inline-flex p-1 rounded-full bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark self-start">
+        {([
+          ['api', 'ربط API الخاص بك', KeyRound],
+          ['balance', 'ربط من خلالنا (رصيد)', Zap],
+        ] as const).map(([key, label, Icon]) => (
+          <button
+            key={key}
+            role="tab"
+            aria-selected={connSource === key}
+            onClick={() => { setConnSource(key); setTab('connection'); }}
+            className={cn(
+              'inline-flex items-center gap-2 h-9 px-4 rounded-full text-small font-semibold transition-colors',
+              connSource === key ? 'bg-primary text-white shadow-sm' : 'text-muted-light dark:text-muted-dark hover:text-current',
+            )}
+          >
+            <Icon className="h-4 w-4" /> {label}
+          </button>
+        ))}
+      </div>
+
       {/* Top-level tabs */}
       <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2 overflow-x-auto">
         <button
@@ -761,8 +783,8 @@ export default function AISettings(): JSX.Element {
             tab === 'connection' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
           )}
         >
-          <KeyRound className="h-4 w-4" />
-          إعدادات الربط
+          {connSource === 'api' ? <KeyRound className="h-4 w-4" /> : <Wallet className="h-4 w-4" />}
+          {connSource === 'api' ? 'إعدادات الربط' : 'رصيد المساعد'}
         </button>
         {featuresAvailable && (
         <button
@@ -1022,25 +1044,6 @@ export default function AISettings(): JSX.Element {
       {/* ═══ Tab 1: الربط والنموذج ═══ */}
       {tab === 'connection' && (
         <div className="space-y-5">
-          <div role="tablist" aria-label="مصدر المساعد الذكي" className="inline-flex p-1 rounded-full bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark">
-            {([
-              ['api', 'ربط API الخاص بك', KeyRound],
-              ['balance', 'ربط من خلالنا (رصيد)', Zap],
-            ] as const).map(([key, label, Icon]) => (
-              <button
-                key={key}
-                role="tab"
-                aria-selected={connSource === key}
-                onClick={() => setConnSource(key)}
-                className={cn(
-                  'inline-flex items-center gap-2 h-9 px-4 rounded-full text-small font-semibold transition-colors',
-                  connSource === key ? 'bg-primary text-white shadow-sm' : 'text-muted-light dark:text-muted-dark hover:text-current',
-                )}
-              >
-                <Icon className="h-4 w-4" /> {label}
-              </button>
-            ))}
-          </div>
           {connSource === 'balance' ? (
             <div className={cn('space-y-5', mutedIfOff)} aria-disabled={!form.enabled}>
               <AIBalancePanel />
