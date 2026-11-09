@@ -82,7 +82,14 @@ function groupingFor(days: number): Grouping {
 
 const monthName = (d: Date): string => d.toLocaleDateString('ar-u-nu-latn', { month: 'long' });
 
-export default function AIUsageDetails({ currentModel }: { currentModel: string }): JSX.Element {
+export default function AIUsageDetails({
+  currentModel,
+  showModelFilter = true,
+}: {
+  currentModel: string;
+  /** Hidden with the Qhub balance: the client doesn't pick or see models there. */
+  showModelFilter?: boolean;
+}): JSX.Element {
   const today = useMemo(() => startOfDay(new Date()), []);
   const models = useMemo(
     () => [currentModel, ...['GPT-4o mini', 'Gemini 2.0 Flash'].filter((m) => m !== currentModel)],
@@ -96,7 +103,7 @@ export default function AIUsageDetails({ currentModel }: { currentModel: string 
   const [customTo, setCustomTo] = useState<string>(iso(today));
 
   // The selected model may no longer exist after the source switch.
-  const activeModel = model === ALL || models.includes(model) ? model : currentModel;
+  const activeModel = !showModelFilter ? ALL : model === ALL || models.includes(model) ? model : currentModel;
 
   const range = useMemo(() => {
     if (preset === 'today') return { from: today, to: today };
@@ -182,6 +189,7 @@ export default function AIUsageDetails({ currentModel }: { currentModel: string 
 
       {/* Filters: model, then period */}
       <div className="flex flex-wrap items-center gap-3">
+        {showModelFilter && (
         <label className="inline-flex items-center gap-2 h-10 px-3 rounded-xl border-2 border-primary bg-white dark:bg-surface-dark text-small">
           <span className="text-[11px] text-muted-light dark:text-muted-dark">المودل:</span>
           <select
@@ -196,7 +204,8 @@ export default function AIUsageDetails({ currentModel }: { currentModel: string 
             ))}
           </select>
         </label>
-        <span className="h-6 w-px bg-border-light dark:bg-border-dark" aria-hidden />
+        )}
+        {showModelFilter && <span className="h-6 w-px bg-border-light dark:bg-border-dark" aria-hidden />}
         <div role="tablist" aria-label="الفترة" className="flex flex-wrap items-center gap-2">
           {periods.map(([key, label]) => (
             <button
@@ -342,7 +351,9 @@ export default function AIUsageDetails({ currentModel }: { currentModel: string 
         </table>
       </div>
       <p className="text-[12px] text-muted-light dark:text-muted-dark">
-        قائمة المودل فيها المودلات اللي العميل استخدمها قبل كده + «كل المودلات». الأرقام في الصفحة كلها حسب المودل والفترة المختارين.
+        {showModelFilter
+          ? 'قائمة المودل فيها المودلات اللي العميل استخدمها قبل كده + «كل المودلات». الأرقام في الصفحة كلها حسب المودل والفترة المختارين.'
+          : 'الأرقام في الصفحة كلها حسب الفترة المختارة.'}
       </p>
     </div>
   );

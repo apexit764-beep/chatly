@@ -1148,6 +1148,7 @@ export default function AISettings(): JSX.Element {
       {/* ═══ Tab 2: الميزات والرصيد ═══ */}
       {tab === 'usage' && (
         <AIUsageDetails
+          showModelFilter={connSource !== 'balance'}
           currentModel={
             connSource === 'balance'
               ? BALANCE_SETTINGS.modelName
