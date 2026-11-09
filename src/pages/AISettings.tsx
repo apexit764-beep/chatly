@@ -614,7 +614,13 @@ export default function AISettings(): JSX.Element {
   // Features and usage only exist once an AI provider is connected; until then
   // the page opens on the connection tab whatever was asked for.
   const featuresAvailable = isConnected(saved) || connSource === 'balance';
-  const tab: PageTab = tabChoice === 'features' && !featuresAvailable ? 'connection' : tabChoice;
+  // With the Qhub balance there is no connection step: its balance and features share one tab.
+  const tab: PageTab =
+    connSource === 'balance' && tabChoice === 'connection'
+      ? 'features'
+      : tabChoice === 'features' && !featuresAvailable
+        ? 'connection'
+        : tabChoice;
   // The usage alert's notification links here with ?tab=features — also when the page is already open.
   useEffect(() => {
     if (tabParam === 'features' || tabParam === 'behavior' || tabParam === 'connection') setTab(tabParam);
@@ -691,6 +697,36 @@ export default function AISettings(): JSX.Element {
           </div>
         </div>
       )}
+    </SectionCard>
+  );
+
+  /** ميزات المساعد: مشتركة بين المصدرين، وتُعرض مع الاستهلاك أو مع الرصيد. */
+  const featuresCard = (
+    <SectionCard
+      icon={<Sparkles className="h-5 w-5" />}
+      title="ميزات المساعد الذكي"
+      description={
+        connSource === 'balance'
+          ? 'فعّل أو عطّل الميزات حسب احتياجك. كل ميزة تستهلك من رصيدك لدى Qhub عند الاستخدام.'
+          : 'فعّل أو عطّل الميزات حسب احتياجك. كل ميزة تستهلك توكنز من حسابك عند المزوّد عند الاستخدام.'
+      }
+    >
+      <div className="divide-y divide-border-light dark:divide-border-dark">
+        {AI_FEATURES.map((f) => {
+          const supported = connSource === 'balance' || isFeatureSupported(form.model, f.key);
+          return (
+            <FeatureRow
+              key={f.key}
+              icon={<f.Icon className="h-4 w-4" />}
+              title={f.title}
+              desc={f.desc}
+              unavailable={!supported}
+              checked={supported && Boolean(form[f.field])}
+              onChange={(v) => update(f.field, v)}
+            />
+          );
+        })}
+      </div>
     </SectionCard>
   );
 
@@ -776,6 +812,7 @@ export default function AISettings(): JSX.Element {
 
       {/* Top-level tabs */}
       <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2 overflow-x-auto">
+        {connSource === 'api' && (
         <button
           onClick={() => setTab('connection')}
           className={cn(
@@ -783,9 +820,10 @@ export default function AISettings(): JSX.Element {
             tab === 'connection' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
           )}
         >
-          {connSource === 'api' ? <KeyRound className="h-4 w-4" /> : <Wallet className="h-4 w-4" />}
-          {connSource === 'api' ? 'إعدادات الربط' : 'رصيد المساعد'}
+          <KeyRound className="h-4 w-4" />
+          إعدادات الربط
         </button>
+        )}
         {BEHAVIOR_GROUP_ORDER.map((g) => {
           const { label, Icon } = GROUP_META[g];
           const active = tab === 'behavior' && subTab === g;
@@ -814,8 +852,8 @@ export default function AISettings(): JSX.Element {
             tab === 'features' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
           )}
         >
-          <Gauge className="h-4 w-4" />
-          الميزات والرصيد
+          {connSource === 'balance' ? <Wallet className="h-4 w-4" /> : <Gauge className="h-4 w-4" />}
+          {connSource === 'balance' ? 'المميزات والرصيد' : 'الميزات والرصيد'}
         </button>
         )}
       </div>
@@ -1025,12 +1063,7 @@ export default function AISettings(): JSX.Element {
       {/* ═══ Tab 1: الربط والنموذج ═══ */}
       {tab === 'connection' && (
         <div className="space-y-5">
-          {connSource === 'balance' ? (
-            <div className={cn('space-y-5', mutedIfOff)} aria-disabled={!form.enabled}>
-              <AIBalancePanel />
-              {channelsCard}
-            </div>
-          ) : (
+          {(
         <div className={cn('grid grid-cols-1 xl:grid-cols-2 gap-5 items-start', mutedIfOff)} aria-disabled={!form.enabled}>
           {/* AI provider connection */}
           <SectionCard
@@ -1190,31 +1223,16 @@ export default function AISettings(): JSX.Element {
       )}
 
       {/* ═══ Tab 2: الميزات والرصيد ═══ */}
-      {tab === 'features' && (
+      {tab === 'features' && connSource === 'balance' && (
+        <div className={cn('space-y-5', mutedIfOff)} aria-disabled={!form.enabled}>
+          <AIBalancePanel />
+          {featuresCard}
+          {channelsCard}
+        </div>
+      )}
+      {tab === 'features' && connSource === 'api' && (
         <div className={cn('grid grid-cols-1 xl:grid-cols-2 gap-5 items-start', mutedIfOff)} aria-disabled={!form.enabled}>
-          {/* AI Features */}
-          <SectionCard
-            icon={<Sparkles className="h-5 w-5" />}
-            title="ميزات المساعد الذكي"
-            description="فعّل أو عطّل الميزات حسب احتياجك. كل ميزة تستهلك توكنز من حسابك عند المزوّد عند الاستخدام."
-          >
-            <div className="divide-y divide-border-light dark:divide-border-dark">
-              {AI_FEATURES.map((f) => {
-                const supported = isFeatureSupported(form.model, f.key);
-                return (
-                  <FeatureRow
-                    key={f.key}
-                    icon={<f.Icon className="h-4 w-4" />}
-                    title={f.title}
-                    desc={f.desc}
-                    unavailable={!supported}
-                    checked={supported && Boolean(form[f.field])}
-                    onChange={(v) => update(f.field, v)}
-                  />
-                );
-              })}
-            </div>
-          </SectionCard>
+          {featuresCard}
 
           <div className="space-y-5">
             {/* Usage in the current cycle */}
