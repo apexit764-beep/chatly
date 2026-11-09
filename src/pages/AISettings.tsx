@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import AIBalancePanel from '@components/ai/AIBalancePanel';
+import AIUsageDetails from '@components/ai/AIUsageDetails';
+import { BALANCE_SETTINGS } from '@/utils/aiBalance';
 import {
   Sparkles,
   Languages,
@@ -35,6 +37,7 @@ import {
   HeartPulse,
   Bell,
   Gauge,
+  BarChart3,
   Loader2,
   RefreshCw,
   Bot,
@@ -601,7 +604,7 @@ export default function AISettings(): JSX.Element {
    */
   const mutedIfOff = cn('transition-opacity', !form.enabled && 'opacity-50 pointer-events-none');
 
-  type PageTab = 'connection' | 'features' | 'behavior';
+  type PageTab = 'connection' | 'features' | 'behavior' | 'usage';
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const sourceParam = searchParams.get('source');
@@ -610,7 +613,7 @@ export default function AISettings(): JSX.Element {
   useEffect(() => {
     if (sourceParam === 'balance' || sourceParam === 'api') setConnSource(sourceParam);
   }, [sourceParam]);
-  const [tabChoice, setTab] = useState<PageTab>(tabParam === 'features' || tabParam === 'behavior' ? tabParam : 'connection');
+  const [tabChoice, setTab] = useState<PageTab>(tabParam === 'features' || tabParam === 'behavior' || tabParam === 'usage' ? tabParam : 'connection');
   // Features and usage only exist once an AI provider is connected; until then
   // the page opens on the connection tab whatever was asked for.
   const featuresAvailable = isConnected(saved) || connSource === 'balance';
@@ -623,7 +626,7 @@ export default function AISettings(): JSX.Element {
         : tabChoice;
   // The usage alert's notification links here with ?tab=features — also when the page is already open.
   useEffect(() => {
-    if (tabParam === 'features' || tabParam === 'behavior' || tabParam === 'connection') setTab(tabParam);
+    if (tabParam === 'features' || tabParam === 'behavior' || tabParam === 'connection' || tabParam === 'usage') setTab(tabParam);
   }, [tabParam]);
   /** Which section is open for the selected scope inside «سلوك المساعد». */
   const [subTab, setSubTab] = useState<BehaviorGroup>('style');
@@ -898,6 +901,17 @@ export default function AISettings(): JSX.Element {
           {connSource === 'balance' ? 'المميزات والرصيد' : 'الميزات والرصيد'}
         </button>
         )}
+        <button
+          onClick={() => setTab('usage')}
+          className={cn(
+            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
+            tab === 'usage' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+          )}
+        >
+          <BarChart3 className="h-4 w-4" />
+          تفاصيل الاستهلاك
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-warning/15 text-warning font-bold">جديد</span>
+        </button>
       </div>
 
       {/* Muting is applied per section, not on this wrapper: opacity can't be
@@ -1132,6 +1146,15 @@ export default function AISettings(): JSX.Element {
       )}
 
       {/* ═══ Tab 2: الميزات والرصيد ═══ */}
+      {tab === 'usage' && (
+        <AIUsageDetails
+          currentModel={
+            connSource === 'balance'
+              ? BALANCE_SETTINGS.modelName
+              : (currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '')
+          }
+        />
+      )}
       {tab === 'features' && connSource === 'balance' && (
         <div className={cn('space-y-5', mutedIfOff)} aria-disabled={!form.enabled}>
           <AIBalancePanel />
