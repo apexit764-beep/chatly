@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { useDataStore } from '@/store/useDataStore';
-import { BALANCE_SETTINGS, MOCK_CARD, clientCurrency, moneyExact, moneyPrice, priceLocal } from '@/utils/aiBalance';
+import { BALANCE_SETTINGS, MOCK_CARD, cardLabel, clientCurrency, moneyExact, moneyPrice, priceLocal, type CardBrand } from '@/utils/aiBalance';
 
 /** One top-up (or free credit) whose remainder is still spendable. */
 export interface BalanceLot {
@@ -31,6 +31,16 @@ export interface BalanceInvoice {
   card: string;
 }
 
+/** A saved payment method. Only the brand and the last four digits are ever kept. */
+export interface PaymentCard {
+  id: number;
+  brand: CardBrand;
+  last4: string;
+  holder: string;
+  /** MM/YY */
+  exp: string;
+}
+
 export interface AutoTopUp {
   on: boolean;
   usd: number;
@@ -53,8 +63,17 @@ interface BalanceState {
   invoices: BalanceInvoice[];
   nextId: number;
   nextInvoice: number;
+  cards: PaymentCard[];
+  defaultCardId: number | null;
+  nextCardId: number;
   balance: () => number;
-  topUp: (usd: number, paidLocal: number) => BalanceInvoice;
+  /** The card used when none is chosen: the default one, else the first. */
+  defaultCard: () => PaymentCard | null;
+  addCard: (card: Omit<PaymentCard, 'id'>, makeDefault: boolean) => PaymentCard;
+  setDefaultCard: (id: number) => void;
+  /** Removes a card; returns true when auto top-up had to be switched off because no card is left. */
+  removeCard: (id: number) => boolean;
+  topUp: (usd: number, paidLocal: number, cardId?: number) => BalanceInvoice;
   setAuto: (auto: AutoTopUp) => void;
   /** Mock usage: the assistant answers `messages` customer messages. */
   simulateUsage: (messages: number) => { done: number; blocked: number };
@@ -68,7 +87,7 @@ function ago(days: number): string {
   return new Date(Date.now() - days * DAY).toISOString();
 }
 
-function initial(): Omit<BalanceState, 'balance' | 'topUp' | 'setAuto' | 'simulateUsage' | 'reset'> {
+function initial(): Omit<BalanceState, 'balance' | 'defaultCard' | 'addCard' | 'setDefaultCard' | 'removeCard' | 'topUp' | 'setAuto' | 'simulateUsage' | 'reset'> {
   const c = clientCurrency();
   return {
     lots: [{ id: 1, source: 'شحن', usd: 10, left: 6.2 }],
@@ -94,6 +113,9 @@ function initial(): Omit<BalanceState, 'balance' | 'topUp' | 'setAuto' | 'simula
     ],
     nextId: 4,
     nextInvoice: 1039,
+    cards: [{ id: 1, brand: 'visa', last4: '4242', holder: 'Qhub Demo', exp: '12/30' }],
+    defaultCardId: 1,
+    nextCardId: 2,
   };
 }
 
@@ -125,6 +147,9 @@ function persist(state: Persisted): void {
         invoices: state.invoices,
         nextId: state.nextId,
         nextInvoice: state.nextInvoice,
+        cards: state.cards,
+        defaultCardId: state.defaultCardId,
+        nextCardId: state.nextCardId,
       }),
     );
   } catch {
@@ -174,7 +199,12 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
     });
   };
 
-  const addInvoice = (description: string, paidLocal: number): BalanceInvoice => {
+  const pickCard = (id?: number): PaymentCard | null => {
+    const { cards, defaultCardId } = get();
+    return cards.find((c) => c.id === (id ?? defaultCardId)) ?? cards[0] ?? null;
+  };
+
+  const addInvoice = (description: string, paidLocal: number, card: string): BalanceInvoice => {
     const s = get();
     const c = clientCurrency();
     const invoice: BalanceInvoice = {
@@ -183,7 +213,7 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
       description,
       amount: paidLocal,
       currency: c.code,
-      card: MOCK_CARD,
+      card,
     };
     commit({ invoices: [invoice, ...s.invoices], nextInvoice: s.nextInvoice + 1 });
     return invoice;
@@ -191,19 +221,53 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
 
   const autoCharge = (): void => {
     const { auto } = get();
+    const card = pickCard();
+    if (!card) {
+      commit({ auto: { ...auto, on: false } });
+      notify('تعذّر الشحن التلقائي', 'لا توجد وسيلة دفع محفوظة، فتم إيقاف الشحن التلقائي. أضف بطاقة من صفحة بيانات الدفع.');
+      return;
+    }
+    const label = cardLabel(card);
     const paid = priceLocal(auto.usd);
-    const invoice = addInvoice('شحن تلقائي لرصيد المساعد', paid);
-    credit(auto.usd, 'شحن تلقائي', 'auto', `${invoice.number} · ${MOCK_CARD}`);
-    notify('شحن تلقائي لرصيد المساعد', `تم شحن رصيد المساعد تلقائيًا بمبلغ ${moneyPrice(auto.usd)} من ${MOCK_CARD}. رقم الفاتورة ${invoice.number}.`);
+    const invoice = addInvoice('شحن تلقائي لرصيد المساعد', paid, label);
+    credit(auto.usd, 'شحن تلقائي', 'auto', `${invoice.number} · ${label}`);
+    notify('شحن تلقائي لرصيد المساعد', `تم شحن رصيد المساعد تلقائيًا بمبلغ ${moneyPrice(auto.usd)} من ${label}. رقم الفاتورة ${invoice.number}.`);
   };
 
   return {
     ...load(),
     balance: () => round6(sumLeft(get().lots) - get().negative),
 
-    topUp: (usd, paidLocal) => {
-      const invoice = addInvoice('شحن رصيد المساعد', paidLocal);
-      credit(usd, 'شحن', 'topup', `${invoice.number} · ${MOCK_CARD}`);
+    defaultCard: () => pickCard(),
+
+    addCard: (card, makeDefault) => {
+      const s = get();
+      const created: PaymentCard = { ...card, id: s.nextCardId };
+      commit({
+        cards: [...s.cards, created],
+        defaultCardId: makeDefault || s.cards.length === 0 ? created.id : s.defaultCardId,
+        nextCardId: s.nextCardId + 1,
+      });
+      return created;
+    },
+
+    setDefaultCard: (id) => {
+      if (get().cards.some((c) => c.id === id)) commit({ defaultCardId: id });
+    },
+
+    removeCard: (id) => {
+      const s = get();
+      const cards = s.cards.filter((c) => c.id !== id);
+      const defaultCardId = s.defaultCardId === id ? (cards[0]?.id ?? null) : s.defaultCardId;
+      const autoOff = cards.length === 0 && s.auto.on;
+      commit({ cards, defaultCardId, ...(autoOff ? { auto: { ...s.auto, on: false } } : {}) });
+      return autoOff;
+    },
+
+    topUp: (usd, paidLocal, cardId) => {
+      const label = cardLabel(pickCard(cardId) ?? { brand: 'card', last4: '----' });
+      const invoice = addInvoice('شحن رصيد المساعد', paidLocal, label);
+      credit(usd, 'شحن', 'topup', `${invoice.number} · ${label}`);
       notify('تم شحن رصيد المساعد', `تم شحن رصيد المساعد بمبلغ ${moneyPrice(usd)}. رقم الفاتورة ${invoice.number}.`);
       return invoice;
     },
