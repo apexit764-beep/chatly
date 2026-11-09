@@ -42,6 +42,7 @@ const PAGE_LABELS: Record<string, string> = {
   '/subscribe': 'الاشتراك',
   '/notifications': 'الإشعارات',
   '/ai-settings': 'إعدادات الذكاء الاصطناعي',
+  '/ai-balance': 'رصيد المساعد الذكي',
   '/knowledge-base': 'قاعدة المعرفة',
 };
 
