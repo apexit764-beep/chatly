@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Wallet, Zap, TrendingDown, Power, Plus, Eye, Download, PauseCircle, RefreshCw, CreditCard, Play } from 'lucide-react';
 import { Button, Card, Modal, StatCard, Input, InfoTip } from '@components/ui';
 import { useAIBalanceStore, type BalanceInvoice, type BalanceTx } from '@/store/useAIBalanceStore';
@@ -124,7 +123,8 @@ function CardRow(): JSX.Element {
   );
 }
 
-export default function AIBalance(): JSX.Element {
+/** Prepaid assistant balance — the "connect through us" source of the AI module. Mock data for now. */
+export default function AIBalancePanel(): JSX.Element {
   const store = useAIBalanceStore();
   const showToast = useUIStore((s) => s.showToast);
   const balance = store.balance();
@@ -202,13 +202,12 @@ export default function AIBalance(): JSX.Element {
   };
 
   return (
-    <div className="p-4 lg:p-6 page-fade space-y-5">
+    <div className="space-y-5">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-h2 font-bold">رصيد المساعد الذكي</h1>
+          <h2 className="text-h3 font-bold">رصيد المساعد الذكي</h2>
           <p className="text-small text-muted-light dark:text-muted-dark mt-1">
-            يعمل المساعد بنموذج {BALANCE_SETTINGS.modelName}، ويُخصم الاستهلاك من رصيدك.{' '}
-            <Link to="/ai-settings" className="text-primary font-semibold hover:underline">إعدادات المساعد</Link>
+            يعمل المساعد بنموذج {BALANCE_SETTINGS.modelName} من خلال Qhub، ويُخصم الاستهلاك من رصيدك. لا تحتاج مفتاح API.
           </p>
         </div>
         <Button onClick={openTopUp}>

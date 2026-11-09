@@ -133,7 +133,7 @@ function persist(state: Persisted): void {
 }
 
 function notify(title: string, body: string): void {
-  useDataStore.getState().pushNotification({ title, body, type: 'system', link: '/ai-balance' });
+  useDataStore.getState().pushNotification({ title, body, type: 'system', link: '/ai-settings?tab=connection&source=balance' });
 }
 
 const round6 = (n: number): number => Math.round(n * 1e6) / 1e6;

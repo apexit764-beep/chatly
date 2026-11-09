@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import AIBalancePanel from '@components/ai/AIBalancePanel';
 import {
   Sparkles,
   Languages,
@@ -602,6 +603,12 @@ export default function AISettings(): JSX.Element {
   type PageTab = 'connection' | 'features' | 'behavior';
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
+  const sourceParam = searchParams.get('source');
+  const [connSource, setConnSource] = useState<'api' | 'balance'>(sourceParam === 'balance' ? 'balance' : 'api');
+  // The balance notifications link here with ?source=balance — also when the page is already open.
+  useEffect(() => {
+    if (sourceParam === 'balance' || sourceParam === 'api') setConnSource(sourceParam);
+  }, [sourceParam]);
   const [tabChoice, setTab] = useState<PageTab>(tabParam === 'features' || tabParam === 'behavior' ? tabParam : 'connection');
   // Features and usage only exist once an AI provider is connected; until then
   // the page opens on the connection tab whatever was asked for.
@@ -622,6 +629,69 @@ export default function AISettings(): JSX.Element {
    * يعطّل كل زرّ وحقل بداخله دفعة واحدة، فلا يُعدَّل هنا ما مكانه الافتراضي.
    */
   const inherited = Boolean(scopedAccount && behaviorTab && modes[behaviorTab] === 'default');
+
+  const channelsCard = (
+    <SectionCard
+      icon={<Radio className="h-5 w-5" />}
+      title="القنوات المُفعّل عليها"
+      description="حدّد القنوات اللي تبي المساعد يرد عليها. القنوات غير المُحدّدة لن يعمل المساعد فيها."
+    >
+      {channels.length === 0 ? (
+        <div className="p-6 rounded-xl border border-dashed border-border-light dark:border-border-dark text-center">
+          <p className="text-small text-muted-light dark:text-muted-dark mb-2">لم تربط أي قناة بعد</p>
+          <a
+            href="/channels"
+            className="inline-flex items-center gap-1 text-small text-primary font-semibold hover:underline"
+          >
+            ربط أول قناة
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-[11px] text-muted-light dark:text-muted-dark mb-1">
+            <span>{form.enabledChannels.length} / {channels.length} قناة مُفعّلة</span>
+            <button
+              onClick={toggleAllChannels}
+              className="text-primary font-semibold hover:underline"
+            >
+              {form.enabledChannels.length === channels.length ? 'إلغاء الكل' : 'تحديد الكل'}
+            </button>
+          </div>
+          <div className="border border-border-light dark:border-border-dark rounded-xl divide-y divide-border-light dark:divide-border-dark overflow-hidden">
+            {channels.map((c) => {
+              const active = form.enabledChannels.includes(c.id);
+              const connected = c.status === 'connected';
+              return (
+                <div
+                  key={c.id}
+                  className={cn(
+                    'flex items-center gap-3 px-4 py-3 transition-colors',
+                    active && 'bg-primary/[0.02]'
+                  )}
+                >
+                  <ChannelIcon type={c.type} size={20} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-small font-semibold truncate">{c.name}</p>
+                    <p className="text-[11px] text-muted-light dark:text-muted-dark truncate">
+                      {c.identifier} ·{' '}
+                      <span className={connected ? 'text-success' : 'text-warning'}>
+                        {connected ? 'متصل' : 'غير متصل'}
+                      </span>
+                    </p>
+                  </div>
+                  <Toggle
+                    checked={active}
+                    onChange={() => { void toggleChannel(c.id); }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </SectionCard>
+  );
 
   return (
     <div className="flex flex-col min-h-full relative">
@@ -951,6 +1021,32 @@ export default function AISettings(): JSX.Element {
 
       {/* ═══ Tab 1: الربط والنموذج ═══ */}
       {tab === 'connection' && (
+        <div className="space-y-5">
+          <div role="tablist" aria-label="مصدر المساعد الذكي" className="inline-flex p-1 rounded-full bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark">
+            {([
+              ['api', 'ربط API الخاص بك', KeyRound],
+              ['balance', 'ربط من خلالنا (رصيد)', Zap],
+            ] as const).map(([key, label, Icon]) => (
+              <button
+                key={key}
+                role="tab"
+                aria-selected={connSource === key}
+                onClick={() => setConnSource(key)}
+                className={cn(
+                  'inline-flex items-center gap-2 h-9 px-4 rounded-full text-small font-semibold transition-colors',
+                  connSource === key ? 'bg-primary text-white shadow-sm' : 'text-muted-light dark:text-muted-dark hover:text-current',
+                )}
+              >
+                <Icon className="h-4 w-4" /> {label}
+              </button>
+            ))}
+          </div>
+          {connSource === 'balance' ? (
+            <div className={cn('space-y-5', mutedIfOff)} aria-disabled={!form.enabled}>
+              <AIBalancePanel />
+              {channelsCard}
+            </div>
+          ) : (
         <div className={cn('grid grid-cols-1 xl:grid-cols-2 gap-5 items-start', mutedIfOff)} aria-disabled={!form.enabled}>
           {/* AI provider connection */}
           <SectionCard
@@ -1103,67 +1199,9 @@ export default function AISettings(): JSX.Element {
             </div>
           </SectionCard>
 
-          {/* Channels */}
-          <SectionCard
-            icon={<Radio className="h-5 w-5" />}
-            title="القنوات المُفعّل عليها"
-            description="حدّد القنوات اللي تبي المساعد يرد عليها. القنوات غير المُحدّدة لن يعمل المساعد فيها."
-          >
-            {channels.length === 0 ? (
-              <div className="p-6 rounded-xl border border-dashed border-border-light dark:border-border-dark text-center">
-                <p className="text-small text-muted-light dark:text-muted-dark mb-2">لم تربط أي قناة بعد</p>
-                <a
-                  href="/channels"
-                  className="inline-flex items-center gap-1 text-small text-primary font-semibold hover:underline"
-                >
-                  ربط أول قناة
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-[11px] text-muted-light dark:text-muted-dark mb-1">
-                  <span>{form.enabledChannels.length} / {channels.length} قناة مُفعّلة</span>
-                  <button
-                    onClick={toggleAllChannels}
-                    className="text-primary font-semibold hover:underline"
-                  >
-                    {form.enabledChannels.length === channels.length ? 'إلغاء الكل' : 'تحديد الكل'}
-                  </button>
-                </div>
-                <div className="border border-border-light dark:border-border-dark rounded-xl divide-y divide-border-light dark:divide-border-dark overflow-hidden">
-                  {channels.map((c) => {
-                    const active = form.enabledChannels.includes(c.id);
-                    const connected = c.status === 'connected';
-                    return (
-                      <div
-                        key={c.id}
-                        className={cn(
-                          'flex items-center gap-3 px-4 py-3 transition-colors',
-                          active && 'bg-primary/[0.02]'
-                        )}
-                      >
-                        <ChannelIcon type={c.type} size={20} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-small font-semibold truncate">{c.name}</p>
-                          <p className="text-[11px] text-muted-light dark:text-muted-dark truncate">
-                            {c.identifier} ·{' '}
-                            <span className={connected ? 'text-success' : 'text-warning'}>
-                              {connected ? 'متصل' : 'غير متصل'}
-                            </span>
-                          </p>
-                        </div>
-                        <Toggle
-                          checked={active}
-                          onChange={() => { void toggleChannel(c.id); }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </SectionCard>
+          {channelsCard}
+        </div>
+          )}
         </div>
       )}
 
