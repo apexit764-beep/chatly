@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Wallet, Zap, TrendingDown, Power, Plus, Eye, Download, PauseCircle, RefreshCw, CreditCard, Play } from 'lucide-react';
 import { Button, Card, Modal, StatCard, Input, InfoTip } from '@components/ui';
 import { useAIBalanceStore, type BalanceInvoice } from '@/store/useAIBalanceStore';
+import { usePaymentMethodsStore, cardLabel } from '@/store/usePaymentMethodsStore';
 import { useUIStore } from '@/store/useUIStore';
 import { printAsPdf } from '@/utils/csv';
 import { formatDate } from '@/utils/format';
@@ -10,7 +11,6 @@ import { formatMoney } from '@/utils/money';
 import { cn } from '@/utils/cn';
 import {
   BALANCE_SETTINGS,
-  cardLabel,
   clientCurrency,
   exactLocal,
   moneyExact,
@@ -106,45 +106,26 @@ function resolveAmount(pack: number | null, custom: string): { usd: number; paid
   return { usd: Math.round((local / c.rate) * 1e4) / 1e4, paidLocal: local };
 }
 
-const PAYMENT_PAGE = '/ai-settings/payment';
+/** Payment methods are managed in Settings › المالية — here we only show the default card and link there. */
+const PAYMENT_SETTINGS = '/settings?tab=finance';
 
-/** Pick the card to pay with; with none saved, point to the payment-details page. */
-function CardPicker({ selected, onSelect, selectable }: { selected: number | null; onSelect: (id: number) => void; selectable: boolean }): JSX.Element {
-  const cards = useAIBalanceStore((s) => s.cards);
-  const defaultCardId = useAIBalanceStore((s) => s.defaultCardId);
-  if (cards.length === 0) {
+function DefaultCard(): JSX.Element {
+  const card = usePaymentMethodsStore((s) => s.cards.find((c) => c.isDefault) ?? s.cards[0] ?? null);
+  if (!card) {
     return (
       <div className="rounded-input border border-dashed border-warning/60 bg-warning/5 px-3 py-3 text-small">
         لا توجد وسيلة دفع محفوظة.{' '}
-        <Link to={PAYMENT_PAGE} className="text-primary font-semibold hover:underline">أضف وسيلة دفع</Link>
+        <Link to={PAYMENT_SETTINGS} className="text-primary font-semibold hover:underline">أضف بطاقة من الإعدادات</Link>
       </div>
     );
   }
   return (
-    <div className="space-y-2">
-      {cards.map((c) => {
-        const active = c.id === selected;
-        return (
-          <button
-            key={c.id}
-            type="button"
-            disabled={!selectable}
-            onClick={() => onSelect(c.id)}
-            className={cn(
-              'w-full flex items-center gap-2 rounded-input border px-3 py-2.5 text-body text-start',
-              active ? 'border-primary bg-primary/5' : 'border-border-light dark:border-border-dark',
-              selectable && !active && 'hover:border-primary/40',
-            )}
-          >
-            <CreditCard className="h-4 w-4 text-muted-light dark:text-muted-dark" />
-            <span dir="ltr">{cardLabel(c)}</span>
-            {defaultCardId === c.id && (
-              <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">الافتراضية</span>
-            )}
-          </button>
-        );
-      })}
-      <Link to={PAYMENT_PAGE} className="inline-block text-small text-primary font-semibold hover:underline">إدارة بيانات الدفع</Link>
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2 rounded-input border border-border-light dark:border-border-dark px-3 py-2.5 text-body">
+        <CreditCard className="h-4 w-4 text-muted-light dark:text-muted-dark" />
+        <span dir="ltr">{cardLabel(card)}</span>
+      </div>
+      <Link to={PAYMENT_SETTINGS} className="inline-block text-small text-primary font-semibold hover:underline">تغيير وسيلة الدفع من الإعدادات</Link>
     </div>
   );
 }
@@ -166,25 +147,23 @@ export default function AIBalancePanel(): JSX.Element {
   const [agreed, setAgreed] = useState(false);
   const [invoice, setInvoice] = useState<BalanceInvoice | null>(null);
   const [simCount, setSimCount] = useState(1500);
-  const [payCardId, setPayCardId] = useState<number | null>(null);
-  const defaultCard = store.defaultCard();
+  const defaultCard = usePaymentMethodsStore((st) => st.cards.find((c) => c.isDefault) ?? st.cards[0] ?? null);
 
   const usedPct = store.base > 0 ? Math.min(100, Math.max(0, ((store.base - balance) / store.base) * 100)) : 0;
   const spent = Math.min(store.base, Math.max(0, store.base - balance));
   const barColor = usedPct >= 70 ? 'bg-danger' : usedPct >= 50 ? 'bg-warning' : 'bg-primary';
 
   const openTopUp = (): void => {
-    setPayCardId(store.defaultCard()?.id ?? null);
     setPack(null);
     setCustom('');
     setTopUpOpen(true);
   };
 
   const submitTopUp = (): void => {
-    if (payCardId === null) return showToast('أضف وسيلة دفع أولًا', 'error');
+    if (!defaultCard) return showToast('أضف وسيلة دفع من الإعدادات أولًا', 'error');
     const r = resolveAmount(pack, custom);
     if (typeof r === 'string') return showToast(r, 'error');
-    const inv = store.topUp(r.usd, r.paidLocal, payCardId);
+    const inv = store.topUp(r.usd, r.paidLocal);
     setTopUpOpen(false);
     showToast(`تم الشحن · الفاتورة ${inv.number}`, 'success');
   };
@@ -194,7 +173,7 @@ export default function AIBalancePanel(): JSX.Element {
     setAutoCustom(BALANCE_SETTINGS.packs.includes(store.auto.usd) ? '' : String(priceLocal(store.auto.usd)));
     setAutoThreshold(store.auto.thresholdPct);
     setAgreed(false);
-    if (!store.defaultCard()) return showToast('أضف وسيلة دفع أولًا لتفعيل الشحن التلقائي', 'error');
+    if (!defaultCard) return showToast('أضف وسيلة دفع من الإعدادات أولًا لتفعيل الشحن التلقائي', 'error');
     setAutoOpen(true);
   };
 
@@ -335,11 +314,11 @@ export default function AIBalancePanel(): JSX.Element {
             <CreditCard className="h-4 w-4 text-primary" />
             <h2 className="text-body font-bold">بيانات الدفع</h2>
           </div>
-          <Link to={PAYMENT_PAGE} className="text-small text-primary font-semibold hover:underline">إدارة بيانات الدفع</Link>
+          <Link to={PAYMENT_SETTINGS} className="text-small text-primary font-semibold hover:underline">إدارة بيانات الدفع في الإعدادات</Link>
         </div>
         <p className="text-small text-muted-light dark:text-muted-dark mt-2">
           {defaultCard ? (
-            <>الوسيلة الافتراضية: <b dir="ltr">{cardLabel(defaultCard)}</b>{store.cards.length > 1 && ` (+${store.cards.length - 1} أخرى)`}</>
+            <>الوسيلة الافتراضية: <b dir="ltr">{cardLabel(defaultCard)}</b></>
           ) : (
             'لا توجد وسيلة دفع محفوظة. أضف بطاقة لتتمكن من شحن الرصيد.'
           )}
@@ -421,7 +400,7 @@ export default function AIBalancePanel(): JSX.Element {
         footer={
           <>
             <Button variant="secondary" onClick={() => setTopUpOpen(false)}>إلغاء</Button>
-            <Button className="text-white" onClick={submitTopUp} disabled={payCardId === null}>دفع</Button>
+            <Button className="text-white" onClick={submitTopUp} disabled={!defaultCard}>دفع</Button>
           </>
         }
       >
@@ -429,7 +408,7 @@ export default function AIBalancePanel(): JSX.Element {
           <AmountPicker pack={pack} onPack={setPack} custom={custom} onCustom={setCustom} />
           <div>
             <p className="text-small font-medium text-muted-light dark:text-muted-dark mb-1.5">طريقة الدفع</p>
-            <CardPicker selected={payCardId} onSelect={setPayCardId} selectable />
+            <DefaultCard />
             <p className="text-small text-muted-light dark:text-muted-dark mt-2">الدفع تجريبي حاليًا ولن يُخصم أي مبلغ فعلي.</p>
           </div>
         </div>
@@ -467,7 +446,7 @@ export default function AIBalancePanel(): JSX.Element {
           </div>
           <div>
             <p className="text-small font-medium text-muted-light dark:text-muted-dark mb-1.5">البطاقة (الوسيلة الافتراضية)</p>
-            <CardPicker selected={defaultCard?.id ?? null} onSelect={() => undefined} selectable={false} />
+            <DefaultCard />
           </div>
           <label className="flex items-start gap-2 text-small leading-relaxed cursor-pointer">
             <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1" />

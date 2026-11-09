@@ -42,7 +42,6 @@ const PAGE_LABELS: Record<string, string> = {
   '/subscribe': 'الاشتراك',
   '/notifications': 'الإشعارات',
   '/ai-settings': 'إعدادات الذكاء الاصطناعي',
-  '/ai-settings/payment': 'بيانات الدفع',
   '/knowledge-base': 'قاعدة المعرفة',
 };
 

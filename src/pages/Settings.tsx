@@ -38,6 +38,7 @@ import { QrCode } from '@components/ui/QrCode';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useInboxStore } from '@/store/useInboxStore';
 import { useUIStore } from '@/store/useUIStore';
+import { usePaymentMethodsStore, type SavedCard } from '@/store/usePaymentMethodsStore';
 import { useAccountStore } from '@/store/useAccountStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
@@ -1434,21 +1435,9 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   );
 }
 
-interface SavedCard {
-  id: string;
-  brand: string;
-  last4: string;
-  expiry: string;
-  isDefault: boolean;
-}
-
-const MOCK_CARDS: SavedCard[] = [
-  { id: 'card-1', brand: 'Visa', last4: '4242', expiry: '12/27', isDefault: true },
-  { id: 'card-2', brand: 'Mastercard', last4: '8831', expiry: '09/26', isDefault: false },
-];
-
 function FinanceTab(): JSX.Element {
-  const [cards, setCards] = useState(MOCK_CARDS);
+  const cards = usePaymentMethodsStore((st) => st.cards);
+  const setCards = usePaymentMethodsStore((st) => st.setCards);
   const [autoRenew, setAutoRenew] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [newCard, setNewCard] = useState({ number: '', expiry: '', cvv: '', holder: '' });

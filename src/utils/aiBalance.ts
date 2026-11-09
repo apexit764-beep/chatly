@@ -23,37 +23,6 @@ export const BALANCE_SETTINGS: {
 
 export const MOCK_CARD = 'Visa •••• 4242';
 
-export type CardBrand = 'visa' | 'mastercard' | 'amex' | 'card';
-
-export interface PaymentCardLike {
-  brand: CardBrand;
-  last4: string;
-}
-
-const BRAND_LABEL: Record<CardBrand, string> = {
-  visa: 'Visa',
-  mastercard: 'Mastercard',
-  amex: 'American Express',
-  card: 'بطاقة',
-};
-
-export function brandLabel(b: CardBrand): string {
-  return BRAND_LABEL[b];
-}
-
-/** «Visa •••• 4242» */
-export function cardLabel(c: PaymentCardLike): string {
-  return `${BRAND_LABEL[c.brand]} •••• ${c.last4}`;
-}
-
-/** Guesses the network from the first digits of the number. */
-export function detectBrand(digits: string): CardBrand {
-  if (/^4/.test(digits)) return 'visa';
-  if (/^(5[1-5]|2(2[2-9][1-9]|2[3-9]\d|[3-6]\d\d|7[01]\d|720))/.test(digits)) return 'mastercard';
-  if (/^3[47]/.test(digits)) return 'amex';
-  return 'card';
-}
-
 export interface ClientCurrency {
   code: string;
   rate: number;

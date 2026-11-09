@@ -27,7 +27,6 @@ const Subscribe = lazy(() => import('@pages/Subscribe'));
 const Billing = lazy(() => import('@pages/Billing'));
 const Notifications = lazy(() => import('@pages/Notifications'));
 const AISettings = lazy(() => import('@pages/AISettings'));
-const PaymentMethods = lazy(() => import('@pages/PaymentMethods'));
 const KnowledgeBase = lazy(() => import('@pages/KnowledgeBase'));
 const Feedback = lazy(() => import('@pages/Feedback'));
 const RatingPublic = lazy(() => import('@pages/RatingPublic'));
@@ -123,7 +122,6 @@ export default function App(): JSX.Element {
           <Route path="/billing" element={<Billing />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/ai-settings" element={<AISettings />} />
-          <Route path="/ai-settings/payment" element={<PaymentMethods />} />
           <Route path="/ai-balance" element={<Navigate to="/ai-settings?tab=connection&source=balance" replace />} />
           <Route path="/knowledge-base" element={<KnowledgeBase />} />
           <Route path="/feedback" element={<Feedback />} />
