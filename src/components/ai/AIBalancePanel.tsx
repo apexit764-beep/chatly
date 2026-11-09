@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Wallet, Zap, TrendingDown, Power, Plus, Eye, Download, PauseCircle, RefreshCw, CreditCard, Play } from 'lucide-react';
-import { Button, Card, Modal, StatCard, Input, InfoTip } from '@components/ui';
+import { Wallet, Zap, TrendingDown, Power, Plus, Eye, Download, PauseCircle, CreditCard, Play } from 'lucide-react';
+import { Button, Card, Modal, StatCard, Input } from '@components/ui';
 import { useAIBalanceStore, type BalanceInvoice } from '@/store/useAIBalanceStore';
 import { usePaymentMethodsStore, cardLabel } from '@/store/usePaymentMethodsStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -19,23 +19,6 @@ import {
   tokenLabel,
   tokensFor,
 } from '@/utils/aiBalance';
-
-function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }): JSX.Element {
-  return (
-    <button
-      onClick={() => onChange(!checked)}
-      aria-label={label}
-      role="switch"
-      aria-checked={checked}
-      className={cn(
-        'relative h-6 w-11 rounded-full transition-colors flex-shrink-0',
-        checked ? 'bg-primary' : 'bg-border-light dark:bg-border-dark',
-      )}
-    >
-      <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all', checked ? 'start-0.5' : 'end-0.5')} />
-    </button>
-  );
-}
 
 /** Pack buttons plus, below them, a free amount in the client's own currency. */
 function AmountPicker({
@@ -138,13 +121,8 @@ export default function AIBalancePanel(): JSX.Element {
   const currency = clientCurrency();
 
   const [topUpOpen, setTopUpOpen] = useState(false);
-  const [autoOpen, setAutoOpen] = useState(false);
   const [pack, setPack] = useState<number | null>(null);
   const [custom, setCustom] = useState('');
-  const [autoPack, setAutoPack] = useState<number | null>(store.auto.usd);
-  const [autoCustom, setAutoCustom] = useState('');
-  const [autoThreshold, setAutoThreshold] = useState(store.auto.thresholdPct);
-  const [agreed, setAgreed] = useState(false);
   const [invoice, setInvoice] = useState<BalanceInvoice | null>(null);
   const [simCount, setSimCount] = useState(1500);
   const defaultCard = usePaymentMethodsStore((st) => st.cards.find((c) => c.isDefault) ?? st.cards[0] ?? null);
@@ -166,24 +144,6 @@ export default function AIBalancePanel(): JSX.Element {
     const inv = store.topUp(r.usd, r.paidLocal);
     setTopUpOpen(false);
     showToast(`تم الشحن · الفاتورة ${inv.number}`, 'success');
-  };
-
-  const openAuto = (): void => {
-    setAutoPack(BALANCE_SETTINGS.packs.includes(store.auto.usd) ? store.auto.usd : null);
-    setAutoCustom(BALANCE_SETTINGS.packs.includes(store.auto.usd) ? '' : String(priceLocal(store.auto.usd)));
-    setAutoThreshold(store.auto.thresholdPct);
-    setAgreed(false);
-    if (!defaultCard) return showToast('أضف وسيلة دفع من الإعدادات أولًا لتفعيل الشحن التلقائي', 'error');
-    setAutoOpen(true);
-  };
-
-  const submitAuto = (): void => {
-    const r = resolveAmount(autoPack, autoCustom);
-    if (typeof r === 'string') return showToast(r, 'error');
-    if (!agreed) return showToast('يجب الموافقة على الخصم التلقائي', 'error');
-    store.setAuto({ on: true, usd: r.usd, thresholdPct: autoThreshold });
-    setAutoOpen(false);
-    showToast('تم تفعيل الشحن التلقائي', 'success');
   };
 
   const downloadInvoice = (inv: BalanceInvoice): void => {
@@ -218,9 +178,16 @@ export default function AIBalancePanel(): JSX.Element {
             يعمل المساعد بنموذج {BALANCE_SETTINGS.modelName} من خلال Qhub، ويُخصم الاستهلاك من رصيدك. لا تحتاج مفتاح API.
           </p>
         </div>
-        <Button className="text-white" onClick={openTopUp}>
-          <Plus className="h-4 w-4" /> شحن الرصيد
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link to={PAYMENT_SETTINGS}>
+            <Button variant="secondary">
+              <CreditCard className="h-4 w-4" /> بيانات الدفع
+            </Button>
+          </Link>
+          <Button className="text-white" onClick={openTopUp}>
+            <Plus className="h-4 w-4" /> شحن الرصيد
+          </Button>
+        </div>
       </div>
 
       {store.stopped && (
@@ -277,53 +244,6 @@ export default function AIBalancePanel(): JSX.Element {
         </div>
       </Card>
 
-      <Card className="p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4 text-primary" />
-            <h2 className="text-body font-bold">الشحن التلقائي</h2>
-            <InfoTip>يُشحن رصيدك تلقائيًا من بطاقتك قبل أن ينفد، حتى لا يتوقف المساعد.</InfoTip>
-          </div>
-          <Toggle
-            checked={store.auto.on}
-            label="الشحن التلقائي"
-            onChange={(v) => {
-              if (v) openAuto();
-              else {
-                store.setAuto({ ...store.auto, on: false });
-                showToast('تم إيقاف الشحن التلقائي', 'success');
-              }
-            }}
-          />
-        </div>
-        <p className="text-small text-muted-light dark:text-muted-dark mt-2 leading-relaxed">
-          {store.auto.on ? (
-            <>
-              عند وصول الرصيد إلى <b>{store.auto.thresholdPct}%</b> من آخر شحنة، سيتم شحن <b>{moneyPrice(store.auto.usd)}</b> من <span dir="ltr">{defaultCard ? cardLabel(defaultCard) : '—'}</span>.{' '}
-              <button onClick={openAuto} className="text-primary font-semibold hover:underline">تعديل</button>
-            </>
-          ) : (
-            'غير مفعّل. فعّله ليتجدد رصيدك تلقائيًا قبل نفاده.'
-          )}
-        </p>
-      </Card>
-
-      <Card className="p-5">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4 text-primary" />
-            <h2 className="text-body font-bold">بيانات الدفع</h2>
-          </div>
-          <Link to={PAYMENT_SETTINGS} className="text-small text-primary font-semibold hover:underline">إدارة بيانات الدفع في الإعدادات</Link>
-        </div>
-        <p className="text-small text-muted-light dark:text-muted-dark mt-2">
-          {defaultCard ? (
-            <>الوسيلة الافتراضية: <b dir="ltr">{cardLabel(defaultCard)}</b></>
-          ) : (
-            'لا توجد وسيلة دفع محفوظة. أضف بطاقة لتتمكن من شحن الرصيد.'
-          )}
-        </p>
-      </Card>
 
       <Card className="overflow-hidden">
         <h2 className="text-body font-bold px-5 pt-5 pb-3">الفواتير</h2>
@@ -367,7 +287,7 @@ export default function AIBalancePanel(): JSX.Element {
       <Card className="p-5 border-dashed">
         <h2 className="text-body font-bold">تجربة الاستهلاك</h2>
         <p className="text-small text-muted-light dark:text-muted-dark mt-1 mb-3">
-          بيانات تجريبية: يحاكي ردّ المساعد على رسائل العملاء لترى التنبيهات والشحن التلقائي وإيقاف المساعد.
+          بيانات تجريبية: يحاكي ردّ المساعد على رسائل العملاء لترى التنبيهات وإيقاف المساعد.
         </p>
         <div className="flex items-end gap-2 flex-wrap">
           <label className="text-small font-medium text-muted-light dark:text-muted-dark">
@@ -411,47 +331,6 @@ export default function AIBalancePanel(): JSX.Element {
             <DefaultCard />
             <p className="text-small text-muted-light dark:text-muted-dark mt-2">الدفع تجريبي حاليًا ولن يُخصم أي مبلغ فعلي.</p>
           </div>
-        </div>
-      </Modal>
-
-      {/* Auto top-up */}
-      <Modal
-        open={autoOpen}
-        onClose={() => setAutoOpen(false)}
-        title="الشحن التلقائي"
-        size="lg"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setAutoOpen(false)}>إلغاء</Button>
-            <Button className="text-white" onClick={submitAuto}>تفعيل</Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <label className="block text-small font-medium text-muted-light dark:text-muted-dark">
-            الشحن عند وصول الرصيد إلى
-            <select
-              value={autoThreshold}
-              onChange={(e) => setAutoThreshold(Number(e.target.value))}
-              className="mt-1.5 block h-10 w-full rounded-input border border-border-light dark:border-border-dark bg-surface-light dark:bg-bg-dark px-3 text-body text-current"
-            >
-              {[10, 20, 30].map((p) => (
-                <option key={p} value={p}>{p}% من آخر شحنة</option>
-              ))}
-            </select>
-          </label>
-          <div>
-            <p className="text-small font-medium text-muted-light dark:text-muted-dark mb-2">مبلغ الشحن</p>
-            <AmountPicker pack={autoPack} onPack={setAutoPack} custom={autoCustom} onCustom={setAutoCustom} />
-          </div>
-          <div>
-            <p className="text-small font-medium text-muted-light dark:text-muted-dark mb-1.5">البطاقة (الوسيلة الافتراضية)</p>
-            <DefaultCard />
-          </div>
-          <label className="flex items-start gap-2 text-small leading-relaxed cursor-pointer">
-            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1" />
-            أوافق على خصم المبلغ تلقائيًا من هذه البطاقة كلما وصل الرصيد إلى النسبة المختارة
-          </label>
         </div>
       </Modal>
 
