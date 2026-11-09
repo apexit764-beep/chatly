@@ -786,6 +786,26 @@ export default function AISettings(): JSX.Element {
           {connSource === 'api' ? <KeyRound className="h-4 w-4" /> : <Wallet className="h-4 w-4" />}
           {connSource === 'api' ? 'إعدادات الربط' : 'رصيد المساعد'}
         </button>
+        {BEHAVIOR_GROUP_ORDER.map((g) => {
+          const { label, Icon } = GROUP_META[g];
+          const active = tab === 'behavior' && subTab === g;
+          return (
+            <button
+              key={g}
+              onClick={() => { setSubTab(g); setTab('behavior'); }}
+              className={cn(
+                'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
+                active ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+              {scopedAccount && modes[g] === 'custom' && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/15 text-success font-bold">مخصّص</span>
+              )}
+            </button>
+          );
+        })}
         {featuresAvailable && (
         <button
           onClick={() => setTab('features')}
@@ -798,21 +818,6 @@ export default function AISettings(): JSX.Element {
           الميزات والرصيد
         </button>
         )}
-        <button
-          onClick={() => setTab('behavior')}
-          className={cn(
-            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
-            tab === 'behavior' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
-          )}
-        >
-          <Bot className="h-4 w-4" />
-          سلوك المساعد
-          {customCount > 0 && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/15 text-success font-bold">
-              {customCount}
-            </span>
-          )}
-        </button>
       </div>
 
       {/* Muting is applied per section, not on this wrapper: opacity can't be
@@ -960,30 +965,6 @@ export default function AISettings(): JSX.Element {
                     : 'تنطبق على كل حساب تربطه.'}
               </p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-1 px-5 border-t border-border-light dark:border-border-dark bg-bg-light/40 dark:bg-bg-dark/30 overflow-x-auto">
-            {BEHAVIOR_GROUP_ORDER.map((g) => {
-              const { label, Icon } = GROUP_META[g];
-              return (
-                <button
-                  key={g}
-                  onClick={() => setSubTab(g)}
-                  className={cn(
-                    'h-11 px-4 text-small font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap',
-                    subTab === g ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {label}
-                  {scopedAccount && modes[g] === 'custom' && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-success/15 text-success font-bold">
-                      مخصّص
-                    </span>
-                  )}
-                </button>
-              );
-            })}
           </div>
 
           {scopedAccount && (
