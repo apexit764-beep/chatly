@@ -806,6 +806,23 @@ export default function AISettings(): JSX.Element {
         </div>
       </Card>
 
+      {!form.enabled && (
+        <div role="status" className="rounded-card border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark px-4 py-3.5 flex items-center gap-3">
+          <PauseCircle className="h-5 w-5 text-muted-light dark:text-muted-dark flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-small font-bold">المساعد الذكي موقوف</p>
+            <p className="text-[12px] text-muted-light dark:text-muted-dark mt-0.5">الإعدادات أدناه معطّلة ومحفوظة، وتعود للعمل عند التفعيل.</p>
+          </div>
+          <button
+            onClick={() => update('enabled', true)}
+            style={{ color: '#fff' }}
+            className="h-8 px-4 rounded-full bg-primary hover:bg-primary-dark text-white text-[12px] font-semibold flex-shrink-0"
+          >
+            تفعيل
+          </button>
+        </div>
+      )}
+
       {/* مصدر المساعد: API العميل نفسه أو رصيد من خلال Qhub */}
       <div role="tablist" aria-label="مصدر المساعد الذكي" className="inline-flex p-1 rounded-full bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark self-start">
         {([
