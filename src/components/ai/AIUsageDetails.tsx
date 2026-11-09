@@ -73,6 +73,7 @@ function buildHistory(models: string[], today: Date): DayRow[] {
   return rows;
 }
 
+/** Grouping rule: up to 31 days → per day · 32–180 → per week · over 180 → per month (custom period max 12 months). */
 function groupingFor(days: number): Grouping {
   if (days <= 31) return 'daily';
   if (days <= 180) return 'weekly';
@@ -295,11 +296,6 @@ export default function AIUsageDetails({ currentModel }: { currentModel: string 
               ))}
             </div>
           </>
-        )}
-        {grouping !== 'daily' && (
-          <p className="mt-4 text-[12px] rounded-lg bg-warning/10 text-warning px-3 py-2 leading-relaxed">
-            <b>قاعدة التجميع:</b> حتى 31 يوم ← عمود لكل يوم · من 32 لـ 180 يوم ← عمود لكل أسبوع · أكتر من 180 يوم ← عمود لكل شهر. أقصى فترة مخصصة 12 شهر.
-          </p>
         )}
       </section>
 
