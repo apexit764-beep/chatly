@@ -1159,8 +1159,10 @@ export default function AISettings(): JSX.Element {
       {tab === 'features' && connSource === 'balance' && (
         <div className={cn('space-y-5', mutedIfOff)} aria-disabled={!form.enabled}>
           <AIBalancePanel />
-          {featuresCard}
-          {channelsCard}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+            {featuresCard}
+            {channelsCard}
+          </div>
         </div>
       )}
       {tab === 'features' && connSource === 'api' && (
