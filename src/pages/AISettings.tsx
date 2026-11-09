@@ -826,9 +826,9 @@ export default function AISettings(): JSX.Element {
       {/* مصدر المساعد: API العميل نفسه أو رصيد من خلال Qhub */}
       <div role="tablist" aria-label="مصدر المساعد الذكي" className="inline-flex p-1 rounded-full bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark self-start">
         {([
-          ['api', 'ربط API الخاص بك', KeyRound],
-          ['balance', 'ربط من خلالنا (رصيد)', Zap],
-        ] as const).map(([key, label, Icon]) => (
+          ['api', 'مفتاح API الخاص بي', KeyRound, ''],
+          ['balance', 'مساعد Qhub', Zap, 'لا يحتاج إلى ربط'],
+        ] as const).map(([key, label, Icon, hint]) => (
           <button
             key={key}
             role="tab"
@@ -840,6 +840,14 @@ export default function AISettings(): JSX.Element {
             )}
           >
             <Icon className="h-4 w-4" /> {label}
+            {hint && (
+              <span className={cn(
+                'text-[10.5px] font-medium px-2 py-0.5 rounded-full',
+                connSource === key ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary',
+              )}>
+                {hint}
+              </span>
+            )}
           </button>
         ))}
       </div>
