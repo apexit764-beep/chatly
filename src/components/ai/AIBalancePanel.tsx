@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Wallet, Zap, TrendingDown, Power, Plus, Eye, Download, PauseCircle, CreditCard, Play } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Wallet, Zap, TrendingDown, Power, Plus, Eye, Download, PauseCircle, CreditCard, Play } from 'lucide-react';
 import { Button, Card, Modal, StatCard, Input } from '@components/ui';
 import { useAIBalanceStore, type BalanceInvoice, type BalanceTx } from '@/store/useAIBalanceStore';
 import { usePaymentMethodsStore, cardLabel } from '@/store/usePaymentMethodsStore';
@@ -114,6 +114,8 @@ function DefaultCard(): JSX.Element {
 }
 
 /** Prepaid assistant balance — the "connect through us" source of the AI module. Mock data for now. */
+const TX_PAGE_SIZE = 10;
+
 const TX_LABEL: Record<BalanceTx['type'], string> = {
   topup: 'شحن',
   auto: 'شحن تلقائي',
@@ -140,7 +142,11 @@ export default function AIBalancePanel(): JSX.Element {
   const spent = Math.min(store.base, Math.max(0, store.base - balance));
   const barColor = usedPct >= 70 ? 'bg-danger' : usedPct >= 50 ? 'bg-warning' : 'bg-primary';
 
-  const recentTx = useMemo(() => store.tx.slice(0, 12), [store.tx]);
+  const [txPage, setTxPage] = useState(0);
+  const txTotalPages = Math.max(1, Math.ceil(store.tx.length / TX_PAGE_SIZE));
+  const txSafePage = Math.min(txPage, txTotalPages - 1);
+  const txStart = txSafePage * TX_PAGE_SIZE;
+  const pageTx = useMemo(() => store.tx.slice(txStart, txStart + TX_PAGE_SIZE), [store.tx, txStart]);
 
   const openTopUp = (): void => {
     setPack(null);
@@ -308,7 +314,7 @@ export default function AIBalancePanel(): JSX.Element {
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
-              {recentTx.map((t) => (
+              {pageTx.map((t) => (
                 <tr key={t.id}>
                   <td className="px-4 py-3 text-small text-muted-light dark:text-muted-dark whitespace-nowrap">{formatDate(t.at)}</td>
                   <td className="px-4 py-3">
@@ -331,6 +337,45 @@ export default function AIBalancePanel(): JSX.Element {
             </tbody>
           </table>
         </div>
+        {store.tx.length > TX_PAGE_SIZE && (
+          <div className="px-4 py-3 border-t border-border-light dark:border-border-dark flex items-center justify-between flex-wrap gap-2">
+            <p className="text-small text-muted-light dark:text-muted-dark">
+              عرض {txStart + 1}-{Math.min(txStart + TX_PAGE_SIZE, store.tx.length)} من {store.tx.length}
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setTxPage(Math.max(0, txSafePage - 1))}
+                disabled={txSafePage === 0}
+                className="h-8 w-8 rounded-md hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-current flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="السابق"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              {Array.from({ length: txTotalPages }, (_, i) => i).map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setTxPage(n)}
+                  className={cn(
+                    'h-8 min-w-8 px-2.5 rounded-md text-small font-medium',
+                    txSafePage === n
+                      ? 'bg-primary text-white'
+                      : 'text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current',
+                  )}
+                >
+                  {n + 1}
+                </button>
+              ))}
+              <button
+                onClick={() => setTxPage(Math.min(txTotalPages - 1, txSafePage + 1))}
+                disabled={txSafePage === txTotalPages - 1}
+                className="h-8 w-8 rounded-md hover:bg-bg-light dark:hover:bg-bg-dark text-muted-light dark:text-muted-dark hover:text-current flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
+                aria-label="التالي"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </Card>
 
       <Card className="p-5 border-dashed">
