@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Copy, Gift, Users, UserCheck, CalendarCheck } from 'lucide-react';
 import { Button, Card, EmptyState, StatCard } from '@components/ui';
 import { useAdminStore } from '@/store/useAdminStore';
@@ -44,11 +44,14 @@ function Contact({ r }: { r: Referral }): JSX.Element {
 
 const TH = 'text-start font-medium px-4 py-3 whitespace-nowrap';
 
+type Filter = 'all' | 'subscribed' | 'registered';
+
 export default function Referral(): JSX.Element {
   const clients = useAdminStore((s) => s.clients);
   const plans = useAdminStore((s) => s.plans);
   const { code, referrals, usedMonths } = useReferralStore();
   const showToast = useUIStore((s) => s.showToast);
+  const [filter, setFilter] = useState<Filter>('all');
   const { on, monthsMonthly, monthsAnnual, discountPct, linkBase } = REFERRAL_SETTINGS;
 
   const client = clients.find((c) => c.id === CURRENT_CLIENT_ID);
@@ -62,25 +65,27 @@ export default function Referral(): JSX.Element {
   // One reward month = discountPct of one month of the referrer's own plan.
   const monthValue = Math.round(planPrice(client?.planId ?? undefined, 'monthly') * discountPct * 10) / 1000;
 
-  const subscribers = useMemo<Row[]>(
+  /** Everyone who came through the link, newest first; only subscribers carry reward numbers. */
+  const rows = useMemo<Row[]>(
     () =>
-      referrals
-        .filter((r) => r.status === 'subscribed')
-        .map((r) => {
-          const paid = planPrice(r.planId, r.cycle);
-          const value = Math.round(Math.min(monthValue, paid) * 1000) / 1000;
-          return {
-            ...r,
-            cycleLabel: r.cycle === 'annual' ? 'سنوي' : 'شهري',
-            months: r.cycle === 'annual' ? monthsAnnual : monthsMonthly,
-            value,
-            capped: value < monthValue,
-          };
-        }),
+      referrals.map((r) => {
+        if (r.status !== 'subscribed') return { ...r, cycleLabel: '—', months: 0, value: 0, capped: false };
+        const paid = planPrice(r.planId, r.cycle);
+        const value = Math.round(Math.min(monthValue, paid) * 1000) / 1000;
+        return {
+          ...r,
+          cycleLabel: r.cycle === 'annual' ? 'سنوي' : 'شهري',
+          months: r.cycle === 'annual' ? monthsAnnual : monthsMonthly,
+          value,
+          capped: value < monthValue,
+        };
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [referrals, plans, monthValue, monthsAnnual, monthsMonthly],
   );
-  const registered = referrals.filter((r) => r.status === 'registered');
+  const subscribers = rows.filter((r) => r.status === 'subscribed');
+  const registered = rows.filter((r) => r.status === 'registered');
+  const visible = filter === 'all' ? rows : filter === 'subscribed' ? subscribers : registered;
 
   const earnedMonths = subscribers.reduce((a, r) => a + r.months, 0);
   const usedCount = Math.min(usedMonths, earnedMonths);
@@ -168,52 +173,34 @@ export default function Referral(): JSX.Element {
           {on && howCard}
 
           <Card className="overflow-hidden">
-            <h2 className="text-body font-bold px-5 pt-5 pb-3">
-              المشتركون من رابطك <span className="text-small font-normal text-muted-light dark:text-muted-dark">{subscribers.length}</span>
-            </h2>
-            {subscribers.length === 0 ? (
-              <p className="text-small text-muted-light dark:text-muted-dark px-5 pb-5">لا يوجد مشتركون بعد.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-body">
-                  <thead className="bg-bg-light dark:bg-bg-dark text-small text-muted-light dark:text-muted-dark">
-                    <tr>
-                      <th className={TH}>المشترك</th>
-                      <th className={TH}>بيانات التواصل</th>
-                      <th className={TH}>تاريخ الاشتراك</th>
-                      <th className={TH}>نوع الاشتراك</th>
-                      <th className={TH}>الشهور المكتسبة</th>
-                      <th className={TH}>تاريخ الحصول على الشهر</th>
-                      <th className={TH}>قيمة الخصم</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                    {subscribers.map((r) => (
-                      <tr key={r.id}>
-                        <td className="px-4 py-3 font-semibold whitespace-nowrap">{r.name}</td>
-                        <td className="px-4 py-3"><Contact r={r} /></td>
-                        <td className="px-4 py-3 text-small whitespace-nowrap">{formatDate(r.at)}</td>
-                        <td className="px-4 py-3 text-small">{r.cycleLabel}</td>
-                        <td className="px-4 py-3 tabular-nums">{r.months}</td>
-                        <td className="px-4 py-3 text-small whitespace-nowrap">{formatDate(r.at)}</td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <span className="font-semibold tabular-nums">{formatMoney(r.value * r.months, currency)}</span>{' '}
-                          {r.capped && <Pill tone="warning">سقف</Pill>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className="flex items-center justify-between gap-3 flex-wrap px-5 pt-5 pb-3">
+              <h2 className="text-body font-bold">
+                المُحالون من رابطك <span className="text-small font-normal text-muted-light dark:text-muted-dark">{visible.length}</span>
+              </h2>
+              <div role="tablist" aria-label="تصفية المُحالين" className="inline-flex p-1 rounded-full bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark">
+                {([
+                  ['all', 'الكل', rows.length],
+                  ['subscribed', 'اشتركوا', subscribers.length],
+                  ['registered', 'سجّلوا فقط', registered.length],
+                ] as const).map(([key, label, n]) => (
+                  <button
+                    key={key}
+                    role="tab"
+                    aria-selected={filter === key}
+                    onClick={() => setFilter(key)}
+                    className={cn(
+                      'h-8 px-3.5 rounded-full text-small font-semibold transition-colors whitespace-nowrap',
+                      filter === key ? 'bg-primary text-white shadow-sm' : 'text-muted-light dark:text-muted-dark hover:text-current',
+                    )}
+                    style={filter === key ? { color: '#fff' } : undefined}
+                  >
+                    {label} <span className="tabular-nums opacity-80">({n})</span>
+                  </button>
+                ))}
               </div>
-            )}
-          </Card>
-
-          <Card className="overflow-hidden">
-            <h2 className="text-body font-bold px-5 pt-5 pb-3">
-              المسجلون من رابطك <span className="text-small font-normal text-muted-light dark:text-muted-dark">{registered.length}</span>
-            </h2>
-            {registered.length === 0 ? (
-              <p className="text-small text-muted-light dark:text-muted-dark px-5 pb-5">لا يوجد مسجلون لم يشتركوا بعد.</p>
+            </div>
+            {visible.length === 0 ? (
+              <p className="text-small text-muted-light dark:text-muted-dark px-5 pb-5">لا يوجد أشخاص مطابقون للتصفية.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-body">
@@ -221,19 +208,41 @@ export default function Referral(): JSX.Element {
                     <tr>
                       <th className={TH}>الاسم</th>
                       <th className={TH}>بيانات التواصل</th>
-                      <th className={TH}>تاريخ التسجيل</th>
+                      <th className={TH}>التاريخ</th>
                       <th className={TH}>الحالة</th>
+                      <th className={TH}>نوع الاشتراك</th>
+                      <th className={TH}>الشهور المكتسبة</th>
+                      <th className={TH}>تاريخ الحصول على الشهر</th>
+                      <th className={TH}>قيمة الخصم</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                    {registered.map((r) => (
-                      <tr key={r.id}>
-                        <td className="px-4 py-3 font-semibold whitespace-nowrap">{r.name}</td>
-                        <td className="px-4 py-3"><Contact r={r} /></td>
-                        <td className="px-4 py-3 text-small whitespace-nowrap">{formatDate(r.at)}</td>
-                        <td className="px-4 py-3"><Pill tone="warning">سجّل ولم يشترك بعد</Pill></td>
-                      </tr>
-                    ))}
+                    {visible.map((r) => {
+                      const sub = r.status === 'subscribed';
+                      return (
+                        <tr key={r.id}>
+                          <td className="px-4 py-3 font-semibold whitespace-nowrap">{r.name}</td>
+                          <td className="px-4 py-3"><Contact r={r} /></td>
+                          <td className="px-4 py-3 text-small whitespace-nowrap">{formatDate(r.at)}</td>
+                          <td className="px-4 py-3">
+                            {sub ? <Pill tone="success">اشترك</Pill> : <Pill tone="warning">سجّل ولم يشترك بعد</Pill>}
+                          </td>
+                          <td className="px-4 py-3 text-small">{sub ? r.cycleLabel : '—'}</td>
+                          <td className="px-4 py-3 tabular-nums">{sub ? r.months : '—'}</td>
+                          <td className="px-4 py-3 text-small whitespace-nowrap">{sub ? formatDate(r.at) : '—'}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {sub ? (
+                              <>
+                                <span className="font-semibold tabular-nums">{formatMoney(r.value * r.months, currency)}</span>{' '}
+                                {r.capped && <Pill tone="warning">سقف</Pill>}
+                              </>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
