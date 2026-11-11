@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Wallet, Zap, TrendingDown, Power, Plus, Eye, Download, PauseCircle, CreditCard, Play } from 'lucide-react';
 import { Button, Card, Modal, StatCard, Input } from '@components/ui';
-import { useAIBalanceStore, type BalanceInvoice } from '@/store/useAIBalanceStore';
+import { useAIBalanceStore, type BalanceInvoice, type BalanceTx } from '@/store/useAIBalanceStore';
 import { usePaymentMethodsStore, cardLabel } from '@/store/usePaymentMethodsStore';
 import { useUIStore } from '@/store/useUIStore';
 import { printAsPdf } from '@/utils/csv';
@@ -114,6 +114,15 @@ function DefaultCard(): JSX.Element {
 }
 
 /** Prepaid assistant balance — the "connect through us" source of the AI module. Mock data for now. */
+const TX_LABEL: Record<BalanceTx['type'], string> = {
+  topup: 'شحن',
+  auto: 'شحن تلقائي',
+  usage: 'استهلاك',
+  settle: 'تسوية سالب',
+  gift: 'رصيد مجاني',
+  settings: 'إعدادات',
+};
+
 export default function AIBalancePanel(): JSX.Element {
   const store = useAIBalanceStore();
   const showToast = useUIStore((s) => s.showToast);
@@ -130,6 +139,8 @@ export default function AIBalancePanel(): JSX.Element {
   const usedPct = store.base > 0 ? Math.min(100, Math.max(0, ((store.base - balance) / store.base) * 100)) : 0;
   const spent = Math.min(store.base, Math.max(0, store.base - balance));
   const barColor = usedPct >= 70 ? 'bg-danger' : usedPct >= 50 ? 'bg-warning' : 'bg-primary';
+
+  const recentTx = useMemo(() => store.tx.slice(0, 12), [store.tx]);
 
   const openTopUp = (): void => {
     setPack(null);
@@ -282,6 +293,44 @@ export default function AIBalancePanel(): JSX.Element {
             </table>
           </div>
         )}
+      </Card>
+
+      <Card className="overflow-hidden">
+        <h2 className="text-body font-bold px-5 pt-5 pb-3">سجل الحركات</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-body">
+            <thead className="bg-bg-light dark:bg-bg-dark text-small text-muted-light dark:text-muted-dark">
+              <tr>
+                <th className="text-start font-medium px-4 py-3">التاريخ</th>
+                <th className="text-start font-medium px-4 py-3">الحركة</th>
+                <th className="text-start font-medium px-4 py-3 hidden md:table-cell">التفاصيل</th>
+                <th className="text-end font-medium px-4 py-3">المبلغ</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-light dark:divide-border-dark">
+              {recentTx.map((t) => (
+                <tr key={t.id}>
+                  <td className="px-4 py-3 text-small text-muted-light dark:text-muted-dark whitespace-nowrap">{formatDate(t.at)}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={cn(
+                        'px-2 py-0.5 rounded-full text-small font-semibold',
+                        t.usd > 0 ? 'bg-success/15 text-success' : t.type === 'usage' ? 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark' : 'bg-danger/15 text-danger',
+                        t.type === 'settings' && 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark',
+                      )}
+                    >
+                      {TX_LABEL[t.type]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-small hidden md:table-cell">{t.description}</td>
+                  <td className={cn('px-4 py-3 text-end font-semibold whitespace-nowrap tabular-nums', t.usd > 0 ? 'text-success' : t.usd < 0 ? 'text-danger' : '')} dir="ltr">
+                    {t.usd === 0 ? '—' : `${t.usd > 0 ? '+' : ''}${formatMoney(exactLocal(t.usd), currency.code)}`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
 
       <Card className="p-5 border-dashed">
