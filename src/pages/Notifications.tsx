@@ -61,7 +61,9 @@ export default function Notifications(): JSX.Element {
 
   const handleClick = (n: Notification): void => {
     markRead(n.id);
-    if (n.type === 'conversation' || n.type === 'message') navigate('/inbox');
+    // A notification that names its own destination (balance, referral rewards) goes there.
+    if (n.link) navigate(n.link);
+    else if (n.type === 'conversation' || n.type === 'message') navigate('/inbox');
     else if (n.type === 'campaign') navigate('/campaigns');
   };
 
