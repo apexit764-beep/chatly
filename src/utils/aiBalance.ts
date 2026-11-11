@@ -55,7 +55,9 @@ export function moneyPrice(usd: number): string {
 
 export function moneyExact(usd: number): string {
   const c = clientCurrency();
-  return formatMoney(exactLocal(usd, c), c.code);
+  const v = exactLocal(usd, c);
+  // A balance a hair below zero must not read «-0».
+  return formatMoney(Math.abs(v) < 0.0005 ? 0 : v, c.code);
 }
 
 /** Tokens a USD amount buys at the current price. */
