@@ -25,6 +25,7 @@ const Reports = lazy(() => import('@pages/Reports'));
 const Settings = lazy(() => import('@pages/Settings'));
 const Subscribe = lazy(() => import('@pages/Subscribe'));
 const Billing = lazy(() => import('@pages/Billing'));
+const Referral = lazy(() => import('@pages/Referral'));
 const Notifications = lazy(() => import('@pages/Notifications'));
 const AISettings = lazy(() => import('@pages/AISettings'));
 const KnowledgeBase = lazy(() => import('@pages/KnowledgeBase'));
@@ -120,6 +121,7 @@ export default function App(): JSX.Element {
           <Route path="/settings" element={<Settings />} />
           <Route path="/subscribe" element={<Subscribe />} />
           <Route path="/billing" element={<Billing />} />
+          <Route path="/referral" element={<Referral />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/ai-settings" element={<AISettings />} />
           <Route path="/ai-balance" element={<Navigate to="/ai-settings?tab=connection&source=balance" replace />} />

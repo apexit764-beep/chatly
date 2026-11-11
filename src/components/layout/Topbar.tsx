@@ -28,6 +28,7 @@ const titleMap: Record<string, string> = {
   '/settings': 'الإعدادات',
   '/subscribe': 'الباقات والاشتراك',
   '/billing': 'الفوترة',
+  '/referral': 'ادعُ واكسب',
 };
 
 export function Topbar(): JSX.Element {

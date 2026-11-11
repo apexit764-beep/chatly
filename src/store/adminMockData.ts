@@ -9,6 +9,7 @@ import type {
   Subscription,
   Transaction,
 } from '@/types';
+import { REFERRAL_SETTINGS } from '@/utils/referral';
 
 const nowMinus = (min: number): string =>
   new Date(Date.now() - min * 60 * 1000).toISOString();
@@ -425,8 +426,13 @@ export const subscriptions: Subscription[] = clients
 // =====================================================================
 function makeInvoice(client: Client, monthsAgo: number, status: Invoice['status']): Invoice {
   const plan = plans.find((p) => p.id === client.planId);
-  const amount = plan?.pricesPerCountry[client.country]?.monthly ?? client.mrr;
-  const tax = Math.round(amount * 0.05);
+  const planAmount = plan?.pricesPerCountry[client.country]?.monthly ?? client.mrr;
+  // The demo client used one earned referral month on this paid invoice (see «ادعُ واكسب»):
+  // discountPct of one month of its plan comes off before tax.
+  const referral = client.id === 'client_1' && monthsAgo === 2 && status === 'paid';
+  const discount = referral ? Math.round(planAmount * REFERRAL_SETTINGS.discountPct * 10) / 1000 : 0;
+  const amount = planAmount - discount;
+  const tax = referral ? Math.round(amount * 0.05 * 1000) / 1000 : Math.round(amount * 0.05);
   const dueDate = new Date(Date.now() - (monthsAgo - 1) * 30 * 86400000).toISOString();
   return {
     id: `inv_${client.id}_${monthsAgo}`,
@@ -440,7 +446,12 @@ function makeInvoice(client: Client, monthsAgo: number, status: Invoice['status'
     status,
     dueDate,
     paidAt: status === 'paid' ? new Date(Date.parse(dueDate) - 86400000).toISOString() : undefined,
-    items: [{ description: `اشتراك ${plan?.nameAr ?? 'باقة'} — شهري`, quantity: 1, unitPrice: amount, total: amount }],
+    items: [
+      { description: `اشتراك ${plan?.nameAr ?? 'باقة'} — شهري`, quantity: 1, unitPrice: planAmount, total: planAmount },
+      ...(referral
+        ? [{ description: `خصم مكافأة الإحالة (شهر واحد · ${REFERRAL_SETTINGS.discountPct}%)`, quantity: 1, unitPrice: -discount, total: -discount }]
+        : []),
+    ],
     createdAt: new Date(Date.parse(dueDate) - 7 * 86400000).toISOString(),
   };
 }

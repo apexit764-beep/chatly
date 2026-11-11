@@ -14,6 +14,7 @@ import {
   PanelRightClose,
   PanelRightOpen,
   MessageSquareWarning,
+  Gift,
 } from 'lucide-react';
 
 import { useTranslation } from '@/i18n/useTranslation';
@@ -47,6 +48,7 @@ const mainNav: NavItem[] = [
   { to: '/ai-settings', label: 'إعدادات الذكاء الاصطناعي', icon: Sparkles, group: 'manage', permission: 'ai.view' },
   { to: '/feedback', label: 'الشكاوى والاقتراحات', icon: MessageSquareWarning, group: 'system', permission: 'feedback.view' },
   { to: '/billing', label: 'الباقات والاشتراك', icon: CreditCard, group: 'system', permission: 'billing.view' },
+  { to: '/referral', label: 'ادعُ واكسب', icon: Gift, group: 'system', permission: 'billing.view' },
   { to: '/settings', label: 'الإعدادات', icon: Settings, group: 'system' },
 ];
 

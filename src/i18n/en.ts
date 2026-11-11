@@ -801,6 +801,7 @@ export const en: Record<string, string> = {
   'حد طول الرد': 'Response Length Limit',
   'رمز': 'tokens',
   'القنوات المُفعّل عليها': 'Enabled Channels',
+  'ادعُ واكسب': 'Refer & Earn',
   'قناة مُفعّلة': 'channel enabled',
   'لغات الرد': 'Reply Languages',
   'نبرة وأسلوب الرد': 'Reply Tone & Style',

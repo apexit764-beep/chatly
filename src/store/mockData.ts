@@ -666,6 +666,8 @@ export const notifications: Notification[] = [
   { id: 'n2', title: 'رسالة جديدة', body: 'أحمد الشعيلي: هل الشقة في الخوض ما زالت متاحة؟', timestamp: nowMinus(15), read: false, type: 'message' },
   { id: 'n3', title: 'حملة مكتملة', body: 'تم إرسال حملة "تجديد عقود المالكين" بنجاح', timestamp: nowMinus(60 * 2), read: true, type: 'campaign' },
   { id: 'n4', title: 'إسناد محادثة', body: 'تم إسناد محادثة جديدة إليك', timestamp: nowMinus(60 * 5), read: true, type: 'system' },
+  { id: 'n5', title: 'كسبت 3 شهور خصم', body: 'اشتركت شركة الريان من خلال رابطك.', timestamp: nowMinus(60 * 24 * 2), read: false, type: 'system', link: '/referral' },
+  { id: 'n6', title: 'كسبت شهر خصم', body: 'اشترك متجر نور من خلال رابطك.', timestamp: nowMinus(60 * 24 * 7), read: false, type: 'system', link: '/referral' },
 ];
 
 // ============================================================

@@ -39,6 +39,7 @@ const PAGE_LABELS: Record<string, string> = {
   '/campaigns': 'الحملات التسويقية',
   '/settings': 'الإعدادات',
   '/billing': 'الباقات والاشتراك',
+  '/referral': 'ادعُ واكسب',
   '/subscribe': 'الاشتراك',
   '/notifications': 'الإشعارات',
   '/ai-settings': 'إعدادات الذكاء الاصطناعي',
