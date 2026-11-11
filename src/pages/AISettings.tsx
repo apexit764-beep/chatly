@@ -604,7 +604,7 @@ export default function AISettings(): JSX.Element {
    */
   const mutedIfOff = cn('transition-opacity', !form.enabled && 'opacity-50 pointer-events-none');
 
-  type PageTab = 'connection' | 'features' | 'behavior' | 'usage';
+  type PageTab = 'connection' | 'features' | 'channels' | 'behavior' | 'usage';
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const sourceParam = searchParams.get('source');
@@ -613,7 +613,7 @@ export default function AISettings(): JSX.Element {
   useEffect(() => {
     if (sourceParam === 'balance' || sourceParam === 'api') setConnSource(sourceParam);
   }, [sourceParam]);
-  const [tabChoice, setTab] = useState<PageTab>(tabParam === 'features' || tabParam === 'behavior' || tabParam === 'usage' ? tabParam : 'connection');
+  const [tabChoice, setTab] = useState<PageTab>(tabParam === 'features' || tabParam === 'channels' || tabParam === 'behavior' || tabParam === 'usage' ? tabParam : 'connection');
   // Features and usage only exist once an AI provider is connected; until then
   // the page opens on the connection tab whatever was asked for.
   const featuresAvailable = isConnected(saved) || connSource === 'balance';
@@ -621,12 +621,14 @@ export default function AISettings(): JSX.Element {
   const tab: PageTab =
     connSource === 'balance' && tabChoice === 'connection'
       ? 'features'
-      : tabChoice === 'features' && !featuresAvailable
+      : (tabChoice === 'features' || tabChoice === 'channels') && !featuresAvailable
         ? 'connection'
-        : tabChoice;
+        : tabChoice === 'channels' && connSource !== 'balance'
+          ? 'features'
+          : tabChoice;
   // The usage alert's notification links here with ?tab=features — also when the page is already open.
   useEffect(() => {
-    if (tabParam === 'features' || tabParam === 'behavior' || tabParam === 'connection' || tabParam === 'usage') setTab(tabParam);
+    if (tabParam === 'features' || tabParam === 'channels' || tabParam === 'behavior' || tabParam === 'connection' || tabParam === 'usage') setTab(tabParam);
   }, [tabParam]);
   /** Which section is open for the selected scope inside «سلوك المساعد». */
   const [subTab, setSubTab] = useState<BehaviorGroup>('style');
@@ -898,7 +900,19 @@ export default function AISettings(): JSX.Element {
           )}
         >
           {connSource === 'balance' ? <Wallet className="h-4 w-4" /> : <Gauge className="h-4 w-4" />}
-          {connSource === 'balance' ? 'المميزات والرصيد' : 'الميزات والرصيد'}
+          {connSource === 'balance' ? 'الرصيد' : 'الميزات والرصيد'}
+        </button>
+        )}
+        {featuresAvailable && connSource === 'balance' && (
+        <button
+          onClick={() => setTab('channels')}
+          className={cn(
+            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
+            tab === 'channels' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+          )}
+        >
+          <Radio className="h-4 w-4" />
+          القنوات والميزات
         </button>
         )}
         <button
@@ -1159,10 +1173,12 @@ export default function AISettings(): JSX.Element {
       {tab === 'features' && connSource === 'balance' && (
         <div className={cn('space-y-5', mutedIfOff)} aria-disabled={!form.enabled}>
           <AIBalancePanel />
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
-            {featuresCard}
-            {channelsCard}
-          </div>
+        </div>
+      )}
+      {tab === 'channels' && connSource === 'balance' && (
+        <div className={cn('grid grid-cols-1 xl:grid-cols-2 gap-5 items-start', mutedIfOff)} aria-disabled={!form.enabled}>
+          {featuresCard}
+          {channelsCard}
         </div>
       )}
       {tab === 'features' && connSource === 'api' && (

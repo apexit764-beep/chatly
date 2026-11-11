@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Wallet, Zap, TrendingDown, Power, Plus, Eye, Download, PauseCircle, CreditCard, Play } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Wallet, Zap, TrendingDown, Power, Plus, Eye, Download, PauseCircle, CreditCard } from 'lucide-react';
 import { Button, Card, Modal, StatCard, Input } from '@components/ui';
 import { useAIBalanceStore, type BalanceInvoice, type BalanceTx } from '@/store/useAIBalanceStore';
 import { usePaymentMethodsStore, cardLabel } from '@/store/usePaymentMethodsStore';
@@ -135,7 +135,6 @@ export default function AIBalancePanel(): JSX.Element {
   const [pack, setPack] = useState<number | null>(null);
   const [custom, setCustom] = useState('');
   const [invoice, setInvoice] = useState<BalanceInvoice | null>(null);
-  const [simCount, setSimCount] = useState(1500);
   const defaultCard = usePaymentMethodsStore((st) => st.cards.find((c) => c.isDefault) ?? st.cards[0] ?? null);
 
   const usedPct = store.base > 0 ? Math.min(100, Math.max(0, ((store.base - balance) / store.base) * 100)) : 0;
@@ -177,13 +176,6 @@ export default function AIBalancePanel(): JSX.Element {
          <tr><td><strong>الإجمالي المدفوع</strong></td><td class="right"><strong>${formatMoney(inv.amount, inv.currency)}</strong></td></tr>
        </table>`,
     );
-  };
-
-  const runSimulation = (): void => {
-    const r = store.simulateUsage(simCount);
-    if (r.done === 0) showToast(`المساعد متوقف، وتم تحويل ${r.blocked.toLocaleString('en-US')} رسالة إلى الموظفين`, 'error');
-    else if (r.blocked > 0) showToast(`ردّ المساعد على ${r.done.toLocaleString('en-US')} رسالة ثم توقف`, 'info');
-    else showToast(`ردّ المساعد على ${r.done.toLocaleString('en-US')} رسالة`, 'success');
   };
 
   return (
@@ -376,33 +368,6 @@ export default function AIBalancePanel(): JSX.Element {
             </div>
           </div>
         )}
-      </Card>
-
-      <Card className="p-5 border-dashed">
-        <h2 className="text-body font-bold">تجربة الاستهلاك</h2>
-        <p className="text-small text-muted-light dark:text-muted-dark mt-1 mb-3">
-          بيانات تجريبية: يحاكي ردّ المساعد على رسائل العملاء لترى التنبيهات وإيقاف المساعد.
-        </p>
-        <div className="flex items-end gap-2 flex-wrap">
-          <label className="text-small font-medium text-muted-light dark:text-muted-dark">
-            عدد الرسائل
-            <select
-              value={simCount}
-              onChange={(e) => setSimCount(Number(e.target.value))}
-              className="mt-1.5 block h-10 rounded-input border border-border-light dark:border-border-dark bg-surface-light dark:bg-bg-dark px-3 text-body text-current"
-            >
-              <option value={500}>500 رسالة</option>
-              <option value={1500}>1,500 رسالة</option>
-              <option value={5000}>5,000 رسالة</option>
-            </select>
-          </label>
-          <Button variant="secondary" onClick={runSimulation}>
-            <Play className="h-4 w-4" /> تنفيذ
-          </Button>
-          <Button variant="ghost" onClick={() => { store.reset(); showToast('أُعيد الرصيد إلى بيانات التجربة', 'info'); }}>
-            إعادة الضبط
-          </Button>
-        </div>
       </Card>
 
       {/* Top-up */}
