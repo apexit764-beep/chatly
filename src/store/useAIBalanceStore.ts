@@ -56,20 +56,53 @@ interface BalanceState {
   nextInvoice: number;
   balance: () => number;
   topUp: (usd: number, paidLocal: number) => BalanceInvoice;
+  /** Admin grants free credit; it lands in the client's balance and the transactions log. */
+  grantGift: (usd: number, note?: string) => void;
   setAuto: (auto: AutoTopUp) => void;
   /** Mock usage: the assistant answers `messages` customer messages. */
   simulateUsage: (messages: number) => { done: number; blocked: number };
   reset: () => void;
 }
 
-const STORAGE_KEY = 'qhub_ai_balance';
+const STORAGE_KEY = 'qhub_ai_balance_v2';
 const DAY = 86_400_000;
 
 function ago(days: number): string {
   return new Date(Date.now() - days * DAY).toISOString();
 }
 
-function initial(): Omit<BalanceState, 'balance' | 'topUp' | 'setAuto' | 'simulateUsage' | 'reset'> {
+/** Seeded history (newest first). Credits − usage = the 6.2 USD left in the lot above. */
+function seedTx(): BalanceTx[] {
+  const out: BalanceTx[] = [];
+  let id = 1;
+  const add = (days: number, type: BalanceTxType, description: string, usd: number): void => {
+    out.push({ id: id++, at: ago(days), type, description, usd });
+  };
+  add(75, 'topup', 'INV-1036 · ' + MOCK_CARD, 10);
+  add(60, 'gift', 'رصيد مجاني من الإدارة · هدية ترحيبية', 2);
+  add(40, 'topup', 'INV-1037 · ' + MOCK_CARD, 10);
+  add(20, 'topup', 'INV-1038 · ' + MOCK_CARD, 10);
+  // 20 weekly-ish usage entries (10 × 1.0 + 10 × 1.2 USD) + the latest 3.8 USD one.
+  for (let i = 0; i < 20; i += 1) {
+    const usd = i % 2 === 0 ? 1 : 1.2;
+    add(72 - i * 3.4, 'usage', `ردود المساعد (${Math.round(usd / 0.002).toLocaleString('en-US')} رسالة)`, -usd);
+  }
+  add(1, 'usage', 'ردود المساعد (1,900 رسالة)', -3.8);
+  return out.sort((a, b) => b.at.localeCompare(a.at)).map((t, i) => ({ ...t, id: out.length - i }));
+}
+
+function seedInvoice(number: string, days: number, c: ReturnType<typeof clientCurrency>): BalanceInvoice {
+  return {
+    number,
+    at: ago(days),
+    description: 'شحن رصيد المساعد',
+    amount: priceLocal(10, c),
+    currency: c.code,
+    card: MOCK_CARD,
+  };
+}
+
+function initial(): Omit<BalanceState, 'balance' | 'topUp' | 'grantGift' | 'setAuto' | 'simulateUsage' | 'reset'> {
   const c = clientCurrency();
   return {
     lots: [{ id: 1, source: 'شحن', usd: 10, left: 6.2 }],
@@ -79,21 +112,13 @@ function initial(): Omit<BalanceState, 'balance' | 'topUp' | 'setAuto' | 'simula
     stopped: false,
     usedMonthTokens: 1_900_000,
     auto: { on: false, usd: 10, thresholdPct: 20 },
-    tx: [
-      { id: 3, at: ago(1), type: 'usage', description: 'ردود المساعد (1,900 رسالة)', usd: -3.8 },
-      { id: 2, at: ago(20), type: 'topup', description: 'INV-1038 · ' + MOCK_CARD, usd: 10 },
-    ],
+    tx: seedTx(),
     invoices: [
-      {
-        number: 'INV-1038',
-        at: ago(20),
-        description: 'شحن رصيد المساعد',
-        amount: priceLocal(10, c),
-        currency: c.code,
-        card: MOCK_CARD,
-      },
+      seedInvoice('INV-1038', 20, c),
+      seedInvoice('INV-1037', 40, c),
+      seedInvoice('INV-1036', 75, c),
     ],
-    nextId: 4,
+    nextId: 100,
     nextInvoice: 1039,
   };
 }
@@ -216,6 +241,12 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
       credit(usd, 'شحن', 'topup', `${invoice.number} · ${label}`);
       notify('تم شحن رصيد المساعد', `تم شحن رصيد المساعد بمبلغ ${moneyPrice(usd)}. رقم الفاتورة ${invoice.number}.`);
       return invoice;
+    },
+
+    grantGift: (usd, note) => {
+      if (!(usd > 0)) return;
+      credit(usd, 'رصيد مجاني', 'gift', note?.trim() ? `رصيد مجاني من الإدارة · ${note.trim()}` : 'رصيد مجاني من الإدارة');
+      notify('حصلت على رصيد مجاني', `أضافت الإدارة ${moneyPrice(usd)} إلى رصيد المساعد.`);
     },
 
     setAuto: (auto) => {
