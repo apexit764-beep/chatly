@@ -1,1 +1,0 @@
-import{aF as a,at as n}from"./index-Dv2oZKWF.js";function r({className:e,...t}){return a.jsx("span",{className:n("inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-small font-medium border",e),...t})}export{r as B};
