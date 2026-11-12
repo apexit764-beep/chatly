@@ -1,12 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Copy, Gift, Users, UserCheck, CalendarCheck } from 'lucide-react';
 import { Button, Card, EmptyState, StatCard } from '@components/ui';
-import { useAdminStore } from '@/store/useAdminStore';
 import { useReferralStore, type Referral } from '@/store/useReferralStore';
 import { useUIStore } from '@/store/useUIStore';
 import { REFERRAL_SETTINGS, monthsLabel } from '@/utils/referral';
 import { formatDate } from '@/utils/format';
-import { formatMoney } from '@/utils/money';
 import { cn } from '@/utils/cn';
 
 const CURRENT_CLIENT_ID = 'client_1';
@@ -14,9 +12,6 @@ const CURRENT_CLIENT_ID = 'client_1';
 interface Row extends Referral {
   cycleLabel: string;
   months: number;
-  /** Value of one reward month: the referrer's month value, capped at what the subscriber paid. */
-  value: number;
-  capped: boolean;
 }
 
 function Pill({ tone, children }: { tone: 'warning' | 'success'; children: string }): JSX.Element {
@@ -47,41 +42,16 @@ const TH = 'text-start font-medium px-4 py-3 whitespace-nowrap';
 type Filter = 'all' | 'subscribed' | 'registered';
 
 export default function Referral(): JSX.Element {
-  const clients = useAdminStore((s) => s.clients);
-  const plans = useAdminStore((s) => s.plans);
   const { code, referrals, usedMonths } = useReferralStore();
   const showToast = useUIStore((s) => s.showToast);
   const [filter, setFilter] = useState<Filter>('all');
-  const { on, monthsMonthly, monthsAnnual, discountPct, linkBase } = REFERRAL_SETTINGS;
+  const { on, monthsMonthly, monthsAnnual, linkBase } = REFERRAL_SETTINGS;
 
-  const client = clients.find((c) => c.id === CURRENT_CLIENT_ID);
-  const currency = client?.currency ?? 'OMR';
-  const country = client?.country ?? 'OM';
-  const planPrice = (planId?: string, cycle?: 'monthly' | 'annual'): number => {
-    const p = plans.find((x) => x.id === planId)?.pricesPerCountry[country];
-    return p ? (cycle === 'annual' ? p.yearly : p.monthly) : 0;
-  };
-
-  // One reward month = discountPct of one month of the referrer's own plan.
-  const monthValue = Math.round(planPrice(client?.planId ?? undefined, 'monthly') * discountPct * 10) / 1000;
-
-  /** Everyone who came through the link, newest first; only subscribers carry reward numbers. */
-  const rows = useMemo<Row[]>(
-    () =>
-      referrals.map((r) => {
-        if (r.status !== 'subscribed') return { ...r, cycleLabel: '—', months: 0, value: 0, capped: false };
-        const paid = planPrice(r.planId, r.cycle);
-        const value = Math.round(Math.min(monthValue, paid) * 1000) / 1000;
-        return {
-          ...r,
-          cycleLabel: r.cycle === 'annual' ? 'سنوي' : 'شهري',
-          months: r.cycle === 'annual' ? monthsAnnual : monthsMonthly,
-          value,
-          capped: value < monthValue,
-        };
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [referrals, plans, monthValue, monthsAnnual, monthsMonthly],
+  /** Everyone who came through the link, newest first; only subscribers carry reward months. */
+  const rows: Row[] = referrals.map((r) =>
+    r.status !== 'subscribed'
+      ? { ...r, cycleLabel: '—', months: 0 }
+      : { ...r, cycleLabel: r.cycle === 'annual' ? 'سنوي' : 'شهري', months: r.cycle === 'annual' ? monthsAnnual : monthsMonthly },
   );
   const subscribers = rows.filter((r) => r.status === 'subscribed');
   const registered = rows.filter((r) => r.status === 'registered');
@@ -105,7 +75,7 @@ export default function Referral(): JSX.Element {
         {[
           'أرسل رابطك لأي شخص.',
           `عندما يشترك ويدفع: الاشتراك الشهري = ${monthsLabel(monthsMonthly)}، والاشتراك السنوي = ${monthsLabel(monthsAnnual)}.`,
-          `كل شهر مكتسب = خصم ${discountPct}% على شهر من اشتراكك، بحد أقصى ما دفعه المشترك، ويُطبق تلقائيًا عند التجديد.`,
+          'كل شهر مكتسب = شهر مجاني على اشتراكك، ويُطبق تلقائيًا عند التجديد.',
         ].map((text, i) => (
           <div key={i} className="rounded-card bg-bg-light dark:bg-bg-dark p-4 text-small leading-loose">
             <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white text-[12px] font-bold mb-2">{i + 1}</span>
@@ -135,7 +105,7 @@ export default function Referral(): JSX.Element {
         <h1 className="text-h1 font-extrabold">ادعُ واكسب</h1>
         <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
           {on
-            ? 'أرسل رابطك، وكل مشترك جديد يدفع يكسبك شهور خصم على اشتراكك'
+            ? 'أرسل رابطك، وكل مشترك جديد يدفع يكسبك شهورًا مجانية على اشتراكك'
             : 'مكافآتك التي اكتسبتها سابقًا تُطبق بشكل طبيعي على التجديد'}
         </p>
       </div>
@@ -213,7 +183,6 @@ export default function Referral(): JSX.Element {
                       <th className={TH}>نوع الاشتراك</th>
                       <th className={TH}>الشهور المكتسبة</th>
                       <th className={TH}>تاريخ الحصول على الشهر</th>
-                      <th className={TH}>قيمة الخصم</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-light dark:divide-border-dark">
@@ -230,16 +199,6 @@ export default function Referral(): JSX.Element {
                           <td className="px-4 py-3 text-small">{sub ? r.cycleLabel : '—'}</td>
                           <td className="px-4 py-3 tabular-nums">{sub ? r.months : '—'}</td>
                           <td className="px-4 py-3 text-small whitespace-nowrap">{sub ? formatDate(r.at) : '—'}</td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            {sub ? (
-                              <>
-                                <span className="font-semibold tabular-nums">{formatMoney(r.value * r.months, currency)}</span>{' '}
-                                {r.capped && <Pill tone="warning">سقف</Pill>}
-                              </>
-                            ) : (
-                              '—'
-                            )}
-                          </td>
                         </tr>
                       );
                     })}

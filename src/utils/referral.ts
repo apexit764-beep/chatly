@@ -6,14 +6,11 @@ export const REFERRAL_SETTINGS: {
   monthsMonthly: number;
   /** Reward months for each new annual subscriber. */
   monthsAnnual: number;
-  /** Discount in a reward month, as a percentage of one month of the referrer's plan. */
-  discountPct: number;
   linkBase: string;
 } = {
   on: true,
   monthsMonthly: 1,
   monthsAnnual: 3,
-  discountPct: 50,
   linkBase: 'qhub.chat/r/',
 };
 
