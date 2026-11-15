@@ -46,6 +46,7 @@ import { cn } from '@/utils/cn';
 import { DEMO_BACKUP_CODES, DEMO_TOTP_SECRET, otpAuthUri, verifyBackupCode, verifyTotpCode } from '@/utils/twoFactor';
 import { usePermission } from '@/hooks/usePermission';
 import type { PermissionKey } from '@/types';
+import { INDUSTRIES, normalizeIndustry, seedAssistantPrompt } from '@/utils/industryPrompts';
 import Billing from './Billing';
 import Tags from './Tags';
 import SavedReplies from './SavedReplies';
@@ -163,7 +164,7 @@ function GeneralTab(): JSX.Element {
   const showToast = useUIStore((s) => s.showToast);
   const [siteName, setSiteName] = useState(general.siteName);
   const [companyLogo, setCompanyLogo] = useState(general.companyLogo);
-  const [industry, setIndustry] = useState(general.industry);
+  const [industry, setIndustry] = useState(() => normalizeIndustry(general.industry));
   const [companySize, setCompanySize] = useState(general.companySize);
 
   const onLogoChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -180,6 +181,7 @@ function GeneralTab(): JSX.Element {
   // their profile, not on the company.
   const save = (): void => {
     setGeneral({ siteName: siteName.trim(), companyLogo, industry, companySize, companySavedAt: new Date().toISOString() });
+    seedAssistantPrompt(industry, { name: siteName, country: general.country });
     showToast('تم حفظ الإعدادات', 'success');
   };
 
@@ -222,16 +224,7 @@ function GeneralTab(): JSX.Element {
         <div className="flex items-center gap-2">
           <select value={industry} onChange={(e) => setIndustry(e.target.value)} aria-label="القطاع" className={selectClass}>
             <option value="">اختر القطاع</option>
-            <option value="real_estate">العقارات</option>
-            <option value="retail">التجزئة والتجارة</option>
-            <option value="healthcare">الرعاية الصحية</option>
-            <option value="education">التعليم</option>
-            <option value="hospitality">الضيافة والسياحة</option>
-            <option value="automotive">السيارات</option>
-            <option value="finance">المالية والبنوك</option>
-            <option value="tech">التقنية</option>
-            <option value="services">الخدمات</option>
-            <option value="other">أخرى</option>
+            {INDUSTRIES.map((i) => <option key={i.value} value={i.value}>{i.label}</option>)}
           </select>
           <button type="button" onClick={() => setIndustry('')} disabled={!industry} className={clearClass}>مسح</button>
         </div>

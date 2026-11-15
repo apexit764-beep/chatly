@@ -74,6 +74,11 @@ export interface AISettings {
   /** Country within the Gulf dialect — only meaningful when dialect === 'gulf' */
   gulfCountry?: AIGulfCountry;
   prompt: string;
+  /**
+   * The starter prompt for the company's industry is offered once — the first time an industry is
+   * chosen. After that the prompt is the owner's, even if it is cleared or the industry changes.
+   */
+  promptSeeded?: boolean;
   forbiddenTopics: string;
   /** Reply the AI sends when a forbidden topic is detected */
   forbiddenReply: string;
@@ -127,6 +132,7 @@ export const AI_SHARED_KEYS = [
   'usageAlertEnabled',
   'usageAlertTokens',
   'dailyReportEnabled',
+  'promptSeeded',
 ] as const;
 
 /** Everything else: how the assistant talks and when it hands over. Per account. */
