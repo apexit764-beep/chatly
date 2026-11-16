@@ -15,6 +15,8 @@ import {
   Image as ImageIcon,
   Sparkles,
   Zap,
+  Workflow,
+  FlaskConical,
   Bot,
   Check,
   CheckCheck,
@@ -86,6 +88,9 @@ import { downloadCsv } from '@/utils/csv';
 import { cn } from '@/utils/cn';
 import { deriveSessions } from '@/utils/sessions';
 import SessionRail from '@/components/inbox/SessionRail';
+import { ChatTemplatePanel, WINDOW_CLOSED } from '@/components/inbox/ChatTemplatePanel';
+import { useChatRunStore } from '@/store/useChatRunStore';
+import { activeRun, customerWindowOpen } from '@/utils/chatTemplateRuns';
 import { VoiceRecorder } from '@/components/inbox/VoiceRecorder';
 import type { Conversation, ConversationSession, ConversationStatus, Channel, Department, Contact } from '@/types';
 import type { AssignedChip, InboxView } from '@/store/useInboxStore';
@@ -234,6 +239,9 @@ export default function Inbox(): JSX.Element {
   }, [filtered, selectedId, setSelectedId, lockedConversationIds]);
 
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
+  const openChatTemplatePicker = useChatRunStore((s) => s.openPicker);
+  const openChatTemplateSimulator = useChatRunStore((s) => s.openSimulator);
+  const composerIsWhatsApp = !!selected && channels.find((c) => c.id === selected.channelId)?.type === 'whatsapp';
   // Blurring the row only hides the preview; the conversation and its details
   // must not render at all, since the plan notice promises they are not shown.
   const selectedLocked = selected ? lockedConversationIds.has(selected.id) : false;
@@ -957,6 +965,8 @@ export default function Inbox(): JSX.Element {
                 </div>
               )}
 
+              {composerIsWhatsApp && selected && <ChatTemplatePanel conversation={selected} />}
+
               {showTemplates && (() => {
                 const q = templateSearch.trim().toLowerCase();
                 const filteredTemplates = q
@@ -1064,6 +1074,25 @@ export default function Inbox(): JSX.Element {
                     label={t('الردود السريعة')}
                     onClick={() => setShowTemplates((v) => !v)}
                   />
+                  {composerIsWhatsApp && (
+                    <>
+                      <ToolBtn
+                        icon={<Workflow className="h-[18px] w-[18px]" />}
+                        label={t('إرسال قالب محادثة')}
+                        onClick={() => {
+                          if (!selected) return;
+                          if (activeRun(selected.id)) { showToast(t('يوجد قالب قيد التشغيل في هذه المحادثة'), 'error'); return; }
+                          if (!customerWindowOpen(selected)) { showToast(t(WINDOW_CLOSED), 'error'); return; }
+                          openChatTemplatePicker(selected.id);
+                        }}
+                      />
+                      <ToolBtn
+                        icon={<FlaskConical className="h-[18px] w-[18px]" />}
+                        label={t('محاكاة رد العميل')}
+                        onClick={() => selected && openChatTemplateSimulator(selected.id)}
+                      />
+                    </>
+                  )}
                   <ToolBtn
                     icon={<Smile className="h-[18px] w-[18px]" />}
                     label={t('رمز تعبيري')}
@@ -2944,7 +2973,19 @@ function MessageBubble({
               // `anywhere` rather than `break-word`: only the former lowers the
               // element's min-content width, which is what lets the bubble shrink
               // instead of the long word pushing it wide and overflowing.
-              <p className="whitespace-pre-wrap [overflow-wrap:anywhere] leading-relaxed">{t(msg.content)}</p>
+              <>
+                {msg.chatTemplate && (
+                  <span className="mb-0.5 flex items-center gap-1 text-[10.5px] font-bold text-primary">
+                    <Workflow className="h-3 w-3" />{t('قالب:')} {msg.chatTemplate.name}
+                  </span>
+                )}
+                <p className="whitespace-pre-wrap [overflow-wrap:anywhere] leading-relaxed">{t(msg.content)}</p>
+                {msg.chatTemplate?.options && msg.chatTemplate.options.length > 0 && (
+                  <p className="mt-1 text-[11px] text-muted-light dark:text-muted-dark [overflow-wrap:anywhere]">
+                    {t('الخيارات:')} {msg.chatTemplate.options.join(' · ')}
+                  </p>
+                )}
+              </>
             )}
             <div className={cn('flex items-center gap-1.5 text-[10px] mt-1', headerMutedClass)}>
               {isOut ? (

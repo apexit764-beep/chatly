@@ -40,6 +40,7 @@ const PAGE_LABELS: Record<string, string> = {
   '/settings': 'الإعدادات',
   '/billing': 'الباقات والاشتراك',
   '/referral': 'ادعُ واكسب',
+  '/chat-templates': 'قوالب المحادثة',
   '/subscribe': 'الاشتراك',
   '/notifications': 'الإشعارات',
   '/ai-settings': 'إعدادات الذكاء الاصطناعي',

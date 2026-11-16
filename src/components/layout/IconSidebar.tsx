@@ -15,6 +15,7 @@ import {
   PanelRightOpen,
   MessageSquareWarning,
   Gift,
+  Workflow,
 } from 'lucide-react';
 
 import { useTranslation } from '@/i18n/useTranslation';
@@ -45,6 +46,7 @@ const mainNav: NavItem[] = [
   { to: '/departments', label: 'الأقسام', icon: Building2, group: 'manage', permission: 'departments.view' },
   { to: '/team', label: 'فريق العمل', icon: UsersRound, group: 'manage', permission: 'team.view' },
   { to: '/campaigns', label: 'الحملات التسويقية', icon: Megaphone, group: 'manage', permission: 'campaigns.view' },
+  { to: '/chat-templates', label: 'قوالب المحادثة', icon: Workflow, group: 'manage', permission: 'conversations.view' },
   { to: '/ai-settings', label: 'إعدادات الذكاء الاصطناعي', icon: Sparkles, group: 'manage', permission: 'ai.view' },
   { to: '/feedback', label: 'الشكاوى والاقتراحات', icon: MessageSquareWarning, group: 'system', permission: 'feedback.view' },
   { to: '/billing', label: 'الباقات والاشتراك', icon: CreditCard, group: 'system', permission: 'billing.view' },

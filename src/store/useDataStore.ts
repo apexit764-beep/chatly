@@ -61,8 +61,10 @@ interface DataState {
     conversationId: string,
     content: string,
     type?: 'text' | 'note',
-    extra?: Pick<Message, 'ratingToken'>,
+    extra?: Pick<Message, 'ratingToken' | 'chatTemplate'>,
   ) => void;
+  /** A message from the customer in an existing conversation (simulated while the data is mock). */
+  receiveMessage: (conversationId: string, content: string) => void;
   editMessage: (conversationId: string, messageId: string, newContent: string) => void;
   assignConversation: (conversationId: string, agentId: string | null) => void;
   setConversationDepartment: (conversationId: string, departmentId: string | null) => void;
@@ -283,6 +285,27 @@ export const useDataStore = create<DataState>((set, get) => ({
                 lastMessage: isNote ? c.lastMessage : extra?.ratingToken ? RATING_SENT_PREVIEW : content,
                 lastMessageAt: isNote ? c.lastMessageAt : message.timestamp,
               }
+            : c
+        ),
+      };
+    }),
+
+  receiveMessage: (conversationId, content) =>
+    set((state) => {
+      const message: Message = {
+        id: newId(),
+        conversationId,
+        direction: 'in',
+        type: 'text',
+        content,
+        timestamp: new Date().toISOString(),
+        read: false,
+        delivered: true,
+      };
+      return {
+        conversations: state.conversations.map((c) =>
+          c.id === conversationId
+            ? { ...c, messages: [...c.messages, message], lastMessage: content, lastMessageAt: message.timestamp, unreadCount: c.unreadCount + 1 }
             : c
         ),
       };

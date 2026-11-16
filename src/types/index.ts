@@ -233,6 +233,8 @@ export interface Message {
    * never holds a clickable link that would let them rate their own chat.
    */
   ratingToken?: string;
+  /** Sent by a chat template (see «قوالب المحادثة»): its name, and the choices offered to the customer. */
+  chatTemplate?: { name: string; options?: string[] };
 }
 
 export interface Conversation {
