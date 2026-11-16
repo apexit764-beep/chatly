@@ -61,6 +61,7 @@ import {
   type ChannelOverride,
   type AISettings as AISettingsType, type AILanguage, type AITone, type AIDialect, type AIGulfCountry, type AIHours, type AIModel, type AIProvider, type DaySchedule,
 } from '@/store/useAIStore';
+import { useAISourceStore } from '@/store/useAISourceStore';
 import { useDataStore } from '@/store/useDataStore';
 import { useAIUsageStore, type AIFeature } from '@/store/useAIUsageStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -608,7 +609,11 @@ export default function AISettings(): JSX.Element {
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const sourceParam = searchParams.get('source');
-  const [connSource, setConnSource] = useState<'api' | 'balance'>(sourceParam === 'balance' ? 'balance' : 'api');
+  const storedSource = useAISourceStore((s) => s.source);
+  const setStoredSource = useAISourceStore((s) => s.setSource);
+  const [connSource, setConnSourceState] = useState<'api' | 'balance'>(sourceParam === 'balance' || sourceParam === 'api' ? sourceParam : storedSource);
+  // The internal assistant runs on whichever source is chosen here, so the choice is kept.
+  const setConnSource = (source: 'api' | 'balance'): void => { setConnSourceState(source); setStoredSource(source); };
   // The balance notifications link here with ?source=balance — also when the page is already open.
   useEffect(() => {
     if (sourceParam === 'balance' || sourceParam === 'api') setConnSource(sourceParam);

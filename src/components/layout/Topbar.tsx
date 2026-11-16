@@ -30,6 +30,7 @@ const titleMap: Record<string, string> = {
   '/billing': 'الفوترة',
   '/referral': 'ادعُ واكسب',
   '/chat-templates': 'قوالب المحادثة',
+  '/assistant': 'المساعد الداخلي',
 };
 
 export function Topbar(): JSX.Element {

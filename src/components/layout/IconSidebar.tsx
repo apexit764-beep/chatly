@@ -16,6 +16,7 @@ import {
   MessageSquareWarning,
   Gift,
   Workflow,
+  MessageCircleQuestion,
 } from 'lucide-react';
 
 import { useTranslation } from '@/i18n/useTranslation';
@@ -42,6 +43,7 @@ const mainNav: NavItem[] = [
   { to: '/inbox', label: 'المحادثات', icon: InboxIcon, badgeKey: 'inboxUnread', group: 'main', permission: 'conversations.view' },
   { to: '/contacts', label: 'جهات الاتصال', icon: Users, group: 'main', permission: 'contacts.view' },
   { to: '/reports', label: 'التقارير', icon: BarChart3, group: 'main', permission: 'reports.view' },
+  { to: '/assistant', label: 'المساعد الداخلي', icon: MessageCircleQuestion, group: 'main', permission: 'ai.view' },
   { to: '/channels', label: 'الحسابات والربط', icon: Smartphone, group: 'manage', permission: 'channels.view' },
   { to: '/departments', label: 'الأقسام', icon: Building2, group: 'manage', permission: 'departments.view' },
   { to: '/team', label: 'فريق العمل', icon: UsersRound, group: 'manage', permission: 'team.view' },

@@ -6,6 +6,7 @@ import { TopHeader } from './TopHeader';
 import { OnboardingModal } from '@components/onboarding/OnboardingModal';
 import { Toast } from '@components/ui';
 import { SupportChat } from '@components/support/SupportChat';
+import { AssistantPanel } from '@components/assistant/AssistantPanel';
 import { SubscriptionExpiredModal } from '@components/billing/SubscriptionExpiredModal';
 import { TrialExpiredModal } from '@components/billing/TrialExpiredModal';
 import { TrialBanner } from '@components/billing/TrialBanner';
@@ -73,6 +74,7 @@ export function AppShell(): JSX.Element {
       {/* Setting up the company is the owner's job, not every seat's. */}
       {has('settings.edit') && <OnboardingModal />}
       <Toast />
+      {getAppMode() === 'client' && <AssistantPanel />}
       {getAppMode() === 'client' && !isInbox && <SupportChat />}
       {getAppMode() === 'client' && <SubscriptionExpiredModal />}
       {getAppMode() === 'client' && <TrialExpiredModal />}

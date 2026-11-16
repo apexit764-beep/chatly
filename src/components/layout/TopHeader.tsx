@@ -24,6 +24,7 @@ import { useThemeStore } from '@/store/useThemeStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { Avatar, useConfirm } from '@components/ui';
 import { HeaderSearch } from '@components/ui/HeaderSearch';
+import { AssistantButton } from '@components/assistant/AssistantButton';
 import { timeAgo } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import { useTranslation } from '@/i18n/useTranslation';
@@ -41,6 +42,7 @@ const PAGE_LABELS: Record<string, string> = {
   '/billing': 'الباقات والاشتراك',
   '/referral': 'ادعُ واكسب',
   '/chat-templates': 'قوالب المحادثة',
+  '/assistant': 'المساعد الداخلي',
   '/subscribe': 'الاشتراك',
   '/notifications': 'الإشعارات',
   '/ai-settings': 'إعدادات الذكاء الاصطناعي',
@@ -125,6 +127,7 @@ export function TopHeader(): JSX.Element {
 
       {/* Action buttons */}
       <div className="flex items-center gap-1">
+        <AssistantButton />
         {/*
           Knowledge base shortcut. It glows to draw the eye to the one page that
           makes the assistant's answers better; on the page itself it settles

@@ -26,6 +26,7 @@ const Settings = lazy(() => import('@pages/Settings'));
 const Subscribe = lazy(() => import('@pages/Subscribe'));
 const Billing = lazy(() => import('@pages/Billing'));
 const Referral = lazy(() => import('@pages/Referral'));
+const Assistant = lazy(() => import('@pages/Assistant'));
 const ChatTemplates = lazy(() => import('@pages/ChatTemplates'));
 const ChatTemplateEditor = lazy(() => import('@pages/ChatTemplateEditor'));
 const Notifications = lazy(() => import('@pages/Notifications'));
@@ -124,6 +125,7 @@ export default function App(): JSX.Element {
           <Route path="/subscribe" element={<Subscribe />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/referral" element={<Referral />} />
+          <Route path="/assistant" element={<Assistant />} />
           <Route path="/chat-templates" element={<ChatTemplates />} />
           <Route path="/chat-templates/:id" element={<ChatTemplateEditor />} />
           <Route path="/notifications" element={<Notifications />} />
