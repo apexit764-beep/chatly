@@ -5,7 +5,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { cn } from '@/utils/cn';
 
 /**
- * The header entry to the internal assistant: an icon that unfolds into «اسأل مساعد Qhub» on hover
+ * The header entry to the internal assistant: an icon that unfolds into «مساعدك الداخلي» on hover
  * and while the panel is open. Only for staff allowed to see the assistant.
  */
 export function AssistantButton(): JSX.Element | null {
@@ -18,8 +18,8 @@ export function AssistantButton(): JSX.Element | null {
   return (
     <button
       type="button"
-      title="مساعد Qhub"
-      aria-label="مساعد Qhub"
+      title="مساعدك الداخلي"
+      aria-label="مساعدك الداخلي"
       aria-expanded={open}
       onClick={() => setOpen(!open)}
       style={
@@ -34,7 +34,7 @@ export function AssistantButton(): JSX.Element | null {
       )}
     >
       <MessageCircleQuestion className="h-[18px] w-[18px] flex-none" />
-      <span className={cn('ms-2 opacity-0 transition-opacity group-hover:opacity-100', open && 'opacity-100')}>اسأل مساعد Qhub</span>
+      <span className={cn('ms-2 opacity-0 transition-opacity group-hover:opacity-100', open && 'opacity-100')}>مساعدك الداخلي</span>
       {!open && <span className="absolute start-1.5 top-1 h-[7px] w-[7px] rounded-full bg-success ring-2 ring-white group-hover:hidden dark:ring-surface-dark" />}
     </button>
   );

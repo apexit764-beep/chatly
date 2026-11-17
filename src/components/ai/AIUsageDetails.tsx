@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { DateRangePicker, type PresetKey } from '@components/ui/DateRangePicker';
 import { cn } from '@/utils/cn';
 
 /**
@@ -23,18 +24,11 @@ const ALL = '__all__';
 const DAY = 86_400_000;
 const MAX_CUSTOM_DAYS = 366;
 
-type Preset = 'today' | '7d' | 'month' | 'custom';
 type Grouping = 'daily' | 'weekly' | 'monthly';
 
 const GROUPING_LABEL: Record<Grouping, string> = { daily: 'يومي', weekly: 'أسبوعي', monthly: 'شهري' };
 
 const startOfDay = (d: Date): Date => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-const iso = (d: Date): string =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const fromIso = (s: string): Date => {
-  const [y, m, d] = s.split('-').map(Number);
-  return new Date(y, m - 1, d);
-};
 const num = (n: number): string => n.toLocaleString('en-US');
 
 /** Deterministic noise in [0, 1). */
@@ -98,26 +92,17 @@ export default function AIUsageDetails({
   const history = useMemo(() => buildHistory(models, today), [models, today]);
 
   const [model, setModel] = useState<string>(currentModel);
-  const [preset, setPreset] = useState<Preset>('month');
-  const [customFrom, setCustomFrom] = useState<string>(iso(new Date(today.getTime() - 29 * DAY)));
-  const [customTo, setCustomTo] = useState<string>(iso(today));
+  const [range, setRange] = useState<{ from: Date; to: Date }>({ from: new Date(today.getFullYear(), today.getMonth(), 1), to: today });
+  const [preset, setPreset] = useState<PresetKey | undefined>('thisMonth');
 
   // The selected model may no longer exist after the source switch.
   const activeModel = !showModelFilter ? ALL : model === ALL || models.includes(model) ? model : currentModel;
 
-  const range = useMemo(() => {
-    if (preset === 'today') return { from: today, to: today };
-    if (preset === '7d') return { from: new Date(today.getTime() - 6 * DAY), to: today };
-    if (preset === 'month') return { from: new Date(today.getFullYear(), today.getMonth(), 1), to: today };
-    return { from: fromIso(customFrom), to: fromIso(customTo) };
-  }, [preset, today, customFrom, customTo]);
-
   const days = Math.round((range.to.getTime() - range.from.getTime()) / DAY) + 1;
   const customError =
-    preset !== 'custom' ? null
-      : days < 1 ? 'تاريخ البداية بعد تاريخ النهاية.'
-        : days > MAX_CUSTOM_DAYS ? 'الفترة المخصصة أقصاها 12 شهرًا.'
-          : null;
+    days < 1 ? 'تاريخ البداية بعد تاريخ النهاية.'
+      : days > MAX_CUSTOM_DAYS ? 'الفترة أقصاها 12 شهرًا.'
+        : null;
   const valid = !customError;
 
   const rows = useMemo(
@@ -176,13 +161,6 @@ export default function AIUsageDetails({
   const maxBucket = Math.max(1, ...buckets.map((b) => b.value));
   const labelEvery = grouping === 'daily' ? Math.max(1, Math.ceil(buckets.length / 4)) : 1;
 
-  const periods: [Preset, string][] = [
-    ['today', 'اليوم'],
-    ['7d', 'آخر 7 أيام'],
-    ['month', 'هذا الشهر'],
-    ['custom', 'فترة مخصصة'],
-  ];
-
   return (
     <div className="space-y-5">
       <h2 className="text-h2 font-extrabold">تفاصيل الاستهلاك</h2>
@@ -206,55 +184,15 @@ export default function AIUsageDetails({
         </label>
         )}
         {showModelFilter && <span className="h-6 w-px bg-border-light dark:bg-border-dark" aria-hidden />}
-        <div role="tablist" aria-label="الفترة" className="flex flex-wrap items-center gap-2">
-          {periods.map(([key, label]) => (
-            <button
-              key={key}
-              role="tab"
-              aria-selected={preset === key}
-              onClick={() => setPreset(key)}
-              className={cn(
-                'h-10 px-4 rounded-full text-small font-semibold border transition-colors',
-                preset === key
-                  ? 'bg-primary text-white border-primary'
-                  : 'border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:text-current',
-              )}
-              style={preset === key ? { color: '#fff' } : undefined}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <DateRangePicker
+          from={range.from}
+          to={range.to}
+          activePreset={preset}
+          onChangeRange={(f, t, p) => { setRange({ from: f, to: t }); setPreset(p); }}
+        />
       </div>
 
-      {preset === 'custom' && (
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="text-[11px] text-muted-light dark:text-muted-dark">
-            من
-            <input
-              type="date"
-              value={customFrom}
-              max={customTo}
-              onChange={(e) => setCustomFrom(e.target.value)}
-              className="mt-1 block h-10 px-3 rounded-xl border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-small text-current"
-            />
-          </label>
-          <label className="text-[11px] text-muted-light dark:text-muted-dark">
-            إلى
-            <input
-              type="date"
-              value={customTo}
-              min={customFrom}
-              max={iso(today)}
-              onChange={(e) => setCustomTo(e.target.value)}
-              className="mt-1 block h-10 px-3 rounded-xl border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-small text-current"
-            />
-          </label>
-          <p className={cn('text-[11px] pb-2.5', customError ? 'text-danger font-semibold' : 'text-muted-light dark:text-muted-dark')}>
-            {customError ?? 'أقصى فترة مخصصة 12 شهرًا.'}
-          </p>
-        </div>
-      )}
+      {customError && <p className="text-[11px] text-danger font-semibold">{customError}</p>}
 
       {/* Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

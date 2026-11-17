@@ -24,6 +24,7 @@ const Departments = lazy(() => import('@pages/Departments'));
 const Reports = lazy(() => import('@pages/Reports'));
 const Settings = lazy(() => import('@pages/Settings'));
 const Subscribe = lazy(() => import('@pages/Subscribe'));
+const AIBalanceCheckout = lazy(() => import('@pages/AIBalanceCheckout'));
 const Billing = lazy(() => import('@pages/Billing'));
 const Referral = lazy(() => import('@pages/Referral'));
 const Assistant = lazy(() => import('@pages/Assistant'));
@@ -123,6 +124,7 @@ export default function App(): JSX.Element {
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/subscribe" element={<Subscribe />} />
+          <Route path="/ai-settings/checkout" element={<AIBalanceCheckout />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/referral" element={<Referral />} />
           <Route path="/assistant" element={<Assistant />} />

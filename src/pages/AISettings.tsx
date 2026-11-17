@@ -625,7 +625,7 @@ export default function AISettings(): JSX.Element {
   // With the Qhub balance there is no connection step: its balance and features share one tab.
   const tab: PageTab =
     connSource === 'balance' && tabChoice === 'connection'
-      ? 'features'
+      ? 'channels'
       : (tabChoice === 'features' || tabChoice === 'channels') && !featuresAvailable
         ? 'connection'
         : tabChoice === 'channels' && connSource !== 'balance'
@@ -831,7 +831,7 @@ export default function AISettings(): JSX.Element {
       <div role="tablist" aria-label="مصدر المساعد الذكي" className="inline-flex p-1 rounded-full bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark self-start">
         {([
           ['api', 'مفتاح API الخاص بي', KeyRound, ''],
-          ['balance', 'مساعد Qhub', Zap, 'لا يحتاج إلى ربط'],
+          ['balance', 'مساعد Qhub', Zap, 'لا يحتاج إلى مفتاح API'],
         ] as const).map(([key, label, Icon, hint]) => (
           <button
             key={key}
@@ -870,6 +870,18 @@ export default function AISettings(): JSX.Element {
           إعدادات الربط
         </button>
         )}
+        {featuresAvailable && connSource === 'balance' && (
+        <button
+          onClick={() => setTab('channels')}
+          className={cn(
+            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
+            tab === 'channels' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
+          )}
+        >
+          <Radio className="h-4 w-4" />
+          القنوات والميزات
+        </button>
+        )}
         {BEHAVIOR_GROUP_ORDER.map((g) => {
           const { label, Icon } = GROUP_META[g];
           const active = tab === 'behavior' && subTab === g;
@@ -906,18 +918,6 @@ export default function AISettings(): JSX.Element {
         >
           {connSource === 'balance' ? <Wallet className="h-4 w-4" /> : <Gauge className="h-4 w-4" />}
           {connSource === 'balance' ? 'الرصيد' : 'الميزات والرصيد'}
-        </button>
-        )}
-        {featuresAvailable && connSource === 'balance' && (
-        <button
-          onClick={() => setTab('channels')}
-          className={cn(
-            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
-            tab === 'channels' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
-          )}
-        >
-          <Radio className="h-4 w-4" />
-          القنوات والميزات
         </button>
         )}
         <button

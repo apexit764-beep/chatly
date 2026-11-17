@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Wallet, Zap, TrendingDown, Power, Plus, Eye, Download, PauseCircle, CreditCard } from 'lucide-react';
 import { Button, Card, Modal, StatCard, Input } from '@components/ui';
 import { useAIBalanceStore, type BalanceInvoice, type BalanceTx } from '@/store/useAIBalanceStore';
@@ -92,9 +92,9 @@ function resolveAmount(pack: number | null, custom: string): { usd: number; paid
 /** Payment methods are managed in Settings › المالية — here we only show the default card and link there. */
 const PAYMENT_SETTINGS = '/settings?tab=finance';
 
-function DefaultCard(): JSX.Element {
-  const card = usePaymentMethodsStore((s) => s.cards.find((c) => c.isDefault) ?? s.cards[0] ?? null);
-  if (!card) {
+function PaymentMethodPicker({ selectedId, onSelect }: { selectedId: string; onSelect: (id: string) => void }): JSX.Element {
+  const cards = usePaymentMethodsStore((s) => s.cards);
+  if (cards.length === 0) {
     return (
       <div className="rounded-input border border-dashed border-warning/60 bg-warning/5 px-3 py-3 text-small">
         لا توجد وسيلة دفع محفوظة.{' '}
@@ -102,13 +102,28 @@ function DefaultCard(): JSX.Element {
       </div>
     );
   }
+  const card = cards.find((c) => c.id === selectedId) ?? cards[0];
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center gap-2 rounded-input border border-border-light dark:border-border-dark px-3 py-2.5 text-body">
-        <CreditCard className="h-4 w-4 text-muted-light dark:text-muted-dark" />
-        <span dir="ltr">{cardLabel(card)}</span>
-      </div>
-      <Link to={PAYMENT_SETTINGS} className="inline-block text-small text-primary font-semibold hover:underline">تغيير وسيلة الدفع من الإعدادات</Link>
+      {cards.length > 1 ? (
+        <select
+          aria-label="طريقة الدفع"
+          value={card.id}
+          onChange={(e) => onSelect(e.target.value)}
+          dir="ltr"
+          className="w-full h-11 rounded-input border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark px-3 text-body focus:border-primary focus:outline-none"
+        >
+          {cards.map((c) => (
+            <option key={c.id} value={c.id}>{cardLabel(c)}{c.isDefault ? ' (افتراضية)' : ''}</option>
+          ))}
+        </select>
+      ) : (
+        <div className="flex items-center gap-2 rounded-input border border-border-light dark:border-border-dark px-3 py-2.5 text-body">
+          <CreditCard className="h-4 w-4 text-muted-light dark:text-muted-dark" />
+          <span dir="ltr">{cardLabel(card)}</span>
+        </div>
+      )}
+      <Link to={PAYMENT_SETTINGS} className="inline-block text-small text-primary font-semibold hover:underline">إعدادات الدفع</Link>
     </div>
   );
 }
@@ -136,20 +151,25 @@ export default function AIBalancePanel(): JSX.Element {
   const [custom, setCustom] = useState('');
   const [invoice, setInvoice] = useState<BalanceInvoice | null>(null);
   const defaultCard = usePaymentMethodsStore((st) => st.cards.find((c) => c.isDefault) ?? st.cards[0] ?? null);
+  const navigate = useNavigate();
+  const [cardId, setCardId] = useState('');
 
   const usedPct = store.base > 0 ? Math.min(100, Math.max(0, ((store.base - balance) / store.base) * 100)) : 0;
   const spent = Math.min(store.base, Math.max(0, store.base - balance));
   const barColor = usedPct >= 70 ? 'bg-danger' : usedPct >= 50 ? 'bg-warning' : 'bg-primary';
 
   const [txPage, setTxPage] = useState(0);
-  const txTotalPages = Math.max(1, Math.ceil(store.tx.length / TX_PAGE_SIZE));
+  const [txType, setTxType] = useState<BalanceTx['type'] | 'all'>('all');
+  const filteredTx = useMemo(() => (txType === 'all' ? store.tx : store.tx.filter((t) => t.type === txType)), [store.tx, txType]);
+  const txTotalPages = Math.max(1, Math.ceil(filteredTx.length / TX_PAGE_SIZE));
   const txSafePage = Math.min(txPage, txTotalPages - 1);
   const txStart = txSafePage * TX_PAGE_SIZE;
-  const pageTx = useMemo(() => store.tx.slice(txStart, txStart + TX_PAGE_SIZE), [store.tx, txStart]);
+  const pageTx = useMemo(() => filteredTx.slice(txStart, txStart + TX_PAGE_SIZE), [filteredTx, txStart]);
 
   const openTopUp = (): void => {
     setPack(null);
     setCustom('');
+    setCardId(defaultCard?.id ?? '');
     setTopUpOpen(true);
   };
 
@@ -157,9 +177,8 @@ export default function AIBalancePanel(): JSX.Element {
     if (!defaultCard) return showToast('أضف وسيلة دفع من الإعدادات أولًا', 'error');
     const r = resolveAmount(pack, custom);
     if (typeof r === 'string') return showToast(r, 'error');
-    const inv = store.topUp(r.usd, r.paidLocal);
     setTopUpOpen(false);
-    showToast(`تم الشحن · الفاتورة ${inv.number}`, 'success');
+    navigate('/ai-settings/checkout', { state: { usd: r.usd, paidLocal: r.paidLocal, cardId: cardId || defaultCard.id } });
   };
 
   const downloadInvoice = (inv: BalanceInvoice): void => {
@@ -188,11 +207,6 @@ export default function AIBalancePanel(): JSX.Element {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Link to={PAYMENT_SETTINGS}>
-            <Button variant="secondary">
-              <CreditCard className="h-4 w-4" /> بيانات الدفع
-            </Button>
-          </Link>
           <Button className="text-white" onClick={openTopUp}>
             <Plus className="h-4 w-4" /> شحن الرصيد
           </Button>
@@ -294,7 +308,22 @@ export default function AIBalancePanel(): JSX.Element {
       </Card>
 
       <Card className="overflow-hidden">
-        <h2 className="text-body font-bold px-5 pt-5 pb-3">سجل الحركات</h2>
+        <div className="flex items-center justify-between gap-3 flex-wrap px-5 pt-5 pb-3">
+          <h2 className="text-body font-bold">سجل الحركات</h2>
+          <label className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark">
+            نوع الحركة
+            <select
+              value={txType}
+              onChange={(e) => { setTxType(e.target.value as BalanceTx['type'] | 'all'); setTxPage(0); }}
+              className="h-9 rounded-input border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark px-3 text-small text-current focus:border-primary focus:outline-none"
+            >
+              <option value="all">الكل</option>
+              {(Object.keys(TX_LABEL) as BalanceTx['type'][]).map((k) => (
+                <option key={k} value={k}>{TX_LABEL[k]}</option>
+              ))}
+            </select>
+          </label>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-body">
             <thead className="bg-bg-light dark:bg-bg-dark text-small text-muted-light dark:text-muted-dark">
@@ -328,11 +357,12 @@ export default function AIBalancePanel(): JSX.Element {
               ))}
             </tbody>
           </table>
+          {pageTx.length === 0 && <p className="text-small text-muted-light dark:text-muted-dark px-5 py-6 text-center">لا توجد حركات من هذا النوع.</p>}
         </div>
-        {store.tx.length > TX_PAGE_SIZE && (
+        {filteredTx.length > TX_PAGE_SIZE && (
           <div className="px-4 py-3 border-t border-border-light dark:border-border-dark flex items-center justify-between flex-wrap gap-2">
             <p className="text-small text-muted-light dark:text-muted-dark">
-              عرض {txStart + 1}-{Math.min(txStart + TX_PAGE_SIZE, store.tx.length)} من {store.tx.length}
+              عرض {txStart + 1}-{Math.min(txStart + TX_PAGE_SIZE, filteredTx.length)} من {filteredTx.length}
             </p>
             <div className="flex items-center gap-1">
               <button
@@ -379,7 +409,7 @@ export default function AIBalancePanel(): JSX.Element {
         footer={
           <>
             <Button variant="secondary" onClick={() => setTopUpOpen(false)}>إلغاء</Button>
-            <Button className="text-white" onClick={submitTopUp} disabled={!defaultCard}>دفع</Button>
+            <Button className="text-white" onClick={submitTopUp} disabled={!defaultCard}>الانتقال للدفع</Button>
           </>
         }
       >
@@ -387,7 +417,7 @@ export default function AIBalancePanel(): JSX.Element {
           <AmountPicker pack={pack} onPack={setPack} custom={custom} onCustom={setCustom} />
           <div>
             <p className="text-small font-medium text-muted-light dark:text-muted-dark mb-1.5">طريقة الدفع</p>
-            <DefaultCard />
+            <PaymentMethodPicker selectedId={cardId} onSelect={setCardId} />
             <p className="text-small text-muted-light dark:text-muted-dark mt-2">الدفع تجريبي حاليًا ولن يُخصم أي مبلغ فعلي.</p>
           </div>
         </div>

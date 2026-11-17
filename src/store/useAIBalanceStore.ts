@@ -55,7 +55,7 @@ interface BalanceState {
   nextId: number;
   nextInvoice: number;
   balance: () => number;
-  topUp: (usd: number, paidLocal: number) => BalanceInvoice;
+  topUp: (usd: number, paidLocal: number, cardLabelOverride?: string) => BalanceInvoice;
   /** Admin grants free credit; it lands in the client's balance and the transactions log. */
   grantGift: (usd: number, note?: string) => void;
   setAuto: (auto: AutoTopUp) => void;
@@ -234,9 +234,9 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
     ...load(),
     balance: () => round6(sumLeft(get().lots) - get().negative),
 
-    topUp: (usd, paidLocal) => {
+    topUp: (usd, paidLocal, cardLabelOverride) => {
       const card = usePaymentMethodsStore.getState().defaultCard();
-      const label = card ? cardLabel(card) : '—';
+      const label = cardLabelOverride ?? (card ? cardLabel(card) : '—');
       const invoice = addInvoice('شحن رصيد المساعد', paidLocal, label);
       credit(usd, 'شحن', 'topup', `${invoice.number} · ${label}`);
       notify('تم شحن رصيد المساعد', `تم شحن رصيد المساعد بمبلغ ${moneyPrice(usd)}. رقم الفاتورة ${invoice.number}.`);
