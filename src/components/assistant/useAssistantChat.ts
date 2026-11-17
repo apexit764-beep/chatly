@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAssistantStore, type AssistantSession } from '@/store/useAssistantStore';
 import { useAISourceStore } from '@/store/useAISourceStore';
 import { useAIStore } from '@/store/useAIStore';
@@ -6,6 +6,15 @@ import { useAIBalanceStore } from '@/store/useAIBalanceStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { QHUB_MODEL, currentUserKey, liveModel, type AssistantModel } from '@/utils/assistantAccess';
 import { answerFor, detectTopic, type Answer, type Topic } from '@/utils/assistantEngine';
+
+const SEED_KEY = 'qhub_assistant_demo_seeded';
+const DEMO_THREADS: { title: string; daysAgo: number; qs: string[] }[] = [
+  { title: 'حالة اشتراكي', daysAgo: 1, qs: ['حالة اشتراكي'] },
+  { title: 'كيف أربط واتساب؟', daysAgo: 2, qs: ['كيف أربط واتساب؟', 'حالة القنوات'] },
+  { title: 'المحادثات المفتوحة الآن', daysAgo: 4, qs: ['المحادثات المفتوحة الآن'] },
+  { title: 'كيف أضيف موظفًا؟', daysAgo: 6, qs: ['كيف أضيف موظفًا؟', 'الموظفون المتصلون'] },
+  { title: 'حالة القنوات', daysAgo: 9, qs: ['حالة القنوات'] },
+];
 
 const NO_MODEL: AssistantModel = { key: 'none', label: 'بدون ربط' };
 const BALANCE_EMPTY: Answer = {
@@ -46,6 +55,29 @@ export function useAssistantChat(): AssistantChat {
   const connection = useAIStore((s) => `${s.settings.connectionStatus}|${s.settings.apiKey}|${s.settings.model}`);
   const authEmail = useAuthStore((s) => s.user?.email);
   const balance = useAIBalanceStore((s) => s.balance());
+
+  // Demo history so the thread list isn't empty on first open; added once per browser.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(SEED_KEY)) return;
+      const userKey = currentUserKey();
+      const model = liveModel();
+      if (!model || useAssistantStore.getState().sessions.some((x) => x.userKey === userKey)) return;
+      const now = Date.now();
+      useAssistantStore.getState().seed(
+        DEMO_THREADS.map((d, i) => ({
+          id: `as_demo_${i}`,
+          userKey,
+          modelKey: model.key,
+          modelLabel: model.label,
+          title: d.title,
+          createdAt: new Date(now - d.daysAgo * 86_400_000).toISOString(),
+          msgs: d.qs.flatMap((q) => [{ r: 'u' as const, t: q }, { r: 'a' as const, a: answerFor(detectTopic(q), q) }]),
+        })),
+      );
+      localStorage.setItem(SEED_KEY, '1');
+    } catch { /* demo data is optional */ }
+  }, [source, connection, authEmail]);
 
   return useMemo<AssistantChat>(() => {
     const userKey = currentUserKey();

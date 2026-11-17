@@ -41,6 +41,8 @@ interface AssistantState {
   setCurrent: (id: string | null) => void;
   setModelKey: (key: string | null) => void;
   setBusy: (busy: boolean) => void;
+  /** Adds demo threads once (kept separate from the user's own history). */
+  seed: (sessions: AssistantSession[]) => void;
   /** Adds a message to the open thread, starting one when there is none; returns its id. */
   append: (msg: AssistantMessage, ctx: { userKey: string; modelKey: string; modelLabel: string }) => string;
 }
@@ -58,6 +60,11 @@ export const useAssistantStore = create<AssistantState>((set, get) => ({
   setCurrent: (currentId) => set({ currentId }),
   setModelKey: (modelKey) => set({ modelKey, currentId: null }),
   setBusy: (busy) => set({ busy }),
+  seed: (extra) => {
+    const next = [...get().sessions, ...extra].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    save(next);
+    set({ sessions: next });
+  },
   append: (msg, ctx) => {
     const { sessions, currentId } = get();
     let session = sessions.find((s) => s.id === currentId && s.userKey === ctx.userKey && s.modelKey === ctx.modelKey);
