@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Copy, Edit2, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { ChevronDown, Copy, Edit2, Eye, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { Button, Card, EmptyState, Modal, useConfirm } from '@components/ui';
+import { ChatTemplatePreview } from '@components/chatTemplates/ChatTemplatePreview';
 import { useChatTemplateStore } from '@/store/useChatTemplateStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatDate } from '@/utils/format';
@@ -95,6 +96,7 @@ export default function ChatTemplates(): JSX.Element {
   const showToast = useUIStore((s) => s.showToast);
   const { confirm } = useConfirm();
 
+  const [viewing, setViewing] = useState<ChatTemplate | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -189,6 +191,14 @@ export default function ChatTemplates(): JSX.Element {
                       )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
+                      <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setViewing(t)}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-btn bg-primary/10 px-3 text-small font-semibold text-primary transition-colors hover:bg-primary/20"
+                      >
+                        <Eye className="h-3.5 w-3.5" /> عرض
+                      </button>
                       <ActionsMenu
                         actions={[
                           { label: 'تعديل', icon: <Edit2 className="h-4 w-4" />, onClick: () => navigate(`/chat-templates/${t.id}`) },
@@ -196,6 +206,7 @@ export default function ChatTemplates(): JSX.Element {
                           { label: 'حذف', icon: <Trash2 className="h-4 w-4" />, danger: true, onClick: () => void askDelete(t) },
                         ]}
                       />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -204,6 +215,19 @@ export default function ChatTemplates(): JSX.Element {
           </div>
         )}
       </Card>
+
+      <Modal open={viewing !== null} onClose={() => setViewing(null)} title={viewing ? `عرض القالب: ${viewing.name}` : undefined} size="md">
+        {viewing && (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2 text-small text-muted-light dark:text-muted-dark">
+              <StatusPill t={viewing} />
+              <span>{triggerSummary(viewing)}</span>
+              <span>· {viewing.steps.length} خطوات</span>
+            </div>
+            <ChatTemplatePreview template={viewing} />
+          </div>
+        )}
+      </Modal>
 
       <Modal
         open={aiOpen}
