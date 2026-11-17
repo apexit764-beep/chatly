@@ -339,6 +339,9 @@ export const contacts: Contact[] = [
     { id: 'al53', action: 'edited', details: 'تحديث الملاحظات والأولوية', by: 'a2', timestamp: nowMinus(60 * 24 * 150) },
     { id: 'al54', action: 'edited', details: 'تحديث التصنيفات', by: 'a3', timestamp: nowMinus(60 * 24 * 30) },
   ] },
+  { id: 'c13', name: 'خالد البلوشي', phone: '+96899887766', type: 'lead', tags: ['حجز موعد'], blocked: false, conversationCount: 1, lastContact: nowMinus(4), createdAt: nowMinus(60 * 24 * 2), channels: ['whatsapp'], activityLog: [
+    { id: 'al60', action: 'created', by: 'a2', timestamp: nowMinus(60 * 24 * 2) },
+  ] },
 ];
 
 // ============================================================
@@ -545,6 +548,26 @@ export const conversations: Conversation[] = [
       { id: 'm150', conversationId: 'conv15', direction: 'in', type: 'text', content: 'مرحباً', timestamp: nowMinus(22), read: true, delivered: true },
       { id: 'm151', conversationId: 'conv15', direction: 'out', type: 'text', content: 'أهلاً بك! كيف أقدر أساعدك اليوم؟', timestamp: nowMinus(21), read: true, delivered: true, sender: 'ai' },
       { id: 'm152', conversationId: 'conv15', direction: 'in', type: 'text', content: 'كيف يمكنني ربط حساب الواتساب؟', timestamp: nowMinus(20), read: false, delivered: true },
+    ],
+  },
+  {
+    // محادثة تجريبية لقالب محادثة: العميل يختار ويرد على كل خطوة.
+    id: 'conv_tpl', contactId: 'c13', assignedTo: 'a2', status: 'in_progress', sessionCount: 1,
+    channelId: 'ch1', departmentId: 'd1',
+    lastMessage: 'تم استلام طلبك ✅ سيتواصل معك أحد موظفينا لتأكيد الموعد.',
+    lastMessageAt: nowMinus(4), unreadCount: 0, notes: [], activityLog: [],
+    messages: [
+      { id: 'mt1', conversationId: 'conv_tpl', direction: 'in', type: 'text', content: 'السلام عليكم، أريد حجز موعد', timestamp: nowMinus(14), read: true, delivered: true },
+      { id: 'mt2', conversationId: 'conv_tpl', direction: 'out', type: 'note', content: 'أرسل الموظف قالب «حجز موعد»', timestamp: nowMinus(13), read: true, delivered: true, sender: 'agent' },
+      { id: 'mt3', conversationId: 'conv_tpl', direction: 'out', type: 'text', content: 'أهلًا خالد البلوشي 👋\nيسعدنا مساعدتك في حجز موعد.', timestamp: nowMinus(13), read: true, delivered: true, sender: 'agent', chatTemplate: { name: 'حجز موعد' } },
+      { id: 'mt4', conversationId: 'conv_tpl', direction: 'out', type: 'text', content: 'ما نوع الخدمة التي تريدها؟', timestamp: nowMinus(13), read: true, delivered: true, sender: 'agent', chatTemplate: { name: 'حجز موعد', options: ['استشارة', 'متابعة', 'أخرى'] } },
+      { id: 'mt5', conversationId: 'conv_tpl', direction: 'in', type: 'text', content: 'استشارة', timestamp: nowMinus(11), read: true, delivered: true },
+      { id: 'mt6', conversationId: 'conv_tpl', direction: 'out', type: 'text', content: 'اختر اليوم المناسب لك:', timestamp: nowMinus(11), read: true, delivered: true, sender: 'agent', chatTemplate: { name: 'حجز موعد', options: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'] } },
+      { id: 'mt7', conversationId: 'conv_tpl', direction: 'in', type: 'text', content: 'الثلاثاء', timestamp: nowMinus(8), read: true, delivered: true },
+      { id: 'mt8', conversationId: 'conv_tpl', direction: 'out', type: 'text', content: 'اكتب رقم جوال للتواصل معك:', timestamp: nowMinus(8), read: true, delivered: true, sender: 'agent', chatTemplate: { name: 'حجز موعد' } },
+      { id: 'mt9', conversationId: 'conv_tpl', direction: 'in', type: 'text', content: '99887766', timestamp: nowMinus(5), read: true, delivered: true },
+      { id: 'mt10', conversationId: 'conv_tpl', direction: 'out', type: 'text', content: 'تم استلام طلبك ✅ سيتواصل معك أحد موظفينا لتأكيد الموعد.', timestamp: nowMinus(4), read: true, delivered: true, sender: 'agent', chatTemplate: { name: 'حجز موعد' } },
+      { id: 'mt11', conversationId: 'conv_tpl', direction: 'out', type: 'note', content: 'القالب «حجز موعد»: اكتمل القالب وأجاب العميل على كل الخطوات', timestamp: nowMinus(4), read: true, delivered: true, sender: 'agent' },
     ],
   },
 ];
