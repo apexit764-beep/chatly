@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Sparkles } from 'lucide-react';
+import { ChevronDown, Copy, Edit2, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { Button, Card, EmptyState, Modal, useConfirm } from '@components/ui';
 import { useChatTemplateStore } from '@/store/useChatTemplateStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -14,6 +14,76 @@ function StatusPill({ t }: { t: ChatTemplate }): JSX.Element {
   const [label, tone] =
     t.status === 'draft' ? ['مسودة', 'bg-warning/15 text-warning'] : t.active ? ['منشور', 'bg-success/15 text-success'] : ['موقوف', 'bg-gray-500/15 text-muted-light dark:text-muted-dark'];
   return <span className={cn('inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold', tone)}>{label}</span>;
+}
+
+function Switch({ on, onChange, label }: { on: boolean; onChange: () => void; label: string }): JSX.Element {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      title={label}
+      onClick={onChange}
+      className={cn('relative h-5 w-9 flex-shrink-0 rounded-full transition-colors', on ? 'bg-primary' : 'bg-border-light dark:bg-border-dark')}
+    >
+      <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all', on ? 'start-0.5' : 'end-0.5')} />
+    </button>
+  );
+}
+
+interface MenuAction { label: string; icon: JSX.Element; onClick: () => void; danger?: boolean }
+
+/** «الإجراءات» — fixed-position menu so the table's horizontal scroll can't clip it. */
+function ActionsMenu({ actions }: { actions: MenuAction[] }): JSX.Element {
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  useEffect(() => {
+    if (!pos) return;
+    const close = (): void => setPos(null);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => { window.removeEventListener('scroll', close, true); window.removeEventListener('resize', close); };
+  }, [pos]);
+  return (
+    <>
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={!!pos}
+        onClick={(e) => {
+          if (pos) { setPos(null); return; }
+          const r = e.currentTarget.getBoundingClientRect();
+          const h = actions.length * 40 + 12;
+          setPos({ top: r.bottom + h > window.innerHeight ? Math.max(8, r.top - h - 4) : r.bottom + 4, left: Math.max(8, r.left) });
+        }}
+        className="inline-flex h-8 items-center gap-1.5 rounded-btn border border-border-light px-3 text-small font-medium hover:bg-bg-light dark:border-border-dark dark:hover:bg-bg-dark"
+      >
+        الإجراءات <ChevronDown className="h-3.5 w-3.5" />
+      </button>
+      {pos && (
+        <>
+          <div className="fixed inset-0 z-[90]" onClick={() => setPos(null)} />
+          <div role="menu" style={{ top: pos.top, left: pos.left }} className="fixed z-[91] w-44 rounded-card border border-border-light bg-white py-1 shadow-card-hover dark:border-border-dark dark:bg-surface-dark">
+            {actions.map((a, i) => (
+              <button
+                key={a.label}
+                type="button"
+                role="menuitem"
+                onClick={() => { setPos(null); a.onClick(); }}
+                className={cn(
+                  'flex w-full items-center gap-2.5 px-3 py-2 text-start text-small hover:bg-bg-light dark:hover:bg-bg-dark',
+                  a.danger && 'text-danger',
+                  a.danger && i > 0 && 'border-t border-border-light dark:border-border-dark',
+                )}
+              >
+                {a.icon} {a.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  );
 }
 
 export default function ChatTemplates(): JSX.Element {
@@ -69,8 +139,6 @@ export default function ChatTemplates(): JSX.Element {
     }, 900);
   };
 
-  const smallBtn = 'h-8 rounded-btn border border-border-light px-3 text-[12px] font-medium hover:bg-bg-light dark:border-border-dark dark:hover:bg-bg-dark';
-
   return (
     <div className="page-fade space-y-5 p-4 lg:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -79,8 +147,12 @@ export default function ChatTemplates(): JSX.Element {
           <p className="mt-0.5 text-small text-muted-light dark:text-muted-dark">قوالب بخطوات وأسئلة تُرسل للعملاء داخل محادثات واتساب</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => setAiOpen(true)}><Sparkles className="h-4 w-4 text-violet-600" /> إنشاء بالذكاء الاصطناعي</Button>
-          <Button onClick={() => navigate('/chat-templates/new')}><Plus className="h-4 w-4" /> قالب جديد</Button>
+          <button onClick={() => setAiOpen(true)} className="flex h-9 items-center gap-2 rounded-full border border-border-light px-4 text-small font-medium hover:bg-bg-light dark:border-border-dark dark:hover:bg-bg-dark">
+            <Sparkles className="h-4 w-4 text-violet-600" /> إنشاء بالذكاء الاصطناعي
+          </button>
+          <button onClick={() => navigate('/chat-templates/new')} className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-small font-medium text-white hover:bg-primary-dark">
+            <Plus className="h-4 w-4" /> قالب جديد
+          </button>
         </div>
       </div>
 
@@ -97,6 +169,7 @@ export default function ChatTemplates(): JSX.Element {
                   <th className={TH}>الخطوات</th>
                   <th className={TH}>الحالة</th>
                   <th className={TH}>آخر تعديل</th>
+                  <th className={TH}>التفعيل</th>
                   <th className={TH}><span className="sr-only">إجراءات</span></th>
                 </tr>
               </thead>
@@ -109,14 +182,20 @@ export default function ChatTemplates(): JSX.Element {
                     <td className="px-4 py-3"><StatusPill t={t} /></td>
                     <td className="whitespace-nowrap px-4 py-3 text-small">{formatDate(t.updatedAt)}</td>
                     <td className="whitespace-nowrap px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <button type="button" className={smallBtn} onClick={() => navigate(`/chat-templates/${t.id}`)}>تعديل</button>
-                        <button type="button" className={smallBtn} onClick={() => duplicate(t)}>نسخ</button>
-                        {t.status === 'published' && (
-                          <button type="button" className={smallBtn} onClick={() => toggle(t)}>{t.active ? 'إيقاف' : 'تشغيل'}</button>
-                        )}
-                        <button type="button" className={cn(smallBtn, 'border-danger/30 text-danger')} onClick={() => void askDelete(t)}>حذف</button>
-                      </div>
+                      {t.status === 'published' ? (
+                        <Switch on={t.active} onChange={() => toggle(t)} label={t.active ? 'إيقاف القالب' : 'تشغيل القالب'} />
+                      ) : (
+                        <span className="text-small text-muted-light dark:text-muted-dark" title="انشر القالب أولًا ليمكن تشغيله">—</span>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <ActionsMenu
+                        actions={[
+                          { label: 'تعديل', icon: <Edit2 className="h-4 w-4" />, onClick: () => navigate(`/chat-templates/${t.id}`) },
+                          { label: 'نسخ', icon: <Copy className="h-4 w-4" />, onClick: () => duplicate(t) },
+                          { label: 'حذف', icon: <Trash2 className="h-4 w-4" />, danger: true, onClick: () => void askDelete(t) },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))}
