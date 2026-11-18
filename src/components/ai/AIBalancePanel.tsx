@@ -5,6 +5,7 @@ import { Button, Card, Modal, StatCard, Input } from '@components/ui';
 import { useAIBalanceStore, type BalanceInvoice, type BalanceTx } from '@/store/useAIBalanceStore';
 import { usePaymentMethodsStore, cardLabel } from '@/store/usePaymentMethodsStore';
 import { useUIStore } from '@/store/useUIStore';
+import { FEATURES, noise } from '@components/ai/AIUsageDetails';
 import { printAsPdf } from '@/utils/csv';
 import { formatDate } from '@/utils/format';
 import { formatMoney } from '@/utils/money';
@@ -139,6 +140,24 @@ const TX_LABEL: Record<BalanceTx['type'], string> = {
   gift: 'رصيد مجاني',
   settings: 'إعدادات',
 };
+
+interface FeatureShare { label: string; uses: number; tokens: number; usd: number; pct: number }
+
+/** Splits one usage entry across the features that consumed its tokens (deterministic mock mix). */
+function featureBreakdown(t: BalanceTx): FeatureShare[] {
+  const usd = -t.usd;
+  const totalTokens = (usd / BALANCE_SETTINGS.pricePerMillionUsd) * 1_000_000;
+  const w = FEATURES.map((f, i) => (f.perDay > 0 ? f.perDay * (0.5 + noise(t.id * 13 + i * 7 + 1)) * (f.tokens / 1000) : 0));
+  const sum = w.reduce((a, b) => a + b, 0) || 1;
+  return FEATURES
+    .map((f, i) => {
+      const share = w[i] / sum;
+      const tokens = Math.round(totalTokens * share);
+      return { label: f.label, uses: Math.max(share > 0 ? 1 : 0, Math.round(tokens / f.tokens)), tokens, usd: usd * share, pct: share * 100 };
+    })
+    .filter((x) => x.tokens > 0)
+    .sort((a, b) => b.tokens - a.tokens);
+}
 
 interface LedgerUse { tx: BalanceTx; amount: number }
 interface LedgerRow extends BalanceTx {
@@ -319,7 +338,7 @@ export default function AIBalancePanel({ usage }: { usage?: ReactNode }): JSX.El
         <div className="flex items-center justify-between gap-3 flex-wrap px-5 pt-5 pb-3">
           <div>
             <h2 className="text-body font-bold">التدفق النقدي</h2>
-            <p className="text-[12px] text-muted-light dark:text-muted-dark mt-0.5">كل ما دخل رصيدك وما خرج منه مع المتبقي بعد كل حركة. اضغط على أي شحنة لترى بنود الاستهلاك التي خُصمت منها.</p>
+            <p className="text-[12px] text-muted-light dark:text-muted-dark mt-0.5">كل ما دخل رصيدك وما خرج منه مع المتبقي بعد كل حركة. اضغط على الشحنة لترى استهلاكها، وعلى الاستهلاك لترى الميزات التي استهلكت التوكنز.</p>
           </div>
           <label className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark">
             نوع الحركة
@@ -351,19 +370,21 @@ export default function AIBalancePanel({ usage }: { usage?: ReactNode }): JSX.El
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
               {pageTx.map((t) => {
                 const isCredit = t.usd > 0;
+                const isUsage = t.type === 'usage';
+                const expandable = isCredit || isUsage;
                 const open = openLot === t.id;
                 const inv = t.type === 'topup' || t.type === 'auto' ? store.invoices.find((i) => t.description.includes(i.number)) : undefined;
                 return (
                   <Fragment key={t.id}>
                     <tr
-                      onClick={isCredit ? () => setOpenLot(open ? null : t.id) : undefined}
-                      className={cn(isCredit && 'cursor-pointer hover:bg-bg-light dark:hover:bg-bg-dark', open && 'bg-bg-light dark:bg-bg-dark')}
-                      aria-expanded={isCredit ? open : undefined}
+                      onClick={expandable ? () => setOpenLot(open ? null : t.id) : undefined}
+                      className={cn(expandable && 'cursor-pointer hover:bg-bg-light dark:hover:bg-bg-dark', open && 'bg-bg-light dark:bg-bg-dark')}
+                      aria-expanded={expandable ? open : undefined}
                     >
                       <td className="px-4 py-3 text-small text-muted-light dark:text-muted-dark whitespace-nowrap">{formatDate(t.at)}</td>
                       <td className="px-4 py-3 text-small">
                         <span className="inline-flex items-center gap-1.5">
-                          {isCredit && (open ? <ChevronDown className="h-3.5 w-3.5 text-muted-light" /> : <ChevronLeft className="h-3.5 w-3.5 text-muted-light" />)}
+                          {expandable && (open ? <ChevronDown className="h-3.5 w-3.5 text-muted-light" /> : <ChevronLeft className="h-3.5 w-3.5 text-muted-light" />)}
                           {t.description}
                         </span>
                       </td>
@@ -399,6 +420,37 @@ export default function AIBalancePanel({ usage }: { usage?: ReactNode }): JSX.El
                         )}
                       </td>
                     </tr>
+                    {isUsage && open && (
+                      <tr className="bg-bg-light/60 dark:bg-bg-dark/60">
+                        <td colSpan={7} className="px-4 py-3">
+                          <div className="rounded-xl border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark p-3">
+                            <b className="block mb-2 text-small">الميزات التي استهلكت التوكنز في هذه الحركة</b>
+                            <table className="w-full text-small">
+                              <thead>
+                                <tr className="text-muted-light dark:text-muted-dark text-[12px]">
+                                  <th className="text-start font-semibold py-1.5">الميزة</th>
+                                  <th className="text-start font-semibold py-1.5">مرات الاستخدام</th>
+                                  <th className="text-start font-semibold py-1.5">التوكنز</th>
+                                  <th className="text-start font-semibold py-1.5">النسبة</th>
+                                  <th className="text-end font-semibold py-1.5">المبلغ</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border-light dark:divide-border-dark">
+                                {featureBreakdown(t).map((f) => (
+                                  <tr key={f.label}>
+                                    <td className="py-1.5">{f.label}</td>
+                                    <td className="py-1.5 tabular-nums">{f.uses.toLocaleString('en-US')}</td>
+                                    <td className="py-1.5 tabular-nums">{f.tokens.toLocaleString('en-US')}</td>
+                                    <td className="py-1.5 tabular-nums">{f.pct.toFixed(1)}%</td>
+                                    <td className="py-1.5 text-end tabular-nums text-danger" dir="ltr">{formatMoney(exactLocal(f.usd), currency.code)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {isCredit && open && (
                       <tr className="bg-bg-light/60 dark:bg-bg-dark/60">
                         <td colSpan={7} className="px-4 py-3">

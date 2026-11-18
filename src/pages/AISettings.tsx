@@ -624,11 +624,7 @@ export default function AISettings(): JSX.Element {
   const featuresAvailable = isConnected(saved) || connSource === 'balance';
   // With the Qhub balance there is no connection step: its balance and features share one tab.
   const tab: PageTab =
-    tabChoice === 'channels'
-      ? 'connection'
-      : (tabChoice === 'features' || tabChoice === 'usage') && !featuresAvailable
-        ? 'connection'
-        : tabChoice;
+    tabChoice === 'channels' ? 'connection' : tabChoice;
   // The usage alert's notification links here with ?tab=features — also when the page is already open.
   useEffect(() => {
     if (tabParam === 'features' || tabParam === 'channels' || tabParam === 'behavior' || tabParam === 'connection' || tabParam === 'usage') setTab(tabParam);
@@ -863,7 +859,6 @@ export default function AISettings(): JSX.Element {
             </button>
           );
         })}
-        {featuresAvailable && (
         <button
           onClick={() => setTab('features')}
           className={cn(
@@ -874,8 +869,6 @@ export default function AISettings(): JSX.Element {
           <Gauge className="h-4 w-4" />
           الميزات
         </button>
-        )}
-        {featuresAvailable && (
         <button
           onClick={() => setTab('usage')}
           className={cn(
@@ -886,7 +879,6 @@ export default function AISettings(): JSX.Element {
           <Wallet className="h-4 w-4" />
           الرصيد والاستهلاك
         </button>
-        )}
       </div>
 
       {/* Muting is applied per section, not on this wrapper: opacity can't be
