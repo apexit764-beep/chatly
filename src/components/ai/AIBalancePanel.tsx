@@ -267,7 +267,7 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
         <div>
           <h2 className="text-h3 font-bold">رصيد المساعد الذكي</h2>
           <p className="text-small text-muted-light dark:text-muted-dark mt-1">
-            {description ?? <>يعمل المساعد بنموذج {BALANCE_SETTINGS.modelName} من خلال Qhub، ويُخصم الاستهلاك من رصيدك. لا تحتاج مفتاح API.</>}
+            {description ?? <>يعمل المساعد بنموذج {BALANCE_SETTINGS.modelName}.</>}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
