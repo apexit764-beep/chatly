@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import AIBalancePanel, { BalancePackPicker } from '@components/ai/AIBalancePanel';
+import ApiUsagePanel from '@components/ai/ApiUsagePanel';
 import AIUsageDetails from '@components/ai/AIUsageDetails';
 import { BALANCE_SETTINGS } from '@/utils/aiBalance';
 import {
@@ -1161,23 +1162,15 @@ export default function AISettings(): JSX.Element {
       {/* ═══ الرصيد والاستهلاك ═══ */}
       {tab === 'usage' && (
         <div className={cn('space-y-5', mutedIfOff)} aria-disabled={!form.enabled}>
-          <AIBalancePanel
-            description={
-              connSource === 'balance'
-                ? undefined
-                : <>يعمل المساعد بنموذج {(currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '')} من خلال مفتاح API الخاص بك لدى {currentProvider.name}. تفاصيل الاستهلاك أدناه للمتابعة فقط، والمحاسبة تتم مباشرة مع المزوّد.</>
-            }
-            usage={
-              <AIUsageDetails
-                showModelFilter={false}
-                currentModel={
-                  connSource === 'balance'
-                    ? BALANCE_SETTINGS.modelName
-                    : (currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '')
-                }
-              />
-            }
-          />
+          {connSource === 'balance' ? (
+            <AIBalancePanel usage={<AIUsageDetails showModelFilter={false} currentModel={BALANCE_SETTINGS.modelName} />} />
+          ) : (
+            <ApiUsagePanel
+              model={(currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '')}
+              provider={currentProvider.name}
+              usage={<AIUsageDetails showModelFilter={false} currentModel={(currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '')} />}
+            />
+          )}
         </div>
       )}
 

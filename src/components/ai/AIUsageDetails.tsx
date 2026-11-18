@@ -254,3 +254,12 @@ export default function AIUsageDetails({
     </div>
   );
 }
+
+/** Tokens used since the 1st of this month, from the same history the details table reads. */
+export function monthToDateTokens(currentModel: string, now = new Date()): number {
+  const today = startOfDay(now);
+  const from = new Date(today.getFullYear(), today.getMonth(), 1);
+  return buildHistory([currentModel], today)
+    .filter((r) => r.date >= from && r.date <= today)
+    .reduce((a, r) => a + FEATURES.reduce((s, f) => s + r.ops[f.key] * f.tokens, 0), 0);
+}
