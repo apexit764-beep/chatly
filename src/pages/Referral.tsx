@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Gift, Users, UserCheck, CalendarCheck } from 'lucide-react';
+import { Copy, Gift, Users, UserCheck, CalendarCheck, MousePointerClick } from 'lucide-react';
 import { Button, Card, EmptyState, StatCard } from '@components/ui';
 import { useReferralStore, type Referral } from '@/store/useReferralStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -42,7 +42,7 @@ const TH = 'text-start font-medium px-4 py-3 whitespace-nowrap';
 type Filter = 'all' | 'subscribed' | 'registered';
 
 export default function Referral(): JSX.Element {
-  const { code, referrals, usedMonths } = useReferralStore();
+  const { code, referrals, visits, usedMonths } = useReferralStore();
   const showToast = useUIStore((s) => s.showToast);
   const [filter, setFilter] = useState<Filter>('all');
   const { on, monthsMonthly, monthsAnnual, linkBase } = REFERRAL_SETTINGS;
@@ -121,7 +121,8 @@ export default function Referral(): JSX.Element {
         </>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+            <StatCard label="زيارات الرابط" value={visits} icon={<MousePointerClick className="h-5 w-5" />} />
             <StatCard label="سجّلوا من رابطك" value={referrals.length} icon={<Users className="h-5 w-5" />} />
             <StatCard label="اشتركوا فعلًا" value={subscribers.length} icon={<UserCheck className="h-5 w-5" />} />
             <StatCard

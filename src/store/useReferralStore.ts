@@ -19,6 +19,8 @@ interface ReferralState {
   code: string;
   /** Newest first. */
   referrals: Referral[];
+  /** How many people opened the referral link (registered or not). */
+  visits: number;
   /** Reward months already taken off renewal invoices, oldest earned first. */
   usedMonths: number;
 }
@@ -35,5 +37,6 @@ export const useReferralStore = create<ReferralState>(() => ({
     { id: 'r3', name: 'محمد سالم', email: 'm.salem@mail.com', phone: '+968 9111 2233', at: ago(10), status: 'registered' },
     { id: 'r4', name: 'مكتب الأمل', email: 'amal@office.om', phone: '+968 9444 5566', at: ago(235), status: 'subscribed', planId: 'plan_business', cycle: 'monthly' },
   ],
+  visits: 37,
   usedMonths: 1,
 }));
