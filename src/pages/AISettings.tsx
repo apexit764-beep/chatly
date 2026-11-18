@@ -1161,6 +1161,11 @@ export default function AISettings(): JSX.Element {
       {tab === 'usage' && (
         <div className={cn('space-y-5', mutedIfOff)} aria-disabled={!form.enabled}>
           <AIBalancePanel
+            description={
+              connSource === 'balance'
+                ? undefined
+                : <>يعمل المساعد بنموذج {(currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '')} من خلال مفتاح API الخاص بك لدى {currentProvider.name}. تفاصيل الاستهلاك أدناه للمتابعة فقط، والمحاسبة تتم مباشرة مع المزوّد.</>
+            }
             usage={
               <AIUsageDetails
                 showModelFilter={false}

@@ -202,7 +202,7 @@ function buildLedger(tx: BalanceTx[]): LedgerRow[] {
   return rows.reverse();
 }
 
-export default function AIBalancePanel({ usage }: { usage?: ReactNode }): JSX.Element {
+export default function AIBalancePanel({ usage, description }: { usage?: ReactNode; description?: ReactNode }): JSX.Element {
   const store = useAIBalanceStore();
   const showToast = useUIStore((s) => s.showToast);
   const balance = store.balance();
@@ -267,7 +267,7 @@ export default function AIBalancePanel({ usage }: { usage?: ReactNode }): JSX.El
         <div>
           <h2 className="text-h3 font-bold">رصيد المساعد الذكي</h2>
           <p className="text-small text-muted-light dark:text-muted-dark mt-1">
-            يعمل المساعد بنموذج {BALANCE_SETTINGS.modelName} من خلال Qhub، ويُخصم الاستهلاك من رصيدك. لا تحتاج مفتاح API.
+            {description ?? <>يعمل المساعد بنموذج {BALANCE_SETTINGS.modelName} من خلال Qhub، ويُخصم الاستهلاك من رصيدك. لا تحتاج مفتاح API.</>}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
