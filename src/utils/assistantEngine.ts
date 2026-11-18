@@ -1,12 +1,14 @@
 import { useAdminStore } from '@/store/useAdminStore';
 import { useDataStore } from '@/store/useDataStore';
+import { useAIBalanceStore } from '@/store/useAIBalanceStore';
 import { channelLabel } from '@components/ui';
 import { formatDate } from '@/utils/format';
 import { currentAgent, hasPermission, seesAllDepartments } from '@/utils/assistantAccess';
 
 /**
- * The internal assistant: answers staff questions about their own account from the app's data,
- * and explains how to use the system. It never changes anything. While the data is mock there
+ * The internal assistant: answers staff questions about their own account's data (subscription,
+ * conversations, channels, staff, customers, campaigns, the AI assistant). It never changes anything
+ * and does not explain how to use the system — that is the support team's job. While the data is mock there
  * is no model call, so the question is matched to a topic and the answer is built from the
  * same stores the pages read — respecting what the signed-in user is allowed to see.
  */
@@ -16,13 +18,11 @@ export interface Answer {
   outro?: string;
   link?: { to: string; label: string };
   tone?: 'err' | 'warn';
-  /** The answer comes from the usage guide rather than the account's data. */
-  guide?: boolean;
 }
 
 export type Topic =
   | 'sub' | 'usage' | 'open' | 'channels' | 'team' | 'top' | 'camp' | 'contact'
-  | 'howWa' | 'howEmp' | 'howQr' | 'howCamp' | 'action' | 'none';
+  | 'ai' | 'howTo' | 'action' | 'none';
 
 export interface QuickQuestion {
   topic: Topic;
@@ -36,8 +36,8 @@ export const QUICK_QUESTIONS: QuickQuestion[] = [
   { topic: 'open', label: 'المحادثات المفتوحة الآن' },
   { topic: 'channels', label: 'حالة القنوات' },
   { topic: 'team', label: 'الموظفون المتصلون' },
-  { topic: 'howWa', label: 'كيف أربط واتساب؟' },
-  { topic: 'howEmp', label: 'كيف أضيف موظفًا؟', visible: () => hasPermission('team.invite') },
+  { topic: 'top', label: 'أفضل موظف', visible: () => hasPermission('reports.view') },
+  { topic: 'camp', label: 'آخر حملة', visible: () => hasPermission('campaigns.view') },
 ];
 
 const NO_PERMISSION: Answer = { intro: 'ليست لديك صلاحية لعرض هذه المعلومات.', tone: 'err' };
@@ -56,10 +56,9 @@ export function detectTopic(question: string): Topic {
   const s = norm(question);
   const has = (...w: string[]): boolean => w.some((x) => s.includes(norm(x)));
   if (has('حول', 'احذف', 'امسح', 'اضف وسم', 'اغلق', 'ارسل رساله', 'غير حاله', 'اسند')) return 'action';
-  if (has('اربط واتساب', 'ربط واتساب', 'اربط حساب', 'كيف اربط', 'اوصل واتساب')) return 'howWa';
-  if (has('اضيف موظف', 'اضافه موظف', 'موظف جديد', 'ادعو موظف')) return 'howEmp';
-  if (has('رد سريع', 'ردود سريعه')) return 'howQr';
-  if (has('اطلق حمله', 'انشئ حمله', 'حمله جديده', 'اعمل حمله')) return 'howCamp';
+  // How-to questions are for the support team, not for this assistant.
+  if (has('كيف اربط', 'كيف اضيف', 'كيف انشئ', 'كيف اطلق', 'كيف اعمل', 'كيف استخدم', 'طريقه', 'ازاي', 'خطوات', 'اربط واتساب', 'ربط واتساب', 'اضيف موظف', 'موظف جديد', 'ادعو موظف', 'رد سريع', 'ردود سريعه', 'اطلق حمله', 'انشئ حمله', 'حمله جديده', 'اعمل حمله')) return 'howTo';
+  if (has('رصيد المساعد', 'استهلاك المساعد', 'توكن')) return 'ai';
   if (has('متبقي', 'باقي', 'تبقي', 'استهلاك', 'حد الباقه')) return 'usage';
   if (has('اشتراك', 'باقه', 'تجديد', 'ينتهي', 'الفاتوره')) return 'sub';
   if (has('افضل موظف', 'اكثر موظف', 'الاكثر', 'افضل', 'ترتيب الموظفين', 'الاداء')) return 'top';
@@ -219,37 +218,15 @@ function contactAnswer(question: string): Answer {
   };
 }
 
-const GUIDE: Record<'howWa' | 'howEmp' | 'howQr' | 'howCamp', () => Answer> = {
-  howWa: () => ({
-    intro: 'لربط حساب واتساب:',
-    items: ['افتح صفحة الحسابات والربط، ثم اختر واتساب.', 'اضغط «ربط حساب جديد».', 'اختر طريقة الربط، وأكمل الخطوات حتى تظهر حالة «متصل».'],
-    link: link('/channels', 'فتح الحسابات والربط'),
-    guide: true,
-  }),
-  howEmp: () =>
-    hasPermission('team.invite')
-      ? {
-          intro: 'لإضافة موظف:',
-          items: ['افتح صفحة فريق العمل.', 'اضغط «إضافة موظف»، وأدخل الاسم والبريد الإلكتروني.', 'اختر الدور والقسم والحسابات المسند إليها، ثم احفظ.'],
-          outro: 'سيصل إلى الموظف بريد لإنشاء كلمة المرور.',
-          link: link('/team', 'فتح فريق العمل'),
-          guide: true,
-        }
-      : { intro: 'إضافة الموظفين تحتاج صلاحية دعوة موظف. تواصل مع مسؤول الحساب.', tone: 'warn' },
-  howQr: () => ({
-    intro: 'لإنشاء رد سريع:',
-    items: ['افتح المحادثات، ثم أيقونة الردود السريعة في مربع الكتابة.', 'اضغط «رد جديد»، واكتب العنوان والنص.'],
-    outro: 'يمكنك استخدامه بعد ذلك في أي محادثة.',
-    link: link('/inbox', 'فتح المحادثات'),
-    guide: true,
-  }),
-  howCamp: () => ({
-    intro: 'لإطلاق حملة:',
-    items: ['افتح صفحة الحملات، واضغط «حملة جديدة».', 'اختر القناة (واتساب أو البريد الإلكتروني) والقالب.', 'حدد الجمهور ووقت الإرسال، ثم أطلق الحملة.'],
-    link: link('/campaigns', 'فتح الحملات'),
-    guide: true,
-  }),
-};
+function aiAnswer(): Answer {
+  const b = useAIBalanceStore.getState();
+  const left = Math.max(0, b.balance());
+  return {
+    intro: `رصيد المساعد الذكي الحالي: $${left.toFixed(2)}.`,
+    items: [b.stopped || left <= 0 ? 'المساعد متوقف لنفاد الرصيد.' : 'المساعد يعمل ويرد على عملائك.'],
+    link: link('/ai-settings?tab=usage', 'فتح الرصيد والاستهلاك'),
+  };
+}
 
 /** The answer to a topic for the signed-in user. */
 export function answerFor(topic: Topic, question = ''): Answer {
@@ -262,8 +239,9 @@ export function answerFor(topic: Topic, question = ''): Answer {
     case 'top': return topAgents();
     case 'camp': return lastCampaign();
     case 'contact': return contactAnswer(question);
-    case 'howWa': case 'howEmp': case 'howQr': case 'howCamp': return GUIDE[topic]();
+    case 'ai': return aiAnswer();
+    case 'howTo': return { intro: 'أجيب عن بيانات حسابك فقط. لمعرفة طريقة استخدام النظام تواصل مع فريق الدعم.', tone: 'warn' };
     case 'action': return { intro: 'لا يمكنني تنفيذ الإجراءات، لكن يمكنك تنفيذها بنفسك من الصفحة المناسبة.', tone: 'warn' };
-    default: return { intro: 'لم أجد إجابة لهذا السؤال. جرّب صياغة أخرى، أو اسأل عن حسابك أو طريقة استخدام النظام.', tone: 'warn' };
+    default: return { intro: 'لم أجد إجابة لهذا السؤال. جرّب صياغة أخرى، أو اسأل عن اشتراكك أو القنوات أو الموظفين أو العملاء أو الحملات.', tone: 'warn' };
   }
 }

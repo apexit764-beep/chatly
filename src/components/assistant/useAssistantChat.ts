@@ -10,9 +10,9 @@ import { answerFor, detectTopic, type Answer, type Topic } from '@/utils/assista
 const SEED_KEY = 'qhub_assistant_demo_seeded';
 const DEMO_THREADS: { title: string; daysAgo: number; qs: string[] }[] = [
   { title: 'حالة اشتراكي', daysAgo: 1, qs: ['حالة اشتراكي'] },
-  { title: 'كيف أربط واتساب؟', daysAgo: 2, qs: ['كيف أربط واتساب؟', 'حالة القنوات'] },
+  { title: 'آخر حملة', daysAgo: 2, qs: ['آخر حملة', 'حالة القنوات'] },
   { title: 'المحادثات المفتوحة الآن', daysAgo: 4, qs: ['المحادثات المفتوحة الآن'] },
-  { title: 'كيف أضيف موظفًا؟', daysAgo: 6, qs: ['كيف أضيف موظفًا؟', 'الموظفون المتصلون'] },
+  { title: 'الموظفون المتصلون', daysAgo: 6, qs: ['الموظفون المتصلون', 'أفضل موظف'] },
   { title: 'حالة القنوات', daysAgo: 9, qs: ['حالة القنوات'] },
 ];
 
@@ -87,7 +87,8 @@ export function useAssistantChat(): AssistantChat {
     if (live) seen.set(live.key, live);
     mine.forEach((s) => { if (!seen.has(s.modelKey)) seen.set(s.modelKey, { key: s.modelKey, label: s.modelLabel }); });
     const models = [...seen.values()];
-    const selected = (modelKey ? seen.get(modelKey) : undefined) ?? live ?? models[0] ?? null;
+    // The provider is whatever the account is connected to; it cannot be switched from here.
+    const selected = live ?? models[0] ?? null;
     const history = selected ? mine.filter((s) => s.modelKey === selected.key) : [];
     const session = history.find((s) => s.id === currentId) ?? null;
     const canWrite = !!live && selected?.key === live.key;

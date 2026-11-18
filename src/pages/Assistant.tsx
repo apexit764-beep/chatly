@@ -1,6 +1,6 @@
 import { Plus } from 'lucide-react';
 import { Card } from '@components/ui';
-import { AssistantChatView, ModelSelect } from '@components/assistant/AssistantChatView';
+import { AssistantChatView } from '@components/assistant/AssistantChatView';
 import { useAssistantChat } from '@components/assistant/useAssistantChat';
 import { usePermission } from '@/hooks/usePermission';
 import { formatDate } from '@/utils/format';
@@ -24,9 +24,8 @@ export default function Assistant(): JSX.Element {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-h1 font-extrabold">المساعد الداخلي</h1>
-          <p className="mt-0.5 text-small text-muted-light dark:text-muted-dark">اسأل عن حسابك وبياناتك وطريقة استخدام النظام</p>
+          <p className="mt-0.5 text-small text-muted-light dark:text-muted-dark">اسأل عن بيانات حسابك وموظفيك وعملائك وحملاتك</p>
         </div>
-        <ModelSelect />
       </div>
       <div className="flex min-h-0 flex-1 gap-3.5">
         <aside className="hidden w-[260px] flex-none flex-col overflow-y-auto rounded-card border border-border-light bg-white p-3 dark:border-border-dark dark:bg-surface-dark md:flex">

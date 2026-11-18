@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Bot, List, Maximize2, Plus, X } from 'lucide-react';
 import { useAssistantStore } from '@/store/useAssistantStore';
 import { usePermission } from '@/hooks/usePermission';
-import { AssistantChatView, ModelSelect } from './AssistantChatView';
+import { AssistantChatView } from './AssistantChatView';
 import { useAssistantChat } from './useAssistantChat';
 import { formatDate } from '@/utils/format';
 import { cn } from '@/utils/cn';
@@ -37,7 +37,6 @@ export function AssistantPanel(): JSX.Element | null {
       <div className="flex items-center gap-2.5 border-b border-border-light px-3.5 py-3 dark:border-border-dark">
         <div className="flex h-8 w-8 flex-none items-center justify-center rounded-[10px] bg-primary/10 text-primary"><Bot className="h-[18px] w-[18px]" /></div>
         <div className="min-w-0 flex-1 whitespace-nowrap font-extrabold">مساعد Qhub</div>
-        <ModelSelect />
         <div ref={menuRef} className="relative">
           <button type="button" title="كل المحادثات" aria-label="كل المحادثات" aria-expanded={listOpen} onClick={() => setListOpen((v) => !v)} className={cn(iconBtn, listOpen && 'bg-bg-light dark:bg-bg-dark')}><List className="h-[17px] w-[17px]" /></button>
           {listOpen && (

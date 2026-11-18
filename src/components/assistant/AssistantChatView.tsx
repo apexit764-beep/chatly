@@ -32,7 +32,6 @@ function AnswerBubble({ a }: { a: Answer }): JSX.Element {
           {a.link.label} <ArrowLeft className="h-3 w-3" />
         </button>
       )}
-      {a.guide && <span className="mt-1.5 block text-[11px] text-muted-light dark:text-muted-dark">المصدر: دليل استخدام Qhub</span>}
     </div>
   );
 }
@@ -64,7 +63,7 @@ export function AssistantChatView({ idPrefix }: { idPrefix: string }): JSX.Eleme
         {msgs.length === 0 ? (
           <div className="px-2 pt-4 text-center leading-loose text-muted-light dark:text-muted-dark">
             <b className="block text-body text-current">أهلًا{first ? ` ${first}` : ''}</b>
-            اسألني عن حسابك أو عن طريقة استخدام النظام.
+            اسألني عن بيانات حسابك: الاشتراك والقنوات والموظفين والعملاء والحملات.
           </div>
         ) : (
           msgs.map((m, i) =>
@@ -136,20 +135,5 @@ export function AssistantChatView({ idPrefix }: { idPrefix: string }): JSX.Eleme
         </div>
       </div>
     </>
-  );
-}
-
-export function ModelSelect(): JSX.Element | null {
-  const chat = useAssistantChat();
-  if (chat.models.length < 2) return null;
-  return (
-    <select
-      value={chat.selected?.key ?? ''}
-      onChange={(e) => chat.select(e.target.value)}
-      aria-label="النموذج"
-      className="rounded-lg border border-border-light bg-white px-2 py-1 text-[12px] dark:border-border-dark dark:bg-surface-dark"
-    >
-      {chat.models.map((m) => <option key={m.key} value={m.key}>{m.label}{m.key === chat.live?.key ? '' : ' (غير مربوط)'}</option>)}
-    </select>
   );
 }
