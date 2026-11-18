@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Wallet, Zap, TrendingDown, Power, Plus, Eye, Download, PauseCircle, CreditCard } from 'lucide-react';
 import { Button, Card, Modal, StatCard, Input } from '@components/ui';
@@ -140,7 +140,7 @@ const TX_LABEL: Record<BalanceTx['type'], string> = {
   settings: 'إعدادات',
 };
 
-export default function AIBalancePanel(): JSX.Element {
+export default function AIBalancePanel({ usage }: { usage?: ReactNode }): JSX.Element {
   const store = useAIBalanceStore();
   const showToast = useUIStore((s) => s.showToast);
   const balance = store.balance();
@@ -268,48 +268,14 @@ export default function AIBalancePanel(): JSX.Element {
       </Card>
 
 
-      <Card className="overflow-hidden">
-        <h2 className="text-body font-bold px-5 pt-5 pb-3">الفواتير</h2>
-        {store.invoices.length === 0 ? (
-          <p className="text-small text-muted-light dark:text-muted-dark px-5 pb-5">لا توجد فواتير بعد.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-body">
-              <thead className="bg-bg-light dark:bg-bg-dark text-small text-muted-light dark:text-muted-dark">
-                <tr>
-                  <th className="text-start font-medium px-4 py-3">رقم الفاتورة</th>
-                  <th className="text-start font-medium px-4 py-3">التاريخ</th>
-                  <th className="text-start font-medium px-4 py-3 hidden md:table-cell">البيان</th>
-                  <th className="text-end font-medium px-4 py-3">الإجمالي</th>
-                  <th className="text-center font-medium px-4 py-3 w-1">الإجراء</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border-light dark:divide-border-dark">
-                {store.invoices.map((inv) => (
-                  <tr key={inv.number} className="hover:bg-bg-light dark:hover:bg-bg-dark transition-colors">
-                    <td className="px-4 py-3 font-mono font-semibold whitespace-nowrap">{inv.number}</td>
-                    <td className="px-4 py-3 text-small text-muted-light dark:text-muted-dark whitespace-nowrap">{formatDate(inv.at)}</td>
-                    <td className="px-4 py-3 text-small hidden md:table-cell">{inv.description}</td>
-                    <td className="px-4 py-3 text-end font-semibold whitespace-nowrap tabular-nums">{formatMoney(inv.amount, inv.currency)}</td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => setInvoice(inv)}
-                        className="h-8 px-3 rounded-full bg-primary/10 text-primary hover:bg-primary/20 inline-flex items-center gap-1.5 text-small font-semibold transition-colors"
-                      >
-                        <Eye className="h-3.5 w-3.5" /> عرض
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+      {usage}
 
       <Card className="overflow-hidden">
         <div className="flex items-center justify-between gap-3 flex-wrap px-5 pt-5 pb-3">
-          <h2 className="text-body font-bold">سجل الحركات</h2>
+          <div>
+            <h2 className="text-body font-bold">التدفق النقدي</h2>
+            <p className="text-[12px] text-muted-light dark:text-muted-dark mt-0.5">كل الشحنات والاستهلاك والتسويات، مع فاتورة كل عملية شحن.</p>
+          </div>
           <label className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark">
             نوع الحركة
             <select
@@ -332,6 +298,7 @@ export default function AIBalancePanel(): JSX.Element {
                 <th className="text-start font-medium px-4 py-3">الحركة</th>
                 <th className="text-start font-medium px-4 py-3 hidden md:table-cell">التفاصيل</th>
                 <th className="text-end font-medium px-4 py-3">المبلغ</th>
+                <th className="text-center font-medium px-4 py-3 w-1">الفاتورة</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
@@ -352,6 +319,21 @@ export default function AIBalancePanel(): JSX.Element {
                   <td className="px-4 py-3 text-small hidden md:table-cell">{t.description}</td>
                   <td className={cn('px-4 py-3 text-end font-semibold whitespace-nowrap tabular-nums', t.usd > 0 ? 'text-success' : t.usd < 0 ? 'text-danger' : '')} dir="ltr">
                     {t.usd === 0 ? '—' : `${t.usd > 0 ? '+' : ''}${formatMoney(exactLocal(t.usd), currency.code)}`}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    {(() => {
+                      const inv = t.type === 'topup' || t.type === 'auto' ? store.invoices.find((i) => t.description.includes(i.number)) : undefined;
+                      return inv ? (
+                        <button
+                          onClick={() => setInvoice(inv)}
+                          className="h-8 px-3 rounded-full bg-primary/10 text-primary hover:bg-primary/20 inline-flex items-center gap-1.5 text-small font-semibold transition-colors"
+                        >
+                          <Eye className="h-3.5 w-3.5" /> عرض
+                        </button>
+                      ) : (
+                        <span className="text-muted-light dark:text-muted-dark">—</span>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}

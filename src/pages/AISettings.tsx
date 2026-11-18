@@ -624,7 +624,9 @@ export default function AISettings(): JSX.Element {
   const featuresAvailable = isConnected(saved) || connSource === 'balance';
   // With the Qhub balance there is no connection step: its balance and features share one tab.
   const tab: PageTab =
-    connSource === 'balance' && tabChoice === 'connection'
+    connSource === 'balance' && tabChoice === 'usage'
+      ? 'features'
+      : connSource === 'balance' && tabChoice === 'connection'
       ? 'channels'
       : (tabChoice === 'features' || tabChoice === 'channels') && !featuresAvailable
         ? 'connection'
@@ -827,35 +829,6 @@ export default function AISettings(): JSX.Element {
         </div>
       )}
 
-      {/* مصدر المساعد: API العميل نفسه أو رصيد من خلال Qhub */}
-      <div role="tablist" aria-label="مصدر المساعد الذكي" className="inline-flex p-1 rounded-full bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark self-start">
-        {([
-          ['api', 'مفتاح API الخاص بي', KeyRound, ''],
-          ['balance', 'مساعد Qhub', Zap, 'لا يحتاج إلى مفتاح API'],
-        ] as const).map(([key, label, Icon, hint]) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={connSource === key}
-            onClick={() => { setConnSource(key); setTab('connection'); }}
-            className={cn(
-              'inline-flex items-center gap-2 h-9 px-4 rounded-full text-small font-semibold transition-colors',
-              connSource === key ? 'bg-primary text-white shadow-sm' : 'text-muted-light dark:text-muted-dark hover:text-current',
-            )}
-          >
-            <Icon className="h-4 w-4" /> {label}
-            {hint && (
-              <span className={cn(
-                'text-[10.5px] font-medium px-2 py-0.5 rounded-full',
-                connSource === key ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary',
-              )}>
-                {hint}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
       {/* Top-level tabs */}
       <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2 overflow-x-auto">
         {connSource === 'api' && (
@@ -917,9 +890,10 @@ export default function AISettings(): JSX.Element {
           )}
         >
           {connSource === 'balance' ? <Wallet className="h-4 w-4" /> : <Gauge className="h-4 w-4" />}
-          {connSource === 'balance' ? 'الرصيد' : 'الميزات والرصيد'}
+          {connSource === 'balance' ? 'الرصيد والاستهلاك' : 'الميزات والرصيد'}
         </button>
         )}
+        {connSource !== 'balance' && (
         <button
           onClick={() => setTab('usage')}
           className={cn(
@@ -931,7 +905,43 @@ export default function AISettings(): JSX.Element {
           تفاصيل الاستهلاك
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-warning/15 text-warning font-bold">جديد</span>
         </button>
+        )}
       </div>
+
+      {/* مصدر المساعد: Radio — مساعد Qhub (افتراضي) أو مفتاح API الخاص بالعميل */}
+      <section className="rounded-card border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark p-4">
+        <h2 className="text-body font-bold">مصدر المساعد الذكي</h2>
+        <p className="text-small text-muted-light dark:text-muted-dark mt-0.5 mb-3">اختر كيف يعمل المساعد: من خلال Qhub مباشرة أو بمفتاح API الخاص بك.</p>
+        <div role="radiogroup" aria-label="مصدر المساعد الذكي" className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {([
+            ['balance', 'مساعد Qhub', 'يعمل من خلال رصيد Qhub، لا يحتاج إلى مفتاح API.', Zap],
+            ['api', 'مفتاح API الخاص بي', 'اربط مزوّدك (OpenAI / Claude / Gemini) بمفتاحك الخاص.', KeyRound],
+          ] as const).map(([key, label, hint, Icon]) => (
+            <label
+              key={key}
+              className={cn(
+                'flex items-start gap-3 rounded-card border-2 p-3 cursor-pointer transition-colors',
+                connSource === key ? 'border-primary bg-primary/5' : 'border-border-light dark:border-border-dark hover:border-primary/40',
+              )}
+            >
+              <input
+                type="radio"
+                name="ai_source"
+                value={key}
+                checked={connSource === key}
+                onChange={() => { setConnSource(key); setTab('connection'); }}
+                className="mt-1 h-4 w-4 accent-primary"
+              />
+              <span className="min-w-0">
+                <span className="flex items-center gap-2 text-small font-bold"><Icon className="h-4 w-4 text-primary" /> {label}
+                  {key === 'balance' && <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">لا يحتاج إلى مفتاح API</span>}
+                </span>
+                <span className="block text-[12px] text-muted-light dark:text-muted-dark mt-0.5">{hint}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </section>
 
       {/* Muting is applied per section, not on this wrapper: opacity can't be
           undone on a child (it multiplies with the parent's), so a section that
@@ -1177,7 +1187,11 @@ export default function AISettings(): JSX.Element {
       )}
       {tab === 'features' && connSource === 'balance' && (
         <div className={cn('space-y-5', mutedIfOff)} aria-disabled={!form.enabled}>
-          <AIBalancePanel />
+          <AIBalancePanel
+            usage={
+              <AIUsageDetails showModelFilter={false} currentModel={BALANCE_SETTINGS.modelName} />
+            }
+          />
         </div>
       )}
       {tab === 'channels' && connSource === 'balance' && (

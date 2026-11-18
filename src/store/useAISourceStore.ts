@@ -6,9 +6,10 @@ const STORAGE_KEY = 'qhub_ai_source';
 
 function load(): AISource {
   try {
-    return localStorage.getItem(STORAGE_KEY) === 'balance' ? 'balance' : 'api';
+    // مساعد Qhub هو الافتراضي حتى يختار العميل مفتاحه الخاص صراحةً.
+    return localStorage.getItem(STORAGE_KEY) === 'api' ? 'api' : 'balance';
   } catch {
-    return 'api';
+    return 'balance';
   }
 }
 
