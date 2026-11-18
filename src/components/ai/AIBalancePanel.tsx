@@ -27,7 +27,9 @@ function AmountPicker({
   onPack,
   custom,
   onCustom,
+  compact = false,
 }: {
+  compact?: boolean;
   pack: number | null;
   onPack: (usd: number | null) => void;
   custom: string;
@@ -37,7 +39,7 @@ function AmountPicker({
   const customUsd = Number(custom) > 0 ? Number(custom) / c.rate : 0;
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className={cn('grid grid-cols-2 gap-3', !compact && 'sm:grid-cols-4')}>
         {BALANCE_SETTINGS.packs.map((usd) => (
           <button
             key={usd}
@@ -199,6 +201,30 @@ function buildLedger(tx: BalanceTx[]): LedgerRow[] {
     rows.push(row);
   }
   return rows.reverse();
+}
+
+/** Shown under «مساعد Qhub» in the connection card: pick a pack (or amount) and go to checkout. */
+export function BalancePackPicker(): JSX.Element {
+  const showToast = useUIStore((s) => s.showToast);
+  const navigate = useNavigate();
+  const defaultCard = usePaymentMethodsStore((st) => st.cards.find((c) => c.isDefault) ?? st.cards[0] ?? null);
+  const [pack, setPack] = useState<number | null>(null);
+  const [custom, setCustom] = useState('');
+  const submit = (): void => {
+    if (!defaultCard) return showToast('أضف وسيلة دفع من الإعدادات أولًا', 'error');
+    const r = resolveAmount(pack, custom);
+    if (typeof r === 'string') return showToast(r, 'error');
+    navigate('/ai-settings/checkout', { state: { usd: r.usd, paidLocal: r.paidLocal, cardId: defaultCard.id } });
+  };
+  return (
+    <div className="space-y-4 rounded-xl border border-border-light dark:border-border-dark p-4">
+      <p className="text-body font-semibold">اختر باقة الرصيد</p>
+      <AmountPicker compact pack={pack} onPack={setPack} custom={custom} onCustom={setCustom} />
+      <div className="flex justify-end">
+        <Button className="text-white" onClick={submit} disabled={!pack && !custom}>الانتقال للدفع</Button>
+      </div>
+    </div>
+  );
 }
 
 export default function AIBalancePanel({ usage, description }: { usage?: ReactNode; description?: ReactNode }): JSX.Element {

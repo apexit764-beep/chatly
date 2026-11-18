@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import AIBalancePanel from '@components/ai/AIBalancePanel';
+import AIBalancePanel, { BalancePackPicker } from '@components/ai/AIBalancePanel';
 import AIUsageDetails from '@components/ai/AIUsageDetails';
 import { BALANCE_SETTINGS } from '@/utils/aiBalance';
 import {
@@ -998,6 +998,7 @@ export default function AISettings(): JSX.Element {
                   يعمل المساعد بنموذج {BALANCE_SETTINGS.modelName} من خلال Qhub، ويُخصم الاستهلاك من رصيدك. الرصيد وتفاصيل الاستهلاك في تاب «الرصيد والاستهلاك».
                 </p>
               )}
+              {connSource === 'balance' && <BalancePackPicker />}
 
               {connSource === 'api' && (<>
               {/* Provider picker */}
