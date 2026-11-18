@@ -32,7 +32,8 @@ export default function ApiUsagePanel({
 }: {
   model: string;
   provider: string;
-  usage: ReactNode;
+  /** Usage details; receives the cost formatter so its feature table can show an estimated cost. */
+  usage: (formatCost: (tokens: number) => string) => ReactNode;
 }): JSX.Element {
   const limit = useAIApiLimitStore();
   const showToast = useUIStore((s) => s.showToast);
@@ -213,7 +214,7 @@ export default function ApiUsagePanel({
         )}
       </Card>
 
-      {usage}
+      {usage((t) => `≈ ${formatMoney(t * perToken, c.code)}`)}
     </div>
   );
 }

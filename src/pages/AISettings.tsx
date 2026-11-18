@@ -1168,7 +1168,14 @@ export default function AISettings(): JSX.Element {
             <ApiUsagePanel
               model={(currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '')}
               provider={currentProvider.name}
-              usage={<AIUsageDetails showModelFilter={false} currentModel={(currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '')} />}
+              usage={(formatCost) => (
+                <AIUsageDetails
+                  showModelFilter={false}
+                  showFeatures
+                  formatCost={formatCost}
+                  currentModel={(currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '')}
+                />
+              )}
             />
           )}
         </div>

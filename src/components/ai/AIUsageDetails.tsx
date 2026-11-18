@@ -79,8 +79,14 @@ const monthName = (d: Date): string => d.toLocaleDateString('ar-u-nu-latn', { mo
 export default function AIUsageDetails({
   currentModel,
   showModelFilter = true,
+  showFeatures = false,
+  formatCost,
 }: {
   currentModel: string;
+  /** Per-feature table. Off for the Qhub balance, where it lives inside the cash-flow rows. */
+  showFeatures?: boolean;
+  /** Adds an estimated-cost column (own API key). */
+  formatCost?: (tokens: number) => string;
   /** Hidden with the Qhub balance: the client doesn't pick or see models there. */
   showModelFilter?: boolean;
 }): JSX.Element {
@@ -246,10 +252,60 @@ export default function AIUsageDetails({
         )}
       </section>
 
+      {showFeatures && (
+      <section className="rounded-card border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark overflow-x-auto">
+        <h3 className="text-body font-bold px-5 pt-5 pb-2">الاستهلاك حسب الميزة</h3>
+        <table className="w-full text-small">
+          <thead>
+            <tr className="text-muted-light dark:text-muted-dark text-[12px] border-b border-border-light dark:border-border-dark">
+              <th className="text-start font-semibold py-3 px-5">الميزة</th>
+              <th className="text-start font-semibold py-3 px-3">مرات الاستخدام</th>
+              <th className="text-start font-semibold py-3 px-3">إجمالي التوكنز</th>
+              {formatCost && <th className="text-start font-semibold py-3 px-3">التكلفة التقديرية</th>}
+              <th className="text-start font-semibold py-3 px-3">النسبة</th>
+            </tr>
+          </thead>
+          <tbody>
+            {perFeature.map((f) => {
+              const pct = totalTokens > 0 ? (f.total / totalTokens) * 100 : 0;
+              const zero = f.total === 0;
+              return (
+                <tr key={f.key} className={cn('border-b border-border-light/70 dark:border-border-dark/70', zero && 'text-muted-light dark:text-muted-dark opacity-60')}>
+                  <td className="py-3 px-5 font-medium">{f.label}</td>
+                  <td className="py-3 px-3 tabular-nums">{num(f.uses)}</td>
+                  <td className="py-3 px-3 tabular-nums">{num(f.total)}</td>
+                  {formatCost && <td className="py-3 px-3 tabular-nums"><span dir="ltr">{formatCost(f.total)}</span></td>}
+                  <td className="py-3 px-3">
+                    <div className="flex items-center gap-3">
+                      <span className="w-12 tabular-nums">{pct.toFixed(1)}%</span>
+                      <span className="h-1.5 w-28 rounded-full bg-bg-light dark:bg-bg-dark overflow-hidden" aria-hidden>
+                        <span className="block h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            <tr className="bg-bg-light dark:bg-bg-dark font-bold">
+              <td className="py-3 px-5">الإجمالي</td>
+              <td className="py-3 px-3 tabular-nums">{num(totalUses)}</td>
+              <td className="py-3 px-3 tabular-nums">{num(totalTokens)}</td>
+              {formatCost && <td className="py-3 px-3 tabular-nums"><span dir="ltr">{formatCost(totalTokens)}</span></td>}
+              <td className="py-3 px-3">{totalTokens > 0 ? '100%' : '0%'}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </section>
+      )}
+
       <p className="text-[12px] text-muted-light dark:text-muted-dark">
         {showModelFilter
           ? 'قائمة المودل فيها المودلات اللي العميل استخدمها قبل كده + «كل المودلات». الأرقام في الصفحة كلها حسب المودل والفترة المختارين.'
-          : 'الأرقام في الصفحة كلها حسب الفترة المختارة. تفصيل الاستهلاك حسب الميزة داخل جدول التدفق النقدي أدناه.'}
+          : showFeatures
+            ? 'الأرقام في الصفحة كلها حسب الفترة المختارة.'
+            : 'الأرقام في الصفحة كلها حسب الفترة المختارة. تفصيل الاستهلاك حسب الميزة داخل جدول التدفق النقدي أدناه.'}
       </p>
     </div>
   );
