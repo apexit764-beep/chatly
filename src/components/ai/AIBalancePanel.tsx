@@ -359,11 +359,11 @@ export default function AIBalancePanel({ usage }: { usage?: ReactNode }): JSX.El
             <thead className="bg-bg-light dark:bg-bg-dark text-small text-muted-light dark:text-muted-dark">
               <tr>
                 <th className="text-start font-medium px-4 py-3">التاريخ</th>
-                <th className="text-start font-medium px-4 py-3">البند</th>
                 <th className="text-start font-medium px-4 py-3">النوع</th>
                 <th className="text-end font-medium px-4 py-3">دائن</th>
                 <th className="text-end font-medium px-4 py-3">مدين</th>
                 <th className="text-end font-medium px-4 py-3">المتبقي</th>
+                <th className="text-start font-medium px-4 py-3">الاستهلاك / التفاصيل</th>
                 <th className="text-center font-medium px-4 py-3 w-1">الفاتورة</th>
               </tr>
             </thead>
@@ -382,12 +382,6 @@ export default function AIBalancePanel({ usage }: { usage?: ReactNode }): JSX.El
                       aria-expanded={expandable ? open : undefined}
                     >
                       <td className="px-4 py-3 text-small text-muted-light dark:text-muted-dark whitespace-nowrap">{formatDate(t.at)}</td>
-                      <td className="px-4 py-3 text-small">
-                        <span className="inline-flex items-center gap-1.5">
-                          {expandable && (open ? <ChevronDown className="h-3.5 w-3.5 text-muted-light" /> : <ChevronLeft className="h-3.5 w-3.5 text-muted-light" />)}
-                          {t.description}
-                        </span>
-                      </td>
                       <td className="px-4 py-3">
                         <span
                           className={cn(
@@ -406,6 +400,12 @@ export default function AIBalancePanel({ usage }: { usage?: ReactNode }): JSX.El
                       </td>
                       <td className={cn('px-4 py-3 text-end font-bold whitespace-nowrap tabular-nums', t.balance < 0 && 'text-danger')} dir="ltr">
                         {formatMoney(exactLocal(t.balance), currency.code)}
+                      </td>
+                      <td className="px-4 py-3 text-small">
+                        <span className="inline-flex items-center gap-1.5">
+                          {expandable && (open ? <ChevronDown className="h-3.5 w-3.5 text-muted-light" /> : <ChevronLeft className="h-3.5 w-3.5 text-muted-light" />)}
+                          {t.description}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                         {inv ? (
