@@ -11,7 +11,7 @@ export interface BalanceLot {
   left: number;
 }
 
-export type BalanceTxType = 'topup' | 'auto' | 'usage' | 'settle' | 'gift' | 'settings';
+export type BalanceTxType = 'topup' | 'auto' | 'usage' | 'gift' | 'settings';
 
 export interface BalanceTx {
   id: number;
@@ -128,7 +128,11 @@ type Persisted = ReturnType<typeof initial>;
 function load(): Persisted {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...initial(), ...(JSON.parse(raw) as Partial<Persisted>) };
+    if (raw) {
+      const saved = { ...initial(), ...(JSON.parse(raw) as Partial<Persisted>) };
+      // Overdraft no longer exists: drop any leftover debt and its settlement rows from older saves.
+      return { ...saved, negative: 0, tx: saved.tx.filter((t) => (t.type as string) !== 'settle') };
+    }
   } catch {
     /* fall through to the seeded state */
   }
@@ -172,20 +176,14 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
     persist(snapshot());
   };
 
-  /** Adds credit: settles any overdraft first, then resets the usage baseline. */
+  /** Adds credit and resets the usage baseline. */
   const credit = (usd: number, source: string, txType: BalanceTxType, txDesc: string): void => {
     const s = get();
-    const before = Math.max(0, round6(sumLeft(s.lots) - s.negative));
-    let add = usd;
-    let negative = s.negative;
+    const before = Math.max(0, round6(sumLeft(s.lots)));
+    const add = usd;
+    const negative = 0;
     let nextId = s.nextId;
     const tx: BalanceTx[] = [];
-    if (negative > 0) {
-      const settled = Math.min(negative, add);
-      negative = round6(negative - settled);
-      add -= settled;
-      tx.push({ id: nextId++, at: new Date().toISOString(), type: 'settle', description: 'خُصم الرصيد السالب من الشحنة', usd: -settled });
-    }
     tx.push({ id: nextId++, at: new Date().toISOString(), type: txType, description: txDesc, usd });
     const lots = [...s.lots, { id: nextId++, source, usd, left: add }];
     const balance = round6(sumLeft(lots) - negative);
@@ -272,9 +270,13 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
           blocked += 1;
           continue;
         }
-        // Deterministic 1,500–2,600 tokens per answered message.
-        const t = 1500 + (((done + 1) * 137) % 1100);
-        let need = (t / 1_000_000) * BALANCE_SETTINGS.pricePerMillionUsd;
+        // Deterministic 1,500–2,600 tokens per answered message. There is no overdraft:
+        // the last message is charged only what is left, then the assistant stops at zero.
+        const tFull = 1500 + (((done + 1) * 137) % 1100);
+        const needFull = (tFull / 1_000_000) * BALANCE_SETTINGS.pricePerMillionUsd;
+        const available = Math.max(0, get().balance());
+        let need = Math.min(needFull, available);
+        const t = Math.round(tFull * (need / needFull));
         tokens += t;
         spentUsd += need;
         const lots = get().lots.map((l) => ({ ...l }));
@@ -284,8 +286,7 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
           need -= take;
           if (need <= 1e-9) break;
         }
-        let negative = get().negative;
-        if (need > 1e-9) negative = Math.min(BALANCE_SETTINGS.maxNegativeUsd, round6(negative + need));
+        const negative = 0;
         done += 1;
         commit({ lots, negative, usedMonthTokens: get().usedMonthTokens + t });
 

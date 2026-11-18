@@ -8,7 +8,6 @@ export const BALANCE_SETTINGS: {
   packs: number[];
   minUsd: number;
   maxUsd: number;
-  maxNegativeUsd: number;
   modelName: string;
 } = {
   /** What the client pays per million tokens, in USD. */
@@ -17,7 +16,6 @@ export const BALANCE_SETTINGS: {
   minUsd: 5,
   maxUsd: 200,
   /** The lowest the balance may go below zero before the assistant stops. */
-  maxNegativeUsd: 0.5,
   modelName: 'Qhub AI',
 };
 

@@ -136,7 +136,6 @@ const TX_LABEL: Record<BalanceTx['type'], string> = {
   topup: 'شحن',
   auto: 'شحن',
   usage: 'استهلاك',
-  settle: 'تسوية سالب',
   gift: 'رصيد مجاني',
   settings: 'إعدادات',
 };
@@ -348,7 +347,7 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
               className="h-9 rounded-input border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark px-3 text-small text-current focus:border-primary focus:outline-none"
             >
               <option value="all">الكل</option>
-              {(Object.keys(TX_LABEL) as BalanceTx['type'][]).filter((k) => k !== 'settings' && k !== 'auto' && k !== 'settle').map((k) => (
+              {(Object.keys(TX_LABEL) as BalanceTx['type'][]).filter((k) => k !== 'settings' && k !== 'auto').map((k) => (
                 <option key={k} value={k}>{TX_LABEL[k]}</option>
               ))}
             </select>
