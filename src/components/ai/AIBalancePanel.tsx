@@ -405,7 +405,7 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
                         <span className="inline-flex items-center gap-1.5">
                           {expandable && (open ? <ChevronDown className="h-3.5 w-3.5 text-muted-light" /> : <ChevronLeft className="h-3.5 w-3.5 text-muted-light" />)}
                           {isUsage
-                            ? <>إجمالي التوكنز المستهلكة في الحركة: <b className="tabular-nums" dir="ltr">{Math.round((-t.usd / BALANCE_SETTINGS.pricePerMillionUsd) * 1_000_000).toLocaleString('en-US')}</b></>
+                            ? <><b className="tabular-nums" dir="ltr">{Math.round((-t.usd / BALANCE_SETTINGS.pricePerMillionUsd) * 1_000_000).toLocaleString('en-US')}</b> توكنز</>
                             : t.description}
                         </span>
                       </td>
