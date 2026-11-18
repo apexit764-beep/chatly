@@ -392,19 +392,21 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
                           {TX_LABEL[t.type]}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-end font-semibold whitespace-nowrap tabular-nums text-success" dir="ltr">
-                        {isCredit ? formatMoney(exactLocal(t.usd), currency.code) : '—'}
+                      <td className="px-4 py-3 text-end font-semibold whitespace-nowrap tabular-nums text-success">
+                        <span dir="ltr">{isCredit ? formatMoney(exactLocal(t.usd), currency.code) : '—'}</span>
                       </td>
-                      <td className="px-4 py-3 text-end font-semibold whitespace-nowrap tabular-nums text-danger" dir="ltr">
-                        {t.usd < 0 ? formatMoney(exactLocal(-t.usd), currency.code) : '—'}
+                      <td className="px-4 py-3 text-end font-semibold whitespace-nowrap tabular-nums text-danger">
+                        <span dir="ltr">{t.usd < 0 ? formatMoney(exactLocal(-t.usd), currency.code) : '—'}</span>
                       </td>
-                      <td className={cn('px-4 py-3 text-end font-bold whitespace-nowrap tabular-nums', t.balance < 0 && 'text-danger')} dir="ltr">
-                        {formatMoney(exactLocal(t.balance), currency.code)}
+                      <td className={cn('px-4 py-3 text-end font-bold whitespace-nowrap tabular-nums', t.balance < 0 && 'text-danger')}>
+                        <span dir="ltr">{formatMoney(exactLocal(t.balance), currency.code)}</span>
                       </td>
                       <td className="px-4 py-3 text-small">
                         <span className="inline-flex items-center gap-1.5">
                           {expandable && (open ? <ChevronDown className="h-3.5 w-3.5 text-muted-light" /> : <ChevronLeft className="h-3.5 w-3.5 text-muted-light" />)}
-                          {t.description}
+                          {isUsage
+                            ? <>إجمالي التوكنز المستهلكة في الحركة: <b className="tabular-nums" dir="ltr">{Math.round((-t.usd / BALANCE_SETTINGS.pricePerMillionUsd) * 1_000_000).toLocaleString('en-US')}</b></>
+                            : t.description}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
