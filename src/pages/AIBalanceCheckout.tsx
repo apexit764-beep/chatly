@@ -14,7 +14,7 @@ export interface BalanceCheckoutState {
   cardId?: string;
 }
 
-const BACK = '/ai-settings?tab=features&source=balance';
+const BACK = '/ai-settings?tab=usage&source=balance';
 type Step = 'checkout' | 'processing' | 'success' | 'failed';
 
 /** «الانتقال للدفع» for the assistant balance — same flow as the plans checkout (/subscribe). */

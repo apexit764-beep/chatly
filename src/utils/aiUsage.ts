@@ -154,7 +154,7 @@ export function checkUsageAlert(now = new Date()): void {
     type: 'system',
     title: 'تنبيه استهلاك الذكاء الاصطناعي',
     body: `وصل استهلاك الذكاء الاصطناعي إلى ${settings.usageAlertTokens.toLocaleString('en-US')} توكن في الدورة الحالية`,
-    link: '/ai-settings?tab=features',
+    link: '/ai-settings?tab=usage',
   });
 }
 

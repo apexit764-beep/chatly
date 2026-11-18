@@ -20,7 +20,7 @@ const NO_MODEL: AssistantModel = { key: 'none', label: 'بدون ربط' };
 const BALANCE_EMPTY: Answer = {
   intro: 'رصيد المساعد الذكي غير كافٍ. اشحن الرصيد لمتابعة الأسئلة.',
   tone: 'err',
-  link: { to: '/ai-settings?tab=connection&source=balance', label: 'شحن الرصيد' },
+  link: { to: '/ai-settings?tab=usage&source=balance', label: 'شحن الرصيد' },
 };
 
 export interface AssistantChat {

@@ -624,15 +624,11 @@ export default function AISettings(): JSX.Element {
   const featuresAvailable = isConnected(saved) || connSource === 'balance';
   // With the Qhub balance there is no connection step: its balance and features share one tab.
   const tab: PageTab =
-    connSource === 'balance' && tabChoice === 'usage'
-      ? 'features'
-      : connSource === 'balance' && tabChoice === 'connection'
-      ? 'channels'
-      : (tabChoice === 'features' || tabChoice === 'channels') && !featuresAvailable
+    tabChoice === 'channels'
+      ? 'connection'
+      : (tabChoice === 'features' || tabChoice === 'usage') && !featuresAvailable
         ? 'connection'
-        : tabChoice === 'channels' && connSource !== 'balance'
-          ? 'features'
-          : tabChoice;
+        : tabChoice;
   // The usage alert's notification links here with ?tab=features — also when the page is already open.
   useEffect(() => {
     if (tabParam === 'features' || tabParam === 'channels' || tabParam === 'behavior' || tabParam === 'connection' || tabParam === 'usage') setTab(tabParam);
@@ -831,7 +827,6 @@ export default function AISettings(): JSX.Element {
 
       {/* Top-level tabs */}
       <div className="flex items-center gap-1 border-b border-border-light dark:border-border-dark -mb-2 overflow-x-auto">
-        {connSource === 'api' && (
         <button
           onClick={() => setTab('connection')}
           className={cn(
@@ -842,19 +837,6 @@ export default function AISettings(): JSX.Element {
           <KeyRound className="h-4 w-4" />
           إعدادات الربط
         </button>
-        )}
-        {featuresAvailable && connSource === 'balance' && (
-        <button
-          onClick={() => setTab('channels')}
-          className={cn(
-            'h-10 px-4 text-small font-medium border-b-2 -mb-px transition-colors flex items-center gap-2 whitespace-nowrap',
-            tab === 'channels' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
-          )}
-        >
-          <Radio className="h-4 w-4" />
-          القنوات والميزات
-        </button>
-        )}
         {BEHAVIOR_GROUP_ORDER.map((g) => {
           const { label, Icon } = GROUP_META[g];
           const active = tab === 'behavior' && subTab === g;
@@ -889,11 +871,11 @@ export default function AISettings(): JSX.Element {
             tab === 'features' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
           )}
         >
-          {connSource === 'balance' ? <Wallet className="h-4 w-4" /> : <Gauge className="h-4 w-4" />}
-          {connSource === 'balance' ? 'الرصيد والاستهلاك' : 'الميزات والرصيد'}
+          <Gauge className="h-4 w-4" />
+          الميزات
         </button>
         )}
-        {connSource !== 'balance' && (
+        {featuresAvailable && (
         <button
           onClick={() => setTab('usage')}
           className={cn(
@@ -901,47 +883,11 @@ export default function AISettings(): JSX.Element {
             tab === 'usage' ? 'border-primary text-current' : 'border-transparent text-muted-light dark:text-muted-dark hover:text-current'
           )}
         >
-          <BarChart3 className="h-4 w-4" />
-          تفاصيل الاستهلاك
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-warning/15 text-warning font-bold">جديد</span>
+          <Wallet className="h-4 w-4" />
+          الرصيد والاستهلاك
         </button>
         )}
       </div>
-
-      {/* مصدر المساعد: Radio — مساعد Qhub (افتراضي) أو مفتاح API الخاص بالعميل */}
-      <section className="rounded-card border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark p-4">
-        <h2 className="text-body font-bold">مصدر المساعد الذكي</h2>
-        <p className="text-small text-muted-light dark:text-muted-dark mt-0.5 mb-3">اختر كيف يعمل المساعد: من خلال Qhub مباشرة أو بمفتاح API الخاص بك.</p>
-        <div role="radiogroup" aria-label="مصدر المساعد الذكي" className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {([
-            ['balance', 'مساعد Qhub', 'يعمل من خلال رصيد Qhub، لا يحتاج إلى مفتاح API.', Zap],
-            ['api', 'مفتاح API الخاص بي', 'اربط مزوّدك (OpenAI / Claude / Gemini) بمفتاحك الخاص.', KeyRound],
-          ] as const).map(([key, label, hint, Icon]) => (
-            <label
-              key={key}
-              className={cn(
-                'flex items-start gap-3 rounded-card border-2 p-3 cursor-pointer transition-colors',
-                connSource === key ? 'border-primary bg-primary/5' : 'border-border-light dark:border-border-dark hover:border-primary/40',
-              )}
-            >
-              <input
-                type="radio"
-                name="ai_source"
-                value={key}
-                checked={connSource === key}
-                onChange={() => { setConnSource(key); setTab('connection'); }}
-                className="mt-1 h-4 w-4 accent-primary"
-              />
-              <span className="min-w-0">
-                <span className="flex items-center gap-2 text-small font-bold"><Icon className="h-4 w-4 text-primary" /> {label}
-                  {key === 'balance' && <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">لا يحتاج إلى مفتاح API</span>}
-                </span>
-                <span className="block text-[12px] text-muted-light dark:text-muted-dark mt-0.5">{hint}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-      </section>
 
       {/* Muting is applied per section, not on this wrapper: opacity can't be
           undone on a child (it multiplies with the parent's), so a section that
@@ -1020,11 +966,48 @@ export default function AISettings(): JSX.Element {
           {/* AI provider connection */}
           <SectionCard
             icon={<KeyRound className="h-5 w-5" />}
-            title="ربط مزوّد الذكاء الاصطناعي"
-            description="اختر مزوّد الـ AI (Claude / OpenAI / Gemini) ثم أدخل مفتاح الـ API. المفتاح محفوظ عندك ولا يُشارك مع أي طرف ثالث."
-            headerExtra={<ConnectionBadge status={form.connectionStatus} hasKey={Boolean(form.apiKey.trim())} />}
+            title="مصدر المساعد الذكي"
+            description="اختر كيف يعمل المساعد: من خلال Qhub مباشرة، أو بمفتاح API الخاص بك (المفتاح محفوظ عندك ولا يُشارك مع أي طرف ثالث)."
+            headerExtra={connSource === 'api' ? <ConnectionBadge status={form.connectionStatus} hasKey={Boolean(form.apiKey.trim())} /> : undefined}
           >
             <div className="space-y-4">
+              <div role="radiogroup" aria-label="مصدر المساعد الذكي" className="grid grid-cols-1 gap-2">
+                {([
+                  ['balance', 'مساعد Qhub', 'يعمل من خلال رصيد Qhub، لا يحتاج إلى مفتاح API.', Zap],
+                  ['api', 'مفتاح API الخاص بي', 'اربط مزوّدك (OpenAI / Claude / Gemini) بمفتاحك الخاص.', KeyRound],
+                ] as const).map(([key, label, hint, Icon]) => (
+                  <label
+                    key={key}
+                    className={cn(
+                      'flex items-start gap-3 rounded-card border-2 p-3 cursor-pointer transition-colors',
+                      connSource === key ? 'border-primary bg-primary/5' : 'border-border-light dark:border-border-dark hover:border-primary/40',
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="ai_source"
+                      value={key}
+                      checked={connSource === key}
+                      onChange={() => setConnSource(key)}
+                      className="mt-1 h-4 w-4 accent-primary"
+                    />
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-2 text-small font-bold"><Icon className="h-4 w-4 text-primary" /> {label}
+                        {key === 'balance' && <span className="text-[10.5px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">لا يحتاج إلى مفتاح API</span>}
+                      </span>
+                      <span className="block text-[12px] text-muted-light dark:text-muted-dark mt-0.5">{hint}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+              {connSource === 'balance' && (
+                <p className="rounded-xl bg-bg-light dark:bg-bg-dark px-3.5 py-3 text-small text-muted-light dark:text-muted-dark leading-relaxed">
+                  يعمل المساعد بنموذج {BALANCE_SETTINGS.modelName} من خلال Qhub، ويُخصم الاستهلاك من رصيدك. الرصيد وتفاصيل الاستهلاك في تاب «الرصيد والاستهلاك».
+                </p>
+              )}
+
+              {connSource === 'api' && (<>
               {/* Provider picker */}
               <div>
                 <label className="text-small font-semibold block mb-2">المصدر</label>
@@ -1165,6 +1148,7 @@ export default function AISettings(): JSX.Element {
                   </p>
                 </div>
               </div>
+              </>)}
             </div>
           </SectionCard>
 
@@ -1174,153 +1158,34 @@ export default function AISettings(): JSX.Element {
         </div>
       )}
 
-      {/* ═══ Tab 2: الميزات والرصيد ═══ */}
+      {/* ═══ الميزات ═══ */}
+      {tab === 'features' && (
+        <div className={cn(mutedIfOff)} aria-disabled={!form.enabled}>
+          {featuresCard}
+        </div>
+      )}
+
+      {/* ═══ الرصيد والاستهلاك ═══ */}
       {tab === 'usage' && (
-        <AIUsageDetails
-          showModelFilter={connSource !== 'balance'}
-          currentModel={
-            connSource === 'balance'
-              ? BALANCE_SETTINGS.modelName
-              : (currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '')
-          }
-        />
-      )}
-      {tab === 'features' && connSource === 'balance' && (
         <div className={cn('space-y-5', mutedIfOff)} aria-disabled={!form.enabled}>
-          <AIBalancePanel
-            usage={
-              <AIUsageDetails showModelFilter={false} currentModel={BALANCE_SETTINGS.modelName} />
-            }
-          />
-        </div>
-      )}
-      {tab === 'channels' && connSource === 'balance' && (
-        <div className={cn('grid grid-cols-1 xl:grid-cols-2 gap-5 items-start', mutedIfOff)} aria-disabled={!form.enabled}>
-          {featuresCard}
-          {channelsCard}
-        </div>
-      )}
-      {tab === 'features' && connSource === 'api' && (
-        <div className={cn('grid grid-cols-1 xl:grid-cols-2 gap-5 items-start', mutedIfOff)} aria-disabled={!form.enabled}>
-          {featuresCard}
-
-          <div className="space-y-5">
-            {/* Usage in the current cycle */}
-            <SectionCard
-              icon={<Gauge className="h-5 w-5" />}
-              title="الاستهلاك في الدورة الحالية"
-              description={
-                cycle
-                  ? `من ${dayMonth(cycle.start)} إلى ${dayMonth(cycle.end)} · تتجدد في ${dayMonth(cycle.renewsOn)}`
-                  : 'تبدأ الدورة من يوم ربط المزوّد وتتجدد كل شهر في نفس اليوم.'
-              }
-            >
-              {cycle ? (
-                <div className="space-y-3">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-extrabold tabular-nums">{cycleTokens.toLocaleString('en-US')}</span>
-                    <span className="text-small text-muted-light dark:text-muted-dark font-medium">توكن</span>
-                  </div>
-                  {saved.cycleTokenLimit != null ? (
-                    <div>
-                      <div className="h-2.5 w-full rounded-full bg-bg-light dark:bg-bg-dark overflow-hidden">
-                        <div
-                          className={cn('h-full rounded-full transition-all', limitShare >= 100 ? 'bg-danger' : limitShare >= 80 ? 'bg-warning' : 'bg-primary')}
-                          style={{ width: `${Math.min(100, limitShare)}%` }}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between gap-3 mt-1.5 text-[11px] text-muted-light dark:text-muted-dark">
-                        <span>{Math.floor(limitShare)}% من الحد الأقصى</span>
-                        <span>الحد: {saved.cycleTokenLimit.toLocaleString('en-US')} توكن</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-[11px] text-muted-light dark:text-muted-dark">بدون حد أقصى</p>
-                  )}
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div className="rounded-xl bg-bg-light dark:bg-bg-dark px-3.5 py-2.5">
-                      <p className="text-[11px] text-muted-light dark:text-muted-dark">استهلاك اليوم</p>
-                      <p className="text-body font-bold tabular-nums">{todayTokens.toLocaleString('en-US')} توكن</p>
-                    </div>
-                    <div className="rounded-xl bg-bg-light dark:bg-bg-dark px-3.5 py-2.5">
-                      <p className="text-[11px] text-muted-light dark:text-muted-dark">متوسط يومي</p>
-                      <p className="text-body font-bold tabular-nums">{dailyAverage.toLocaleString('en-US')} توكن</p>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-muted-light dark:text-muted-dark leading-relaxed">
-                    الرصيد والفاتورة في حسابك عند المزوّد.{' '}
-                    <a
-                      href={currentProvider.billingUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary font-semibold hover:underline"
-                    >
-                      فتح حساب المزوّد
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </p>
-                </div>
-              ) : (
-                <p className="text-small text-muted-light dark:text-muted-dark">
-                  لا توجد دورة حالية — المزوّد غير مربوط.{' '}
-                  <button onClick={() => setTab('connection')} className="text-primary font-semibold hover:underline">ربط مزوّد</button>
-                </p>
-              )}
-            </SectionCard>
-
-            <SectionCard
-              icon={<Bell className="h-5 w-5" />}
-              title="التنبيهات والحدود"
-              description="اضبط الحد الأقصى والتنبيهات لاستهلاك التوكنز."
-            >
-              <div className="space-y-3">
-                <div className="p-3 rounded-xl bg-bg-light dark:bg-bg-dark">
-                  <p className="text-small font-bold">الحد الأقصى للدورة</p>
-                  <p className="text-[11px] text-muted-light dark:text-muted-dark leading-relaxed">
-                    عند الوصول له يتوقف المساعد حتى بداية الدورة الجديدة. اتركه فارغًا بدون حد.
-                  </p>
-                  <div className="flex items-center gap-2 mt-2.5">
-                    <label htmlFor="cycle-limit" className="text-small font-semibold">الحد</label>
-                    <TokenField
-                      id="cycle-limit"
-                      value={form.cycleTokenLimit}
-                      onChange={(v) => update('cycleTokenLimit', v)}
-                      placeholder="بدون حد"
-                    />
-                  </div>
-                </div>
-
-                <div className="p-3 rounded-xl bg-bg-light dark:bg-bg-dark">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-small font-bold">تنبيه الاستهلاك</p>
-                      <p className="text-[11px] text-muted-light dark:text-muted-dark">إشعار داخل النظام عندما يصل استهلاك الدورة لهذا الرقم.</p>
-                    </div>
-                    <Toggle checked={form.usageAlertEnabled} onChange={(v) => update('usageAlertEnabled', v)} label="تنبيه الاستهلاك" />
-                  </div>
-                  {form.usageAlertEnabled && (
-                    <div className="flex items-center gap-2 mt-2.5">
-                      <label htmlFor="usage-alert" className="text-small font-semibold">نبّهني عند</label>
-                      <TokenField
-                        id="usage-alert"
-                        value={form.usageAlertTokens || null}
-                        onChange={(v) => update('usageAlertTokens', v ?? 0)}
-                        placeholder="1,000,000"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-bg-light dark:bg-bg-dark">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-small font-bold">تقرير يومي بالاستهلاك</p>
-                    <p className="text-[11px] text-muted-light dark:text-muted-dark">ملخص يومي بإجمالي التوكنز المستهلكة.</p>
-                  </div>
-                  <Toggle checked={form.dailyReportEnabled} onChange={(v) => update('dailyReportEnabled', v)} label="تقرير يومي بالاستهلاك" />
-                </div>
-              </div>
-            </SectionCard>
-          </div>
+          {connSource === 'balance' ? (
+            <AIBalancePanel
+              usage={<AIUsageDetails showModelFilter={false} currentModel={BALANCE_SETTINGS.modelName} />}
+            />
+          ) : (
+            <>
+              <p className="rounded-card border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark px-4 py-3 text-small text-muted-light dark:text-muted-dark">
+                أنت تستخدم مفتاح API الخاص بك، فالرصيد والفاتورة في حسابك عند المزوّد.{' '}
+                <a href={currentProvider.billingUrl} target="_blank" rel="noopener noreferrer" className="text-primary font-semibold hover:underline">فتح حساب المزوّد</a>
+                {' · '}
+                <button onClick={() => { setConnSource('balance'); setTab('connection'); }} className="text-primary font-semibold hover:underline">التحويل إلى مساعد Qhub</button>
+              </p>
+              <AIUsageDetails
+                showModelFilter
+                currentModel={(currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '')}
+              />
+            </>
+          )}
         </div>
       )}
 

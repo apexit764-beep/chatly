@@ -1,6 +1,6 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Wallet, Zap, TrendingDown, Power, Plus, Eye, Download, PauseCircle, CreditCard } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Wallet, Zap, TrendingDown, Power, Plus, Eye, Download, PauseCircle, CreditCard } from 'lucide-react';
 import { Button, Card, Modal, StatCard, Input } from '@components/ui';
 import { useAIBalanceStore, type BalanceInvoice, type BalanceTx } from '@/store/useAIBalanceStore';
 import { usePaymentMethodsStore, cardLabel } from '@/store/usePaymentMethodsStore';
@@ -140,6 +140,49 @@ const TX_LABEL: Record<BalanceTx['type'], string> = {
   settings: 'إعدادات',
 };
 
+interface LedgerUse { tx: BalanceTx; amount: number }
+interface LedgerRow extends BalanceTx {
+  /** Balance right after this entry. */
+  balance: number;
+  /** For a credit: the usage entries that drew from it, oldest first. */
+  uses: LedgerUse[];
+  /** For a credit: what is left of it. */
+  leftInLot: number;
+}
+
+/**
+ * The cash-flow ledger: every entry with its running balance (oldest to newest), returned
+ * newest first. Usage is charged to the oldest credit that still has money (FIFO), so each
+ * credit can list the usage items it paid for.
+ */
+function buildLedger(tx: BalanceTx[]): LedgerRow[] {
+  const asc = tx
+    .filter((t) => t.type !== 'settings')
+    .slice()
+    .sort((a, b) => a.at.localeCompare(b.at) || a.id - b.id);
+  const rows: LedgerRow[] = [];
+  const lots: LedgerRow[] = [];
+  let running = 0;
+  for (const t of asc) {
+    running = Math.round((running + t.usd) * 1e6) / 1e6;
+    const row: LedgerRow = { ...t, balance: running, uses: [], leftInLot: t.usd > 0 ? t.usd : 0 };
+    if (t.usd > 0) lots.push(row);
+    else if (t.type === 'usage') {
+      let need = -t.usd;
+      for (const lot of lots) {
+        if (need <= 1e-9) break;
+        const take = Math.min(lot.leftInLot, need);
+        if (take <= 0) continue;
+        lot.leftInLot = Math.round((lot.leftInLot - take) * 1e6) / 1e6;
+        lot.uses.push({ tx: t, amount: take });
+        need -= take;
+      }
+    }
+    rows.push(row);
+  }
+  return rows.reverse();
+}
+
 export default function AIBalancePanel({ usage }: { usage?: ReactNode }): JSX.Element {
   const store = useAIBalanceStore();
   const showToast = useUIStore((s) => s.showToast);
@@ -160,7 +203,9 @@ export default function AIBalancePanel({ usage }: { usage?: ReactNode }): JSX.El
 
   const [txPage, setTxPage] = useState(0);
   const [txType, setTxType] = useState<BalanceTx['type'] | 'all'>('all');
-  const filteredTx = useMemo(() => (txType === 'all' ? store.tx : store.tx.filter((t) => t.type === txType)), [store.tx, txType]);
+  const ledger = useMemo(() => buildLedger(store.tx), [store.tx]);
+  const filteredTx = useMemo(() => (txType === 'all' ? ledger : ledger.filter((t) => t.type === txType)), [ledger, txType]);
+  const [openLot, setOpenLot] = useState<number | null>(null);
   const txTotalPages = Math.max(1, Math.ceil(filteredTx.length / TX_PAGE_SIZE));
   const txSafePage = Math.min(txPage, txTotalPages - 1);
   const txStart = txSafePage * TX_PAGE_SIZE;
@@ -274,7 +319,7 @@ export default function AIBalancePanel({ usage }: { usage?: ReactNode }): JSX.El
         <div className="flex items-center justify-between gap-3 flex-wrap px-5 pt-5 pb-3">
           <div>
             <h2 className="text-body font-bold">التدفق النقدي</h2>
-            <p className="text-[12px] text-muted-light dark:text-muted-dark mt-0.5">كل الشحنات والاستهلاك والتسويات، مع فاتورة كل عملية شحن.</p>
+            <p className="text-[12px] text-muted-light dark:text-muted-dark mt-0.5">كل ما دخل رصيدك وما خرج منه مع المتبقي بعد كل حركة. اضغط على أي شحنة لترى بنود الاستهلاك التي خُصمت منها.</p>
           </div>
           <label className="flex items-center gap-2 text-small text-muted-light dark:text-muted-dark">
             نوع الحركة
@@ -284,7 +329,7 @@ export default function AIBalancePanel({ usage }: { usage?: ReactNode }): JSX.El
               className="h-9 rounded-input border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark px-3 text-small text-current focus:border-primary focus:outline-none"
             >
               <option value="all">الكل</option>
-              {(Object.keys(TX_LABEL) as BalanceTx['type'][]).map((k) => (
+              {(Object.keys(TX_LABEL) as BalanceTx['type'][]).filter((k) => k !== 'settings').map((k) => (
                 <option key={k} value={k}>{TX_LABEL[k]}</option>
               ))}
             </select>
@@ -295,48 +340,97 @@ export default function AIBalancePanel({ usage }: { usage?: ReactNode }): JSX.El
             <thead className="bg-bg-light dark:bg-bg-dark text-small text-muted-light dark:text-muted-dark">
               <tr>
                 <th className="text-start font-medium px-4 py-3">التاريخ</th>
-                <th className="text-start font-medium px-4 py-3">الحركة</th>
-                <th className="text-start font-medium px-4 py-3 hidden md:table-cell">التفاصيل</th>
-                <th className="text-end font-medium px-4 py-3">المبلغ</th>
+                <th className="text-start font-medium px-4 py-3">البند</th>
+                <th className="text-start font-medium px-4 py-3">النوع</th>
+                <th className="text-end font-medium px-4 py-3">دائن</th>
+                <th className="text-end font-medium px-4 py-3">مدين</th>
+                <th className="text-end font-medium px-4 py-3">المتبقي</th>
                 <th className="text-center font-medium px-4 py-3 w-1">الفاتورة</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-light dark:divide-border-dark">
-              {pageTx.map((t) => (
-                <tr key={t.id}>
-                  <td className="px-4 py-3 text-small text-muted-light dark:text-muted-dark whitespace-nowrap">{formatDate(t.at)}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        'px-2 py-0.5 rounded-full text-small font-semibold',
-                        t.usd > 0 ? 'bg-success/15 text-success' : t.type === 'usage' ? 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark' : 'bg-danger/15 text-danger',
-                        t.type === 'settings' && 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark',
-                      )}
+              {pageTx.map((t) => {
+                const isCredit = t.usd > 0;
+                const open = openLot === t.id;
+                const inv = t.type === 'topup' || t.type === 'auto' ? store.invoices.find((i) => t.description.includes(i.number)) : undefined;
+                return (
+                  <Fragment key={t.id}>
+                    <tr
+                      onClick={isCredit ? () => setOpenLot(open ? null : t.id) : undefined}
+                      className={cn(isCredit && 'cursor-pointer hover:bg-bg-light dark:hover:bg-bg-dark', open && 'bg-bg-light dark:bg-bg-dark')}
+                      aria-expanded={isCredit ? open : undefined}
                     >
-                      {TX_LABEL[t.type]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-small hidden md:table-cell">{t.description}</td>
-                  <td className={cn('px-4 py-3 text-end font-semibold whitespace-nowrap tabular-nums', t.usd > 0 ? 'text-success' : t.usd < 0 ? 'text-danger' : '')} dir="ltr">
-                    {t.usd === 0 ? '—' : `${t.usd > 0 ? '+' : ''}${formatMoney(exactLocal(t.usd), currency.code)}`}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {(() => {
-                      const inv = t.type === 'topup' || t.type === 'auto' ? store.invoices.find((i) => t.description.includes(i.number)) : undefined;
-                      return inv ? (
-                        <button
-                          onClick={() => setInvoice(inv)}
-                          className="h-8 px-3 rounded-full bg-primary/10 text-primary hover:bg-primary/20 inline-flex items-center gap-1.5 text-small font-semibold transition-colors"
+                      <td className="px-4 py-3 text-small text-muted-light dark:text-muted-dark whitespace-nowrap">{formatDate(t.at)}</td>
+                      <td className="px-4 py-3 text-small">
+                        <span className="inline-flex items-center gap-1.5">
+                          {isCredit && (open ? <ChevronDown className="h-3.5 w-3.5 text-muted-light" /> : <ChevronLeft className="h-3.5 w-3.5 text-muted-light" />)}
+                          {t.description}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={cn(
+                            'px-2 py-0.5 rounded-full text-small font-semibold whitespace-nowrap',
+                            isCredit ? 'bg-success/15 text-success' : t.type === 'usage' ? 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark' : 'bg-danger/15 text-danger',
+                          )}
                         >
-                          <Eye className="h-3.5 w-3.5" /> عرض
-                        </button>
-                      ) : (
-                        <span className="text-muted-light dark:text-muted-dark">—</span>
-                      );
-                    })()}
-                  </td>
-                </tr>
-              ))}
+                          {TX_LABEL[t.type]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-end font-semibold whitespace-nowrap tabular-nums text-success" dir="ltr">
+                        {isCredit ? formatMoney(exactLocal(t.usd), currency.code) : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-end font-semibold whitespace-nowrap tabular-nums text-danger" dir="ltr">
+                        {t.usd < 0 ? formatMoney(exactLocal(-t.usd), currency.code) : '—'}
+                      </td>
+                      <td className={cn('px-4 py-3 text-end font-bold whitespace-nowrap tabular-nums', t.balance < 0 && 'text-danger')} dir="ltr">
+                        {formatMoney(exactLocal(t.balance), currency.code)}
+                      </td>
+                      <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        {inv ? (
+                          <button
+                            onClick={() => setInvoice(inv)}
+                            className="h-8 px-3 rounded-full bg-primary/10 text-primary hover:bg-primary/20 inline-flex items-center gap-1.5 text-small font-semibold transition-colors"
+                          >
+                            <Eye className="h-3.5 w-3.5" /> عرض
+                          </button>
+                        ) : (
+                          <span className="text-muted-light dark:text-muted-dark">—</span>
+                        )}
+                      </td>
+                    </tr>
+                    {isCredit && open && (
+                      <tr className="bg-bg-light/60 dark:bg-bg-dark/60">
+                        <td colSpan={7} className="px-4 py-3">
+                          <div className="rounded-xl border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark p-3">
+                            <div className="flex items-center justify-between gap-3 flex-wrap mb-2 text-small">
+                              <b>بنود الاستهلاك من هذه الشحنة</b>
+                              <span className="text-muted-light dark:text-muted-dark">
+                                المتبقي منها: <b className="text-current tabular-nums" dir="ltr">{formatMoney(exactLocal(t.leftInLot), currency.code)}</b>
+                              </span>
+                            </div>
+                            {t.uses.length === 0 ? (
+                              <p className="text-small text-muted-light dark:text-muted-dark">لم يُستهلك شيء من هذه الشحنة بعد.</p>
+                            ) : (
+                              <ul className="divide-y divide-border-light dark:divide-border-dark text-small">
+                                {t.uses.map((u) => (
+                                  <li key={u.tx.id} className="flex items-center justify-between gap-3 py-1.5">
+                                    <span>{u.tx.description}</span>
+                                    <span className="flex items-center gap-4 whitespace-nowrap">
+                                      <span className="text-muted-light dark:text-muted-dark">{formatDate(u.tx.at)}</span>
+                                      <b className="tabular-nums text-danger" dir="ltr">{formatMoney(exactLocal(u.amount), currency.code)}</b>
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
           {pageTx.length === 0 && <p className="text-small text-muted-light dark:text-muted-dark px-5 py-6 text-center">لا توجد حركات من هذا النوع.</p>}

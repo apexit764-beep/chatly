@@ -132,7 +132,7 @@ export default function App(): JSX.Element {
           <Route path="/chat-templates/:id" element={<ChatTemplateEditor />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/ai-settings" element={<AISettings />} />
-          <Route path="/ai-balance" element={<Navigate to="/ai-settings?tab=connection&source=balance" replace />} />
+          <Route path="/ai-balance" element={<Navigate to="/ai-settings?tab=usage&source=balance" replace />} />
           <Route path="/knowledge-base" element={<KnowledgeBase />} />
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/rating" element={<Navigate to="/reports#ratings" replace />} />
