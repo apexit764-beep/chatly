@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { useAdminStore } from '@/store/useAdminStore';
+import { planFreeTokens } from '@/types';
 import { useDataStore } from '@/store/useDataStore';
 import { usePaymentMethodsStore, cardLabel } from '@/store/usePaymentMethodsStore';
 import { BALANCE_SETTINGS, MOCK_CARD, clientCurrency, moneyExact, moneyPrice, priceLocal } from '@/utils/aiBalance';
@@ -11,7 +13,7 @@ export interface BalanceLot {
   left: number;
 }
 
-export type BalanceTxType = 'topup' | 'auto' | 'usage' | 'gift' | 'settings';
+export type BalanceTxType = 'topup' | 'auto' | 'usage' | 'gift' | 'plan' | 'settings';
 
 export interface BalanceTx {
   id: number;
@@ -54,6 +56,8 @@ interface BalanceState {
   invoices: BalanceInvoice[];
   nextId: number;
   nextInvoice: number;
+  /** The plan's free tokens already credited for the current month. */
+  planGrant: { period: string; tokens: number } | null;
   balance: () => number;
   topUp: (usd: number, paidLocal: number, cardLabelOverride?: string) => BalanceInvoice;
   /** Admin grants free credit; it lands in the client's balance and the transactions log. */
@@ -61,10 +65,13 @@ interface BalanceState {
   setAuto: (auto: AutoTopUp) => void;
   /** Mock usage: the assistant answers `messages` customer messages. */
   simulateUsage: (messages: number) => { done: number; blocked: number };
+  /** Credits the subscribed plan's free monthly tokens once per month (and the difference on an upgrade). */
+  syncPlanTokens: () => void;
   reset: () => void;
 }
 
 const STORAGE_KEY = 'qhub_ai_balance_v2';
+const CURRENT_CLIENT_ID = 'client_1';
 const DAY = 86_400_000;
 
 function ago(days: number): string {
@@ -102,7 +109,7 @@ function seedInvoice(number: string, days: number, c: ReturnType<typeof clientCu
   };
 }
 
-function initial(): Omit<BalanceState, 'balance' | 'topUp' | 'grantGift' | 'setAuto' | 'simulateUsage' | 'reset'> {
+function initial(): Omit<BalanceState, 'balance' | 'topUp' | 'grantGift' | 'setAuto' | 'simulateUsage' | 'syncPlanTokens' | 'reset'> {
   const c = clientCurrency();
   return {
     lots: [{ id: 1, source: 'شحن', usd: 10, left: 6.2 }],
@@ -120,6 +127,7 @@ function initial(): Omit<BalanceState, 'balance' | 'topUp' | 'grantGift' | 'setA
     ],
     nextId: 100,
     nextInvoice: 1039,
+    planGrant: null,
   };
 }
 
@@ -155,6 +163,7 @@ function persist(state: Persisted): void {
         invoices: state.invoices,
         nextId: state.nextId,
         nextInvoice: state.nextInvoice,
+        planGrant: state.planGrant,
       }),
     );
   } catch {
@@ -325,8 +334,36 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
       return { done, blocked };
     },
 
+    syncPlanTokens: () => {
+      const client = useAdminStore.getState().clients.find((c) => c.id === CURRENT_CLIENT_ID);
+      const plan = client?.planId ? useAdminStore.getState().plans.find((p) => p.id === client.planId) : undefined;
+      if (!plan) return;
+      const tokens = planFreeTokens(plan);
+      const period = new Date().toISOString().slice(0, 7);
+      const prev = get().planGrant;
+      const already = prev && prev.period === period ? prev.tokens : 0;
+      const add = tokens - already;
+      if (add <= 0) return;
+      credit(
+        round6((add / 1_000_000) * BALANCE_SETTINGS.pricePerMillionUsd),
+        'توكنز الباقة',
+        'plan',
+        `باقة ${plan.nameAr} · ${add.toLocaleString('en-US')} توكنز مجانية`,
+      );
+      commit({ planGrant: { period, tokens } });
+      notify('أُضيفت توكنز باقتك', `أُضيف ${add.toLocaleString('en-US')} توكنز مجانية من باقة ${plan.nameAr} إلى رصيد المساعد.`);
+    },
+
     reset: () => {
       commit(initial());
     },
   };
+});
+
+// The plan's free tokens land in the balance on load and whenever the subscribed plan changes.
+useAIBalanceStore.getState().syncPlanTokens();
+useAdminStore.subscribe((s, prev) => {
+  const now = s.clients.find((c) => c.id === CURRENT_CLIENT_ID)?.planId;
+  const before = prev.clients.find((c) => c.id === CURRENT_CLIENT_ID)?.planId;
+  if (now !== before || s.plans !== prev.plans) useAIBalanceStore.getState().syncPlanTokens();
 });

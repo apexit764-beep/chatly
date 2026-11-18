@@ -139,6 +139,7 @@ const TX_LABEL: Record<BalanceTx['type'], string> = {
   auto: 'شحن',
   usage: 'استهلاك',
   gift: 'رصيد مجاني',
+  plan: 'توكنز الباقة',
   settings: 'إعدادات',
 };
 
