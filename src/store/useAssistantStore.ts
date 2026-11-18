@@ -19,7 +19,11 @@ const STORAGE_KEY = 'qhub_assistant_sessions';
 function load(): AssistantSession[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as AssistantSession[];
+    if (raw) {
+      // The assistant no longer explains how to use the system: drop threads saved with those usage-guide answers.
+      const all = JSON.parse(raw) as AssistantSession[];
+      return all.filter((s) => !s.msgs.some((m) => m.r === 'a' && (m.a as { guide?: boolean }).guide));
+    }
   } catch { /* start empty */ }
   return [];
 }
