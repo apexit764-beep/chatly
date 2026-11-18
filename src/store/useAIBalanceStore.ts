@@ -57,7 +57,7 @@ interface BalanceState {
   nextId: number;
   nextInvoice: number;
   /** The plan's free tokens already credited for the current month. */
-  planGrant: { period: string; tokens: number } | null;
+  planGrant: { period: string; tokens: number; planId?: string } | null;
   balance: () => number;
   topUp: (usd: number, paidLocal: number, cardLabelOverride?: string) => BalanceInvoice;
   /** Admin grants free credit; it lands in the client's balance and the transactions log. */
@@ -65,7 +65,10 @@ interface BalanceState {
   setAuto: (auto: AutoTopUp) => void;
   /** Mock usage: the assistant answers `messages` customer messages. */
   simulateUsage: (messages: number) => { done: number; blocked: number };
-  /** Credits the subscribed plan's free monthly tokens once per month (and the difference on an upgrade). */
+  /**
+   * Credits the plan's free tokens on a new subscription and at each monthly renewal, at the plan's
+   * value at that moment. Later admin edits to the plan apply from the subscriber's next renewal.
+   */
   syncPlanTokens: () => void;
   reset: () => void;
 }
@@ -341,16 +344,22 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
       const tokens = planFreeTokens(plan);
       const period = new Date().toISOString().slice(0, 7);
       const prev = get().planGrant;
+      // Same month and same plan: already granted for this period, whatever the admin changed since.
+      if (prev && prev.period === period && prev.planId === plan.id) return;
+      // Plan changed mid-month (upgrade): grant only what the new plan adds over what was granted.
       const already = prev && prev.period === period ? prev.tokens : 0;
       const add = tokens - already;
-      if (add <= 0) return;
+      if (add <= 0) {
+        commit({ planGrant: { period, tokens: Math.max(tokens, already), planId: plan.id } });
+        return;
+      }
       credit(
         round6((add / 1_000_000) * BALANCE_SETTINGS.pricePerMillionUsd),
         'توكنز الباقة',
         'plan',
         `باقة ${plan.nameAr} · ${add.toLocaleString('en-US')} توكنز مجانية`,
       );
-      commit({ planGrant: { period, tokens } });
+      commit({ planGrant: { period, tokens, planId: plan.id } });
       notify('أُضيفت توكنز باقتك', `أُضيف ${add.toLocaleString('en-US')} توكنز مجانية من باقة ${plan.nameAr} إلى رصيد المساعد.`);
     },
 
@@ -365,5 +374,7 @@ useAIBalanceStore.getState().syncPlanTokens();
 useAdminStore.subscribe((s, prev) => {
   const now = s.clients.find((c) => c.id === CURRENT_CLIENT_ID)?.planId;
   const before = prev.clients.find((c) => c.id === CURRENT_CLIENT_ID)?.planId;
-  if (now !== before || s.plans !== prev.plans) useAIBalanceStore.getState().syncPlanTokens();
+  // Only a new subscription (plan change) triggers a grant — the admin editing a plan's tokens
+  // never touches current subscribers; they get the new amount at their next renewal.
+  if (now !== before) useAIBalanceStore.getState().syncPlanTokens();
 });
