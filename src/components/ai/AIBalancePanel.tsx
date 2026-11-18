@@ -134,7 +134,7 @@ const TX_PAGE_SIZE = 10;
 
 const TX_LABEL: Record<BalanceTx['type'], string> = {
   topup: 'شحن',
-  auto: 'شحن تلقائي',
+  auto: 'شحن',
   usage: 'استهلاك',
   settle: 'تسوية سالب',
   gift: 'رصيد مجاني',
@@ -223,7 +223,7 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
   const [txPage, setTxPage] = useState(0);
   const [txType, setTxType] = useState<BalanceTx['type'] | 'all'>('all');
   const ledger = useMemo(() => buildLedger(store.tx), [store.tx]);
-  const filteredTx = useMemo(() => (txType === 'all' ? ledger : ledger.filter((t) => t.type === txType)), [ledger, txType]);
+  const filteredTx = useMemo(() => (txType === 'all' ? ledger : ledger.filter((t) => (txType === 'topup' ? t.type === 'topup' || t.type === 'auto' : t.type === txType))), [ledger, txType]);
   const [openLot, setOpenLot] = useState<number | null>(null);
   const txTotalPages = Math.max(1, Math.ceil(filteredTx.length / TX_PAGE_SIZE));
   const txSafePage = Math.min(txPage, txTotalPages - 1);
@@ -348,7 +348,7 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
               className="h-9 rounded-input border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark px-3 text-small text-current focus:border-primary focus:outline-none"
             >
               <option value="all">الكل</option>
-              {(Object.keys(TX_LABEL) as BalanceTx['type'][]).filter((k) => k !== 'settings').map((k) => (
+              {(Object.keys(TX_LABEL) as BalanceTx['type'][]).filter((k) => k !== 'settings' && k !== 'auto' && k !== 'settle').map((k) => (
                 <option key={k} value={k}>{TX_LABEL[k]}</option>
               ))}
             </select>
