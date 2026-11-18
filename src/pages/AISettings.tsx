@@ -1168,24 +1168,18 @@ export default function AISettings(): JSX.Element {
       {/* ═══ الرصيد والاستهلاك ═══ */}
       {tab === 'usage' && (
         <div className={cn('space-y-5', mutedIfOff)} aria-disabled={!form.enabled}>
-          {connSource === 'balance' ? (
-            <AIBalancePanel
-              usage={<AIUsageDetails showModelFilter={false} currentModel={BALANCE_SETTINGS.modelName} />}
-            />
-          ) : (
-            <>
-              <p className="rounded-card border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark px-4 py-3 text-small text-muted-light dark:text-muted-dark">
-                أنت تستخدم مفتاح API الخاص بك، فالرصيد والفاتورة في حسابك عند المزوّد.{' '}
-                <a href={currentProvider.billingUrl} target="_blank" rel="noopener noreferrer" className="text-primary font-semibold hover:underline">فتح حساب المزوّد</a>
-                {' · '}
-                <button onClick={() => { setConnSource('balance'); setTab('connection'); }} className="text-primary font-semibold hover:underline">التحويل إلى مساعد Qhub</button>
-              </p>
+          <AIBalancePanel
+            usage={
               <AIUsageDetails
-                showModelFilter
-                currentModel={(currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '')}
+                showModelFilter={false}
+                currentModel={
+                  connSource === 'balance'
+                    ? BALANCE_SETTINGS.modelName
+                    : (currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '')
+                }
               />
-            </>
-          )}
+            }
+          />
         </div>
       )}
 
