@@ -28,6 +28,7 @@ import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
 import { cn } from '@/utils/cn';
 import type { Plan, PlanTier } from '@/types';
+import { planFreeTokens } from '@/types';
 
 const tierStyle: Record<PlanTier, { bg: string; ring: string; text: string }> = {
   starter: { bg: 'from-cyan-50 to-cyan-100/50 dark:from-cyan-900/20 dark:to-cyan-900/10', ring: 'ring-cyan-300 dark:ring-cyan-700', text: 'text-cyan-700 dark:text-cyan-300' },
@@ -59,6 +60,7 @@ export default function AdminPlans(): JSX.Element {
     limitChannels: number;
     limitConversations: number;
     limitContacts: number;
+    freeTokens: number;
     pricesPerCountry: Record<string, { monthly: number; yearly: number }>;
     popular: boolean;
     active: boolean;
@@ -72,6 +74,7 @@ export default function AdminPlans(): JSX.Element {
     limitChannels: 2,
     limitConversations: 5000,
     limitContacts: 1000,
+    freeTokens: 2000,
     pricesPerCountry: {},
     popular: false,
     active: true,
@@ -83,7 +86,7 @@ export default function AdminPlans(): JSX.Element {
     countries.forEach((c) => { defaults[c.code] = { monthly: 0, yearly: 0 }; });
     setForm({
       tier: 'pro', name: '', nameAr: '', tagline: '', features: '',
-      limitAgents: 5, limitChannels: 2, limitConversations: 5000, limitContacts: 1000,
+      limitAgents: 5, limitChannels: 2, limitConversations: 5000, limitContacts: 1000, freeTokens: 2000,
       pricesPerCountry: defaults, popular: false, active: true,
     });
     setModalOpen(true);
@@ -101,6 +104,7 @@ export default function AdminPlans(): JSX.Element {
       limitChannels: p.limits.channels,
       limitConversations: p.limits.conversations,
       limitContacts: p.limits.contacts,
+      freeTokens: planFreeTokens(p),
       pricesPerCountry: { ...p.pricesPerCountry },
       popular: p.popular ?? false,
       active: p.active,
@@ -116,6 +120,7 @@ export default function AdminPlans(): JSX.Element {
       tagline: p.tagline,
       features: [...p.features],
       limits: { ...p.limits },
+      freeTokens: p.freeTokens,
       pricesPerCountry: { ...p.pricesPerCountry },
       active: false,
     });
@@ -140,6 +145,7 @@ export default function AdminPlans(): JSX.Element {
         conversations: form.limitConversations,
         contacts: form.limitContacts,
       },
+      freeTokens: Math.max(0, form.freeTokens),
       pricesPerCountry: form.pricesPerCountry,
       popular: form.popular,
       active: form.active,
@@ -383,6 +389,14 @@ export default function AdminPlans(): JSX.Element {
             <Input label={<>محادثات/شهر (-1 = ∞)<span className="text-danger ms-0.5">*</span></>} type="number" value={form.limitConversations} onChange={(e) => setForm({ ...form, limitConversations: Number(e.target.value) })} />
             <Input label={<>جهات اتصال (-1 = ∞)<span className="text-danger ms-0.5">*</span></>} type="number" value={form.limitContacts} onChange={(e) => setForm({ ...form, limitContacts: Number(e.target.value) })} />
           </div>
+          <Input
+            label={<>توكنز مجانية من مساعد Qhub (شهريًا)<span className="text-danger ms-0.5">*</span></>}
+            type="number"
+            min={0}
+            value={form.freeTokens}
+            onChange={(e) => setForm({ ...form, freeTokens: Number(e.target.value) })}
+            tip="تظهر للعميل في صفحة الباقات تحت اسم الباقة."
+          />
 
           <div>
             <p className="text-small font-semibold mb-2">الأسعار حسب الدولة</p>

@@ -40,6 +40,7 @@ import { formatDate } from '@/utils/format';
 import { isEditable } from '@/utils/planRequest';
 import { cn } from '@/utils/cn';
 import type { Plan } from '@/types';
+import { planFreeTokens } from '@/types';
 
 const CURRENT_CLIENT_ID = 'client_1';
 
@@ -408,7 +409,10 @@ export default function Subscribe(): JSX.Element {
                               </span>
                             )}
                           </div>
-                          <p className="text-body font-bold mb-1">{plan.nameAr}</p>
+                          <p className="text-body font-bold">{plan.nameAr}</p>
+                          <p className="text-[11px] text-primary font-semibold mb-1">
+                            <span dir="ltr">{planFreeTokens(plan).toLocaleString('en')}</span> توكنز مجانية من مساعد Qhub
+                          </p>
                           <div className="h-[58px] flex flex-col justify-center">
                             {isEnt ? (
                               <p className="text-h2 font-extrabold">حسب الطلب</p>
@@ -490,13 +494,15 @@ export default function Subscribe(): JSX.Element {
                     ['عدد الموظفين', (p: Plan) => limitLabel(p.limits.agents)],
                     ['المحادثات شهرياً', (p: Plan) => limitLabel(p.limits.conversations)],
                     ['جهات الاتصال', (p: Plan) => limitLabel(p.limits.contacts)],
-                  ] as [string, (p: Plan) => string][]).map(([label, valueOf]) => (
+                    ['مساعد Qhub', (p: Plan) => `${planFreeTokens(p).toLocaleString('en')} توكنز`, 'توكنز مجانية ولا يحتاج إلى ربط'],
+                  ] as [string, (p: Plan) => string, string?][]).map(([label, valueOf, sub]) => (
                     <tr key={label} className="border-b border-border-light dark:border-border-dark">
                       <td
                         className="p-3 text-muted-light dark:text-muted-dark bg-white dark:bg-surface-dark sticky z-10"
                         style={{ insetInlineStart: 0 }}
                       >
                         {label}
+                        {sub && <span className="block text-[11px] mt-0.5 opacity-80">{sub}</span>}
                       </td>
                       {rankedPlans.map((plan) => (
                         <td

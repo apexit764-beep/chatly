@@ -466,6 +466,13 @@ export interface Country {
 
 export type PlanTier = 'starter' | 'pro' | 'business' | 'enterprise';
 
+/** Default free Qhub-assistant tokens per tier, used when a plan has no value set. */
+export const DEFAULT_FREE_TOKENS: Record<PlanTier, number> = { starter: 1000, pro: 2000, business: 3000, enterprise: 4000 };
+
+export function planFreeTokens(p: Pick<Plan, 'tier' | 'freeTokens'>): number {
+  return p.freeTokens ?? DEFAULT_FREE_TOKENS[p.tier] ?? 0;
+}
+
 export interface Plan {
   id: string;
   tier: PlanTier;
@@ -480,6 +487,8 @@ export interface Plan {
     conversations: number;
     contacts: number;
   };
+  /** Free monthly tokens of the Qhub assistant included in the plan (set by the admin). */
+  freeTokens?: number;
   /** keyed by country code; price in local currency (monthly) */
   pricesPerCountry: Record<string, { monthly: number; yearly: number }>;
   popular?: boolean;
