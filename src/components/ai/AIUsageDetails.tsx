@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { DateRangePicker, type PresetKey } from '@components/ui/DateRangePicker';
 import { cn } from '@/utils/cn';
+import { Activity, Zap } from 'lucide-react';
 
 /**
  * «تفاصيل الاستهلاك» — mock data for now. One record per operation the assistant
@@ -202,14 +203,20 @@ export default function AIUsageDetails({
 
       {/* Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-card border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark px-5 py-4">
-          <p className="text-small text-muted-light dark:text-muted-dark">إجمالي التوكنز</p>
-          <p className="text-[26px] font-extrabold mt-1">{num(totalTokens)}</p>
+        <div className="rounded-card border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark px-5 py-4 flex items-center gap-4">
+          <span className="h-12 w-12 flex-none rounded-xl bg-primary/15 text-primary flex items-center justify-center"><Zap className="h-5 w-5" /></span>
+          <div>
+            <p className="text-small text-muted-light dark:text-muted-dark">إجمالي التوكنز</p>
+            <p className="text-[26px] font-extrabold tabular-nums leading-tight">{num(totalTokens)}</p>
+          </div>
         </div>
-        <div className="rounded-card border border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark px-5 py-4">
-          <p className="text-small text-muted-light dark:text-muted-dark">مرات الاستخدام</p>
-          <p className="text-[26px] font-extrabold mt-1">{num(totalUses)}</p>
-          <p className="text-[11px] text-muted-light dark:text-muted-dark">إجمالي العمليات التي نفّذها المساعد الذكي في جميع المميزات</p>
+        <div className="rounded-card border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark px-5 py-4 flex items-center gap-4">
+          <span className="h-12 w-12 flex-none rounded-xl bg-violet-500/15 text-violet-600 flex items-center justify-center"><Activity className="h-5 w-5" /></span>
+          <div>
+            <p className="text-small text-muted-light dark:text-muted-dark">مرات الاستخدام</p>
+            <p className="text-[26px] font-extrabold tabular-nums leading-tight">{num(totalUses)}</p>
+            <p className="text-[11px] text-muted-light dark:text-muted-dark">إجمالي العمليات التي نفّذها المساعد الذكي في جميع المميزات</p>
+          </div>
         </div>
       </div>
 
@@ -234,10 +241,19 @@ export default function AIUsageDetails({
                 return (
                   <div
                     key={i}
-                    title={`${b.label}: ${num(b.value)} توكن`}
-                    className={cn('flex-1 min-w-[4px] rounded-t-md', last ? 'bg-primary' : 'bg-primary/40')}
-                    style={{ height: `${Math.max(2, (b.value / maxBucket) * 100)}%` }}
-                  />
+                    className="group relative flex-1 min-w-[4px] h-full flex items-end"
+                  >
+                    <div
+                      className={cn(
+                        'w-full rounded-t-md transition-all bg-gradient-to-t',
+                        last ? 'from-primary-dark to-primary' : 'from-primary/30 to-primary/55 group-hover:from-primary/60 group-hover:to-primary',
+                      )}
+                      style={{ height: `${Math.max(2, (b.value / maxBucket) * 100)}%` }}
+                    />
+                    <span className="pointer-events-none absolute bottom-full start-1/2 ltr:-translate-x-1/2 rtl:translate-x-1/2 mb-1 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-[11px] font-semibold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100" style={{ color: '#fff' }}>
+                      {b.label} · {num(b.value)} توكن
+                    </span>
+                  </div>
                 );
               })}
             </div>

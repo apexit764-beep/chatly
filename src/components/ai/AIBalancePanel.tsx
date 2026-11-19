@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, ChevronRight, Wallet, Zap, TrendingDown, Power, Plus, Eye, Download, PauseCircle, CreditCard } from 'lucide-react';
-import { Button, Card, Modal, StatCard, Input } from '@components/ui';
+import { ChevronDown, ChevronLeft, ChevronRight, Wallet, TrendingDown, Plus, Eye, Download, PauseCircle, CreditCard } from 'lucide-react';
+import { Button, Card, Modal, Input } from '@components/ui';
 import { useAIBalanceStore, type BalanceInvoice, type BalanceTx } from '@/store/useAIBalanceStore';
 import { usePaymentMethodsStore, cardLabel } from '@/store/usePaymentMethodsStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -244,7 +244,6 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
 
   const usedPct = store.base > 0 ? Math.min(100, Math.max(0, ((store.base - balance) / store.base) * 100)) : 0;
   const spent = Math.min(store.base, Math.max(0, store.base - balance));
-  const barColor = usedPct >= 70 ? 'bg-danger' : usedPct >= 50 ? 'bg-warning' : 'bg-primary';
 
   const [txPage, setTxPage] = useState(0);
   const [txType, setTxType] = useState<BalanceTx['type'] | 'all'>('all');
@@ -289,17 +288,63 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h2 className="text-h3 font-bold">رصيد المساعد الذكي</h2>
-          <p className="text-small text-muted-light dark:text-muted-dark mt-1">
-            {description ?? <>يعمل المساعد بنموذج {BALANCE_SETTINGS.modelName}.</>}
-          </p>
+      {/* Balance hero — the same banner language as «نظرة عامة»: the one number that
+          matters (what is left) is the headline, with top-up next to it. */}
+      <div className="relative overflow-hidden bg-gradient-to-l from-primary to-primary-dark text-white rounded-card p-5 lg:p-6 shadow-lg">
+        <span aria-hidden className="pointer-events-none absolute -top-20 -start-16 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
+        <div className="relative flex items-start justify-between flex-wrap gap-5">
+          <div className="flex items-center gap-5 min-w-0">
+            <div className="h-20 w-20 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center flex-shrink-0 ring-1 ring-white/20">
+              <Wallet className="h-10 w-10 text-white/90" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-small font-semibold opacity-90">رصيد المساعد الذكي</p>
+                <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ring-1', store.stopped ? 'bg-danger/30 ring-white/20' : 'bg-white/15 ring-white/20')}>
+                  <span className={cn('h-1.5 w-1.5 rounded-full', store.stopped ? 'bg-white' : 'bg-emerald-300 animate-pulse')} />
+                  {store.stopped ? 'متوقف' : 'يعمل'}
+                </span>
+              </div>
+              <p className="text-[34px] lg:text-[40px] font-extrabold leading-tight tabular-nums mt-1">{moneyExact(balance)}</p>
+              <p className="text-small opacity-85">
+                ≈ {tokenLabel(tokensFor(balance))} توكن متبقية · {description ?? <>يعمل المساعد بنموذج {BALANCE_SETTINGS.modelName}.</>}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2.5 bg-white/10 backdrop-blur px-3.5 py-2.5 rounded-xl ring-1 ring-white/15">
+              <div className="h-8 w-8 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
+                <TrendingDown className="h-4 w-4" />
+              </div>
+              <div className="leading-tight">
+                <p className="text-[10px] opacity-75 font-medium">استهلاك هذا الشهر</p>
+                <p className="text-body font-bold tabular-nums">{tokenLabel(store.usedMonthTokens)} توكن</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={openTopUp}
+              className="h-[52px] px-5 rounded-xl bg-white text-primary text-body font-bold inline-flex items-center gap-1.5 shadow-sm hover:bg-white/90 transition-colors"
+            >
+              <Plus className="h-4 w-4" /> شحن الرصيد
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button className="text-white" onClick={openTopUp}>
-            <Plus className="h-4 w-4" /> شحن الرصيد
-          </Button>
+
+        <div className="relative mt-5 rounded-xl bg-white/10 ring-1 ring-white/15 px-4 py-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap text-small">
+            <span className="font-semibold">الاستهلاك من آخر شحنة</span>
+            <span className="opacity-90">
+              <b className="tabular-nums">{moneyExact(spent)}</b> من <b className="tabular-nums">{moneyExact(store.base)}</b> · <b className="tabular-nums">{Math.round(usedPct)}%</b>
+            </span>
+          </div>
+          <div className="relative mt-2 h-2 rounded-full bg-white/20 overflow-hidden" role="progressbar" aria-valuenow={Math.round(usedPct)} aria-valuemin={0} aria-valuemax={100}>
+            <div className={cn('h-full rounded-full transition-all', usedPct >= 70 ? 'bg-rose-300' : usedPct >= 50 ? 'bg-amber-300' : 'bg-white')} style={{ width: `${Math.max(usedPct, 1.5)}%` }} />
+            {/* the alert thresholds, so 50% and 70% are visible before they are reached */}
+            <span aria-hidden className="absolute inset-y-0 start-1/2 w-px bg-white/40" />
+            <span aria-hidden className="absolute inset-y-0 start-[70%] w-px bg-white/40" />
+          </div>
+          <p className="text-[11px] opacity-75 mt-1.5">تنبيه عند 50% و70% وعند نفاد الرصيد</p>
         </div>
       </div>
 
@@ -313,50 +358,6 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
           <Button size="sm" className="text-white" onClick={openTopUp}>اشحن الآن</Button>
         </div>
       )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard
-          label="الرصيد الحالي"
-          value={moneyExact(balance)}
-          icon={<Wallet className="h-5 w-5" />}
-          iconBg={balance < 0 ? 'bg-danger/15' : 'bg-success/15'}
-          iconColor={balance < 0 ? 'text-danger' : 'text-success'}
-        />
-        <StatCard
-          label="توكنز متبقية تقريبًا"
-          value={`≈ ${tokenLabel(tokensFor(balance))}`}
-          icon={<Zap className="h-5 w-5" />}
-          hint="تقدير حسب سعر المليون توكن الحالي، وتختلف الكمية الفعلية حسب طول المحادثات."
-        />
-        <StatCard
-          label="استهلاك هذا الشهر"
-          value={`${tokenLabel(store.usedMonthTokens)} توكن`}
-          icon={<TrendingDown className="h-5 w-5" />}
-          iconBg="bg-warning/15"
-          iconColor="text-warning"
-        />
-        <StatCard
-          label="حالة المساعد"
-          value={store.stopped ? 'متوقف' : 'يعمل'}
-          icon={<Power className="h-5 w-5" />}
-          iconBg={store.stopped ? 'bg-danger/15' : 'bg-success/15'}
-          iconColor={store.stopped ? 'text-danger' : 'text-success'}
-        />
-      </div>
-
-      <Card className="p-5">
-        <h2 className="text-body font-bold mb-3">الاستهلاك من آخر شحنة</h2>
-        <div className="h-2.5 rounded-full bg-bg-light dark:bg-bg-dark overflow-hidden" role="progressbar" aria-valuenow={Math.round(usedPct)} aria-valuemin={0} aria-valuemax={100}>
-          <div className={cn('h-full rounded-full transition-all', barColor)} style={{ width: `${usedPct}%` }} />
-        </div>
-        <div className="flex items-center justify-between gap-3 flex-wrap mt-2 text-small">
-          <span>
-            استهلكت <b>{moneyExact(spent)}</b> (<b className="tabular-nums">{Math.round(usedPct)}%</b>) من أصل <b>{moneyExact(store.base)}</b>
-          </span>
-          <span className="text-muted-light dark:text-muted-dark">تنبيه عند 50% و70% وعند نفاد الرصيد</span>
-        </div>
-      </Card>
-
 
       {usage}
 
@@ -412,7 +413,7 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
                         <span
                           className={cn(
                             'px-2 py-0.5 rounded-full text-small font-semibold whitespace-nowrap',
-                            isCredit ? 'bg-success/15 text-success' : t.type === 'usage' ? 'bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark' : 'bg-danger/15 text-danger',
+                            isCredit ? 'bg-success/15 text-success' : t.type === 'usage' ? 'bg-primary/10 text-primary' : 'bg-danger/15 text-danger',
                           )}
                         >
                           {TX_LABEL[t.type]}

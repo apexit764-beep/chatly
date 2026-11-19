@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Copy, Gift, Users, UserCheck, CalendarCheck, MousePointerClick } from 'lucide-react';
-import { Button, Card, EmptyState, StatCard } from '@components/ui';
+import { Copy, Gift, Users, UserCheck, CalendarCheck, MousePointerClick, Send, CreditCard, Share2 } from 'lucide-react';
+import { Card, EmptyState, StatCard } from '@components/ui';
 import { useReferralStore, type Referral } from '@/store/useReferralStore';
 import { useUIStore } from '@/store/useUIStore';
 import { REFERRAL_SETTINGS, monthsLabel } from '@/utils/referral';
@@ -68,49 +68,99 @@ export default function Referral(): JSX.Element {
     showToast('تم نسخ الرابط', 'success');
   };
 
+  const steps = [
+    { icon: Send, tint: 'bg-primary/10 text-primary', title: 'شارك رابطك', text: 'أرسل رابطك لأي شخص.' },
+    {
+      icon: CreditCard,
+      tint: 'bg-warning/15 text-warning',
+      title: 'يشترك ويدفع',
+      text: `الاشتراك الشهري = ${monthsLabel(monthsMonthly)}، والاشتراك السنوي = ${monthsLabel(monthsAnnual)}.`,
+    },
+    { icon: Gift, tint: 'bg-success/15 text-success', title: 'تكسب شهورًا مجانية', text: 'كل شهر مكتسب = شهر مجاني على اشتراكك، ويُطبق تلقائيًا عند التجديد.' },
+  ];
   const howCard = (
-    <Card className="p-5">
-      <h2 className="text-body font-bold mb-3">كيف تكسب؟</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {[
-          'أرسل رابطك لأي شخص.',
-          `عندما يشترك ويدفع: الاشتراك الشهري = ${monthsLabel(monthsMonthly)}، والاشتراك السنوي = ${monthsLabel(monthsAnnual)}.`,
-          'كل شهر مكتسب = شهر مجاني على اشتراكك، ويُطبق تلقائيًا عند التجديد.',
-        ].map((text, i) => (
-          <div key={i} className="rounded-card bg-bg-light dark:bg-bg-dark p-4 text-small leading-loose">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white text-[12px] font-bold mb-2">{i + 1}</span>
-            <br />
-            {text}
-          </div>
+    <Card className="p-5 lg:p-6">
+      <h2 className="text-h3 font-bold mb-5">كيف تكسب؟</h2>
+      <ol className="relative grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* the dashed rail that ties the three steps together on wide screens */}
+        <span aria-hidden className="hidden md:block absolute top-6 inset-x-[16%] border-t-2 border-dashed border-border-light dark:border-border-dark" />
+        {steps.map(({ icon: Icon, tint, title, text }, i) => (
+          <li key={i} className="relative flex md:flex-col md:items-center md:text-center gap-3">
+            <span className={cn('relative h-12 w-12 flex-none rounded-2xl flex items-center justify-center ring-4 ring-white dark:ring-surface-dark', tint)}>
+              <Icon className="h-5 w-5" />
+              <span className="absolute -top-1.5 -end-1.5 h-5 w-5 rounded-full bg-primary text-white text-[11px] font-bold flex items-center justify-center" style={{ color: '#fff' }}>{i + 1}</span>
+            </span>
+            <div>
+              <p className="text-body font-bold">{title}</p>
+              <p className="text-small text-muted-light dark:text-muted-dark leading-relaxed mt-0.5">{text}</p>
+            </div>
+          </li>
         ))}
-      </div>
+      </ol>
     </Card>
   );
 
-  const linkCard = (
-    <Card className="p-5">
-      <h2 className="text-body font-bold mb-3">رابط الإحالة الخاص بك</h2>
-      <div className="flex items-center justify-between gap-3 rounded-card border border-dashed border-primary/40 bg-primary/5 px-4 py-3">
-        <b className="text-primary" dir="ltr">{link}</b>
-        <Button variant="secondary" size="sm" onClick={copyLink}>
-          <Copy className="h-3.5 w-3.5" /> نسخ
-        </Button>
+  const shareWhatsApp = (): void => {
+    const msg = `جرّب Qhub لإدارة محادثات عملائك من مكان واحد: https://${link}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
+  };
+
+  /** Same banner language as «نظرة عامة»: the page's headline facts sit on the gradient. */
+  const hero = (
+    <div className="relative overflow-hidden bg-gradient-to-l from-primary to-primary-dark text-white rounded-card p-5 lg:p-6 shadow-lg">
+      <span aria-hidden className="pointer-events-none absolute -top-16 -start-10 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+      <div className="relative flex items-center justify-between flex-wrap gap-5">
+        <div className="flex items-center gap-5 min-w-0">
+          <div className="h-20 w-20 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center flex-shrink-0 ring-1 ring-white/20">
+            <Gift className="h-10 w-10 text-white/90" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-h1 font-bold leading-tight">ادعُ واكسب</h1>
+            <p className="text-small opacity-90 mt-1">
+              {on
+                ? 'أرسل رابطك، وكل مشترك جديد يدفع يكسبك شهورًا مجانية على اشتراكك'
+                : 'مكافآتك التي اكتسبتها سابقًا تُطبق بشكل طبيعي على التجديد'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5 bg-white/10 backdrop-blur px-4 py-3 rounded-xl ring-1 ring-white/15">
+          <div className="h-10 w-10 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
+            <CalendarCheck className="h-5 w-5" />
+          </div>
+          <div className="leading-tight">
+            <p className="text-[11px] opacity-75 font-medium">شهور مجانية متبقية لك</p>
+            <p className="text-h2 font-extrabold tabular-nums">{remaining}</p>
+          </div>
+        </div>
       </div>
-    </Card>
+
+      {on && (
+        <div className="relative mt-5 flex items-center gap-2 flex-wrap rounded-xl bg-white/10 ring-1 ring-white/20 p-2 ps-4">
+          <span className="text-[11px] opacity-75 font-medium">رابطك</span>
+          <b className="flex-1 min-w-0 truncate text-body tracking-wide text-right" dir="ltr">{link}</b>
+          <button
+            type="button"
+            onClick={copyLink}
+            className="h-9 px-4 rounded-lg bg-white text-primary text-small font-bold inline-flex items-center gap-1.5 hover:bg-white/90 transition-colors"
+          >
+            <Copy className="h-3.5 w-3.5" /> نسخ الرابط
+          </button>
+          <button
+            type="button"
+            onClick={shareWhatsApp}
+            className="h-9 px-4 rounded-lg bg-[#25D366] text-white text-small font-bold inline-flex items-center gap-1.5 hover:brightness-95 transition"
+            style={{ color: '#fff' }}
+          >
+            <Share2 className="h-3.5 w-3.5" /> مشاركة واتساب
+          </button>
+        </div>
+      )}
+    </div>
   );
 
   return (
     <div className="p-4 lg:p-6 page-fade space-y-5">
-      <div>
-        <h1 className="text-h1 font-extrabold">ادعُ واكسب</h1>
-        <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
-          {on
-            ? 'أرسل رابطك، وكل مشترك جديد يدفع يكسبك شهورًا مجانية على اشتراكك'
-            : 'مكافآتك التي اكتسبتها سابقًا تُطبق بشكل طبيعي على التجديد'}
-        </p>
-      </div>
-
-      {on && linkCard}
+      {hero}
 
       {referrals.length === 0 ? (
         <>
@@ -121,17 +171,10 @@ export default function Referral(): JSX.Element {
         </>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-            <StatCard label="زيارات الرابط" value={visits} icon={<MousePointerClick className="h-5 w-5" />} />
-            <StatCard label="سجّلوا من رابطك" value={referrals.length} icon={<Users className="h-5 w-5" />} />
-            <StatCard label="اشتركوا فعلًا" value={subscribers.length} icon={<UserCheck className="h-5 w-5" />} />
-            <StatCard
-              label="الشهور المتبقية"
-              value={remaining}
-              icon={<Gift className="h-5 w-5" />}
-              iconBg="bg-success/15"
-              iconColor="text-success"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <StatCard label="زيارات الرابط" value={visits} icon={<MousePointerClick className="h-5 w-5" />} iconBg="bg-info/15" iconColor="text-info" />
+            <StatCard label="سجّلوا من رابطك" value={referrals.length} icon={<Users className="h-5 w-5" />} iconBg="bg-violet-500/15" iconColor="text-violet-600" />
+            <StatCard label="اشتركوا فعلًا" value={subscribers.length} icon={<UserCheck className="h-5 w-5" />} iconBg="bg-primary/15" iconColor="text-primary" />
             <StatCard
               label="الشهور المستخدمة"
               value={usedCount}
@@ -191,7 +234,14 @@ export default function Referral(): JSX.Element {
                       const sub = r.status === 'subscribed';
                       return (
                         <tr key={r.id}>
-                          <td className="px-4 py-3 font-semibold whitespace-nowrap">{r.name}</td>
+                          <td className="px-4 py-3 font-semibold whitespace-nowrap">
+                            <span className="inline-flex items-center gap-2.5">
+                              <span className={cn('h-8 w-8 rounded-full flex items-center justify-center text-[12px] font-bold', sub ? 'bg-success/15 text-success' : 'bg-warning/15 text-warning')}>
+                                {r.name.trim().slice(0, 1)}
+                              </span>
+                              {r.name}
+                            </span>
+                          </td>
                           <td className="px-4 py-3"><Contact r={r} /></td>
                           <td className="px-4 py-3 text-small whitespace-nowrap">{formatDate(r.at)}</td>
                           <td className="px-4 py-3">

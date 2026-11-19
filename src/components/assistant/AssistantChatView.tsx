@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft, BarChart3, CreditCard, Megaphone, MessagesSquare, Radio, Send, Sparkles, Trophy, UsersRound, type LucideIcon } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { QUICK_QUESTIONS, type Answer } from '@/utils/assistantEngine';
 import { useAssistantStore } from '@/store/useAssistantStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useAssistantChat } from './useAssistantChat';
+
+/** One icon and tint per quick question, so the welcome grid reads at a glance. */
+const TOPIC_LOOK: Record<string, { icon: LucideIcon; tint: string; hint: string }> = {
+  sub: { icon: CreditCard, tint: 'bg-primary/10 text-primary', hint: 'الباقة والتجديد والفواتير' },
+  open: { icon: MessagesSquare, tint: 'bg-warning/15 text-warning', hint: 'ما ينتظر الرد الآن' },
+  channels: { icon: Radio, tint: 'bg-success/15 text-success', hint: 'المتصلة والمتوقفة' },
+  team: { icon: UsersRound, tint: 'bg-info/15 text-info', hint: 'من متاح في الفريق' },
+  top: { icon: Trophy, tint: 'bg-amber-500/15 text-amber-600', hint: 'الأعلى أداءً هذا الأسبوع' },
+  camp: { icon: Megaphone, tint: 'bg-fuchsia-500/10 text-fuchsia-600', hint: 'النتائج والإرسال' },
+};
 
 function AnswerBubble({ a }: { a: Answer }): JSX.Element {
   const navigate = useNavigate();
@@ -37,7 +48,7 @@ function AnswerBubble({ a }: { a: Answer }): JSX.Element {
 }
 
 /** Messages, quick questions and composer — the body of both the panel and the page. */
-export function AssistantChatView({ idPrefix }: { idPrefix: string }): JSX.Element {
+export function AssistantChatView({ idPrefix, wide = false }: { idPrefix: string; wide?: boolean }): JSX.Element {
   const navigate = useNavigate();
   const chat = useAssistantChat();
   const [text, setText] = useState('');
@@ -54,16 +65,45 @@ export function AssistantChatView({ idPrefix }: { idPrefix: string }): JSX.Eleme
     setText('');
   };
 
-  const first = (chat.userKey.split('@')[0] ?? '').trim();
+  // Greet by the person's name; the email's local part (e.g. «admin») is only a fallback.
+  const userName = useAuthStore((st) => st.user?.name);
+  const first = ((userName ?? '').trim().split(/\s+/)[0] || (chat.userKey.split('@')[0] ?? '')).trim();
+  const questions = QUICK_QUESTIONS.filter((q) => !q.visible || q.visible());
   const disabled = !chat.canWrite || chat.busy;
 
   return (
     <>
       <div ref={scroller} className="flex flex-1 flex-col gap-2.5 overflow-y-auto bg-bg-light p-3.5 dark:bg-bg-dark">
         {msgs.length === 0 ? (
-          <div className="px-2 pt-4 text-center leading-loose text-muted-light dark:text-muted-dark">
-            <b className="block text-body text-current">أهلًا{first ? ` ${first}` : ''}</b>
-            اسألني عن بيانات حسابك: الاشتراك والقنوات والموظفين والعملاء والحملات.
+          <div className={cn('m-auto w-full text-center', wide ? 'max-w-2xl py-6' : 'py-3')}>
+            <div className={cn('mx-auto flex items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/25', wide ? 'h-16 w-16' : 'h-12 w-12')}>
+              <Sparkles className={wide ? 'h-8 w-8' : 'h-6 w-6'} />
+            </div>
+            <p className={cn('mt-4 font-extrabold', wide ? 'text-h2' : 'text-body')}>أهلًا{first ? `، ${first}` : ''} 👋</p>
+            <p className="mt-1 text-small text-muted-light dark:text-muted-dark">اسألني عن بيانات حسابك: الاشتراك والقنوات والموظفين والعملاء والحملات.</p>
+            <div className={cn('mt-5 grid gap-2.5 text-start', wide ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-2')}>
+              {questions.map((q) => {
+                const look = TOPIC_LOOK[q.topic] ?? { icon: BarChart3, tint: 'bg-primary/10 text-primary', hint: '' };
+                const Icon = look.icon;
+                return (
+                  <button
+                    key={q.topic}
+                    type="button"
+                    disabled={chat.busy}
+                    onClick={() => chat.ask(q.label, q.topic)}
+                    className="group flex items-start gap-2.5 rounded-xl border border-border-light bg-white p-3 transition-all hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md disabled:opacity-50 dark:border-border-dark dark:bg-surface-dark"
+                  >
+                    <span className={cn('flex h-8 w-8 flex-none items-center justify-center rounded-lg', look.tint)}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-small font-bold group-hover:text-violet-600">{q.label}</span>
+                      {wide && look.hint && <span className="block text-[11.5px] text-muted-light dark:text-muted-dark">{look.hint}</span>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         ) : (
           msgs.map((m, i) =>
@@ -81,8 +121,9 @@ export function AssistantChatView({ idPrefix }: { idPrefix: string }): JSX.Eleme
         )}
       </div>
 
+      {msgs.length > 0 && (
       <div className="flex flex-wrap gap-1.5 border-t border-border-light bg-white px-3.5 pt-2.5 dark:border-border-dark dark:bg-surface-dark">
-        {QUICK_QUESTIONS.filter((q) => !q.visible || q.visible()).map((q) => (
+        {questions.map((q) => (
           <button
             key={q.topic}
             type="button"
@@ -94,8 +135,9 @@ export function AssistantChatView({ idPrefix }: { idPrefix: string }): JSX.Eleme
           </button>
         ))}
       </div>
+      )}
 
-      <div className="bg-white px-3.5 pb-3 pt-2.5 dark:bg-surface-dark">
+      <div className={cn('bg-white px-3.5 pb-3 pt-2.5 dark:bg-surface-dark', msgs.length === 0 && 'border-t border-border-light dark:border-border-dark')}>
         {!chat.live && (
           <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-warning/30 bg-warning/5 px-2.5 py-2 text-[12px] text-warning">
             <span>اربط حساب ذكاء اصطناعي لتتمكن من كتابة أسئلتك.</span>

@@ -25,6 +25,9 @@ import { Footer } from './Footer';
 export function AppShell(): JSX.Element {
   const location = useLocation();
   const isInbox = location.pathname.startsWith('/inbox');
+  // Pages that size themselves to the window (a chat composer pinned to the bottom)
+  // instead of scrolling inside <main>.
+  const fillsViewport = isInbox || location.pathname.startsWith('/assistant');
   const inboxFocus = useUIStore((s) => s.inboxFocus);
   // Focus mode only applies on the inbox page
   const focused = isInbox && inboxFocus;
@@ -50,7 +53,7 @@ export function AppShell(): JSX.Element {
         {!focused && <SectionSidebar />}
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
           {!focused && <TopHeader />}
-          <main className={isInbox ? 'flex-1 overflow-hidden min-h-0 flex flex-col' : 'flex-1 overflow-y-auto overflow-x-hidden'}>
+          <main className={fillsViewport ? 'flex-1 overflow-hidden min-h-0 flex flex-col' : 'flex-1 overflow-y-auto overflow-x-hidden'}>
             {/* داخل المحتوى أعلى عنوان الصفحة، خارج انتقال الصفحات فلا يومض
                 مع كل تنقّل. هامشه بحشو الصفحات نفسه، وحشو الصفحة العلويّ هو
                 الفاصل بينه وبين العنوان. */}
@@ -62,7 +65,7 @@ export function AppShell(): JSX.Element {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
                 transition={{ duration: 0.2 }}
-                className={isInbox ? 'flex-1 min-h-0' : 'h-full'}
+                className={fillsViewport ? 'flex-1 min-h-0' : 'h-full'}
               >
                 <Outlet />
               </motion.div>
@@ -75,7 +78,8 @@ export function AppShell(): JSX.Element {
       {has('settings.edit') && <OnboardingModal />}
       <Toast />
       {getAppMode() === 'client' && <AssistantPanel />}
-      {getAppMode() === 'client' && !isInbox && <SupportChat />}
+      {/* The assistant page is itself a chat; a second floating bot over its composer only confuses. */}
+      {getAppMode() === 'client' && !fillsViewport && <SupportChat />}
       {getAppMode() === 'client' && <SubscriptionExpiredModal />}
       {getAppMode() === 'client' && <TrialExpiredModal />}
     </div>
