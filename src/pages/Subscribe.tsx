@@ -15,6 +15,7 @@ import {
   MessageCircle,
   Clock,
   ArrowUpRight,
+  Sparkles,
 } from 'lucide-react';
 import { Card, Input, Modal, Textarea, useConfirm, InfoTip } from '@components/ui';
 
@@ -410,7 +411,8 @@ export default function Subscribe(): JSX.Element {
                             )}
                           </div>
                           <p className="text-body font-bold">{plan.nameAr}</p>
-                          <p className="text-[11px] text-primary font-semibold mb-1">
+                          <p className="mx-auto mb-1 inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[11px] font-semibold text-violet-600">
+                            <Sparkles className="h-3 w-3" />
                             <span dir="ltr">{planFreeTokens(plan).toLocaleString('en')}</span> توكنز مجانية من مساعد Qhub
                           </p>
                           <div className="h-[58px] flex flex-col justify-center">

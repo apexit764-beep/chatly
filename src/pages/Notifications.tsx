@@ -7,6 +7,9 @@ import {
   UserPlus,
   CheckCheck,
   Trash2,
+  Gift,
+  Sparkles,
+  type LucideIcon,
 } from 'lucide-react';
 import { Card } from '@components/ui';
 import { useDataStore } from '@/store/useDataStore';
@@ -15,12 +18,19 @@ import { timeAgo, formatTime } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import type { Notification } from '@/types';
 
-const NOTIF_ICON: Record<Notification['type'], JSX.Element> = {
-  conversation: <UserPlus className="h-4 w-4 text-primary" />,
-  message: <MessageSquare className="h-4 w-4 text-primary" />,
-  campaign: <Megaphone className="h-4 w-4 text-primary" />,
-  system: <Bell className="h-4 w-4 text-primary" />,
+const NOTIF_LOOK: Record<Notification['type'], { icon: LucideIcon; tint: string }> = {
+  conversation: { icon: UserPlus, tint: 'bg-primary/10 text-primary' },
+  message: { icon: MessageSquare, tint: 'bg-info/15 text-info' },
+  campaign: { icon: Megaphone, tint: 'bg-fuchsia-500/10 text-fuchsia-600' },
+  system: { icon: Bell, tint: 'bg-warning/15 text-warning' },
 };
+
+/** System notices are told apart by where they lead: referral rewards and AI balance get their own look. */
+function lookFor(n: Notification): { icon: LucideIcon; tint: string } {
+  if (n.link?.startsWith('/referral')) return { icon: Gift, tint: 'bg-success/15 text-success' };
+  if (n.link?.startsWith('/ai-settings')) return { icon: Sparkles, tint: 'bg-violet-500/15 text-violet-600' };
+  return NOTIF_LOOK[n.type];
+}
 
 type Filter = 'all' | 'unread' | 'read';
 
@@ -145,17 +155,19 @@ export default function Notifications(): JSX.Element {
               </p>
               <Card className="overflow-hidden">
                 <div className="divide-y divide-border-light dark:divide-border-dark">
-                  {items.map((n) => (
+                  {items.map((n) => {
+                    const { icon: Icon, tint } = lookFor(n);
+                    return (
                     <button
                       key={n.id}
                       onClick={() => handleClick(n)}
                       className={cn(
-                        'w-full text-start flex gap-3 px-4 py-3.5 hover:bg-bg-light dark:hover:bg-bg-dark transition-colors',
-                        !n.read && 'bg-primary/[0.03]'
+                        'w-full text-start flex gap-3 px-4 py-3.5 border-s-[3px] hover:bg-bg-light dark:hover:bg-bg-dark transition-colors',
+                        !n.read ? 'bg-primary/[0.03] border-s-primary' : 'border-s-transparent'
                       )}
                     >
-                      <div className="h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark">
-                        {NOTIF_ICON[n.type]}
+                      <div className={cn('h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0', tint)}>
+                        <Icon className="h-[18px] w-[18px]" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
@@ -171,7 +183,8 @@ export default function Notifications(): JSX.Element {
                         <p className="text-[10px] text-muted-light dark:text-muted-dark mt-1">{formatTime(n.timestamp)}</p>
                       </div>
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </Card>
             </div>

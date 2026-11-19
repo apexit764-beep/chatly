@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, ChevronRight, Wallet, TrendingDown, Plus, Eye, Download, PauseCircle, CreditCard } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Wallet, TrendingDown, Plus, Check, Zap, Eye, Download, PauseCircle, CreditCard } from 'lucide-react';
 import { Button, Card, Modal, Input } from '@components/ui';
 import { useAIBalanceStore, type BalanceInvoice, type BalanceTx } from '@/store/useAIBalanceStore';
 import { usePaymentMethodsStore, cardLabel } from '@/store/usePaymentMethodsStore';
@@ -40,22 +40,42 @@ function AmountPicker({
   return (
     <div className="space-y-4">
       <div className={cn('grid grid-cols-2 gap-3', !compact && 'sm:grid-cols-4')}>
-        {BALANCE_SETTINGS.packs.map((usd) => (
-          <button
-            key={usd}
-            onClick={() => {
-              onPack(usd);
-              onCustom('');
-            }}
-            className={cn(
-              'rounded-card border-2 p-3 text-center transition-colors',
-              pack === usd ? 'border-primary bg-primary/10' : 'border-border-light dark:border-border-dark hover:border-primary/40',
-            )}
-          >
-            <span className="block text-h3 font-bold tabular-nums">{moneyPrice(usd)}</span>
-            <span className="block text-small text-muted-light dark:text-muted-dark">≈ {tokenLabel(tokensFor(usd))} توكن</span>
-          </button>
-        ))}
+        {BALANCE_SETTINGS.packs.map((usd, i) => {
+          const selected = pack === usd;
+          // the second pack is the suggested one — enough for a month of a typical inbox
+          const popular = i === 1;
+          return (
+            <button
+              key={usd}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => {
+                onPack(usd);
+                onCustom('');
+              }}
+              className={cn(
+                'relative rounded-card border-2 px-3 pb-3 pt-4 text-center transition-all hover:-translate-y-0.5 hover:shadow-md',
+                selected ? 'border-primary bg-primary/5 shadow-md shadow-primary/10' : 'border-border-light dark:border-border-dark hover:border-primary/40 bg-white dark:bg-surface-dark',
+              )}
+            >
+              {popular && (
+                <span className="absolute -top-2.5 start-1/2 ltr:-translate-x-1/2 rtl:translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-l from-primary to-primary-dark px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm" style={{ color: '#fff' }}>
+                  الأكثر طلبًا
+                </span>
+              )}
+              {selected && (
+                <span className="absolute top-2 end-2 h-5 w-5 rounded-full bg-primary text-white flex items-center justify-center" style={{ color: '#fff' }}>
+                  <Check className="h-3 w-3" />
+                </span>
+              )}
+              <span className={cn('mx-auto mb-1.5 h-8 w-8 rounded-lg flex items-center justify-center', selected ? 'bg-primary text-white' : 'bg-primary/10 text-primary')} style={selected ? { color: '#fff' } : undefined}>
+                <Zap className="h-4 w-4" />
+              </span>
+              <span className="block text-h3 font-extrabold tabular-nums">{moneyPrice(usd)}</span>
+              <span className="block text-small text-muted-light dark:text-muted-dark">≈ {tokenLabel(tokensFor(usd))} توكن</span>
+            </button>
+          );
+        })}
       </div>
       <div>
         <Input
@@ -218,12 +238,18 @@ export function BalancePackPicker(): JSX.Element {
     navigate('/ai-settings/checkout', { state: { usd: r.usd, paidLocal: r.paidLocal, cardId: defaultCard.id } });
   };
   return (
-    <div className="space-y-4 rounded-xl border border-border-light dark:border-border-dark p-4">
-      <p className="text-body font-semibold">اختر باقة الرصيد</p>
-      <AmountPicker compact pack={pack} onPack={setPack} custom={custom} onCustom={setCustom} />
-      <div className="flex justify-end">
-        <Button className="text-white" onClick={submit} disabled={!pack && !custom}>الانتقال للدفع</Button>
+    <div className="space-y-4 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.04] to-transparent p-4">
+      <div className="flex items-center gap-2.5">
+        <span className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-primary-dark text-white flex items-center justify-center shadow-sm" style={{ color: '#fff' }}>
+          <Wallet className="h-4 w-4" />
+        </span>
+        <div>
+          <p className="text-body font-bold">اختر باقة الرصيد</p>
+          <p className="text-[11.5px] text-muted-light dark:text-muted-dark">تُضاف إلى رصيدك فور إتمام الدفع</p>
+        </div>
       </div>
+      <AmountPicker compact pack={pack} onPack={setPack} custom={custom} onCustom={setCustom} />
+      <Button className="text-white w-full" onClick={submit} disabled={!pack && !custom}>الانتقال للدفع</Button>
     </div>
   );
 }

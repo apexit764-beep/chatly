@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Gauge, PauseCircle, TrendingDown, Coins } from 'lucide-react';
-import { Button, Card, Input, StatCard } from '@components/ui';
+import { Gauge, PauseCircle, KeyRound, Coins } from 'lucide-react';
+import { Button, Card, Input } from '@components/ui';
 import { monthToDateTokens } from '@components/ai/AIUsageDetails';
 import { useAIApiLimitStore } from '@/store/useAIApiLimitStore';
 import { useDataStore } from '@/store/useDataStore';
@@ -106,11 +106,44 @@ export default function ApiUsagePanel({
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-h3 font-bold">استهلاك مفتاح API</h2>
-        <p className="text-small text-muted-light dark:text-muted-dark mt-1">
-          يعمل المساعد بنموذج {model} من خلال مفتاح API الخاص بك لدى {provider}. المحاسبة تتم مباشرة مع المزوّد، والأرقام هنا للمتابعة فقط.
-        </p>
+      {/* Own-key hero: violet, the AI accent from «نظرة عامة», so it never reads as the Qhub balance. */}
+      <div className="relative overflow-hidden bg-gradient-to-l from-violet-600 to-fuchsia-600 text-white rounded-card p-5 lg:p-6 shadow-lg">
+        <span aria-hidden className="pointer-events-none absolute -top-20 -start-16 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
+        <div className="relative flex items-start justify-between flex-wrap gap-5">
+          <div className="flex items-center gap-5 min-w-0">
+            <div className="h-20 w-20 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center flex-shrink-0 ring-1 ring-white/20">
+              <KeyRound className="h-10 w-10 text-white/90" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-small font-semibold opacity-90">استهلاك مفتاح API · هذا الشهر</p>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/15 ring-1 ring-white/20" dir="ltr">{provider} · {model}</span>
+              </div>
+              <p className="text-[34px] lg:text-[40px] font-extrabold leading-tight tabular-nums mt-1">{tokenLabel(used)} <span className="text-h3 font-bold opacity-90">توكن</span></p>
+              <p className="text-small opacity-85">المحاسبة تتم مباشرة مع {provider}، والأرقام هنا للمتابعة فقط.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2.5 bg-white/10 backdrop-blur px-3.5 py-2.5 rounded-xl ring-1 ring-white/15" title={`تقدير بسعر تقريبي ${price}$ لكل مليون توكن لنموذج ${model}. الفاتورة الفعلية تصدر من ${provider}.`}>
+              <div className="h-8 w-8 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
+                <Coins className="h-4 w-4" />
+              </div>
+              <div className="leading-tight">
+                <p className="text-[10px] opacity-75 font-medium">التكلفة التقديرية لدى المزوّد</p>
+                <p className="text-body font-bold tabular-nums">≈ {formatMoney(usedMoney, c.code)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 bg-white/10 backdrop-blur px-3.5 py-2.5 rounded-xl ring-1 ring-white/15">
+              <div className="h-8 w-8 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
+                <Gauge className="h-4 w-4" />
+              </div>
+              <div className="leading-tight">
+                <p className="text-[10px] opacity-75 font-medium">حد الاستهلاك الشهري</p>
+                <p className="text-body font-bold tabular-nums">{active ? `${tokenLabel(limit.tokens)} توكن` : 'غير محدد'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {stopped && (
@@ -123,33 +156,10 @@ export default function ApiUsagePanel({
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard
-          label="استهلاك هذا الشهر"
-          value={`${tokenLabel(used)} توكن`}
-          icon={<TrendingDown className="h-5 w-5" />}
-          iconBg="bg-warning/15"
-          iconColor="text-warning"
-        />
-        <StatCard
-          label="التكلفة التقديرية لدى المزوّد"
-          value={`≈ ${formatMoney(usedMoney, c.code)}`}
-          icon={<Coins className="h-5 w-5" />}
-          hint={`تقدير بسعر تقريبي ${price}$ لكل مليون توكن لنموذج ${model}. الفاتورة الفعلية تصدر من ${provider}.`}
-        />
-        <StatCard
-          label="حد الاستهلاك الشهري"
-          value={active ? `${tokenLabel(limit.tokens)} توكن` : 'غير محدد'}
-          icon={<Gauge className="h-5 w-5" />}
-          iconBg={reached ? 'bg-danger/15' : 'bg-primary/15'}
-          iconColor={reached ? 'text-danger' : 'text-primary'}
-        />
-      </div>
-
       <Card className="p-5 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-body font-bold">حد الاستهلاك الشهري</h2>
+            <h2 className="text-body font-bold flex items-center gap-2"><span className="h-8 w-8 rounded-lg bg-violet-500/15 text-violet-600 flex items-center justify-center"><Gauge className="h-4 w-4" /></span>حد الاستهلاك الشهري</h2>
             <p className="text-[12px] text-muted-light dark:text-muted-dark mt-0.5">اختياري — يحميك من فاتورة مفاجئة لدى المزوّد. التوكن والمبلغ مرتبطان: غيّر أحدهما يتغير الآخر.</p>
           </div>
           <button
@@ -157,7 +167,7 @@ export default function ApiUsagePanel({
             aria-label="تفعيل حد الاستهلاك"
             role="switch"
             aria-checked={on}
-            className={cn('relative h-6 w-11 rounded-full transition-colors flex-shrink-0', on ? 'bg-primary' : 'bg-border-light dark:bg-border-dark')}
+            className={cn('relative h-6 w-11 rounded-full transition-colors flex-shrink-0', on ? 'bg-violet-600' : 'bg-border-light dark:bg-border-dark')}
           >
             <span className={cn('absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all', on ? 'start-0.5' : 'end-0.5')} />
           </button>

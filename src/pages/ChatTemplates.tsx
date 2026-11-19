@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Copy, Edit2, Eye, Plus, Sparkles, Trash2 } from 'lucide-react';
-import { Button, Card, EmptyState, Modal, useConfirm } from '@components/ui';
+import { ChevronDown, ChevronLeft, CircleDashed, Copy, Edit2, Eye, Layers, MessageSquareMore, PlayCircle, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { Button, Card, EmptyState, Modal, StatCard, useConfirm } from '@components/ui';
 import { ChatTemplatePreview } from '@components/chatTemplates/ChatTemplatePreview';
 import { useChatTemplateStore } from '@/store/useChatTemplateStore';
 import { useUIStore } from '@/store/useUIStore';
@@ -127,6 +127,9 @@ export default function ChatTemplates(): JSX.Element {
     showToast('تم حذف القالب', 'success');
   };
 
+  const liveCount = templates.filter((t) => t.status === 'published' && t.active).length;
+  const draftCount = templates.filter((t) => t.status === 'draft').length;
+
   const generate = (): void => {
     if (prompt.trim().length < 10) { showToast('اكتب وصفًا أوضح لما تريده', 'error'); return; }
     setGenerating(true);
@@ -149,18 +152,42 @@ export default function ChatTemplates(): JSX.Element {
           <p className="mt-0.5 text-small text-muted-light dark:text-muted-dark">قوالب بخطوات وأسئلة تُرسل للعملاء داخل محادثات واتساب</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setAiOpen(true)} className="flex h-9 items-center gap-2 rounded-full border border-border-light px-4 text-small font-medium hover:bg-bg-light dark:border-border-dark dark:hover:bg-bg-dark">
-            <Sparkles className="h-4 w-4 text-violet-600" /> إنشاء بالذكاء الاصطناعي
-          </button>
-          <button onClick={() => navigate('/chat-templates/new')} className="flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-small font-medium text-white hover:bg-primary-dark">
+          <button onClick={() => navigate('/chat-templates/new')} className="flex h-10 items-center gap-2 rounded-full bg-gradient-to-l from-primary to-primary-dark px-5 text-small font-bold text-white shadow-sm transition-shadow hover:shadow-md" style={{ color: '#fff' }}>
             <Plus className="h-4 w-4" /> قالب جديد
           </button>
         </div>
       </div>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard label="إجمالي القوالب" value={templates.length} icon={<Layers className="h-5 w-5" />} iconBg="bg-primary/15" iconColor="text-primary" />
+        <StatCard label="مفعّلة الآن" value={liveCount} icon={<PlayCircle className="h-5 w-5" />} iconBg="bg-success/15" iconColor="text-success" />
+        <StatCard label="مسودات" value={draftCount} icon={<CircleDashed className="h-5 w-5" />} iconBg="bg-warning/15" iconColor="text-warning" />
+      </div>
+
+      {/* AI card — the violet accent «نظرة عامة» uses for everything the assistant does */}
+      <Card className="border-l-4 border-l-violet-500 bg-gradient-to-br from-violet-500/[0.04] to-fuchsia-500/[0.04] p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-md">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-body font-bold">أنشئ قالبًا بالذكاء الاصطناعي</h2>
+              <p className="mt-0.5 text-small text-muted-light dark:text-muted-dark">اكتب ما تريد بجملة، مثل «احجز موعدًا واسأل عن الاسم والتاريخ»، وتصلك مسودة جاهزة للمراجعة.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setAiOpen(true)}
+            className="flex h-9 flex-shrink-0 items-center gap-1.5 rounded-full border border-border-light bg-white px-4 text-small font-medium transition-colors hover:border-violet-300 hover:text-violet-600 dark:border-border-dark dark:bg-surface-dark"
+          >
+            جرّبه الآن <ChevronLeft className="h-4 w-4" />
+          </button>
+        </div>
+      </Card>
+
       <Card className="overflow-hidden">
         {templates.length === 0 ? (
-          <EmptyState icon={<Plus className="h-8 w-8" />} title="لا توجد قوالب بعد" />
+          <EmptyState icon={<MessageSquareMore className="h-8 w-8" />} title="لا توجد قوالب بعد" />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-body">
@@ -178,9 +205,16 @@ export default function ChatTemplates(): JSX.Element {
               <tbody className="divide-y divide-border-light dark:divide-border-dark">
                 {templates.map((t) => (
                   <tr key={t.id}>
-                    <td className="whitespace-nowrap px-4 py-3 font-semibold">{t.name}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-semibold">
+                      <span className="inline-flex items-center gap-2.5">
+                        <span className={cn('flex h-9 w-9 items-center justify-center rounded-lg', t.status === 'published' && t.active ? 'bg-[#25D366]/15 text-[#128C7E]' : 'bg-bg-light text-muted-light dark:bg-bg-dark dark:text-muted-dark')}>
+                          <MessageSquareMore className="h-4 w-4" />
+                        </span>
+                        {t.name}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-small">{triggerSummary(t)}</td>
-                    <td className="px-4 py-3 tabular-nums">{t.steps.length}</td>
+                    <td className="px-4 py-3"><span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-primary/10 px-2 text-small font-bold tabular-nums text-primary">{t.steps.length}</span></td>
                     <td className="px-4 py-3"><StatusPill t={t} /></td>
                     <td className="whitespace-nowrap px-4 py-3 text-small">{formatDate(t.updatedAt)}</td>
                     <td className="whitespace-nowrap px-4 py-3">

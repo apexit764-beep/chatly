@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, Lock, Plus } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, CreditCard, Loader2, Lock, Plus, ShieldCheck, Wallet, Zap } from 'lucide-react';
 import { Card, Input } from '@components/ui';
 import { useAIBalanceStore, type BalanceInvoice } from '@/store/useAIBalanceStore';
 import { cardLabel, usePaymentMethodsStore } from '@/store/usePaymentMethodsStore';
@@ -117,30 +117,40 @@ export default function AIBalanceCheckout(): JSX.Element {
         <h2 className="text-h1 font-bold text-center mb-6">إتمام الدفع</h2>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-          <Card className="p-5">
-            <p className="text-small font-semibold text-muted-light dark:text-muted-dark mb-3">ملخص الطلب</p>
-            <div className="space-y-2 text-small mb-3 pb-3 border-b border-border-light dark:border-border-dark">
-              <div className="flex justify-between">
-                <span className="text-muted-light dark:text-muted-dark">البند</span>
-                <span className="font-semibold">شحن رصيد المساعد</span>
+          {/* Order summary in the hero language of «نظرة عامة» — what you get is the headline. */}
+          <div className="relative overflow-hidden rounded-card bg-gradient-to-l from-primary to-primary-dark p-5 text-white shadow-lg lg:p-6">
+            <span aria-hidden className="pointer-events-none absolute -top-16 -start-12 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+            <div className="relative flex items-center gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-white/15 ring-1 ring-white/20 flex items-center justify-center flex-shrink-0">
+                <Wallet className="h-7 w-7" />
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-light dark:text-muted-dark">الرصيد المضاف</span>
-                <span className="font-semibold">{moneyPrice(order.usd)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-light dark:text-muted-dark">توكنز تقريبًا</span>
-                <span className="font-semibold">≈ {tokenLabel(tokensFor(order.usd))}</span>
+              <div>
+                <p className="text-small opacity-85 font-semibold">شحن رصيد المساعد</p>
+                <p className="text-[32px] font-extrabold leading-tight tabular-nums">{moneyPrice(order.usd)}</p>
               </div>
             </div>
-            <div className="flex justify-between text-body font-bold">
-              <span>الإجمالي</span>
-              <span>{formatMoney(order.paidLocal, currency.code)}</span>
+            <div className="relative mt-5 space-y-2.5 rounded-xl bg-white/10 ring-1 ring-white/15 p-4 text-small">
+              <div className="flex justify-between">
+                <span className="opacity-80">الرصيد المضاف</span>
+                <span className="font-semibold tabular-nums">{moneyPrice(order.usd)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="opacity-80 inline-flex items-center gap-1"><Zap className="h-3.5 w-3.5" /> توكنز تقريبًا</span>
+                <span className="font-semibold tabular-nums">≈ {tokenLabel(tokensFor(order.usd))}</span>
+              </div>
+              <div className="flex justify-between border-t border-white/20 pt-2.5 text-body font-bold">
+                <span>الإجمالي</span>
+                <span className="tabular-nums">{formatMoney(order.paidLocal, currency.code)}</span>
+              </div>
             </div>
-          </Card>
+            <div className="relative mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] opacity-85">
+              <span className="inline-flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5" /> دفع آمن عبر Paymob</span>
+              <span className="inline-flex items-center gap-1"><Zap className="h-3.5 w-3.5" /> يُضاف الرصيد فورًا</span>
+            </div>
+          </div>
 
           <Card className="p-5">
-            <p className="text-small font-semibold text-muted-light dark:text-muted-dark mb-3">طريقة الدفع</p>
+            <p className="text-body font-bold mb-3 flex items-center gap-2"><span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><CreditCard className="h-4 w-4" /></span>طريقة الدفع</p>
             <div className="space-y-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {cards.map((c) => {
@@ -195,9 +205,10 @@ export default function AIBalanceCheckout(): JSX.Element {
         <button
           onClick={pay}
           disabled={newInvalid}
-          className="w-full h-14 mt-5 rounded-full bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 text-white text-body font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full h-14 mt-5 rounded-full bg-gradient-to-l from-primary to-primary-dark text-white text-body font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/25 transition-all hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ color: '#fff' }}
         >
-          ادفع {formatMoney(order.paidLocal, currency.code)}
+          <Lock className="h-4 w-4" /> ادفع {formatMoney(order.paidLocal, currency.code)}
         </button>
         <p className="text-[11px] text-muted-light dark:text-muted-dark text-center mt-3">عند نجاح الدفع، يُضاف الرصيد فورًا. الدفع تجريبي حاليًا.</p>
       </div>
