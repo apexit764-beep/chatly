@@ -45,11 +45,29 @@ export interface ChatStep {
   dept?: string;
 }
 
+/**
+ * Every template is sent automatically with the customer's first message (a new customer, or a
+ * message after the conversation was closed), on the template's numbers. `kws` decide which one:
+ * the template whose keyword is in that message, otherwise the number's default template (no
+ * keywords). `first`, `kw` and `off` are kept only so older saved templates load; they are not used.
+ */
 export interface ChatTemplateTriggers {
   first: boolean;
   kw: boolean;
   kws: string[];
   off: boolean;
+}
+
+/** The keywords that pick this template; none = the default template of its numbers. */
+export function keywordsOf(t: ChatTemplate): string[] {
+  return t.triggers?.kws ?? [];
+}
+
+/** Brings a template saved under the older trigger options onto the keyword-only model. */
+export function normalizeTriggers(t: ChatTemplate): ChatTemplate {
+  const tr = t.triggers ?? { first: false, kw: false, kws: [], off: false };
+  const kws = tr.kw ? tr.kws ?? [] : [];
+  return { ...t, triggers: { first: false, kw: kws.length > 0, kws, off: false } };
 }
 
 export interface ChatTemplate {
@@ -149,11 +167,8 @@ export function cloneTemplate(t: ChatTemplate, patch: Partial<ChatTemplate> = {}
 }
 
 export function triggerSummary(t: ChatTemplate): string {
-  const parts = ['يدوي من المحادثة'];
-  if (t.triggers.first) parts.push('أول رسالة من عميل جديد');
-  if (t.triggers.kw) parts.push(`كلمات: ${t.triggers.kws.join('، ')}`);
-  if (t.triggers.off) parts.push('خارج أوقات العمل');
-  return parts.join(' · ');
+  const kws = keywordsOf(t);
+  return kws.length ? `كلمات: ${kws.join('، ')}` : 'افتراضي (بدون كلمات)';
 }
 
 /** Arabic digits and punctuation stripped, so «٢» and «2.» match the same choice. */
@@ -183,13 +198,12 @@ export function findConflict(t: ChatTemplate, all: ChatTemplate[]): string | nul
   const others = all.filter(
     (x) => x.id !== t.id && x.status === 'published' && x.active && (x.channelIds ?? []).some((c) => mine.includes(c)),
   );
+  const mineKws = keywordsOf(t);
   for (const o of others) {
-    if (t.triggers.first && o.triggers.first) return `يوجد قالب منشور آخر (${o.name}) يُرسل عند أول رسالة من عميل جديد على نفس الرقم`;
-    if (t.triggers.off && o.triggers.off) return `يوجد قالب منشور آخر (${o.name}) يُرسل خارج أوقات العمل على نفس الرقم`;
-    if (t.triggers.kw && o.triggers.kw) {
-      const w = t.triggers.kws.find((k) => o.triggers.kws.includes(k));
-      if (w) return `الكلمة "${w}" مستخدمة في قالب آخر (${o.name}) على نفس الرقم`;
-    }
+    const theirs = keywordsOf(o);
+    if (!mineKws.length && !theirs.length) return `يوجد قالب افتراضي آخر (${o.name}) بدون كلمات مفتاحية على نفس الرقم`;
+    const w = mineKws.find((k) => theirs.includes(k));
+    if (w) return `الكلمة "${w}" مستخدمة في قالب آخر (${o.name}) على نفس الرقم`;
   }
   return null;
 }
@@ -227,7 +241,6 @@ export function validateForPublish(t: ChatTemplate, all: ChatTemplate[], deptIds
     }
   }
   if (!(t.channelIds ?? []).length) return { message: 'اختر رقمًا واحدًا على الأقل يعمل عليه القالب', tab: 'settings' };
-  if (t.triggers.kw && !t.triggers.kws.length) return { message: 'أضف كلمة مفتاحية واحدة على الأقل', tab: 'settings' };
   const conflict = findConflict(t, all);
   if (conflict) return { message: conflict, tab: 'settings' };
   return null;
@@ -383,18 +396,18 @@ export class ChatRunner {
 
 const live = (t: ChatTemplate, channelId?: string): boolean => t.status === 'published' && t.active && worksOn(t, channelId);
 
-/** A published, switched-on template on this number whose keyword appears in the customer's message. */
-export function templateForKeyword(all: ChatTemplate[], text: string, channelId?: string): ChatTemplate | null {
+/**
+ * The template for the customer's first message on this number: the one whose keyword appears in
+ * the message, otherwise the default template (no keywords), otherwise none.
+ */
+export function templateForFirstMessage(all: ChatTemplate[], text: string, channelId?: string): ChatTemplate | null {
   const n = normalizeReply(text);
-  return all.find((t) => live(t, channelId) && t.triggers.kw && t.triggers.kws.some((w) => n.includes(normalizeReply(w)))) ?? null;
-}
-
-export function templateForFirstMessage(all: ChatTemplate[], channelId?: string): ChatTemplate | null {
-  return all.find((t) => live(t, channelId) && t.triggers.first) ?? null;
-}
-
-export function templateForOffHours(all: ChatTemplate[], channelId?: string): ChatTemplate | null {
-  return all.find((t) => live(t, channelId) && t.triggers.off) ?? null;
+  const mine = all.filter((t) => live(t, channelId));
+  return (
+    mine.find((t) => keywordsOf(t).some((w) => n.includes(normalizeReply(w)))) ??
+    mine.find((t) => !keywordsOf(t).length) ??
+    null
+  );
 }
 
 /* ───────────────────────── draft from a description ───────────────────────── */

@@ -7,6 +7,7 @@ import {
   blankTemplate,
   deptTarget,
   newStep,
+  normalizeTriggers,
   type AnswerKind,
   type ChatStep,
   type ChatTemplate,
@@ -18,7 +19,9 @@ import {
 const STORAGE_KEY = 'qhub_chat_templates';
 /** Bumped when the ready-made templates change, so saved lists pick up the new ones once. */
 const SEED_KEY = 'qhub_chat_templates_seed';
-const SEED_VERSION = '2';
+const SEED_VERSION = '3';
+/** Lists saved under version 2 already have the six; version 3 only switches the trigger model. */
+const PREVIOUS_SEED_VERSION = '2';
 /** The two examples the first version shipped; the ready-made set replaces them. */
 const OLD_SEED_IDS = ['ct_booking', 'ct_welcome'];
 
@@ -42,9 +45,14 @@ interface SeedDef {
   name: string;
   triggers: ChatTemplateTriggers;
   steps: SeedStep[];
+  /** Switched off: it has no keywords, like the welcome template, and one number has one default. */
+  off?: boolean;
 }
 
 const kw = (...kws: string[]): ChatTemplateTriggers => ({ first: false, kw: true, kws, off: false });
+const noKeywords: ChatTemplateTriggers = { first: false, kw: false, kws: [], off: false };
+/** The off-hours template ships switched off, so the welcome template is each number's default. */
+const OFF_HOURS_ID = 'seed_off_hours';
 
 /**
  * The ready-made templates every client starts with. They are built on the client's own
@@ -65,7 +73,7 @@ function seed(): ChatTemplate[] {
     {
       id: 'seed_welcome',
       name: 'الترحيب وتوجيه العميل للقسم',
-      triggers: { first: true, kw: false, kws: [], off: false },
+      triggers: noKeywords,
       steps: [
         { type: 'msg', text: `أهلًا ${CUSTOMER_NAME_TAG} 👋\nمرحبًا بك، يسعدنا تواصلك معنا.` },
         pickDept,
@@ -74,7 +82,8 @@ function seed(): ChatTemplate[] {
     {
       id: 'seed_off_hours',
       name: 'خارج أوقات العمل',
-      triggers: { first: false, kw: false, kws: [], off: true },
+      triggers: noKeywords,
+      off: true,
       steps: [
         { type: 'msg', text: `شكرًا لتواصلك ${CUSTOMER_NAME_TAG} 🌙\nنحن خارج أوقات العمل حاليًا، وسنرد عليك في أقرب وقت.` },
         { type: 'ask', text: 'اكتب طلبك باختصار حتى نجهّز الرد:', valid: 'any' },
@@ -132,6 +141,7 @@ function seed(): ChatTemplate[] {
     const t = blankTemplate(def.name);
     t.id = def.id;
     t.status = 'published';
+    t.active = !def.off;
     t.triggers = def.triggers;
     t.channelIds = numbers;
     t.updatedAt = new Date(Date.now() - (defs.length - i) * day).toISOString();
@@ -151,22 +161,29 @@ function seed(): ChatTemplate[] {
 
 function load(): ChatTemplate[] {
   let stored: ChatTemplate[] | null = null;
-  let seeded = false;
+  let marker: string | null = null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) stored = JSON.parse(raw) as ChatTemplate[];
-    seeded = localStorage.getItem(SEED_KEY) === SEED_VERSION;
+    marker = localStorage.getItem(SEED_KEY);
   } catch { /* storage unavailable: start from the ready-made set */ }
-  // Templates saved before numbers existed worked on every number, so they keep doing so.
+  // Templates saved before numbers existed worked on every number, so they keep doing so; older
+  // trigger options become keywords only.
   const numbers = whatsappNumbers();
   const withNumbers = (list: ChatTemplate[]): ChatTemplate[] =>
-    list.map((t) => (Array.isArray(t.channelIds) ? t : { ...t, channelIds: numbers }));
+    list.map((t) => normalizeTriggers(Array.isArray(t.channelIds) ? t : { ...t, channelIds: numbers }));
   if (!stored) {
     const fresh = seed();
     save(fresh);
     return fresh;
   }
-  if (seeded) return withNumbers(stored);
+  if (marker === SEED_VERSION) return withNumbers(stored);
+  if (marker === PREVIOUS_SEED_VERSION) {
+    // The off-hours template lost its trigger and would be a second default next to the welcome one.
+    const next = withNumbers(stored).map((t) => (t.id === OFF_HOURS_ID ? { ...t, active: false } : t));
+    save(next);
+    return next;
+  }
   const own = stored.filter((t) => !OLD_SEED_IDS.includes(t.id));
   const ids = new Set(own.map((t) => t.id));
   const next = withNumbers([...seed().filter((t) => !ids.has(t.id)), ...own]);

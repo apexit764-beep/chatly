@@ -9,19 +9,15 @@ export interface ConversationRun extends RunState {
 interface ChatRunStore {
   /** Keyed by conversation id. Kept for the session only: a run does not survive a reload. */
   runs: Record<string, ConversationRun>;
-  /** Which conversation has the «إرسال قالب» / «محاكاة» dialog open. */
-  pickerFor: string | null;
+  /** Which conversation has the «محاكاة» dialog open. */
   simulatorFor: string | null;
   setRun: (conversationId: string, run: ConversationRun) => void;
-  openPicker: (conversationId: string | null) => void;
   openSimulator: (conversationId: string | null) => void;
 }
 
 export const useChatRunStore = create<ChatRunStore>((set) => ({
   runs: {},
-  pickerFor: null,
   simulatorFor: null,
   setRun: (conversationId, run) => set((s) => ({ runs: { ...s.runs, [conversationId]: run } })),
-  openPicker: (conversationId) => set({ pickerFor: conversationId }),
   openSimulator: (conversationId) => set({ simulatorFor: conversationId }),
 }));

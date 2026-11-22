@@ -88,9 +88,8 @@ import { downloadCsv } from '@/utils/csv';
 import { cn } from '@/utils/cn';
 import { deriveSessions } from '@/utils/sessions';
 import SessionRail from '@/components/inbox/SessionRail';
-import { ChatTemplatePanel, WINDOW_CLOSED } from '@/components/inbox/ChatTemplatePanel';
+import { ChatTemplatePanel } from '@/components/inbox/ChatTemplatePanel';
 import { useChatRunStore } from '@/store/useChatRunStore';
-import { activeRun, customerWindowOpen } from '@/utils/chatTemplateRuns';
 import { VoiceRecorder } from '@/components/inbox/VoiceRecorder';
 import type { Conversation, ConversationSession, ConversationStatus, Channel, Department, Contact } from '@/types';
 import type { AssignedChip, InboxView } from '@/store/useInboxStore';
@@ -239,7 +238,6 @@ export default function Inbox(): JSX.Element {
   }, [filtered, selectedId, setSelectedId, lockedConversationIds]);
 
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
-  const openChatTemplatePicker = useChatRunStore((s) => s.openPicker);
   const openChatTemplateSimulator = useChatRunStore((s) => s.openSimulator);
   const composerIsWhatsApp = !!selected && channels.find((c) => c.id === selected.channelId)?.type === 'whatsapp';
   // Blurring the row only hides the preview; the conversation and its details
@@ -1075,23 +1073,11 @@ export default function Inbox(): JSX.Element {
                     onClick={() => setShowTemplates((v) => !v)}
                   />
                   {composerIsWhatsApp && (
-                    <>
-                      <ToolBtn
-                        icon={<Workflow className="h-[18px] w-[18px]" />}
-                        label={t('إرسال قالب محادثة')}
-                        onClick={() => {
-                          if (!selected) return;
-                          if (activeRun(selected.id)) { showToast(t('يوجد قالب قيد التشغيل في هذه المحادثة'), 'error'); return; }
-                          if (!customerWindowOpen(selected)) { showToast(t(WINDOW_CLOSED), 'error'); return; }
-                          openChatTemplatePicker(selected.id);
-                        }}
-                      />
-                      <ToolBtn
-                        icon={<FlaskConical className="h-[18px] w-[18px]" />}
-                        label={t('محاكاة رد العميل')}
-                        onClick={() => selected && openChatTemplateSimulator(selected.id)}
-                      />
-                    </>
+                    <ToolBtn
+                      icon={<FlaskConical className="h-[18px] w-[18px]" />}
+                      label={t('محاكاة رد العميل')}
+                      onClick={() => selected && openChatTemplateSimulator(selected.id)}
+                    />
                   )}
                   <ToolBtn
                     icon={<Smile className="h-[18px] w-[18px]" />}

@@ -145,11 +145,15 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
     }, 50);
   };
 
+  /** Keywords are the only trigger setting left; `kw` mirrors whether there are any. */
+  const setKeywords = (kws: string[]): void =>
+    patch({ triggers: { first: false, kw: kws.length > 0, kws, off: false } });
+
   const addKeyword = (): void => {
     const w = kwInput.trim();
     if (!w) return;
     if (draft.triggers.kws.includes(w)) { showToast('الكلمة مضافة بالفعل', 'error'); return; }
-    patch({ triggers: { ...draft.triggers, kws: [...draft.triggers.kws, w] } });
+    setKeywords([...draft.triggers.kws, w]);
     setKwInput('');
   };
 
@@ -377,7 +381,7 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
                     </button>
                   )}
                 </div>
-                <p className="mb-3 text-[12px] text-muted-light dark:text-muted-dark">يُرسل القالب تلقائيًا ويظهر للموظفين فقط في محادثات الأرقام المحددة. يمكنك اختيار أكثر من رقم.</p>
+                <p className="mb-3 text-[12px] text-muted-light dark:text-muted-dark">يعمل القالب فقط في محادثات الأرقام المحددة. يمكنك اختيار أكثر من رقم.</p>
                 {numbers.length === 0 ? (
                   <p className="rounded-card border border-warning/30 bg-warning/5 px-3 py-2 text-small text-warning">لا يوجد رقم واتساب مربوط. اربط رقمًا من القنوات أولًا.</p>
                 ) : (
@@ -405,49 +409,27 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
               </Card>
 
               <Card className="p-5">
-                <h3 className="mb-3 text-body font-bold">متى يُرسل القالب</h3>
-                <div className="space-y-2">
-                  <div className={cn(triggerBox, 'bg-bg-light dark:bg-bg-dark')}>
-                    <input type="checkbox" checked disabled className={check} />
-                    <div><b className="block text-small">يدويًا من المحادثة</b><small className="text-muted-light dark:text-muted-dark">يستطيع الموظف إرسال القالب من داخل أي محادثة واتساب.</small></div>
+                <h3 className="mb-1 text-body font-bold">الكلمات المفتاحية</h3>
+                <p className="mb-3 text-[12px] text-muted-light dark:text-muted-dark">يُختار هذا القالب عندما تحتوي رسالة العميل إحدى هذه الكلمات. اتركها فارغة ليكون القالب الافتراضي للأرقام المحددة.</p>
+                {draft.triggers.kws.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {draft.triggers.kws.map((w) => (
+                      <span key={w} className="inline-flex items-center gap-1.5 rounded-full border border-border-light py-1 ps-3 pe-1.5 text-small dark:border-border-dark">
+                        {w}
+                        <button type="button" aria-label={`حذف ${w}`} onClick={() => setKeywords(draft.triggers.kws.filter((k) => k !== w))} className="flex h-5 w-5 items-center justify-center rounded-full bg-danger/10 text-danger"><X className="h-3 w-3" /></button>
+                      </span>
+                    ))}
                   </div>
-                  <label className={triggerBox}>
-                    <input type="checkbox" className={check} checked={draft.triggers.first} onChange={(e) => patch({ triggers: { ...draft.triggers, first: e.target.checked } })} />
-                    <div><b className="block text-small">عند أول رسالة من عميل جديد</b><small className="text-muted-light dark:text-muted-dark">يُرسل تلقائيًا عندما يراسلك عميل لأول مرة.</small></div>
-                  </label>
-                  <div className={triggerBox}>
-                    <input id="kw_on" type="checkbox" className={check} checked={draft.triggers.kw} onChange={(e) => patch({ triggers: { ...draft.triggers, kw: e.target.checked } })} />
-                    <div className="min-w-0 flex-1">
-                      <label htmlFor="kw_on" className="block cursor-pointer text-small font-bold">عند كتابة كلمة مفتاحية</label>
-                      <small className="text-muted-light dark:text-muted-dark">يُرسل تلقائيًا عندما يكتب العميل إحدى هذه الكلمات.</small>
-                      {draft.triggers.kw && (
-                        <div className="mt-2">
-                          <div className="mb-1.5 flex flex-wrap gap-1.5">
-                            {draft.triggers.kws.map((w) => (
-                              <span key={w} className="inline-flex items-center gap-1.5 rounded-full border border-border-light py-1 ps-3 pe-1.5 text-small dark:border-border-dark">
-                                {w}
-                                <button type="button" aria-label={`حذف ${w}`} onClick={() => patch({ triggers: { ...draft.triggers, kws: draft.triggers.kws.filter((k) => k !== w) } })} className="flex h-5 w-5 items-center justify-center rounded-full bg-danger/10 text-danger"><X className="h-3 w-3" /></button>
-                              </span>
-                            ))}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              value={kwInput}
-                              onChange={(e) => setKwInput(e.target.value)}
-                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } }}
-                              placeholder="اكتب كلمة ثم اضغط إضافة"
-                              className={cn(fieldClass, 'max-w-[240px]')}
-                            />
-                            <Button type="button" size="sm" onClick={addKeyword}>إضافة</Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <label className={triggerBox}>
-                    <input type="checkbox" className={check} checked={draft.triggers.off} onChange={(e) => patch({ triggers: { ...draft.triggers, off: e.target.checked } })} />
-                    <div><b className="block text-small">خارج أوقات العمل</b><small className="text-muted-light dark:text-muted-dark">يُرسل تلقائيًا عندما يراسلك عميل خارج أوقات العمل المحددة في الإعدادات.</small></div>
-                  </label>
+                )}
+                <div className="flex items-center gap-2">
+                  <input
+                    value={kwInput}
+                    onChange={(e) => setKwInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } }}
+                    placeholder="اكتب كلمة ثم اضغط إضافة"
+                    className={cn(fieldClass, 'max-w-[240px]')}
+                  />
+                  <Button type="button" size="sm" onClick={addKeyword}>إضافة</Button>
                 </div>
               </Card>
 

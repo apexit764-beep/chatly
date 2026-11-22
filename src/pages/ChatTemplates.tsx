@@ -205,7 +205,7 @@ export default function ChatTemplates(): JSX.Element {
               <thead className="bg-bg-light text-small text-muted-light dark:bg-bg-dark dark:text-muted-dark">
                 <tr>
                   <th className={TH}>القالب</th>
-                  <th className={TH}>متى يُرسل</th>
+                  <th className={TH}>الكلمات المفتاحية</th>
                   <th className={TH}>الأرقام</th>
                   <th className={TH}>الخطوات</th>
                   <th className={TH}>الحالة</th>

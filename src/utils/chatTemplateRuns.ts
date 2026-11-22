@@ -6,8 +6,6 @@ import {
   ChatRunner,
   newRunState,
   templateForFirstMessage,
-  templateForKeyword,
-  templateForOffHours,
   worksOn,
   type ChatTemplate,
 } from '@/utils/chatTemplates';
@@ -81,8 +79,26 @@ function resume(conversationId: string): ChatRunner | null {
   return runnerFor(conversationId, template, { ...state });
 }
 
-/** The customer wrote: feed the running template, or let a keyword start one. */
+/**
+ * Is this the customer's first message — a new customer (no message from them yet), or a message
+ * after the conversation was closed? Checked before the message is added.
+ */
+function isFirstMessage(conversationId: string): boolean {
+  const c = useDataStore.getState().conversations.find((x) => x.id === conversationId);
+  if (!c) return false;
+  return c.status === 'closed' || !c.messages.some((m) => m.direction === 'in' && m.type !== 'note');
+}
+
+/** Starts the template the first message picks (keyword, else the number's default). Null when none. */
+function startForFirstMessage(conversationId: string, text: string): ChatTemplate | null {
+  const t = templateForFirstMessage(sendableTemplates(), text, channelOf(conversationId));
+  if (t) startTemplate(conversationId, t, `أُرسل قالب «${t.name}» تلقائيًا مع أول رسالة من العميل`);
+  return t;
+}
+
+/** The customer wrote: feed the running template, or, on a first message, start one. */
 export function customerMessage(conversationId: string, text: string): void {
+  const first = isFirstMessage(conversationId);
   useDataStore.getState().receiveMessage(conversationId, text);
   const runner = resume(conversationId);
   if (runner) {
@@ -90,23 +106,17 @@ export function customerMessage(conversationId: string, text: string): void {
     keep(conversationId, runner);
     return;
   }
-  const t = templateForKeyword(sendableTemplates(), text, channelOf(conversationId));
-  if (t) startTemplate(conversationId, t, `أُرسل قالب «${t.name}» تلقائيًا بسبب كلمة مفتاحية`);
+  if (first) startForFirstMessage(conversationId, text);
 }
 
-export function simulateFirstMessage(conversationId: string): string | null {
-  const t = templateForFirstMessage(sendableTemplates(), channelOf(conversationId));
-  if (!t) return 'لا يوجد قالب منشور يُرسل عند أول رسالة من عميل جديد على هذا الرقم';
-  useDataStore.getState().receiveMessage(conversationId, 'مرحبا');
-  startTemplate(conversationId, t, `أُرسل قالب «${t.name}» تلقائيًا لأنها أول رسالة من عميل جديد`);
-  return null;
-}
-
-export function simulateOffHours(conversationId: string): string | null {
-  const t = templateForOffHours(sendableTemplates(), channelOf(conversationId));
-  if (!t) return 'لا يوجد قالب منشور يُرسل خارج أوقات العمل على هذا الرقم';
-  useDataStore.getState().receiveMessage(conversationId, 'عندي استفسار');
-  startTemplate(conversationId, t, `أُرسل قالب «${t.name}» تلقائيًا لأن الرسالة خارج أوقات العمل`);
+/** Simulator: the customer's first message, whatever state the demo conversation is in. */
+export function simulateFirstMessage(conversationId: string, text: string): string | null {
+  const body = text.trim() || 'مرحبا';
+  if (!templateForFirstMessage(sendableTemplates(), body, channelOf(conversationId))) {
+    return 'لا يوجد قالب منشور يعمل على هذا الرقم';
+  }
+  useDataStore.getState().receiveMessage(conversationId, body);
+  startForFirstMessage(conversationId, body);
   return null;
 }
 
