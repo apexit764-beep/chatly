@@ -33,7 +33,7 @@ export function ChatTemplatePanel({ conversation }: { conversation: Conversation
   const [templateId, setTemplateId] = useState('');
   const [customerText, setCustomerText] = useState('');
   const running = !!run && !run.done;
-  const choices = pickerOpen ? sendableTemplates() : [];
+  const choices = pickerOpen ? sendableTemplates(conversation.channelId) : [];
   const chosen = choices.find((t) => t.id === templateId) ?? choices[0];
 
   const send = (): void => {
@@ -89,7 +89,7 @@ export function ChatTemplatePanel({ conversation }: { conversation: Conversation
       >
         {choices.length === 0 ? (
           <p className="text-small text-muted-light dark:text-muted-dark">
-            لا توجد قوالب منشورة. أنشئ قالبًا وانشره من <Link to="/chat-templates" className="font-semibold text-primary">قوالب المحادثة</Link>.
+            لا توجد قوالب منشورة تعمل على رقم هذه المحادثة. أنشئ قالبًا أو اختر هذا الرقم في إعدادات القالب من <Link to="/chat-templates" className="font-semibold text-primary">قوالب المحادثة</Link>.
           </p>
         ) : (
           <>

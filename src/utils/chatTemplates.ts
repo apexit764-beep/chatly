@@ -7,8 +7,20 @@
 
 export type StepType = 'msg' | 'ask' | 'btn' | 'list' | 'agent' | 'end';
 export type AnswerKind = 'any' | 'number' | 'email' | 'phone';
-/** Where a step leads: the next step, a hand-over to staff, the end, or a step by id. */
+/**
+ * Where a step leads: the next step, a hand-over to any staff member, a hand-over to one
+ * department (`dept:<departmentId>`), the end, or a step by id.
+ */
 export type StepTarget = 'next' | 'agent' | 'end' | (string & {});
+
+export const DEPT_PREFIX = 'dept:';
+export function deptTarget(departmentId: string): StepTarget {
+  return `${DEPT_PREFIX}${departmentId}`;
+}
+/** The department a target hands over to, or null when it is not a department hand-over. */
+export function deptOf(target: StepTarget | undefined): string | null {
+  return target && target.startsWith(DEPT_PREFIX) ? target.slice(DEPT_PREFIX.length) : null;
+}
 
 export interface StepOption {
   label: string;
@@ -29,6 +41,8 @@ export interface ChatStep {
   opts?: StepOption[];
   /** Where it goes when the customer fails twice (wrong answer or text instead of a choice). */
   other: StepTarget;
+  /** agent: the department the conversation is handed to. Absent means any available staff member. */
+  dept?: string;
 }
 
 export interface ChatTemplateTriggers {
@@ -51,6 +65,8 @@ export interface ChatTemplate {
   timeout: number;
   remind: string;
   steps: ChatStep[];
+  /** The WhatsApp numbers (channel ids) the template works on. At least one to publish. */
+  channelIds: string[];
   updatedAt: string;
 }
 
@@ -109,6 +125,7 @@ export function blankTemplate(name = ''): ChatTemplate {
     timeout: 60,
     remind: DEFAULT_REMIND,
     steps: [],
+    channelIds: [],
     updatedAt: new Date().toISOString(),
   };
 }
@@ -152,15 +169,26 @@ export function fillName(text: string, customerName: string): string {
   return text.split(CUSTOMER_NAME_TAG).join(customerName);
 }
 
-/** The published, switched-on templates that share a trigger with `t`, as a sentence — or null. */
+/** Does the template work on this WhatsApp number? */
+export function worksOn(t: ChatTemplate, channelId: string | undefined): boolean {
+  return !channelId || (t.channelIds ?? []).includes(channelId);
+}
+
+/**
+ * The published, switched-on templates that share a trigger with `t` on one of the same
+ * numbers, as a sentence — or null. Two templates on different numbers never clash.
+ */
 export function findConflict(t: ChatTemplate, all: ChatTemplate[]): string | null {
-  const others = all.filter((x) => x.id !== t.id && x.status === 'published' && x.active);
+  const mine = t.channelIds ?? [];
+  const others = all.filter(
+    (x) => x.id !== t.id && x.status === 'published' && x.active && (x.channelIds ?? []).some((c) => mine.includes(c)),
+  );
   for (const o of others) {
-    if (t.triggers.first && o.triggers.first) return `يوجد قالب منشور آخر (${o.name}) يُرسل عند أول رسالة من عميل جديد`;
-    if (t.triggers.off && o.triggers.off) return `يوجد قالب منشور آخر (${o.name}) يُرسل خارج أوقات العمل`;
+    if (t.triggers.first && o.triggers.first) return `يوجد قالب منشور آخر (${o.name}) يُرسل عند أول رسالة من عميل جديد على نفس الرقم`;
+    if (t.triggers.off && o.triggers.off) return `يوجد قالب منشور آخر (${o.name}) يُرسل خارج أوقات العمل على نفس الرقم`;
     if (t.triggers.kw && o.triggers.kw) {
       const w = t.triggers.kws.find((k) => o.triggers.kws.includes(k));
-      if (w) return `الكلمة "${w}" مستخدمة في قالب آخر (${o.name})`;
+      if (w) return `الكلمة "${w}" مستخدمة في قالب آخر (${o.name}) على نفس الرقم`;
     }
   }
   return null;
@@ -172,13 +200,23 @@ export interface TemplateIssue {
   stepId?: string;
 }
 
-/** What stops a template being published, first problem only. */
-export function validateForPublish(t: ChatTemplate, all: ChatTemplate[]): TemplateIssue | null {
+/**
+ * What stops a template being published, first problem only. `deptIds` are the departments
+ * that exist now; a hand-over to a deleted one is caught here.
+ */
+export function validateForPublish(t: ChatTemplate, all: ChatTemplate[], deptIds?: string[]): TemplateIssue | null {
   if (!t.name.trim()) return { message: 'أدخل اسم القالب', tab: 'steps' };
   if (!t.steps.length) return { message: 'أضف خطوة واحدة على الأقل', tab: 'steps' };
   for (let i = 0; i < t.steps.length; i += 1) {
     const s = t.steps[i];
     const at = `الخطوة ${i + 1}: `;
+    if (deptIds) {
+      const targets = [s.go, s.other, ...(s.opts ?? []).map((o) => o.go)].map(deptOf);
+      if (s.type === 'agent' && s.dept) targets.push(s.dept);
+      if (targets.some((d) => d && !deptIds.includes(d))) {
+        return { message: `${at}القسم المحدد لم يعد موجودًا، اختر قسمًا آخر`, tab: 'steps', stepId: s.id };
+      }
+    }
     if (s.type !== 'agent' && !s.text.trim()) return { message: `${at}أدخل نص الرسالة`, tab: 'steps', stepId: s.id };
     if (s.type === 'list' && !(s.btnLabel ?? '').trim()) return { message: `${at}أدخل نص زر القائمة`, tab: 'steps', stepId: s.id };
     if (s.opts) {
@@ -188,6 +226,7 @@ export function validateForPublish(t: ChatTemplate, all: ChatTemplate[]): Templa
       if (new Set(labels).size !== labels.length) return { message: `${at}لا يمكن تكرار نص الخيار`, tab: 'steps', stepId: s.id };
     }
   }
+  if (!(t.channelIds ?? []).length) return { message: 'اختر رقمًا واحدًا على الأقل يعمل عليه القالب', tab: 'settings' };
   if (t.triggers.kw && !t.triggers.kws.length) return { message: 'أضف كلمة مفتاحية واحدة على الأقل', tab: 'settings' };
   const conflict = findConflict(t, all);
   if (conflict) return { message: conflict, tab: 'settings' };
@@ -212,6 +251,10 @@ export interface RunSink {
   bot: (text: string, step?: ChatStep) => void;
   /** A line about the run itself (handed over, ended, stopped). */
   sys: (text: string) => void;
+  /** The run handed the conversation over: to a department, or (null) to any staff member. */
+  handover?: (departmentId: string | null) => void;
+  /** A department's name, or undefined when it no longer exists. */
+  deptName?: (departmentId: string) => string | undefined;
 }
 
 export function newRunState(templateId: string): RunState {
@@ -297,8 +340,22 @@ export class ChatRunner {
     this.sink.sys(line);
   }
 
+  /** Hands over to the department, or to any staff member when it is absent or was deleted. */
+  private handOver(departmentId: string | null | undefined): void {
+    const name = departmentId ? this.sink.deptName?.(departmentId) : undefined;
+    if (departmentId && name) {
+      this.finish(`تم تحويل المحادثة إلى قسم «${name}»`);
+      this.sink.handover?.(departmentId);
+      return;
+    }
+    this.finish('تم تحويل المحادثة إلى موظف');
+    this.sink.handover?.(null);
+  }
+
   private go(target: StepTarget, from: string): void {
-    if (target === 'agent') { this.finish('تم تحويل المحادثة إلى موظف'); return; }
+    if (target === 'agent') { this.handOver(null); return; }
+    const dept = deptOf(target);
+    if (dept) { this.handOver(dept); return; }
     if (target === 'end') { this.finish('انتهى القالب'); return; }
     if (target === 'next') {
       const i = this.template.steps.findIndex((s) => s.id === from);
@@ -319,23 +376,25 @@ export class ChatRunner {
     const text = fillName(s.text, this.customerName);
     if (s.type === 'msg') { this.sink.bot(text); this.go(s.go, s.id); return; }
     if (s.type === 'end') { if (text) this.sink.bot(text); this.finish('انتهى القالب'); return; }
-    if (s.type === 'agent') { if (text) this.sink.bot(text); this.finish('تم تحويل المحادثة إلى موظف'); return; }
+    if (s.type === 'agent') { if (text) this.sink.bot(text); this.handOver(s.dept); return; }
     this.sink.bot(text, s.type === 'ask' ? undefined : { ...s, text });
   }
 }
 
-/** A published, switched-on template whose keyword appears in the customer's message. */
-export function templateForKeyword(all: ChatTemplate[], text: string): ChatTemplate | null {
+const live = (t: ChatTemplate, channelId?: string): boolean => t.status === 'published' && t.active && worksOn(t, channelId);
+
+/** A published, switched-on template on this number whose keyword appears in the customer's message. */
+export function templateForKeyword(all: ChatTemplate[], text: string, channelId?: string): ChatTemplate | null {
   const n = normalizeReply(text);
-  return all.find((t) => t.status === 'published' && t.active && t.triggers.kw && t.triggers.kws.some((w) => n.includes(normalizeReply(w)))) ?? null;
+  return all.find((t) => live(t, channelId) && t.triggers.kw && t.triggers.kws.some((w) => n.includes(normalizeReply(w)))) ?? null;
 }
 
-export function templateForFirstMessage(all: ChatTemplate[]): ChatTemplate | null {
-  return all.find((t) => t.status === 'published' && t.active && t.triggers.first) ?? null;
+export function templateForFirstMessage(all: ChatTemplate[], channelId?: string): ChatTemplate | null {
+  return all.find((t) => live(t, channelId) && t.triggers.first) ?? null;
 }
 
-export function templateForOffHours(all: ChatTemplate[]): ChatTemplate | null {
-  return all.find((t) => t.status === 'published' && t.active && t.triggers.off) ?? null;
+export function templateForOffHours(all: ChatTemplate[], channelId?: string): ChatTemplate | null {
+  return all.find((t) => live(t, channelId) && t.triggers.off) ?? null;
 }
 
 /* ───────────────────────── draft from a description ───────────────────────── */

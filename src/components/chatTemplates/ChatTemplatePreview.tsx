@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RotateCcw, Send, TimerOff } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { useDataStore } from '@/store/useDataStore';
 import { ChatRunner, newRunState, type ChatStep, type ChatTemplate } from '@/utils/chatTemplates';
 
 interface PreviewMsg {
@@ -34,6 +35,7 @@ export function ChatTemplatePreview({ template }: { template: ChatTemplate }): J
       {
         bot: (text, step) => log.current.push({ kind: 'bot', text, step }),
         sys: (text) => log.current.push({ kind: 'sys', text }),
+        deptName: (id) => useDataStore.getState().departments.find((d) => d.id === id)?.name,
       },
       SAMPLE_NAME,
     );

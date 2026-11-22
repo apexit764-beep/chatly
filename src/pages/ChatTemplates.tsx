@@ -4,6 +4,7 @@ import { ChevronDown, ChevronLeft, CircleDashed, Copy, Edit2, Eye, Layers, Messa
 import { Button, Card, EmptyState, Modal, StatCard, useConfirm } from '@components/ui';
 import { ChatTemplatePreview } from '@components/chatTemplates/ChatTemplatePreview';
 import { useChatTemplateStore } from '@/store/useChatTemplateStore';
+import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatDate } from '@/utils/format';
 import { cn } from '@/utils/cn';
@@ -85,6 +86,16 @@ function ActionsMenu({ actions }: { actions: MenuAction[] }): JSX.Element {
       )}
     </>
   );
+}
+
+/** The template's WhatsApp numbers by name, or a warning when none is chosen. */
+function NumbersCell({ ids }: { ids: string[] }): JSX.Element {
+  const channels = useDataStore((s) => s.channels);
+  const names = ids.map((id) => channels.find((c) => c.id === id)).filter(Boolean).map((c) => c!.name);
+  if (!names.length) return <span className="text-warning">لم يُحدد رقم</span>;
+  const all = channels.filter((c) => c.type === 'whatsapp').length;
+  if (names.length === all && all > 1) return <span title={names.join('، ')}>كل الأرقام ({all})</span>;
+  return <span title={names.join('، ')}>{names.length === 1 ? names[0] : `${names[0]} +${names.length - 1}`}</span>;
 }
 
 export default function ChatTemplates(): JSX.Element {
@@ -195,6 +206,7 @@ export default function ChatTemplates(): JSX.Element {
                 <tr>
                   <th className={TH}>القالب</th>
                   <th className={TH}>متى يُرسل</th>
+                  <th className={TH}>الأرقام</th>
                   <th className={TH}>الخطوات</th>
                   <th className={TH}>الحالة</th>
                   <th className={TH}>آخر تعديل</th>
@@ -214,6 +226,7 @@ export default function ChatTemplates(): JSX.Element {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-small">{triggerSummary(t)}</td>
+                    <td className="px-4 py-3 text-small"><NumbersCell ids={t.channelIds ?? []} /></td>
                     <td className="px-4 py-3"><span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-primary/10 px-2 text-small font-bold tabular-nums text-primary">{t.steps.length}</span></td>
                     <td className="px-4 py-3"><StatusPill t={t} /></td>
                     <td className="whitespace-nowrap px-4 py-3 text-small">{formatDate(t.updatedAt)}</td>
@@ -256,6 +269,7 @@ export default function ChatTemplates(): JSX.Element {
             <div className="flex flex-wrap items-center gap-2 text-small text-muted-light dark:text-muted-dark">
               <StatusPill t={viewing} />
               <span>{triggerSummary(viewing)}</span>
+              <span>· <NumbersCell ids={viewing.channelIds ?? []} /></span>
               <span>· {viewing.steps.length} خطوات</span>
             </div>
             <ChatTemplatePreview template={viewing} />

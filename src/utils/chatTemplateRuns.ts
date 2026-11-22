@@ -8,6 +8,7 @@ import {
   templateForFirstMessage,
   templateForKeyword,
   templateForOffHours,
+  worksOn,
   type ChatTemplate,
 } from '@/utils/chatTemplates';
 
@@ -24,9 +25,13 @@ export function activeRun(conversationId: string) {
   return run && !run.done ? run : null;
 }
 
-/** The templates a staff member can send by hand: published and switched on. */
-export function sendableTemplates(): ChatTemplate[] {
-  return useChatTemplateStore.getState().templates.filter((t) => t.status === 'published' && t.active);
+/** The templates a staff member can send by hand: published, switched on, and on this number. */
+export function sendableTemplates(channelId?: string): ChatTemplate[] {
+  return useChatTemplateStore.getState().templates.filter((t) => t.status === 'published' && t.active && worksOn(t, channelId));
+}
+
+function channelOf(conversationId: string): string | undefined {
+  return useDataStore.getState().conversations.find((c) => c.id === conversationId)?.channelId;
 }
 
 function runnerFor(conversationId: string, template: ChatTemplate, state = newRunState(template.id)): ChatRunner {
@@ -43,6 +48,11 @@ function runnerFor(conversationId: string, template: ChatTemplate, state = newRu
         }),
       // Lines about the run are for the team only, so they go in as internal notes.
       sys: (line) => data.sendMessage(conversationId, `القالب «${template.name}»: ${line}`, 'note'),
+      deptName: (id) => useDataStore.getState().departments.find((d) => d.id === id)?.name,
+      // A department hand-over moves the conversation to that department's queue.
+      handover: (departmentId) => {
+        if (departmentId) useDataStore.getState().setConversationDepartment(conversationId, departmentId);
+      },
     },
     customer,
   );
@@ -80,21 +90,21 @@ export function customerMessage(conversationId: string, text: string): void {
     keep(conversationId, runner);
     return;
   }
-  const t = templateForKeyword(sendableTemplates(), text);
+  const t = templateForKeyword(sendableTemplates(), text, channelOf(conversationId));
   if (t) startTemplate(conversationId, t, `أُرسل قالب «${t.name}» تلقائيًا بسبب كلمة مفتاحية`);
 }
 
 export function simulateFirstMessage(conversationId: string): string | null {
-  const t = templateForFirstMessage(sendableTemplates());
-  if (!t) return 'لا يوجد قالب منشور يُرسل عند أول رسالة من عميل جديد';
+  const t = templateForFirstMessage(sendableTemplates(), channelOf(conversationId));
+  if (!t) return 'لا يوجد قالب منشور يُرسل عند أول رسالة من عميل جديد على هذا الرقم';
   useDataStore.getState().receiveMessage(conversationId, 'مرحبا');
   startTemplate(conversationId, t, `أُرسل قالب «${t.name}» تلقائيًا لأنها أول رسالة من عميل جديد`);
   return null;
 }
 
 export function simulateOffHours(conversationId: string): string | null {
-  const t = templateForOffHours(sendableTemplates());
-  if (!t) return 'لا يوجد قالب منشور يُرسل خارج أوقات العمل';
+  const t = templateForOffHours(sendableTemplates(), channelOf(conversationId));
+  if (!t) return 'لا يوجد قالب منشور يُرسل خارج أوقات العمل على هذا الرقم';
   useDataStore.getState().receiveMessage(conversationId, 'عندي استفسار');
   startTemplate(conversationId, t, `أُرسل قالب «${t.name}» تلقائيًا لأن الرسالة خارج أوقات العمل`);
   return null;

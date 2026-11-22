@@ -5,6 +5,7 @@ import { Button, Card, InfoTip, Modal } from '@components/ui';
 import { ChatTemplatePreview } from '@components/chatTemplates/ChatTemplatePreview';
 import { useChatTemplateStore } from '@/store/useChatTemplateStore';
 import { useUIStore } from '@/store/useUIStore';
+import { useDataStore } from '@/store/useDataStore';
 import { cn } from '@/utils/cn';
 import {
   ANSWER_KINDS,
@@ -15,6 +16,8 @@ import {
   REMINDER_CHOICES,
   STEP_TYPES,
   blankTemplate,
+  deptOf,
+  deptTarget,
   newStep,
   validateForPublish,
   type AnswerKind,
@@ -56,6 +59,9 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
   const templates = useChatTemplateStore((s) => s.templates);
   const upsert = useChatTemplateStore((s) => s.upsert);
   const showToast = useUIStore((s) => s.showToast);
+  const departments = useDataStore((s) => s.departments);
+  const channels = useDataStore((s) => s.channels);
+  const numbers = useMemo(() => channels.filter((c) => c.type === 'whatsapp'), [channels]);
 
   const [draft, setDraft] = useState<ChatTemplate>(initial);
   const [tab, setTab] = useState<Tab>('steps');
@@ -88,7 +94,7 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
   };
 
   const publish = (): void => {
-    const issue = validateForPublish(draft, templates);
+    const issue = validateForPublish(draft, templates, departments.map((d) => d.id));
     if (issue) {
       setTab(issue.tab);
       setErrStep(issue.stepId ?? null);
@@ -147,15 +153,23 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
     setKwInput('');
   };
 
-  /** The targets a step can lead to: other steps, hand-over, end — and «next» where it makes sense. */
-  const targetOptions = (current: string, allowNext: boolean): JSX.Element[] => [
-    ...(allowNext ? [<option key="next" value="next">الخطوة التالية</option>] : []),
-    ...draft.steps
-      .filter((s) => s.id !== current)
-      .map((s) => <option key={s.id} value={s.id}>{`الخطوة ${draft.steps.indexOf(s) + 1}: ${STEP_TYPES[s.type].title}`}</option>),
-    <option key="agent" value="agent">تحويل لموظف</option>,
-    <option key="end" value="end">إنهاء القالب</option>,
-  ];
+  /**
+   * The targets a step can lead to: other steps, hand-over to any staff member or to one
+   * department, end — and «next» where it makes sense. `value` keeps a deleted department visible.
+   */
+  const targetOptions = (current: string, allowNext: boolean, value?: StepTarget): JSX.Element[] => {
+    const gone = deptOf(value);
+    return [
+      ...(allowNext ? [<option key="next" value="next">الخطوة التالية</option>] : []),
+      ...draft.steps
+        .filter((s) => s.id !== current)
+        .map((s) => <option key={s.id} value={s.id}>{`الخطوة ${draft.steps.indexOf(s) + 1}: ${STEP_TYPES[s.type].title}`}</option>),
+      <option key="agent" value="agent">تحويل لموظف</option>,
+      ...departments.map((d) => <option key={d.id} value={deptTarget(d.id)}>{`تحويل لقسم: ${d.name}`}</option>),
+      ...(gone && !departments.some((d) => d.id === gone) ? [<option key="gone" value={value}>قسم محذوف — اختر قسمًا آخر</option>] : []),
+      <option key="end" value="end">إنهاء القالب</option>,
+    ];
+  };
 
   const stepCard = (s: ChatStep, i: number): JSX.Element => {
     const hasOptions = s.type === 'btn' || s.type === 'list';
@@ -231,7 +245,7 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
                 <span className={cn('text-center text-[11px] tabular-nums', o.label.length > MAX_OPTION_LENGTH ? 'font-bold text-danger' : 'text-muted-light dark:text-muted-dark')}>
                   {o.label.length}/{MAX_OPTION_LENGTH}
                 </span>
-                <select value={o.go} onChange={(e) => setOpt(j, { go: e.target.value })} className={cn(goSelect, 'min-w-0')}>{targetOptions(s.id, true)}</select>
+                <select value={o.go} onChange={(e) => setOpt(j, { go: e.target.value })} className={cn(goSelect, 'min-w-0')}>{targetOptions(s.id, true, o.go)}</select>
                 <button
                   type="button"
                   aria-label="حذف الخيار"
@@ -251,7 +265,7 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-dashed border-border-light pt-3 text-small text-muted-light dark:border-border-dark dark:text-muted-dark">
               إذا كتب العميل ردًا غير الخيارات مرتين، يذهب إلى:
-              <select value={s.other} onChange={(e) => patchStep(s.id, { other: e.target.value })} className={goSelect}>{targetOptions(s.id, false)}</select>
+              <select value={s.other} onChange={(e) => patchStep(s.id, { other: e.target.value })} className={goSelect}>{targetOptions(s.id, false, s.other)}</select>
             </div>
           </div>
         )}
@@ -259,13 +273,23 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
         {(s.type === 'msg' || s.type === 'ask') && (
           <div className="mt-2 flex flex-wrap items-center gap-2 text-small text-muted-light dark:text-muted-dark">
             بعدها يذهب إلى:
-            <select value={s.go} onChange={(e) => patchStep(s.id, { go: e.target.value })} className={goSelect}>{targetOptions(s.id, true)}</select>
+            <select value={s.go} onChange={(e) => patchStep(s.id, { go: e.target.value })} className={goSelect}>{targetOptions(s.id, true, s.go)}</select>
+          </div>
+        )}
+        {s.type === 'agent' && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-small text-muted-light dark:text-muted-dark">
+            تُحوَّل المحادثة إلى:
+            <select value={s.dept ?? ''} onChange={(e) => patchStep(s.id, { dept: e.target.value || undefined })} className={goSelect}>
+              <option value="">أي موظف متاح</option>
+              {departments.map((d) => <option key={d.id} value={d.id}>{`قسم ${d.name}`}</option>)}
+              {s.dept && !departments.some((d) => d.id === s.dept) && <option value={s.dept}>قسم محذوف — اختر قسمًا آخر</option>}
+            </select>
           </div>
         )}
         {s.type === 'ask' && s.valid !== 'any' && (
           <div className="mt-2 flex flex-wrap items-center gap-2 text-small text-muted-light dark:text-muted-dark">
             إذا كانت الإجابة غير صحيحة مرتين، يذهب إلى:
-            <select value={s.other} onChange={(e) => patchStep(s.id, { other: e.target.value })} className={goSelect}>{targetOptions(s.id, false)}</select>
+            <select value={s.other} onChange={(e) => patchStep(s.id, { other: e.target.value })} className={goSelect}>{targetOptions(s.id, false, s.other)}</select>
           </div>
         )}
       </div>
@@ -340,6 +364,46 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
             )
           ) : (
             <div className="space-y-4">
+              <Card className="p-5">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <h3 className="text-body font-bold">الأرقام التي يعمل عليها القالب</h3>
+                  {numbers.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => patch({ channelIds: draft.channelIds.length === numbers.length ? [] : numbers.map((n) => n.id) })}
+                      className="text-small font-semibold text-primary"
+                    >
+                      {draft.channelIds.length === numbers.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+                    </button>
+                  )}
+                </div>
+                <p className="mb-3 text-[12px] text-muted-light dark:text-muted-dark">يُرسل القالب تلقائيًا ويظهر للموظفين فقط في محادثات الأرقام المحددة. يمكنك اختيار أكثر من رقم.</p>
+                {numbers.length === 0 ? (
+                  <p className="rounded-card border border-warning/30 bg-warning/5 px-3 py-2 text-small text-warning">لا يوجد رقم واتساب مربوط. اربط رقمًا من القنوات أولًا.</p>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {numbers.map((n) => {
+                      const on = draft.channelIds.includes(n.id);
+                      return (
+                        <label key={n.id} className={cn(triggerBox, 'cursor-pointer', on && 'border-primary/50 bg-primary/5')}>
+                          <input
+                            type="checkbox"
+                            className={check}
+                            checked={on}
+                            onChange={(e) => patch({ channelIds: e.target.checked ? [...draft.channelIds, n.id] : draft.channelIds.filter((x) => x !== n.id) })}
+                          />
+                          <div className="min-w-0">
+                            <b className="block truncate text-small">{n.name}</b>
+                            <small dir="ltr" className="block text-end text-muted-light dark:text-muted-dark">{n.identifier}</small>
+                            {n.status !== 'connected' && <small className="block text-warning">الرقم غير متصل حاليًا</small>}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+
               <Card className="p-5">
                 <h3 className="mb-3 text-body font-bold">متى يُرسل القالب</h3>
                 <div className="space-y-2">
