@@ -333,7 +333,7 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
               </div>
               <p className="text-[34px] lg:text-[40px] font-extrabold leading-tight tabular-nums mt-1">{moneyExact(balance)}</p>
               <p className="text-small opacity-85">
-                ≈ {tokenLabel(tokensFor(balance))} توكن متبقية · {description ?? <>يعمل المساعد بنموذج {BALANCE_SETTINGS.modelName}.</>}
+                ≈ {tokenLabel(tokensFor(Math.max(0, balance - BALANCE_SETTINGS.minBalanceUsd)))} توكن متبقية · {description ?? <>يعمل المساعد بنموذج {BALANCE_SETTINGS.modelName}.</>}
               </p>
             </div>
           </div>

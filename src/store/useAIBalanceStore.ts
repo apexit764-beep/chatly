@@ -204,7 +204,7 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
       negative,
       base: before + add,
       alerts: {},
-      stopped: balance > 0 ? false : s.stopped,
+      stopped: balance > BALANCE_SETTINGS.minBalanceUsd ? false : s.stopped,
       tx: [...tx.reverse(), ...s.tx],
       nextId,
     });
@@ -277,16 +277,16 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
       let tokens = 0;
       let spentUsd = 0;
       for (let i = 0; i < messages; i += 1) {
-        if (get().stopped || get().balance() <= 0) {
+        if (get().stopped || get().balance() <= BALANCE_SETTINGS.minBalanceUsd) {
           if (!get().stopped) commit({ stopped: true });
           blocked += 1;
           continue;
         }
         // Deterministic 1,500–2,600 tokens per answered message. There is no overdraft:
-        // the last message is charged only what is left, then the assistant stops at zero.
+        // the last message is charged only what is left above the minimum balance, then the assistant stops.
         const tFull = 1500 + (((done + 1) * 137) % 1100);
         const needFull = (tFull / 1_000_000) * BALANCE_SETTINGS.pricePerMillionUsd;
-        const available = Math.max(0, get().balance());
+        const available = Math.max(0, get().balance() - BALANCE_SETTINGS.minBalanceUsd);
         let need = Math.min(needFull, available);
         const t = Math.round(tFull * (need / needFull));
         tokens += t;
@@ -315,7 +315,7 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
           });
         }
         if (s.auto.on && balance <= (s.base * s.auto.thresholdPct) / 100 && !s.stopped) autoCharge();
-        if (get().balance() <= 0) {
+        if (get().balance() <= BALANCE_SETTINGS.minBalanceUsd) {
           commit({ stopped: true });
           if (!get().alerts.end) {
             commit({ alerts: { ...get().alerts, end: true } });

@@ -522,14 +522,6 @@ export default function AISettings(): JSX.Element {
     const sharedChanged = AI_SHARED_KEYS.some(
       (k) => JSON.stringify(form[k]) !== JSON.stringify(saved[k])
     );
-    if (form.cycleTokenLimit !== null && form.cycleTokenLimit < 1) {
-      showToast('الحد الأقصى للدورة يجب أن يكون أكبر من صفر — أو اتركه فارغًا بدون حد', 'error');
-      return;
-    }
-    if (form.usageAlertEnabled && form.usageAlertTokens < 1) {
-      showToast('أدخل رقم تنبيه الاستهلاك بالتوكنز أو أوقف التنبيه', 'error');
-      return;
-    }
     const modelLabel = (currentProvider.models.find((m) => m.value === form.model)?.label ?? form.model).replace(' · موصى به', '');
     const summary: { label: string; value: string }[] = [
       ...(!scopedAccount || sharedChanged
@@ -766,14 +758,14 @@ export default function AISettings(): JSX.Element {
           <div className="flex-1 min-w-0">
             <p className="text-small font-bold">
               {stop.reason === 'limit'
-                ? `المساعد الذكي متوقف — وصل استهلاك الدورة إلى الحد الأقصى (${stop.limit.toLocaleString('en-US')} توكن)`
+                ? `المساعد الذكي متوقف — وصل استهلاك هذا الشهر إلى حد الاستهلاك الشهري (${stop.limit.toLocaleString('en-US')} توكن)`
                 : stop.reason === 'failed'
                   ? 'المساعد الذكي متوقف — تعذّر الاتصال بالمزوّد'
                   : 'المساعد الذكي متوقف — لا يوجد مزوّد مربوط'}
             </p>
             <p className="text-[12px] text-muted-light dark:text-muted-dark mt-0.5 leading-relaxed">
               {stop.reason === 'limit'
-                ? `يعود تلقائيًا مع بداية الدورة الجديدة في ${dayMonth(stop.renewsOn)}، أو ارفع الحد أو احذفه. `
+                ? `يعود تلقائيًا مع بداية الشهر في ${dayMonth(stop.renewsOn)}، أو ارفع الحد أو أوقفه. `
                 : stop.reason === 'failed'
                   ? 'تحقق من مفتاح API ثم أعد فحص الاتصال. '
                   : 'اربط مزوّد الذكاء الاصطناعي ليعود المساعد للعمل. '}
@@ -781,7 +773,7 @@ export default function AISettings(): JSX.Element {
             </p>
           </div>
           <button
-            onClick={() => setTab(stop.reason === 'limit' ? 'features' : 'connection')}
+            onClick={() => setTab(stop.reason === 'limit' ? 'usage' : 'connection')}
             className="h-8 px-3 rounded-full bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark text-[12px] font-semibold whitespace-nowrap hover:border-primary/40 hover:text-primary flex-shrink-0"
           >
             {stop.reason === 'limit' ? 'تعديل الحد' : stop.reason === 'failed' ? 'إعدادات الربط' : 'ربط مزوّد'}
@@ -1506,11 +1498,7 @@ export default function AISettings(): JSX.Element {
                   className="!h-11 !rounded-xl !bg-bg-light dark:!bg-bg-dark"
                 >
                   <option value="">— اختر موظف —</option>
-                  {agents.filter((a) => a.invitationStatus === 'active').map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} ({a.email})
-                    </option>
-                  ))}
+                  <option value="auto">تلقائي (أقل عبء)</option>
                 </Select>
                 <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1.5">
                   المحادثة تُحوَّل لهذا الموظف عند تفعيل أي شرط من الأعلى.
@@ -1674,7 +1662,7 @@ export default function AISettings(): JSX.Element {
             </span>
             <div className="text-center">
               <p className="text-small font-semibold">اسحب الملفات هنا أو اضغط للرفع</p>
-              <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1">PDF, TXT, DOCX — حد أقصى 10 MB</p>
+              <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1">PDF, TXT, DOCX — حد أقصى 20 MB</p>
             </div>
             <input
               type="file"
@@ -1682,9 +1670,12 @@ export default function AISettings(): JSX.Element {
               accept=".pdf,.txt,.docx"
               multiple
               onChange={(e) => {
-                const files = e.target.files;
-                if (!files?.length) return;
-                const newDocs = Array.from(files).map((f, i) => ({
+                const all = e.target.files;
+                if (!all?.length) return;
+                const files = Array.from(all).filter((f) => f.size <= 20 * 1024 * 1024);
+                if (files.length < all.length) showToast('حجم الملف يجب أن لا يتجاوز 20MB', 'error');
+                if (!files.length) { e.target.value = ''; return; }
+                const newDocs = files.map((f, i) => ({
                   id: `doc_${Date.now()}_${i}`,
                   name: f.name,
                   size: f.size < 1024 * 1024 ? `${Math.round(f.size / 1024)} KB` : `${(f.size / (1024 * 1024)).toFixed(1)} MB`,

@@ -8,6 +8,8 @@ export const BALANCE_SETTINGS: {
   packs: number[];
   minUsd: number;
   maxUsd: number;
+  /** The assistant stops when the balance reaches this amount (admin setting «أقل رصيد مسموح»). */
+  minBalanceUsd: number;
   modelName: string;
 } = {
   /** What the client pays per million tokens, in USD. */
@@ -15,7 +17,7 @@ export const BALANCE_SETTINGS: {
   packs: [5, 10, 25, 50],
   minUsd: 5,
   maxUsd: 200,
-  /** The lowest the balance may go below zero before the assistant stops. */
+  minBalanceUsd: 0.5,
   modelName: 'Qhub AI',
 };
 

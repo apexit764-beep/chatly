@@ -1,6 +1,7 @@
 import { useAdminStore } from '@/store/useAdminStore';
 import { useDataStore } from '@/store/useDataStore';
 import { useAIBalanceStore } from '@/store/useAIBalanceStore';
+import { BALANCE_SETTINGS } from '@/utils/aiBalance';
 import { channelLabel } from '@components/ui';
 import { formatDate } from '@/utils/format';
 import { currentAgent, hasPermission, seesAllDepartments } from '@/utils/assistantAccess';
@@ -180,11 +181,13 @@ function topAgents(): Answer {
   if (!hasPermission('reports.view')) return NO_PERMISSION;
   const data = useDataStore.getState();
   const counts = new Map<string, number>();
-  data.conversations.filter((c) => c.status === 'closed' && c.assignedTo).forEach((c) => counts.set(c.assignedTo!, (counts.get(c.assignedTo!) ?? 0) + 1));
+  // «الأعلى أداءً هذا الأسبوع»: conversations closed in the last 7 days.
+  const weekAgo = Date.now() - 7 * 86_400_000;
+  data.conversations.filter((c) => c.status === 'closed' && c.assignedTo && Date.parse(c.lastMessageAt) >= weekAgo).forEach((c) => counts.set(c.assignedTo!, (counts.get(c.assignedTo!) ?? 0) + 1));
   const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
-  if (!top.length) return { intro: 'لا توجد محادثات مغلقة بعد لترتيب الموظفين.', tone: 'warn' };
+  if (!top.length) return { intro: 'لا توجد محادثات مغلقة هذا الأسبوع لترتيب الموظفين.', tone: 'warn' };
   return {
-    intro: 'الأكثر إغلاقًا للمحادثات:',
+    intro: 'الأكثر إغلاقًا للمحادثات هذا الأسبوع:',
     items: top.map(([id, n], i) => `${i + 1}. ${data.agents.find((a) => a.id === id)?.name ?? '—'}: ${n} محادثة`),
     link: link('/reports', 'فتح التقارير'),
   };
@@ -223,7 +226,7 @@ function aiAnswer(): Answer {
   const left = Math.max(0, b.balance());
   return {
     intro: `رصيد المساعد الذكي الحالي: $${left.toFixed(2)}.`,
-    items: [b.stopped || left <= 0 ? 'المساعد متوقف لنفاد الرصيد.' : 'المساعد يعمل ويرد على عملائك.'],
+    items: [b.stopped || left <= BALANCE_SETTINGS.minBalanceUsd ? 'المساعد متوقف لنفاد الرصيد.' : 'المساعد يعمل ويرد على عملائك.'],
     link: link('/ai-settings?tab=usage', 'فتح الرصيد والاستهلاك'),
   };
 }

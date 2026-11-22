@@ -2,6 +2,8 @@ import { useAIStore, type AIModel, type AISettings } from '@/store/useAIStore';
 import { useAIUsageStore, type AIFeature, type AIUsageRow } from '@/store/useAIUsageStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useDataStore } from '@/store/useDataStore';
+import { useAIApiLimitStore } from '@/store/useAIApiLimitStore';
+import { monthToDateTokens } from '@components/ai/AIUsageDetails';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -122,11 +124,13 @@ export function assistantStop(settings: AISettings, rows: AIUsageRow[], now = ne
   if (!settings.apiKey.trim()) return { reason: 'disconnected' };
   if (settings.connectionStatus === 'failed') return { reason: 'failed' };
   if (settings.connectionStatus !== 'ok' || !settings.connectedAt) return { reason: 'disconnected' };
-  const limit = settings.cycleTokenLimit;
-  if (limit != null) {
-    const cycle = cycleFor(settings.connectedAt, now);
-    if (tokensBetween(rows, cycle.start) >= limit) return { reason: 'limit', limit, renewsOn: cycle.renewsOn };
+  // The monthly limit set on «الرصيد والاستهلاك» (own API key). Only the «إيقاف المساعد» action stops it;
+  // it comes back on the 1st of next month or when the limit is raised / switched off.
+  const lim = useAIApiLimitStore.getState();
+  if (lim.on && lim.action === 'stop' && lim.tokens > 0 && monthToDateTokens(settings.model, now) >= lim.tokens) {
+    return { reason: 'limit', limit: lim.tokens, renewsOn: new Date(now.getFullYear(), now.getMonth() + 1, 1) };
   }
+  void rows;
   return null;
 }
 
@@ -141,21 +145,8 @@ export function assistantRunning(): boolean {
  * client's alert number. Independent of the limit.
  */
 export function checkUsageAlert(now = new Date()): void {
-  const settings = useAIStore.getState().settings;
-  if (!settings.usageAlertEnabled || !settings.usageAlertTokens || !settings.connectedAt) return;
-  const clientId = currentClientId();
-  const usage = useAIUsageStore.getState();
-  const cycle = cycleFor(settings.connectedAt, now);
-  const cycleKey = cycle.start.toISOString();
-  if (usage.alertedCycle[clientId] === cycleKey) return;
-  if (tokensBetween(usage.rowsFor(clientId), cycle.start) < settings.usageAlertTokens) return;
-  usage.markAlerted(clientId, cycleKey);
-  useDataStore.getState().pushNotification({
-    type: 'system',
-    title: 'تنبيه استهلاك الذكاء الاصطناعي',
-    body: `وصل استهلاك الذكاء الاصطناعي إلى ${settings.usageAlertTokens.toLocaleString('en-US')} توكن في الدورة الحالية`,
-    link: '/ai-settings?tab=usage',
-  });
+  // Legacy per-cycle alert removed: the monthly limit on «الرصيد والاستهلاك» sends the 50/70/100% alerts.
+  void now;
 }
 
 /**

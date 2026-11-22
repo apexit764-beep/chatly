@@ -104,8 +104,8 @@ export function useAssistantChat(): AssistantChat {
       store().setBusy(true);
       window.setTimeout(() => {
         let answer: Answer;
-        // Typed questions are what the model answers, so on the Qhub balance they are what costs.
-        if (free && model.key === QHUB_MODEL.key && useAIBalanceStore.getState().simulateUsage(1).blocked > 0) {
+        // Every question — typed or quick — is AI usage, so on the Qhub balance each one costs.
+        if (model.key === QHUB_MODEL.key && useAIBalanceStore.getState().simulateUsage(1).blocked > 0) {
           answer = BALANCE_EMPTY;
         } else {
           answer = answerFor(topic ?? detectTopic(t), t);

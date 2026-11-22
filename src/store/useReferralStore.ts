@@ -25,12 +25,14 @@ interface ReferralState {
   usedMonths: number;
 }
 
+const CURRENT_CLIENT_ID = 'client_1';
 const DAY = 86_400_000;
 const ago = (days: number): string => new Date(Date.now() - days * DAY).toISOString();
 
 /** Mock data. The reward values are derived from the plans, never stored here. */
 export const useReferralStore = create<ReferralState>(() => ({
-  code: 'qhub',
+  // The code is derived from the client id and cannot be edited: 'c' + its digits (client_1 → c1).
+  code: `c${CURRENT_CLIENT_ID.replace(/\D/g, '')}`,
   referrals: [
     { id: 'r1', name: 'شركة الريان', email: 'hello@rayan.om', phone: '+968 9234 5678', at: ago(2), status: 'subscribed', planId: 'plan_business', cycle: 'annual' },
     { id: 'r2', name: 'متجر نور', email: 'nour@shop.com', phone: '+968 9876 1122', at: ago(7), status: 'subscribed', planId: 'plan_starter', cycle: 'monthly' },
