@@ -110,7 +110,7 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
       return;
     }
     commit('published');
-    showToast('تم نشر القالب', 'success');
+    showToast(published ? 'تم حفظ التعديلات' : 'تم نشر القالب', 'success');
   };
 
   const move = (i: number, dir: -1 | 1): void => {
@@ -327,8 +327,16 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {!published && <Button variant="secondary" onClick={saveDraft}>حفظ كمسودة</Button>}
-          <Button variant="success" onClick={publish}>{published ? 'حفظ التعديلات ونشرها' : 'نشر'}</Button>
+          {!published && <Button variant="secondary" onClick={saveDraft} className="rounded-full px-5 text-small font-bold">حفظ كمسودة</Button>}
+          {/* Same pill as «قالب جديد», the module's main button. */}
+          <button
+            type="button"
+            onClick={publish}
+            className="flex h-10 items-center gap-2 rounded-full bg-gradient-to-l from-primary to-primary-dark px-5 text-small font-bold text-white shadow-sm transition-shadow hover:shadow-md"
+            style={{ color: '#fff' }}
+          >
+            {published ? 'حفظ التعديلات ونشرها' : 'نشر'}
+          </button>
         </div>
       </div>
 
