@@ -8,7 +8,7 @@ import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatDate } from '@/utils/format';
 import { cn } from '@/utils/cn';
-import { cloneTemplate, draftFromDescription, findConflict, triggerSummary, type ChatTemplate } from '@/utils/chatTemplates';
+import { cloneTemplate, draftFromDescription, findConflict, type ChatTemplate } from '@/utils/chatTemplates';
 
 const TH = 'text-start font-medium px-4 py-3 whitespace-nowrap';
 
@@ -117,9 +117,13 @@ export default function ChatTemplates(): JSX.Element {
     showToast('تم إنشاء نسخة كمسودة', 'success');
   };
 
+  const channels = useDataStore((s) => s.channels);
+  const numberName = (id: string): string => channels.find((c) => c.id === id)?.name ?? id;
+
   const toggle = (t: ChatTemplate): void => {
     if (!t.active) {
-      const conflict = findConflict(t, templates);
+      if (!(t.channelIds ?? []).length) { showToast('اختر رقمًا واحدًا على الأقل يعمل عليه القالب', 'error'); return; }
+      const conflict = findConflict(t, templates, numberName);
       if (conflict) { showToast(conflict, 'error'); return; }
     }
     setActive(t.id, !t.active);
@@ -205,7 +209,6 @@ export default function ChatTemplates(): JSX.Element {
               <thead className="bg-bg-light text-small text-muted-light dark:bg-bg-dark dark:text-muted-dark">
                 <tr>
                   <th className={TH}>القالب</th>
-                  <th className={TH}>الكلمات المفتاحية</th>
                   <th className={TH}>الأرقام</th>
                   <th className={TH}>الخطوات</th>
                   <th className={TH}>الحالة</th>
@@ -225,7 +228,6 @@ export default function ChatTemplates(): JSX.Element {
                         {t.name}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-small">{triggerSummary(t)}</td>
                     <td className="px-4 py-3 text-small"><NumbersCell ids={t.channelIds ?? []} /></td>
                     <td className="px-4 py-3"><span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-primary/10 px-2 text-small font-bold tabular-nums text-primary">{t.steps.length}</span></td>
                     <td className="px-4 py-3"><StatusPill t={t} /></td>
@@ -268,8 +270,7 @@ export default function ChatTemplates(): JSX.Element {
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2 text-small text-muted-light dark:text-muted-dark">
               <StatusPill t={viewing} />
-              <span>{triggerSummary(viewing)}</span>
-              <span>· <NumbersCell ids={viewing.channelIds ?? []} /></span>
+              <span><NumbersCell ids={viewing.channelIds ?? []} /></span>
               <span>· {viewing.steps.length} خطوات</span>
             </div>
             <ChatTemplatePreview template={viewing} />

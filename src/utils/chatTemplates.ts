@@ -47,9 +47,9 @@ export interface ChatStep {
 
 /**
  * Every template is sent automatically with the customer's first message (a new customer, or a
- * message after the conversation was closed), on the template's numbers. `kws` decide which one:
- * the template whose keyword is in that message, otherwise the number's default template (no
- * keywords). `first`, `kw` and `off` are kept only so older saved templates load; they are not used.
+ * message after the conversation was closed), on the template's numbers. A number has at most one
+ * switched-on template, so there is nothing to choose between. The fields are kept only so older
+ * saved templates load; none of them is used.
  */
 export interface ChatTemplateTriggers {
   first: boolean;
@@ -58,16 +58,11 @@ export interface ChatTemplateTriggers {
   off: boolean;
 }
 
-/** The keywords that pick this template; none = the default template of its numbers. */
-export function keywordsOf(t: ChatTemplate): string[] {
-  return t.triggers?.kws ?? [];
-}
+export const NO_TRIGGERS: ChatTemplateTriggers = { first: false, kw: false, kws: [], off: false };
 
-/** Brings a template saved under the older trigger options onto the keyword-only model. */
+/** Clears the trigger options of a template saved before they were removed. */
 export function normalizeTriggers(t: ChatTemplate): ChatTemplate {
-  const tr = t.triggers ?? { first: false, kw: false, kws: [], off: false };
-  const kws = tr.kw ? tr.kws ?? [] : [];
-  return { ...t, triggers: { first: false, kw: kws.length > 0, kws, off: false } };
+  return { ...t, triggers: { ...NO_TRIGGERS, kws: [] } };
 }
 
 export interface ChatTemplate {
@@ -138,7 +133,7 @@ export function blankTemplate(name = ''): ChatTemplate {
     name,
     status: 'draft',
     active: true,
-    triggers: { first: false, kw: false, kws: [], off: false },
+    triggers: { ...NO_TRIGGERS, kws: [] },
     retry: DEFAULT_RETRY,
     timeout: 60,
     remind: DEFAULT_REMIND,
@@ -166,11 +161,6 @@ export function cloneTemplate(t: ChatTemplate, patch: Partial<ChatTemplate> = {}
   return { ...copy, id: newId('ct'), ...patch };
 }
 
-export function triggerSummary(t: ChatTemplate): string {
-  const kws = keywordsOf(t);
-  return kws.length ? `كلمات: ${kws.join('، ')}` : 'افتراضي (بدون كلمات)';
-}
-
 /** Arabic digits and punctuation stripped, so «٢» and «2.» match the same choice. */
 export function normalizeReply(x: string): string {
   return x
@@ -189,23 +179,27 @@ export function worksOn(t: ChatTemplate, channelId: string | undefined): boolean
   return !channelId || (t.channelIds ?? []).includes(channelId);
 }
 
+/** A published, switched-on template other than `t` — the kind that holds its numbers. */
+function holdsNumbers(x: ChatTemplate, t: ChatTemplate): boolean {
+  return x.id !== t.id && x.status === 'published' && x.active;
+}
+
+/** For each number, the other switched-on template already working on it (numbers held by none are absent). */
+export function numbersTakenBy(t: ChatTemplate, all: ChatTemplate[]): Map<string, ChatTemplate> {
+  const taken = new Map<string, ChatTemplate>();
+  all.filter((x) => holdsNumbers(x, t)).forEach((x) => (x.channelIds ?? []).forEach((c) => { if (!taken.has(c)) taken.set(c, x); }));
+  return taken;
+}
+
 /**
- * The published, switched-on templates that share a trigger with `t` on one of the same
- * numbers, as a sentence — or null. Two templates on different numbers never clash.
+ * A number works with one switched-on template only. Returns why `t` cannot be switched on or
+ * published alongside the others, or null. `numberName` turns a channel id into its display name.
  */
-export function findConflict(t: ChatTemplate, all: ChatTemplate[]): string | null {
-  const mine = t.channelIds ?? [];
-  const others = all.filter(
-    (x) => x.id !== t.id && x.status === 'published' && x.active && (x.channelIds ?? []).some((c) => mine.includes(c)),
-  );
-  const mineKws = keywordsOf(t);
-  for (const o of others) {
-    const theirs = keywordsOf(o);
-    if (!mineKws.length && !theirs.length) return `يوجد قالب افتراضي آخر (${o.name}) بدون كلمات مفتاحية على نفس الرقم`;
-    const w = mineKws.find((k) => theirs.includes(k));
-    if (w) return `الكلمة "${w}" مستخدمة في قالب آخر (${o.name}) على نفس الرقم`;
-  }
-  return null;
+export function findConflict(t: ChatTemplate, all: ChatTemplate[], numberName: (id: string) => string = (id) => id): string | null {
+  const taken = numbersTakenBy(t, all);
+  const clash = (t.channelIds ?? []).find((c) => taken.has(c));
+  if (!clash) return null;
+  return `الرقم «${numberName(clash)}» عليه قالب آخر مفعّل («${taken.get(clash)!.name}»)`;
 }
 
 export interface TemplateIssue {
@@ -218,7 +212,12 @@ export interface TemplateIssue {
  * What stops a template being published, first problem only. `deptIds` are the departments
  * that exist now; a hand-over to a deleted one is caught here.
  */
-export function validateForPublish(t: ChatTemplate, all: ChatTemplate[], deptIds?: string[]): TemplateIssue | null {
+export function validateForPublish(
+  t: ChatTemplate,
+  all: ChatTemplate[],
+  deptIds?: string[],
+  numberName?: (id: string) => string,
+): TemplateIssue | null {
   if (!t.name.trim()) return { message: 'أدخل اسم القالب', tab: 'steps' };
   if (!t.steps.length) return { message: 'أضف خطوة واحدة على الأقل', tab: 'steps' };
   for (let i = 0; i < t.steps.length; i += 1) {
@@ -241,7 +240,7 @@ export function validateForPublish(t: ChatTemplate, all: ChatTemplate[], deptIds
     }
   }
   if (!(t.channelIds ?? []).length) return { message: 'اختر رقمًا واحدًا على الأقل يعمل عليه القالب', tab: 'settings' };
-  const conflict = findConflict(t, all);
+  const conflict = findConflict(t, all, numberName);
   if (conflict) return { message: conflict, tab: 'settings' };
   return null;
 }
@@ -396,18 +395,9 @@ export class ChatRunner {
 
 const live = (t: ChatTemplate, channelId?: string): boolean => t.status === 'published' && t.active && worksOn(t, channelId);
 
-/**
- * The template for the customer's first message on this number: the one whose keyword appears in
- * the message, otherwise the default template (no keywords), otherwise none.
- */
-export function templateForFirstMessage(all: ChatTemplate[], text: string, channelId?: string): ChatTemplate | null {
-  const n = normalizeReply(text);
-  const mine = all.filter((t) => live(t, channelId));
-  return (
-    mine.find((t) => keywordsOf(t).some((w) => n.includes(normalizeReply(w)))) ??
-    mine.find((t) => !keywordsOf(t).length) ??
-    null
-  );
+/** The template for the customer's first message on this number: its one switched-on template, or none. */
+export function templateForFirstMessage(all: ChatTemplate[], channelId?: string): ChatTemplate | null {
+  return all.find((t) => live(t, channelId)) ?? null;
 }
 
 /* ───────────────────────── draft from a description ───────────────────────── */

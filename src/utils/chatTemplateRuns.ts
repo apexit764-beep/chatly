@@ -89,9 +89,9 @@ function isFirstMessage(conversationId: string): boolean {
   return c.status === 'closed' || !c.messages.some((m) => m.direction === 'in' && m.type !== 'note');
 }
 
-/** Starts the template the first message picks (keyword, else the number's default). Null when none. */
-function startForFirstMessage(conversationId: string, text: string): ChatTemplate | null {
-  const t = templateForFirstMessage(sendableTemplates(), text, channelOf(conversationId));
+/** Starts the number's switched-on template. Null when the number has none. */
+function startForFirstMessage(conversationId: string): ChatTemplate | null {
+  const t = templateForFirstMessage(sendableTemplates(), channelOf(conversationId));
   if (t) startTemplate(conversationId, t, `أُرسل قالب «${t.name}» تلقائيًا مع أول رسالة من العميل`);
   return t;
 }
@@ -106,17 +106,17 @@ export function customerMessage(conversationId: string, text: string): void {
     keep(conversationId, runner);
     return;
   }
-  if (first) startForFirstMessage(conversationId, text);
+  if (first) startForFirstMessage(conversationId);
 }
 
 /** Simulator: the customer's first message, whatever state the demo conversation is in. */
 export function simulateFirstMessage(conversationId: string, text: string): string | null {
   const body = text.trim() || 'مرحبا';
-  if (!templateForFirstMessage(sendableTemplates(), body, channelOf(conversationId))) {
-    return 'لا يوجد قالب منشور يعمل على هذا الرقم';
+  if (!templateForFirstMessage(sendableTemplates(), channelOf(conversationId))) {
+    return 'لا يوجد قالب مفعّل يعمل على هذا الرقم';
   }
   useDataStore.getState().receiveMessage(conversationId, body);
-  startForFirstMessage(conversationId, body);
+  startForFirstMessage(conversationId);
   return null;
 }
 

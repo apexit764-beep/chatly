@@ -8,10 +8,10 @@ import {
   deptTarget,
   newStep,
   normalizeTriggers,
+  NO_TRIGGERS,
   type AnswerKind,
   type ChatStep,
   type ChatTemplate,
-  type ChatTemplateTriggers,
   type StepTarget,
   type StepType,
 } from '@/utils/chatTemplates';
@@ -19,9 +19,11 @@ import {
 const STORAGE_KEY = 'qhub_chat_templates';
 /** Bumped when the ready-made templates change, so saved lists pick up the new ones once. */
 const SEED_KEY = 'qhub_chat_templates_seed';
-const SEED_VERSION = '3';
-/** Lists saved under version 2 already have the six; version 3 only switches the trigger model. */
-const PREVIOUS_SEED_VERSION = '2';
+const SEED_VERSION = '4';
+/** Lists saved under versions 2–3 already have the six; version 4 only applies «one template per number». */
+const PREVIOUS_SEED_VERSIONS = ['2', '3'];
+/** The ready-made template that works on every number; the other five start switched off with none. */
+const WELCOME_ID = 'seed_welcome';
 /** The two examples the first version shipped; the ready-made set replaces them. */
 const OLD_SEED_IDS = ['ct_booking', 'ct_welcome'];
 
@@ -43,16 +45,8 @@ interface SeedStep {
 interface SeedDef {
   id: string;
   name: string;
-  triggers: ChatTemplateTriggers;
   steps: SeedStep[];
-  /** Switched off: it has no keywords, like the welcome template, and one number has one default. */
-  off?: boolean;
 }
-
-const kw = (...kws: string[]): ChatTemplateTriggers => ({ first: false, kw: true, kws, off: false });
-const noKeywords: ChatTemplateTriggers = { first: false, kw: false, kws: [], off: false };
-/** The off-hours template ships switched off, so the welcome template is each number's default. */
-const OFF_HOURS_ID = 'seed_off_hours';
 
 /**
  * The ready-made templates every client starts with. They are built on the client's own
@@ -73,7 +67,6 @@ function seed(): ChatTemplate[] {
     {
       id: 'seed_welcome',
       name: 'الترحيب وتوجيه العميل للقسم',
-      triggers: noKeywords,
       steps: [
         { type: 'msg', text: `أهلًا ${CUSTOMER_NAME_TAG} 👋\nمرحبًا بك، يسعدنا تواصلك معنا.` },
         pickDept,
@@ -82,8 +75,6 @@ function seed(): ChatTemplate[] {
     {
       id: 'seed_off_hours',
       name: 'خارج أوقات العمل',
-      triggers: noKeywords,
-      off: true,
       steps: [
         { type: 'msg', text: `شكرًا لتواصلك ${CUSTOMER_NAME_TAG} 🌙\nنحن خارج أوقات العمل حاليًا، وسنرد عليك في أقرب وقت.` },
         { type: 'ask', text: 'اكتب طلبك باختصار حتى نجهّز الرد:', valid: 'any' },
@@ -93,7 +84,6 @@ function seed(): ChatTemplate[] {
     {
       id: 'seed_sales',
       name: 'استفسارات المبيعات والأسعار',
-      triggers: kw('سعر', 'أسعار', 'عرض سعر', 'شراء'),
       steps: [
         { type: 'msg', text: `أهلًا ${CUSTOMER_NAME_TAG}، شكرًا لاهتمامك بخدماتنا.` },
         { type: 'btn', text: 'كيف نقدر نساعدك؟', opts: [['معرفة الأسعار', 'next'], ['طلب عرض سعر', 'next'], ['التحدث مع المبيعات', toDept('d1')]] },
@@ -104,7 +94,6 @@ function seed(): ChatTemplate[] {
     {
       id: 'seed_support',
       name: 'الدعم والشكاوى',
-      triggers: kw('شكوى', 'مشكلة', 'دعم'),
       steps: [
         { type: 'msg', text: 'نأسف لأي إزعاج واجهته، وسنساعدك في أسرع وقت.' },
         { type: 'btn', text: 'ما نوع طلبك؟', opts: [['شكوى', 'next'], ['مشكلة في الطلب', 'next'], ['استفسار عام', toDept('d2')]] },
@@ -115,7 +104,6 @@ function seed(): ChatTemplate[] {
     {
       id: 'seed_billing',
       name: 'الفواتير والمدفوعات',
-      triggers: kw('فاتورة', 'دفع', 'استرداد', 'تحويل بنكي'),
       steps: [
         { type: 'btn', text: `أهلًا ${CUSTOMER_NAME_TAG}، ما الذي تحتاجه؟`, opts: [['طلب فاتورة', 'next'], ['مشكلة في الدفع', 'next'], ['استرداد مبلغ', 'next']] },
         { type: 'ask', text: 'اكتب رقم الطلب أو الفاتورة:', valid: 'number', other: toDept('d3') },
@@ -125,7 +113,6 @@ function seed(): ChatTemplate[] {
     {
       id: 'seed_management',
       name: 'التواصل مع الإدارة',
-      triggers: kw('الإدارة', 'مدير', 'اقتراح'),
       steps: [
         { type: 'msg', text: 'يسعدنا سماع رأيك، وتصل رسالتك للإدارة مباشرة.' },
         { type: 'btn', text: 'ما موضوع رسالتك؟', opts: [['اقتراح', 'next'], ['ملاحظة على الخدمة', 'next'], ['شراكة', 'next']] },
@@ -141,9 +128,11 @@ function seed(): ChatTemplate[] {
     const t = blankTemplate(def.name);
     t.id = def.id;
     t.status = 'published';
-    t.active = !def.off;
-    t.triggers = def.triggers;
-    t.channelIds = numbers;
+    // One number, one switched-on template: the welcome template takes them all.
+    const welcome = def.id === WELCOME_ID;
+    t.active = welcome;
+    t.triggers = { ...NO_TRIGGERS, kws: [] };
+    t.channelIds = welcome ? numbers : [];
     t.updatedAt = new Date(Date.now() - (defs.length - i) * day).toISOString();
     t.steps = def.steps.map((d): ChatStep => {
       const s = newStep(d.type);
@@ -167,26 +156,40 @@ function load(): ChatTemplate[] {
     if (raw) stored = JSON.parse(raw) as ChatTemplate[];
     marker = localStorage.getItem(SEED_KEY);
   } catch { /* storage unavailable: start from the ready-made set */ }
-  // Templates saved before numbers existed worked on every number, so they keep doing so; older
-  // trigger options become keywords only.
+  // Templates saved before numbers existed worked on every number; trigger options are cleared.
   const numbers = whatsappNumbers();
   const withNumbers = (list: ChatTemplate[]): ChatTemplate[] =>
     list.map((t) => normalizeTriggers(Array.isArray(t.channelIds) ? t : { ...t, channelIds: numbers }));
+  /**
+   * One switched-on template per number: the welcome template keeps its numbers first, then each
+   * other switched-on template keeps only the numbers still free; one left with none is switched off.
+   */
+  const onePerNumber = (list: ChatTemplate[]): ChatTemplate[] => {
+    const held = new Set<string>();
+    const order = [...list].sort((a, b) => Number(b.id === WELCOME_ID) - Number(a.id === WELCOME_ID));
+    const fixed = new Map<string, ChatTemplate>();
+    order.forEach((t) => {
+      if (t.status !== 'published' || !t.active) { fixed.set(t.id, t); return; }
+      const free = (t.channelIds ?? []).filter((c) => !held.has(c));
+      free.forEach((c) => held.add(c));
+      fixed.set(t.id, { ...t, channelIds: free, active: free.length > 0 });
+    });
+    return list.map((t) => fixed.get(t.id) ?? t);
+  };
   if (!stored) {
     const fresh = seed();
     save(fresh);
     return fresh;
   }
   if (marker === SEED_VERSION) return withNumbers(stored);
-  if (marker === PREVIOUS_SEED_VERSION) {
-    // The off-hours template lost its trigger and would be a second default next to the welcome one.
-    const next = withNumbers(stored).map((t) => (t.id === OFF_HOURS_ID ? { ...t, active: false } : t));
+  if (marker && PREVIOUS_SEED_VERSIONS.includes(marker)) {
+    const next = onePerNumber(withNumbers(stored));
     save(next);
     return next;
   }
   const own = stored.filter((t) => !OLD_SEED_IDS.includes(t.id));
   const ids = new Set(own.map((t) => t.id));
-  const next = withNumbers([...seed().filter((t) => !ids.has(t.id)), ...own]);
+  const next = onePerNumber(withNumbers([...seed().filter((t) => !ids.has(t.id)), ...own]));
   save(next);
   return next;
 }

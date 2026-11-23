@@ -19,6 +19,7 @@ import {
   deptOf,
   deptTarget,
   newStep,
+  numbersTakenBy,
   validateForPublish,
   type AnswerKind,
   type ChatStep,
@@ -63,11 +64,18 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
   const channels = useDataStore((s) => s.channels);
   const numbers = useMemo(() => channels.filter((c) => c.type === 'whatsapp'), [channels]);
 
-  const [draft, setDraft] = useState<ChatTemplate>(initial);
+  // A number works with one switched-on template; the ones another template holds are locked here
+  // and dropped from this template so it never opens holding a number it cannot keep.
+  const [draft, setDraft] = useState<ChatTemplate>(() => {
+    const held = numbersTakenBy(initial, useChatTemplateStore.getState().templates);
+    return { ...initial, channelIds: (initial.channelIds ?? []).filter((c) => !held.has(c)) };
+  });
+  const taken = useMemo(() => numbersTakenBy(draft, templates), [draft, templates]);
+  const freeNumbers = numbers.filter((n) => !taken.has(n.id));
+  const numberName = (id: string): string => channels.find((c) => c.id === id)?.name ?? id;
   const [tab, setTab] = useState<Tab>('steps');
   const [errStep, setErrStep] = useState<string | null>(null);
   const [addAt, setAddAt] = useState<number | null>(null);
-  const [kwInput, setKwInput] = useState('');
 
   const published = draft.status === 'published';
   const patch = (p: Partial<ChatTemplate>): void => setDraft((d) => ({ ...d, ...p }));
@@ -94,7 +102,7 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
   };
 
   const publish = (): void => {
-    const issue = validateForPublish(draft, templates, departments.map((d) => d.id));
+    const issue = validateForPublish(draft, templates, departments.map((d) => d.id), numberName);
     if (issue) {
       setTab(issue.tab);
       setErrStep(issue.stepId ?? null);
@@ -143,18 +151,6 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
       el?.scrollIntoView({ block: 'center' });
       el?.querySelector('textarea')?.focus();
     }, 50);
-  };
-
-  /** Keywords are the only trigger setting left; `kw` mirrors whether there are any. */
-  const setKeywords = (kws: string[]): void =>
-    patch({ triggers: { first: false, kw: kws.length > 0, kws, off: false } });
-
-  const addKeyword = (): void => {
-    const w = kwInput.trim();
-    if (!w) return;
-    if (draft.triggers.kws.includes(w)) { showToast('الكلمة مضافة بالفعل', 'error'); return; }
-    setKeywords([...draft.triggers.kws, w]);
-    setKwInput('');
   };
 
   /**
@@ -371,66 +367,52 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
               <Card className="p-5">
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <h3 className="text-body font-bold">الأرقام التي يعمل عليها القالب</h3>
-                  {numbers.length > 1 && (
+                  {freeNumbers.length > 1 && (
                     <button
                       type="button"
-                      onClick={() => patch({ channelIds: draft.channelIds.length === numbers.length ? [] : numbers.map((n) => n.id) })}
+                      onClick={() => patch({ channelIds: draft.channelIds.length === freeNumbers.length ? [] : freeNumbers.map((n) => n.id) })}
                       className="text-small font-semibold text-primary"
                     >
-                      {draft.channelIds.length === numbers.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+                      {draft.channelIds.length === freeNumbers.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
                     </button>
                   )}
                 </div>
-                <p className="mb-3 text-[12px] text-muted-light dark:text-muted-dark">يعمل القالب فقط في محادثات الأرقام المحددة. يمكنك اختيار أكثر من رقم.</p>
+                <p className="mb-3 text-[12px] text-muted-light dark:text-muted-dark">يُرسل القالب تلقائيًا مع أول رسالة من العميل على الأرقام المحددة. يمكنك اختيار أكثر من رقم، ولكل رقم قالب مفعّل واحد فقط.</p>
                 {numbers.length === 0 ? (
                   <p className="rounded-card border border-warning/30 bg-warning/5 px-3 py-2 text-small text-warning">لا يوجد رقم واتساب مربوط. اربط رقمًا من القنوات أولًا.</p>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2">
                     {numbers.map((n) => {
                       const on = draft.channelIds.includes(n.id);
+                      const holder = taken.get(n.id);
                       return (
-                        <label key={n.id} className={cn(triggerBox, 'cursor-pointer', on && 'border-primary/50 bg-primary/5')}>
+                        <label
+                          key={n.id}
+                          title={holder ? `الرقم مستخدم في قالب «${holder.name}». أوقفه أو أزل الرقم منه أولًا.` : undefined}
+                          className={cn(
+                            triggerBox,
+                            holder ? 'cursor-not-allowed bg-bg-light opacity-60 dark:bg-bg-dark' : 'cursor-pointer',
+                            on && 'border-primary/50 bg-primary/5',
+                          )}
+                        >
                           <input
                             type="checkbox"
-                            className={check}
+                            className={cn(check, holder && 'cursor-not-allowed')}
                             checked={on}
+                            disabled={!!holder}
                             onChange={(e) => patch({ channelIds: e.target.checked ? [...draft.channelIds, n.id] : draft.channelIds.filter((x) => x !== n.id) })}
                           />
                           <div className="min-w-0">
                             <b className="block truncate text-small">{n.name}</b>
                             <small dir="ltr" className="block text-end text-muted-light dark:text-muted-dark">{n.identifier}</small>
                             {n.status !== 'connected' && <small className="block text-warning">الرقم غير متصل حاليًا</small>}
+                            {holder && <small className="block text-muted-light dark:text-muted-dark">{`مستخدم في قالب «${holder.name}»`}</small>}
                           </div>
                         </label>
                       );
                     })}
                   </div>
                 )}
-              </Card>
-
-              <Card className="p-5">
-                <h3 className="mb-1 text-body font-bold">الكلمات المفتاحية</h3>
-                <p className="mb-3 text-[12px] text-muted-light dark:text-muted-dark">يُختار هذا القالب عندما تحتوي رسالة العميل إحدى هذه الكلمات. اتركها فارغة ليكون القالب الافتراضي للأرقام المحددة.</p>
-                {draft.triggers.kws.length > 0 && (
-                  <div className="mb-2 flex flex-wrap gap-1.5">
-                    {draft.triggers.kws.map((w) => (
-                      <span key={w} className="inline-flex items-center gap-1.5 rounded-full border border-border-light py-1 ps-3 pe-1.5 text-small dark:border-border-dark">
-                        {w}
-                        <button type="button" aria-label={`حذف ${w}`} onClick={() => setKeywords(draft.triggers.kws.filter((k) => k !== w))} className="flex h-5 w-5 items-center justify-center rounded-full bg-danger/10 text-danger"><X className="h-3 w-3" /></button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <input
-                    value={kwInput}
-                    onChange={(e) => setKwInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyword(); } }}
-                    placeholder="اكتب كلمة ثم اضغط إضافة"
-                    className={cn(fieldClass, 'max-w-[240px]')}
-                  />
-                  <Button type="button" size="sm" onClick={addKeyword}>إضافة</Button>
-                </div>
               </Card>
 
               <Card className="p-5">
