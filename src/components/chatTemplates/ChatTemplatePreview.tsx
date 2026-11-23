@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { RotateCcw, Send, TimerOff } from 'lucide-react';
+import { Eye, RotateCcw, Send, TimerOff } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useDataStore } from '@/store/useDataStore';
 import { ChatRunner, newRunState, type ChatStep, type ChatTemplate } from '@/utils/chatTemplates';
@@ -18,7 +18,15 @@ const SAMPLE_NAME = 'أحمد';
  * A WhatsApp-style phone running the template as written, so the owner can tap the buttons or
  * type as the customer. It starts over whenever the template changes.
  */
-export function ChatTemplatePreview({ template }: { template: ChatTemplate }): JSX.Element {
+interface PreviewProps {
+  template: ChatTemplate;
+  /** Editor only: shows «معاينة», which loads the latest edits into the phone. */
+  onPreview?: () => void;
+  /** Editor only: the template has edits the phone does not show yet. */
+  stale?: boolean;
+}
+
+export function ChatTemplatePreview({ template, onPreview, stale = false }: PreviewProps): JSX.Element {
   const [msgs, setMsgs] = useState<PreviewMsg[]>([]);
   const [input, setInput] = useState('');
   const runner = useRef<ChatRunner | null>(null);
@@ -88,6 +96,17 @@ export function ChatTemplatePreview({ template }: { template: ChatTemplate }): J
       <div className="mb-2 flex items-center justify-between">
         <b className="text-small">المعاينة</b>
         <div className="flex items-center gap-1.5">
+          {onPreview && (
+            <button
+              type="button"
+              onClick={onPreview}
+              title="يعرض آخر التعديلات في المعاينة"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-gradient-to-l from-primary to-primary-dark px-3 text-[12px] font-bold text-white shadow-sm"
+              style={{ color: '#fff' }}
+            >
+              <Eye className="h-3.5 w-3.5" /> معاينة
+            </button>
+          )}
           <button
             type="button"
             onClick={silence}
@@ -105,6 +124,12 @@ export function ChatTemplatePreview({ template }: { template: ChatTemplate }): J
           </button>
         </div>
       </div>
+
+      {stale && (
+        <p className="mb-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-1.5 text-[12px] text-warning">
+          فيه تعديلات لم تظهر في المعاينة. اضغط «معاينة» لعرضها.
+        </p>
+      )}
 
       <div className="overflow-hidden rounded-[22px] border border-border-light bg-white shadow-card dark:border-border-dark" dir="rtl">
         <div className="flex items-center justify-between bg-[#075e54] px-4 py-2.5 text-small font-bold text-white">
