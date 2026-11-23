@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ArrowDown, ArrowRight, ArrowUp, Plus, X } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUp, Eye, Plus, X } from 'lucide-react';
 import { Button, Card, InfoTip, Modal } from '@components/ui';
 import { ChatTemplatePreview } from '@components/chatTemplates/ChatTemplatePreview';
 import { useChatTemplateStore } from '@/store/useChatTemplateStore';
@@ -76,6 +76,9 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
   const [tab, setTab] = useState<Tab>('steps');
   const [errStep, setErrStep] = useState<string | null>(null);
   const [addAt, setAddAt] = useState<number | null>(null);
+  /** A copy of the template taken when «معاينة» is pressed; null while closed. */
+  const [previewing, setPreviewing] = useState<ChatTemplate | null>(null);
+  const openPreview = (): void => setPreviewing(JSON.parse(JSON.stringify(draft)) as ChatTemplate);
 
   const published = draft.status === 'published';
   const patch = (p: Partial<ChatTemplate>): void => setDraft((d) => ({ ...d, ...p }));
@@ -327,6 +330,9 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={openPreview} className="rounded-full px-5 text-small font-bold">
+            <Eye className="h-4 w-4" /> معاينة
+          </Button>
           {!published && <Button variant="secondary" onClick={saveDraft} className="rounded-full px-5 text-small font-bold">حفظ كمسودة</Button>}
           {/* Same pill as «قالب جديد», the module's main button. */}
           <button
@@ -353,8 +359,8 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
         ))}
       </div>
 
-      <div className="flex flex-col items-start gap-5 xl:flex-row">
-        <div className="min-w-0 w-full flex-1">
+      <div>
+        <div className="min-w-0 w-full">
           {tab === 'steps' ? (
             draft.steps.length === 0 ? (
               <Card className="p-8 text-center">
@@ -449,11 +455,12 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
             </div>
           )}
         </div>
-
-        <div className="w-full flex-none xl:sticky xl:top-20 xl:w-[360px]">
-          <ChatTemplatePreview template={draft} />
-        </div>
       </div>
+
+      {/* The preview runs the template as it stands when opened; edits made later show next time. */}
+      <Modal open={previewing !== null} onClose={() => setPreviewing(null)} title={`معاينة القالب: ${draft.name.trim() || 'بدون اسم'}`} size="md">
+        {previewing && <ChatTemplatePreview template={previewing} />}
+      </Modal>
 
       <Modal open={addAt !== null} onClose={() => setAddAt(null)} title="إضافة خطوة" size="md">
         <div className="grid gap-2 sm:grid-cols-2">
