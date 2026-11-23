@@ -51,7 +51,7 @@ export function ChatTemplatePreview({ template, onPreview, stale = false }: Prev
     flush();
   }, [template, flush]);
 
-  // Restart on every edit, as the owner types.
+  // Restart whenever the template shown changes («معاينة» in the editor).
   useEffect(() => { restart(); }, [restart]);
 
   useEffect(() => {

@@ -1,7 +1,6 @@
 /**
  * Chat templates: a fixed script of steps (messages, questions, buttons, lists) that the
- * client sends to a customer on WhatsApp, either by hand from the conversation or
- * automatically from a trigger. This file holds the model, the checks run before publishing
+ * client sends automatically to a customer on WhatsApp with the customer's first message. This file holds the model, the checks run before publishing
  * and the runner that walks a customer through the steps.
  */
 
@@ -39,8 +38,6 @@ export interface ChatStep {
   btnLabel?: string;
   /** btn / list: the choices. */
   opts?: StepOption[];
-  /** Where it goes when the customer fails twice (wrong answer or text instead of a choice). */
-  other: StepTarget;
   /** agent: the department the conversation is handed to. Absent means any available staff member. */
   dept?: string;
 }
@@ -80,6 +77,11 @@ export interface ChatTemplate {
   steps: ChatStep[];
   /** The WhatsApp numbers (channel ids) the template works on. At least one to publish. */
   channelIds: string[];
+  /**
+   * For each of its numbers, the staff member the conversation goes to when the customer answers
+   * outside the choices (or a wrong answer) twice. Required for every number to publish.
+   */
+  fallbackAgents: Record<string, string>;
   updatedAt: string;
 }
 
@@ -121,7 +123,7 @@ export function newId(prefix: string): string {
 }
 
 export function newStep(type: StepType): ChatStep {
-  const step: ChatStep = { id: newId('st'), type, text: '', go: 'next', other: 'agent', valid: 'any' };
+  const step: ChatStep = { id: newId('st'), type, text: '', go: 'next', valid: 'any' };
   if (type === 'btn' || type === 'list') step.opts = [{ label: '', go: 'next' }, { label: '', go: 'next' }];
   if (type === 'list') step.btnLabel = 'عرض الخيارات';
   return step;
@@ -139,6 +141,7 @@ export function blankTemplate(name = ''): ChatTemplate {
     remind: DEFAULT_REMIND,
     steps: [],
     channelIds: [],
+    fallbackAgents: {},
     updatedAt: new Date().toISOString(),
   };
 }
@@ -155,7 +158,6 @@ export function cloneTemplate(t: ChatTemplate, patch: Partial<ChatTemplate> = {}
   const remap = (g: StepTarget): StepTarget => map.get(g) ?? g;
   copy.steps.forEach((s) => {
     s.go = remap(s.go);
-    s.other = remap(s.other);
     s.opts?.forEach((o) => { o.go = remap(o.go); });
   });
   return { ...copy, id: newId('ct'), ...patch };
@@ -202,6 +204,24 @@ export function findConflict(t: ChatTemplate, all: ChatTemplate[], numberName: (
   return `الرقم «${numberName(clash)}» عليه قالب آخر مفعّل («${taken.get(clash)!.name}»)`;
 }
 
+/** The staff who can take a number's conversations: accepted their invitation and have access to it. */
+export function agentsFor<A extends { id: string; invitationStatus: string; channels: string[] }>(agents: A[], channelId: string): A[] {
+  return agents.filter((a) => a.invitationStatus === 'active' && a.channels.includes(channelId));
+}
+
+/**
+ * The first number with no staff member (or one who can no longer take it) for the twice-wrong
+ * hand-over, as a message, or null. `agentIdsFor` lists who can take a number.
+ */
+export function missingFallbackAgent(
+  t: ChatTemplate,
+  agentIdsFor: (channelId: string) => string[],
+  numberName: (id: string) => string = (id) => id,
+): string | null {
+  const c = (t.channelIds ?? []).find((id) => !agentIdsFor(id).includes(t.fallbackAgents?.[id] ?? ''));
+  return c ? `اختر الموظف الذي تُحوَّل له المحادثة على رقم «${numberName(c)}»` : null;
+}
+
 export interface TemplateIssue {
   message: string;
   tab: 'steps' | 'settings';
@@ -217,6 +237,7 @@ export function validateForPublish(
   all: ChatTemplate[],
   deptIds?: string[],
   numberName?: (id: string) => string,
+  agentIdsFor?: (channelId: string) => string[],
 ): TemplateIssue | null {
   if (!t.name.trim()) return { message: 'أدخل اسم القالب', tab: 'steps' };
   if (!t.steps.length) return { message: 'أضف خطوة واحدة على الأقل', tab: 'steps' };
@@ -224,7 +245,7 @@ export function validateForPublish(
     const s = t.steps[i];
     const at = `الخطوة ${i + 1}: `;
     if (deptIds) {
-      const targets = [s.go, s.other, ...(s.opts ?? []).map((o) => o.go)].map(deptOf);
+      const targets = [s.go, ...(s.opts ?? []).map((o) => o.go)].map(deptOf);
       if (s.type === 'agent' && s.dept) targets.push(s.dept);
       if (targets.some((d) => d && !deptIds.includes(d))) {
         return { message: `${at}القسم المحدد لم يعد موجودًا، اختر قسمًا آخر`, tab: 'steps', stepId: s.id };
@@ -242,6 +263,10 @@ export function validateForPublish(
   if (!(t.channelIds ?? []).length) return { message: 'اختر رقمًا واحدًا على الأقل يعمل عليه القالب', tab: 'settings' };
   const conflict = findConflict(t, all, numberName);
   if (conflict) return { message: conflict, tab: 'settings' };
+  if (agentIdsFor) {
+    const missing = missingFallbackAgent(t, agentIdsFor, numberName);
+    if (missing) return { message: missing, tab: 'settings' };
+  }
   return null;
 }
 
@@ -267,6 +292,10 @@ export interface RunSink {
   handover?: (departmentId: string | null) => void;
   /** A department's name, or undefined when it no longer exists. */
   deptName?: (departmentId: string) => string | undefined;
+  /** The run handed the conversation to this staff member (the number's twice-wrong hand-over). */
+  assign?: (agentId: string) => void;
+  /** A staff member's name, or undefined when they no longer exist. */
+  agentName?: (agentId: string) => string | undefined;
 }
 
 export function newRunState(templateId: string): RunState {
@@ -287,6 +316,8 @@ export class ChatRunner {
     readonly state: RunState,
     private readonly sink: RunSink,
     private readonly customerName: string,
+    /** The number the run is on; picks the staff member for the twice-wrong hand-over. Absent in the editor preview. */
+    private readonly channelId?: string,
   ) {}
 
   get done(): boolean { return this.state.done; }
@@ -309,7 +340,7 @@ export class ChatRunner {
       if (ANSWER_CHECKS[s.valid](text)) { this.go(s.go, s.id); return true; }
       this.state.attempts += 1;
       if (this.state.attempts < 2) { this.sink.bot(`الرجاء إدخال ${ANSWER_KINDS[s.valid]} صحيح.`); return true; }
-      this.go(s.other || 'agent', s.id);
+      this.toFallbackAgent();
       return true;
     }
     const opts = s.opts ?? [];
@@ -318,7 +349,7 @@ export class ChatRunner {
     if (i >= 0) { this.go(opts[i].go, s.id); return true; }
     this.state.attempts += 1;
     if (this.state.attempts < 2) { this.sink.bot(this.template.retry, s); return true; }
-    this.go(s.other || 'agent', s.id);
+    this.toFallbackAgent();
     return true;
   }
 
@@ -362,6 +393,16 @@ export class ChatRunner {
     }
     this.finish('تم تحويل المحادثة إلى موظف');
     this.sink.handover?.(null);
+  }
+
+  /** Twice outside the choices (or a wrong answer): the conversation goes to the number's staff member. */
+  private toFallbackAgent(): void {
+    if (!this.channelId) { this.finish('تم تحويل المحادثة إلى الموظف المحدد لهذا الرقم'); return; }
+    const id = this.template.fallbackAgents?.[this.channelId];
+    const name = id ? this.sink.agentName?.(id) : undefined;
+    if (!id || !name) { this.handOver(null); return; }
+    this.finish(`تم تحويل المحادثة إلى «${name}»`);
+    this.sink.assign?.(id);
   }
 
   private go(target: StepTarget, from: string): void {

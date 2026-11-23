@@ -4,6 +4,7 @@ import {
   CUSTOMER_NAME_TAG,
   MAX_LIST_ITEMS,
   MAX_OPTION_LENGTH,
+  agentsFor,
   blankTemplate,
   deptTarget,
   newStep,
@@ -31,6 +32,23 @@ function whatsappNumbers(): string[] {
   return useDataStore.getState().channels.filter((c) => c.type === 'whatsapp').map((c) => c.id);
 }
 
+/**
+ * Gives every number of the template a staff member for the twice-wrong hand-over when it has none
+ * (or one who can no longer take it): the first who can take that number. Numbers it no longer
+ * works on are dropped.
+ */
+function withFallbackAgents(t: ChatTemplate): ChatTemplate {
+  const agents = useDataStore.getState().agents;
+  const out: Record<string, string> = {};
+  (t.channelIds ?? []).forEach((c) => {
+    const can = agentsFor(agents, c);
+    const kept = t.fallbackAgents?.[c];
+    const pick = can.some((a) => a.id === kept) ? kept : can[0]?.id;
+    if (pick) out[c] = pick;
+  });
+  return { ...t, fallbackAgents: out };
+}
+
 interface SeedStep {
   type: StepType;
   text: string;
@@ -39,7 +57,6 @@ interface SeedStep {
   btnLabel?: string;
   valid?: AnswerKind;
   dept?: string;
-  other?: StepTarget;
 }
 
 interface SeedDef {
@@ -106,7 +123,7 @@ function seed(): ChatTemplate[] {
       name: 'الفواتير والمدفوعات',
       steps: [
         { type: 'btn', text: `أهلًا ${CUSTOMER_NAME_TAG}، ما الذي تحتاجه؟`, opts: [['طلب فاتورة', 'next'], ['مشكلة في الدفع', 'next'], ['استرداد مبلغ', 'next']] },
-        { type: 'ask', text: 'اكتب رقم الطلب أو الفاتورة:', valid: 'number', other: toDept('d3') },
+        { type: 'ask', text: 'اكتب رقم الطلب أو الفاتورة:', valid: 'number' },
         { type: 'agent', text: 'تم استلام طلبك ✅ سيتابع معك فريق المالية الآن.', dept: has('d3') ? 'd3' : undefined },
       ],
     },
@@ -139,7 +156,6 @@ function seed(): ChatTemplate[] {
       s.text = d.text;
       if (d.valid) s.valid = d.valid;
       if (d.btnLabel) s.btnLabel = d.btnLabel;
-      if (d.other) s.other = d.other;
       if (d.dept) s.dept = d.dept;
       if (d.opts) s.opts = d.opts.map(([label, go]) => ({ label, go }));
       return s;
@@ -159,7 +175,7 @@ function load(): ChatTemplate[] {
   // Templates saved before numbers existed worked on every number; trigger options are cleared.
   const numbers = whatsappNumbers();
   const withNumbers = (list: ChatTemplate[]): ChatTemplate[] =>
-    list.map((t) => normalizeTriggers(Array.isArray(t.channelIds) ? t : { ...t, channelIds: numbers }));
+    list.map((t) => withFallbackAgents(normalizeTriggers(Array.isArray(t.channelIds) ? t : { ...t, channelIds: numbers })));
   /**
    * One switched-on template per number: the welcome template keeps its numbers first, then each
    * other switched-on template keeps only the numbers still free; one left with none is switched off.
@@ -174,10 +190,10 @@ function load(): ChatTemplate[] {
       free.forEach((c) => held.add(c));
       fixed.set(t.id, { ...t, channelIds: free, active: free.length > 0 });
     });
-    return list.map((t) => fixed.get(t.id) ?? t);
+    return list.map((t) => withFallbackAgents(fixed.get(t.id) ?? t));
   };
   if (!stored) {
-    const fresh = seed();
+    const fresh = seed().map(withFallbackAgents);
     save(fresh);
     return fresh;
   }

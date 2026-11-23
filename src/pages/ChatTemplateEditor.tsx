@@ -15,6 +15,7 @@ import {
   MIN_OPTIONS,
   REMINDER_CHOICES,
   STEP_TYPES,
+  agentsFor,
   blankTemplate,
   deptOf,
   deptTarget,
@@ -68,11 +69,16 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
   // and dropped from this template so it never opens holding a number it cannot keep.
   const [draft, setDraft] = useState<ChatTemplate>(() => {
     const held = numbersTakenBy(initial, useChatTemplateStore.getState().templates);
-    return { ...initial, channelIds: (initial.channelIds ?? []).filter((c) => !held.has(c)) };
+    const channelIds = (initial.channelIds ?? []).filter((c) => !held.has(c));
+    const fallbackAgents: Record<string, string> = {};
+    channelIds.forEach((c) => { const a = initial.fallbackAgents?.[c]; if (a) fallbackAgents[c] = a; });
+    return { ...initial, channelIds, fallbackAgents };
   });
   const taken = useMemo(() => numbersTakenBy(draft, templates), [draft, templates]);
   const freeNumbers = numbers.filter((n) => !taken.has(n.id));
   const numberName = (id: string): string => channels.find((c) => c.id === id)?.name ?? id;
+  const agents = useDataStore((s) => s.agents);
+  const agentIdsFor = (channelId: string): string[] => agentsFor(agents, channelId).map((a) => a.id);
   const [tab, setTab] = useState<Tab>('steps');
   const [errStep, setErrStep] = useState<string | null>(null);
   const [addAt, setAddAt] = useState<number | null>(null);
@@ -88,6 +94,12 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
 
   const published = draft.status === 'published';
   const patch = (p: Partial<ChatTemplate>): void => setDraft((d) => ({ ...d, ...p }));
+  /** Picks the numbers; a number taken off loses its staff member. */
+  const setNumbers = (channelIds: string[]): void => setDraft((d) => {
+    const fallbackAgents: Record<string, string> = {};
+    channelIds.forEach((c) => { const a = d.fallbackAgents?.[c]; if (a) fallbackAgents[c] = a; });
+    return { ...d, channelIds, fallbackAgents };
+  });
   const patchStep = (stepId: string, p: Partial<ChatStep>): void => {
     setDraft((d) => ({ ...d, steps: d.steps.map((s) => (s.id === stepId ? { ...s, ...p } : s)) }));
     if (errStep === stepId) setErrStep(null);
@@ -111,7 +123,7 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
   };
 
   const publish = (): void => {
-    const issue = validateForPublish(draft, templates, departments.map((d) => d.id), numberName);
+    const issue = validateForPublish(draft, templates, departments.map((d) => d.id), numberName, agentIdsFor);
     if (issue) {
       setTab(issue.tab);
       setErrStep(issue.stepId ?? null);
@@ -140,7 +152,6 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
           .map((s) => ({
             ...s,
             go: fix(s.go, 'next'),
-            other: fix(s.other, 'agent'),
             opts: s.opts?.map((o) => ({ ...o, go: fix(o.go, 'next') })),
           })),
       };
@@ -164,12 +175,12 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
 
   /**
    * The targets a step can lead to: other steps, hand-over to any staff member or to one
-   * department, end — and «next» where it makes sense. `value` keeps a deleted department visible.
+   * department, end and the next step. `value` keeps a deleted department visible.
    */
-  const targetOptions = (current: string, allowNext: boolean, value?: StepTarget): JSX.Element[] => {
+  const targetOptions = (current: string, value?: StepTarget): JSX.Element[] => {
     const gone = deptOf(value);
     return [
-      ...(allowNext ? [<option key="next" value="next">الخطوة التالية</option>] : []),
+      <option key="next" value="next">الخطوة التالية</option>,
       ...draft.steps
         .filter((s) => s.id !== current)
         .map((s) => <option key={s.id} value={s.id}>{`الخطوة ${draft.steps.indexOf(s) + 1}: ${STEP_TYPES[s.type].title}`}</option>),
@@ -254,7 +265,7 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
                 <span className={cn('text-center text-[11px] tabular-nums', o.label.length > MAX_OPTION_LENGTH ? 'font-bold text-danger' : 'text-muted-light dark:text-muted-dark')}>
                   {o.label.length}/{MAX_OPTION_LENGTH}
                 </span>
-                <select value={o.go} onChange={(e) => setOpt(j, { go: e.target.value })} className={cn(goSelect, 'min-w-0')}>{targetOptions(s.id, true, o.go)}</select>
+                <select value={o.go} onChange={(e) => setOpt(j, { go: e.target.value })} className={cn(goSelect, 'min-w-0')}>{targetOptions(s.id, o.go)}</select>
                 <button
                   type="button"
                   aria-label="حذف الخيار"
@@ -272,17 +283,13 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
               </Button>
               <span className="text-[11.5px] text-muted-light dark:text-muted-dark">{opts.length}/{max}</span>
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-dashed border-border-light pt-3 text-small text-muted-light dark:border-border-dark dark:text-muted-dark">
-              إذا كتب العميل ردًا غير الخيارات مرتين، يذهب إلى:
-              <select value={s.other} onChange={(e) => patchStep(s.id, { other: e.target.value })} className={goSelect}>{targetOptions(s.id, false, s.other)}</select>
-            </div>
           </div>
         )}
 
         {(s.type === 'msg' || s.type === 'ask') && (
           <div className="mt-2 flex flex-wrap items-center gap-2 text-small text-muted-light dark:text-muted-dark">
             بعدها يذهب إلى:
-            <select value={s.go} onChange={(e) => patchStep(s.id, { go: e.target.value })} className={goSelect}>{targetOptions(s.id, true, s.go)}</select>
+            <select value={s.go} onChange={(e) => patchStep(s.id, { go: e.target.value })} className={goSelect}>{targetOptions(s.id, s.go)}</select>
           </div>
         )}
         {s.type === 'agent' && (
@@ -293,12 +300,6 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
               {departments.map((d) => <option key={d.id} value={d.id}>{`قسم ${d.name}`}</option>)}
               {s.dept && !departments.some((d) => d.id === s.dept) && <option value={s.dept}>قسم محذوف — اختر قسمًا آخر</option>}
             </select>
-          </div>
-        )}
-        {s.type === 'ask' && s.valid !== 'any' && (
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-small text-muted-light dark:text-muted-dark">
-            إذا كانت الإجابة غير صحيحة مرتين، يذهب إلى:
-            <select value={s.other} onChange={(e) => patchStep(s.id, { other: e.target.value })} className={goSelect}>{targetOptions(s.id, false, s.other)}</select>
           </div>
         )}
       </div>
@@ -314,7 +315,6 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
   );
 
   const check = 'mt-1 h-4 w-4 flex-none accent-[var(--color-primary,#2563eb)]';
-  const triggerBox = 'flex gap-3 rounded-card border border-border-light p-3 dark:border-border-dark';
 
   return (
     <div className="page-fade p-4 lg:p-6">
@@ -387,14 +387,14 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
                   {freeNumbers.length > 1 && (
                     <button
                       type="button"
-                      onClick={() => patch({ channelIds: draft.channelIds.length === freeNumbers.length ? [] : freeNumbers.map((n) => n.id) })}
+                      onClick={() => setNumbers(draft.channelIds.length === freeNumbers.length ? [] : freeNumbers.map((n) => n.id))}
                       className="text-small font-semibold text-primary"
                     >
                       {draft.channelIds.length === freeNumbers.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
                     </button>
                   )}
                 </div>
-                <p className="mb-3 text-[12px] text-muted-light dark:text-muted-dark">يُرسل القالب تلقائيًا مع أول رسالة من العميل على الأرقام المحددة. يمكنك اختيار أكثر من رقم، ولكل رقم قالب مفعّل واحد فقط.</p>
+                <p className="mb-3 text-[12px] text-muted-light dark:text-muted-dark">يُرسل القالب تلقائيًا مع أول رسالة من العميل على الأرقام المحددة. يمكنك اختيار أكثر من رقم، ولكل رقم قالب مفعّل واحد فقط. ولكل رقم تختاره، حدّد الموظف الذي تُحوَّل له المحادثة إذا رد العميل بغير الخيارات مرتين.</p>
                 {numbers.length === 0 ? (
                   <p className="rounded-card border border-warning/30 bg-warning/5 px-3 py-2 text-small text-warning">لا يوجد رقم واتساب مربوط. اربط رقمًا من القنوات أولًا.</p>
                 ) : (
@@ -402,22 +402,26 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
                     {numbers.map((n) => {
                       const on = draft.channelIds.includes(n.id);
                       const holder = taken.get(n.id);
+                      const can = agentsFor(agents, n.id);
+                      const agentId = draft.fallbackAgents?.[n.id] ?? '';
+                      const agentGone = !!agentId && !can.some((a) => a.id === agentId);
                       return (
-                        <label
+                        <div
                           key={n.id}
                           title={holder ? `الرقم مستخدم في قالب «${holder.name}». أوقفه أو أزل الرقم منه أولًا.` : undefined}
                           className={cn(
-                            triggerBox,
-                            holder ? 'cursor-not-allowed bg-bg-light opacity-60 dark:bg-bg-dark' : 'cursor-pointer',
+                            'rounded-card border border-border-light p-3 dark:border-border-dark',
+                            holder && 'bg-bg-light opacity-60 dark:bg-bg-dark',
                             on && 'border-primary/50 bg-primary/5',
                           )}
                         >
+                        <label className={cn('flex gap-3', holder ? 'cursor-not-allowed' : 'cursor-pointer')}>
                           <input
                             type="checkbox"
                             className={cn(check, holder && 'cursor-not-allowed')}
                             checked={on}
                             disabled={!!holder}
-                            onChange={(e) => patch({ channelIds: e.target.checked ? [...draft.channelIds, n.id] : draft.channelIds.filter((x) => x !== n.id) })}
+                            onChange={(e) => setNumbers(e.target.checked ? [...draft.channelIds, n.id] : draft.channelIds.filter((x) => x !== n.id))}
                           />
                           <div className="min-w-0">
                             <b className="block truncate text-small">{n.name}</b>
@@ -426,6 +430,23 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
                             {holder && <small className="block text-muted-light dark:text-muted-dark">{`مستخدم في قالب «${holder.name}»`}</small>}
                           </div>
                         </label>
+                        {on && (
+                          <div className="mt-3 border-t border-dashed border-border-light pt-3 dark:border-border-dark">
+                            <label htmlFor={`fa_${n.id}`} className="mb-1 block text-[12px] text-muted-light dark:text-muted-dark">إذا رد العميل بغير الخيارات مرتين، تُحوَّل المحادثة إلى:</label>
+                            <select
+                              id={`fa_${n.id}`}
+                              value={agentId}
+                              onChange={(e) => patch({ fallbackAgents: { ...draft.fallbackAgents, [n.id]: e.target.value } })}
+                              className={cn('w-full rounded-input border border-border-light bg-white px-2 py-1.5 text-small dark:border-border-dark dark:bg-surface-dark', agentGone && 'border-danger/60')}
+                            >
+                              <option value="" disabled>اختر الموظف</option>
+                              {can.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                              {agentGone && <option value={agentId}>موظف لم يعد متاحًا — اختر موظفًا آخر</option>}
+                            </select>
+                            {can.length === 0 && <small className="mt-1 block text-warning">لا يوجد موظف لديه صلاحية على هذا الرقم</small>}
+                          </div>
+                        )}
+                        </div>
                       );
                     })}
                   </div>
@@ -436,7 +457,7 @@ function Editor({ initial, isNew }: { initial: ChatTemplate; isNew: boolean }): 
                 <h3 className="mb-3 text-body font-bold">عند الرد بغير الخيارات</h3>
                 <label className="mb-1 block text-small font-bold" htmlFor="retry">رسالة إعادة الاختيار</label>
                 <input id="retry" value={draft.retry} onChange={(e) => patch({ retry: e.target.value })} className={fieldClass} />
-                <p className="mt-1.5 text-[12px] text-muted-light dark:text-muted-dark">تُرسل مع الخيارات مرة أخرى. وإذا تكرر الرد بغير الخيارات مرتين، ينتقل القالب للمسار المحدد في الخطوة.</p>
+                <p className="mt-1.5 text-[12px] text-muted-light dark:text-muted-dark">تُرسل مع الخيارات مرة أخرى. وإذا تكرر الرد بغير الخيارات مرتين، تُحوَّل المحادثة للموظف المحدد للرقم في بطاقة الأرقام.</p>
               </Card>
 
               <Card className="p-5">

@@ -8,7 +8,7 @@ import { useDataStore } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { formatDate } from '@/utils/format';
 import { cn } from '@/utils/cn';
-import { cloneTemplate, draftFromDescription, findConflict, type ChatTemplate } from '@/utils/chatTemplates';
+import { agentsFor, cloneTemplate, draftFromDescription, findConflict, missingFallbackAgent, type ChatTemplate } from '@/utils/chatTemplates';
 
 const TH = 'text-start font-medium px-4 py-3 whitespace-nowrap';
 
@@ -119,12 +119,16 @@ export default function ChatTemplates(): JSX.Element {
 
   const channels = useDataStore((s) => s.channels);
   const numberName = (id: string): string => channels.find((c) => c.id === id)?.name ?? id;
+  const agents = useDataStore((s) => s.agents);
+  const agentIdsFor = (channelId: string): string[] => agentsFor(agents, channelId).map((a) => a.id);
 
   const toggle = (t: ChatTemplate): void => {
     if (!t.active) {
       if (!(t.channelIds ?? []).length) { showToast('اختر رقمًا واحدًا على الأقل يعمل عليه القالب', 'error'); return; }
       const conflict = findConflict(t, templates, numberName);
       if (conflict) { showToast(conflict, 'error'); return; }
+      const missing = missingFallbackAgent(t, agentIdsFor, numberName);
+      if (missing) { showToast(missing, 'error'); return; }
     }
     setActive(t.id, !t.active);
     showToast(t.active ? 'تم إيقاف القالب' : 'تم تشغيل القالب', 'success');

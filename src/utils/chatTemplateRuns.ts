@@ -51,8 +51,12 @@ function runnerFor(conversationId: string, template: ChatTemplate, state = newRu
       handover: (departmentId) => {
         if (departmentId) useDataStore.getState().setConversationDepartment(conversationId, departmentId);
       },
+      agentName: (id) => useDataStore.getState().agents.find((a) => a.id === id)?.name,
+      // The number's twice-wrong hand-over assigns the conversation to that staff member.
+      assign: (agentId) => useDataStore.getState().assignConversation(conversationId, agentId),
     },
     customer,
+    conversation?.channelId,
   );
 }
 
