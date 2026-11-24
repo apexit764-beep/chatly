@@ -41,7 +41,7 @@ const PAGE_LABELS: Record<string, string> = {
   '/billing': 'الباقات والاشتراك',
   '/referral': 'ادعُ واكسب',
   '/chat-templates': 'قوالب المحادثة',
-  '/assistant': 'المساعد الداخلي',
+  '/assistant': 'مساعدك الذكي',
   '/subscribe': 'الاشتراك',
   '/notifications': 'الإشعارات',
   '/ai-settings': 'إعدادات الذكاء الاصطناعي',

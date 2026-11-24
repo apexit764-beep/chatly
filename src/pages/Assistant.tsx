@@ -13,7 +13,7 @@ export default function Assistant(): JSX.Element {
   if (!has('ai.view')) {
     return (
       <div className="page-fade space-y-5 p-4 lg:p-6">
-        <h1 className="text-h1 font-extrabold">المساعد الداخلي</h1>
+        <h1 className="text-h1 font-extrabold">مساعدك الذكي</h1>
         <Card className="p-8 text-center text-muted-light dark:text-muted-dark">ليست لديك صلاحية لعرض هذه المعلومات.</Card>
       </div>
     );
@@ -28,7 +28,7 @@ export default function Assistant(): JSX.Element {
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-h1 font-extrabold">المساعد الداخلي</h1>
+              <h1 className="text-h1 font-extrabold">مساعدك الذكي</h1>
               {chat.live && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-bold text-success">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />
