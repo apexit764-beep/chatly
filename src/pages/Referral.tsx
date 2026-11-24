@@ -189,7 +189,7 @@ export default function Referral(): JSX.Element {
           <Card className="overflow-hidden">
             <div className="flex items-center justify-between gap-3 flex-wrap px-5 pt-5 pb-3">
               <h2 className="text-body font-bold">
-                المُحالون من رابطك <span className="text-small font-normal text-muted-light dark:text-muted-dark">{visible.length}</span>
+                الدعوات <span className="text-small font-normal text-muted-light dark:text-muted-dark">{visible.length}</span>
               </h2>
               <div role="tablist" aria-label="تصفية المُحالين" className="inline-flex p-1 rounded-full bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark">
                 {([
