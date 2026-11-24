@@ -2,24 +2,50 @@ import { useAdminStore } from '@/store/useAdminStore';
 import { useSettingsStore } from '@/store/useSettingsStore';
 import { formatMoney } from '@/utils/money';
 
+/**
+ * A top-up pack set by the admin. The client subscribes to a pack by its id, so the id never
+ * changes when the admin edits the amount. A disabled pack is hidden from new subscribers and keeps
+ * working for the clients already on it. There is no free amount: top-ups are by pack only.
+ */
+export interface TopupPack {
+  id: string;
+  usd: number;
+  active: boolean;
+}
+
 /** Admin-controlled settings of the assistant balance — fixed here while the data is mock. */
 export const BALANCE_SETTINGS: {
   pricePerMillionUsd: number;
-  packs: number[];
-  minUsd: number;
-  maxUsd: number;
+  /** Up to 6 packs; at least one stays active. */
+  packs: TopupPack[];
+  /** The pack shown as «الأكثر طلبًا». */
+  popularPackId: string;
   /** The assistant stops when the balance reaches this amount (admin setting «أقل رصيد مسموح»). */
   minBalanceUsd: number;
   modelName: string;
 } = {
   /** What the client pays per million tokens, in USD. */
   pricePerMillionUsd: 2,
-  packs: [5, 10, 25, 50],
-  minUsd: 5,
-  maxUsd: 200,
+  packs: [
+    { id: 'pack_5', usd: 5, active: true },
+    { id: 'pack_10', usd: 10, active: true },
+    { id: 'pack_25', usd: 25, active: true },
+    { id: 'pack_50', usd: 50, active: true },
+  ],
+  popularPackId: 'pack_10',
   minBalanceUsd: 0.5,
   modelName: 'Qhub AI',
 };
+
+/** A pack by id, active or not (a disabled pack still renews for the clients on it). */
+export function packById(id: string | null | undefined): TopupPack | undefined {
+  return id ? BALANCE_SETTINGS.packs.find((p) => p.id === id) : undefined;
+}
+
+/** The packs a client can choose: the active ones, plus the client's own pack if it was disabled. */
+export function packsFor(currentPackId: string | null): TopupPack[] {
+  return BALANCE_SETTINGS.packs.filter((p) => p.active || p.id === currentPackId);
+}
 
 export const MOCK_CARD = 'Visa •••• 4242';
 

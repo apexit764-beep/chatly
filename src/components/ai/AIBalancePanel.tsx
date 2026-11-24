@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronRight, Wallet, TrendingDown, Plus, Check, Zap, Eye, Download, PauseCircle, CreditCard } from 'lucide-react';
 import { Button, Card, Modal, Input } from '@components/ui';
-import { useAIBalanceStore, type BalanceInvoice, type BalanceTx } from '@/store/useAIBalanceStore';
+import { lastPaidUsd, spendOrder, useAIBalanceStore, type BalanceInvoice, type BalanceTx, type LotKind } from '@/store/useAIBalanceStore';
 import { usePaymentMethodsStore, cardLabel } from '@/store/usePaymentMethodsStore';
 import { useUIStore } from '@/store/useUIStore';
 import { FEATURES, noise } from '@components/ai/AIUsageDetails';
@@ -13,6 +13,8 @@ import { cn } from '@/utils/cn';
 import {
   BALANCE_SETTINGS,
   clientCurrency,
+  packById,
+  packsFor,
   exactLocal,
   moneyExact,
   moneyPrice,
@@ -21,95 +23,69 @@ import {
   tokensFor,
 } from '@/utils/aiBalance';
 
-/** Pack buttons plus, below them, a free amount in the client's own currency. */
+/** The top-up packs (no free amount). The client's own pack is marked, even if it was disabled. */
 function AmountPicker({
   pack,
   onPack,
-  custom,
-  onCustom,
+  currentPackId,
   compact = false,
 }: {
   compact?: boolean;
-  pack: number | null;
-  onPack: (usd: number | null) => void;
-  custom: string;
-  onCustom: (v: string) => void;
+  pack: string | null;
+  onPack: (id: string) => void;
+  currentPackId: string | null;
 }): JSX.Element {
-  const c = clientCurrency();
-  const customUsd = Number(custom) > 0 ? Number(custom) / c.rate : 0;
+  const packs = packsFor(currentPackId);
   return (
-    <div className="space-y-4">
-      <div className={cn('grid grid-cols-2 gap-3', !compact && 'sm:grid-cols-4')}>
-        {BALANCE_SETTINGS.packs.map((usd, i) => {
-          const selected = pack === usd;
-          // the second pack is the suggested one — enough for a month of a typical inbox
-          const popular = i === 1;
-          return (
-            <button
-              key={usd}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => {
-                onPack(usd);
-                onCustom('');
-              }}
-              className={cn(
-                'relative rounded-card border-2 px-3 pb-3 pt-4 text-center transition-all hover:-translate-y-0.5 hover:shadow-md',
-                selected ? 'border-primary bg-primary/5 shadow-md shadow-primary/10' : 'border-border-light dark:border-border-dark hover:border-primary/40 bg-white dark:bg-surface-dark',
-              )}
-            >
-              {popular && (
-                <span className="absolute -top-2.5 start-1/2 ltr:-translate-x-1/2 rtl:translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-l from-primary to-primary-dark px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm" style={{ color: '#fff' }}>
-                  الأكثر طلبًا
-                </span>
-              )}
-              {selected && (
-                <span className="absolute top-2 end-2 h-5 w-5 rounded-full bg-primary text-white flex items-center justify-center" style={{ color: '#fff' }}>
-                  <Check className="h-3 w-3" />
-                </span>
-              )}
-              <span className={cn('mx-auto mb-1.5 h-8 w-8 rounded-lg flex items-center justify-center', selected ? 'bg-primary text-white' : 'bg-primary/10 text-primary')} style={selected ? { color: '#fff' } : undefined}>
-                <Zap className="h-4 w-4" />
+    <div className={cn('grid grid-cols-2 gap-3', !compact && 'sm:grid-cols-4')}>
+      {packs.map((p) => {
+        const selected = pack === p.id;
+        const mine = p.id === currentPackId;
+        const badge = mine ? 'باقتك الحالية' : p.id === BALANCE_SETTINGS.popularPackId ? 'الأكثر طلبًا' : null;
+        return (
+          <button
+            key={p.id}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onPack(p.id)}
+            className={cn(
+              'relative rounded-card border-2 px-3 pb-3 pt-4 text-center transition-all hover:-translate-y-0.5 hover:shadow-md',
+              selected ? 'border-primary bg-primary/5 shadow-md shadow-primary/10' : 'border-border-light dark:border-border-dark hover:border-primary/40 bg-white dark:bg-surface-dark',
+            )}
+          >
+            {badge && (
+              <span
+                className={cn(
+                  'absolute -top-2.5 start-1/2 ltr:-translate-x-1/2 rtl:translate-x-1/2 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[10px] font-bold shadow-sm',
+                  mine ? 'bg-success text-white' : 'bg-gradient-to-l from-primary to-primary-dark text-white',
+                )}
+                style={{ color: '#fff' }}
+              >
+                {badge}
               </span>
-              <span className="block text-h3 font-extrabold tabular-nums">{moneyPrice(usd)}</span>
-              <span className="block text-small text-muted-light dark:text-muted-dark">≈ {tokenLabel(tokensFor(usd))} توكن</span>
-            </button>
-          );
-        })}
-      </div>
-      <div>
-        <Input
-          label={`أو أدخل مبلغًا آخر (${c.code})`}
-          type="number"
-          inputMode="decimal"
-          dir="ltr"
-          min={0}
-          placeholder={`من ${priceLocal(BALANCE_SETTINGS.minUsd, c)} إلى ${priceLocal(BALANCE_SETTINGS.maxUsd, c)}`}
-          value={custom}
-          onChange={(e) => {
-            onCustom(e.target.value);
-            onPack(null);
-          }}
-        />
-        {customUsd > 0 && (
-          <p className="text-small text-primary font-semibold mt-1.5">≈ {tokenLabel(tokensFor(customUsd))} توكن</p>
-        )}
-      </div>
+            )}
+            {selected && (
+              <span className="absolute top-2 end-2 h-5 w-5 rounded-full bg-primary text-white flex items-center justify-center" style={{ color: '#fff' }}>
+                <Check className="h-3 w-3" />
+              </span>
+            )}
+            <span className={cn('mx-auto mb-1.5 h-8 w-8 rounded-lg flex items-center justify-center', selected ? 'bg-primary text-white' : 'bg-primary/10 text-primary')} style={selected ? { color: '#fff' } : undefined}>
+              <Zap className="h-4 w-4" />
+            </span>
+            <span className="block text-h3 font-extrabold tabular-nums">{moneyPrice(p.usd)}</span>
+            <span className="block text-small text-muted-light dark:text-muted-dark">≈ {tokenLabel(tokensFor(p.usd))} توكن</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-/** Resolves the chosen pack or free amount to USD and what the client pays. */
-function resolveAmount(pack: number | null, custom: string): { usd: number; paidLocal: number } | string {
-  const c = clientCurrency();
-  if (pack) return { usd: pack, paidLocal: priceLocal(pack, c) };
-  const local = Number(custom);
-  if (!custom || !(local > 0)) return 'اختر باقة أو أدخل المبلغ';
-  const min = priceLocal(BALANCE_SETTINGS.minUsd, c);
-  const max = priceLocal(BALANCE_SETTINGS.maxUsd, c);
-  if (local < min) return `المبلغ أقل من الحد الأدنى (${formatMoney(min, c.code)})`;
-  if (local > max) return `المبلغ أكبر من الحد الأقصى (${formatMoney(max, c.code)})`;
-  return { usd: Math.round((local / c.rate) * 1e4) / 1e4, paidLocal: local };
+/** Resolves the chosen pack to USD and what the client pays. */
+function resolveAmount(packId: string | null, currentPackId: string | null): { usd: number; paidLocal: number; packId: string } | string {
+  const p = packId ? packsFor(currentPackId).find((x) => x.id === packId) : undefined;
+  if (!p) return 'اختر باقة';
+  return { usd: p.usd, paidLocal: priceLocal(p.usd, clientCurrency()), packId: p.id };
 }
 
 /** Payment methods are managed in Settings › المالية — here we only show the default card and link there. */
@@ -160,6 +136,7 @@ const TX_LABEL: Record<BalanceTx['type'], string> = {
   usage: 'استهلاك',
   gift: 'رصيد مجاني',
   plan: 'توكنز الباقة',
+  expire: 'انتهاء توكنز الباقة',
   settings: 'إعدادات',
 };
 
@@ -193,8 +170,9 @@ interface LedgerRow extends BalanceTx {
 
 /**
  * The cash-flow ledger: every entry with its running balance (oldest to newest), returned
- * newest first. Usage is charged to the oldest credit that still has money (FIFO), so each
- * credit can list the usage items it paid for.
+ * newest first. Usage is charged in the same order as the balance itself: plan tokens first
+ * (soonest to expire first, and only while still valid), then top-ups, then free credit — so
+ * each credit can list the usage items it paid for.
  */
 function buildLedger(tx: BalanceTx[]): LedgerRow[] {
   const asc = tx
@@ -202,15 +180,20 @@ function buildLedger(tx: BalanceTx[]): LedgerRow[] {
     .slice()
     .sort((a, b) => a.at.localeCompare(b.at) || a.id - b.id);
   const rows: LedgerRow[] = [];
-  const lots: LedgerRow[] = [];
+  const lots: (LedgerRow & { kind: LotKind })[] = [];
+  const kindOf = (t: BalanceTx): LotKind => (t.type === 'plan' ? 'plan' : t.type === 'gift' ? 'gift' : 'topup');
   let running = 0;
   for (const t of asc) {
     running = Math.round((running + t.usd) * 1e6) / 1e6;
     const row: LedgerRow = { ...t, balance: running, uses: [], leftInLot: t.usd > 0 ? t.usd : 0 };
-    if (t.usd > 0) lots.push(row);
-    else if (t.type === 'usage') {
+    if (t.usd > 0) lots.push({ ...row, kind: kindOf(t) } as LedgerRow & { kind: LotKind });
+    else if (t.type === 'expire') {
+      const lot = lots.find((l) => l.id === t.ref);
+      if (lot) lot.leftInLot = 0;
+    } else if (t.type === 'usage') {
       let need = -t.usd;
-      for (const lot of lots) {
+      const valid = lots.filter((l) => l.kind !== 'plan' || !l.expiresAt || l.expiresAt > t.at);
+      for (const lot of spendOrder(valid)) {
         if (need <= 1e-9) break;
         const take = Math.min(lot.leftInLot, need);
         if (take <= 0) continue;
@@ -221,6 +204,14 @@ function buildLedger(tx: BalanceTx[]): LedgerRow[] {
     }
     rows.push(row);
   }
+  // Credits were tracked on copies; copy their uses and remainder back onto the rows.
+  lots.forEach((l) => {
+    const r = rows.find((x) => x.id === l.id);
+    if (r) {
+      r.uses = l.uses;
+      r.leftInLot = l.leftInLot;
+    }
+  });
   return rows.reverse();
 }
 
@@ -229,13 +220,13 @@ export function BalancePackPicker(): JSX.Element {
   const showToast = useUIStore((s) => s.showToast);
   const navigate = useNavigate();
   const defaultCard = usePaymentMethodsStore((st) => st.cards.find((c) => c.isDefault) ?? st.cards[0] ?? null);
-  const [pack, setPack] = useState<number | null>(null);
-  const [custom, setCustom] = useState('');
+  const currentPackId = useAIBalanceStore((s) => s.packId);
+  const [pack, setPack] = useState<string | null>(null);
   const submit = (): void => {
     if (!defaultCard) return showToast('أضف وسيلة دفع من الإعدادات أولًا', 'error');
-    const r = resolveAmount(pack, custom);
+    const r = resolveAmount(pack, currentPackId);
     if (typeof r === 'string') return showToast(r, 'error');
-    navigate('/ai-settings/checkout', { state: { usd: r.usd, paidLocal: r.paidLocal, cardId: defaultCard.id } });
+    navigate('/ai-settings/checkout', { state: { usd: r.usd, paidLocal: r.paidLocal, packId: r.packId, cardId: defaultCard.id } });
   };
   return (
     <div className="space-y-4 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.04] to-transparent p-4">
@@ -248,8 +239,8 @@ export function BalancePackPicker(): JSX.Element {
           <p className="text-[11.5px] text-muted-light dark:text-muted-dark">تُضاف إلى رصيدك فور إتمام الدفع</p>
         </div>
       </div>
-      <AmountPicker compact pack={pack} onPack={setPack} custom={custom} onCustom={setCustom} />
-      <Button className="text-white w-full" onClick={submit} disabled={!pack && !custom}>الانتقال للدفع</Button>
+      <AmountPicker compact pack={pack} onPack={setPack} currentPackId={currentPackId} />
+      <Button className="text-white w-full" onClick={submit} disabled={!pack}>الانتقال للدفع</Button>
     </div>
   );
 }
@@ -261,8 +252,7 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
   const currency = clientCurrency();
 
   const [topUpOpen, setTopUpOpen] = useState(false);
-  const [pack, setPack] = useState<number | null>(null);
-  const [custom, setCustom] = useState('');
+  const [pack, setPack] = useState<string | null>(null);
   const [invoice, setInvoice] = useState<BalanceInvoice | null>(null);
   const defaultCard = usePaymentMethodsStore((st) => st.cards.find((c) => c.isDefault) ?? st.cards[0] ?? null);
   const navigate = useNavigate();
@@ -274,7 +264,13 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
   const [txPage, setTxPage] = useState(0);
   const [txType, setTxType] = useState<BalanceTx['type'] | 'all'>('all');
   const ledger = useMemo(() => buildLedger(store.tx), [store.tx]);
-  const filteredTx = useMemo(() => (txType === 'all' ? ledger : ledger.filter((t) => (txType === 'topup' ? t.type === 'topup' || t.type === 'auto' : t.type === txType))), [ledger, txType]);
+  const filteredTx = useMemo(
+    () => (txType === 'all' ? ledger : ledger.filter((t) => (txType === 'topup' ? t.type === 'topup' || t.type === 'auto' : txType === 'plan' ? t.type === 'plan' || t.type === 'expire' : t.type === txType))),
+    [ledger, txType],
+  );
+  const myPack = packById(store.packId);
+  const lastPaid = lastPaidUsd(store.tx);
+  const planTokens = store.planTokens();
   const [openLot, setOpenLot] = useState<number | null>(null);
   const txTotalPages = Math.max(1, Math.ceil(filteredTx.length / TX_PAGE_SIZE));
   const txSafePage = Math.min(txPage, txTotalPages - 1);
@@ -282,18 +278,17 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
   const pageTx = useMemo(() => filteredTx.slice(txStart, txStart + TX_PAGE_SIZE), [filteredTx, txStart]);
 
   const openTopUp = (): void => {
-    setPack(null);
-    setCustom('');
+    setPack(store.packId && packsFor(store.packId).some((p) => p.id === store.packId) ? store.packId : null);
     setCardId(defaultCard?.id ?? '');
     setTopUpOpen(true);
   };
 
   const submitTopUp = (): void => {
     if (!defaultCard) return showToast('أضف وسيلة دفع من الإعدادات أولًا', 'error');
-    const r = resolveAmount(pack, custom);
+    const r = resolveAmount(pack, store.packId);
     if (typeof r === 'string') return showToast(r, 'error');
     setTopUpOpen(false);
-    navigate('/ai-settings/checkout', { state: { usd: r.usd, paidLocal: r.paidLocal, cardId: cardId || defaultCard.id } });
+    navigate('/ai-settings/checkout', { state: { usd: r.usd, paidLocal: r.paidLocal, packId: r.packId, cardId: cardId || defaultCard.id } });
   };
 
   const downloadInvoice = (inv: BalanceInvoice): void => {
@@ -335,6 +330,17 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
               <p className="text-small opacity-85">
                 ≈ {tokenLabel(tokensFor(Math.max(0, balance - BALANCE_SETTINGS.minBalanceUsd)))} توكن متبقية · {description ?? <>يعمل المساعد بنموذج {BALANCE_SETTINGS.modelName}.</>}
               </p>
+              {planTokens && (
+                <p className="text-[12px] opacity-90 mt-1">
+                  منها توكنز باقتك المجانية: <b className="tabular-nums">{tokenLabel(tokensFor(planTokens.usd))}</b> توكن · تنتهي في {formatDate(planTokens.expiresAt)} · تُستهلك أولًا
+                </p>
+              )}
+              {myPack && (
+                <p className="text-[12px] opacity-90 mt-0.5">
+                  باقة الشحن: <b className="tabular-nums">{moneyPrice(lastPaid ?? myPack.usd)}</b>
+                  {lastPaid !== null && Math.abs(lastPaid - myPack.usd) > 1e-9 && <> · التجديد القادم <b className="tabular-nums">{moneyPrice(myPack.usd)}</b></>}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -597,7 +603,7 @@ export default function AIBalancePanel({ usage, description }: { usage?: ReactNo
         }
       >
         <div className="space-y-4">
-          <AmountPicker pack={pack} onPack={setPack} custom={custom} onCustom={setCustom} />
+          <AmountPicker pack={pack} onPack={setPack} currentPackId={store.packId} />
           <div>
             <p className="text-small font-medium text-muted-light dark:text-muted-dark mb-1.5">طريقة الدفع</p>
             <PaymentMethodPicker selectedId={cardId} onSelect={setCardId} />

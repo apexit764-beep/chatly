@@ -4,13 +4,15 @@ import { AlertTriangle, ArrowLeft, CheckCircle2, CreditCard, Loader2, Lock, Plus
 import { Card, Input } from '@components/ui';
 import { useAIBalanceStore, type BalanceInvoice } from '@/store/useAIBalanceStore';
 import { cardLabel, usePaymentMethodsStore } from '@/store/usePaymentMethodsStore';
-import { clientCurrency, moneyPrice, tokenLabel, tokensFor } from '@/utils/aiBalance';
+import { clientCurrency, moneyPrice, packsFor, tokenLabel, tokensFor } from '@/utils/aiBalance';
 import { formatMoney } from '@/utils/money';
 import { cn } from '@/utils/cn';
 
 export interface BalanceCheckoutState {
   usd: number;
   paidLocal: number;
+  /** The pack being bought — top-ups are by pack only. */
+  packId: string;
   cardId?: string;
 }
 
@@ -24,6 +26,7 @@ export default function AIBalanceCheckout(): JSX.Element {
   const order = location.state as BalanceCheckoutState | null;
   const cards = usePaymentMethodsStore((s) => s.cards);
   const topUp = useAIBalanceStore((s) => s.topUp);
+  const currentPackId = useAIBalanceStore((s) => s.packId);
   const currency = clientCurrency();
 
   const [step, setStep] = useState<Step>('checkout');
@@ -35,7 +38,9 @@ export default function AIBalanceCheckout(): JSX.Element {
   const timer = useRef<number>();
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
-  if (!order || !(order.usd > 0)) return <Navigate to={BACK} replace />;
+  // Only an available pack can be bought (an active one, or the client's own even if disabled).
+  const pack = order ? packsFor(currentPackId).find((p) => p.id === order.packId) : undefined;
+  if (!order || !pack || pack.usd !== order.usd) return <Navigate to={BACK} replace />;
 
   const usingNew = selectedId === 'new';
   const newInvalid = usingNew && (card.number.replace(/\s/g, '').length < 13 || !card.name.trim() || !/^\d{2}\/\d{2}$/.test(card.exp) || card.cvv.length < 3);
@@ -51,7 +56,7 @@ export default function AIBalanceCheckout(): JSX.Element {
         return;
       }
       const label = usingNew ? `بطاقة جديدة •••• ${digits.slice(-4)}` : saved ? cardLabel(saved) : undefined;
-      setInvoice(topUp(order.usd, order.paidLocal, label));
+      setInvoice(topUp(order.usd, order.paidLocal, label, order.packId));
       setStep('success');
     }, 1800);
   };

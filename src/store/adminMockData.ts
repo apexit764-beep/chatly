@@ -62,7 +62,8 @@ export const plans: Plan[] = [
       'دعم عبر البريد الإلكتروني',
     ],
     limits: { agents: 3, channels: 1, conversations: 1000, contacts: 500 },
-    freeTokens: 1000,
+    freeTokensMonthly: 1000,
+    freeTokensYearly: 12000,
     pricesPerCountry: pricesFromUSD(19),
     active: true,
     createdAt: nowMinus(60 * 24 * 200),
@@ -85,7 +86,8 @@ export const plans: Plan[] = [
       'دعم أولوية عبر الواتساب',
     ],
     limits: { agents: 10, channels: 3, conversations: 10000, contacts: -1 },
-    freeTokens: 2000,
+    freeTokensMonthly: 2000,
+    freeTokensYearly: 24000,
     pricesPerCountry: pricesFromUSD(49),
     popular: true,
     active: true,
@@ -111,7 +113,8 @@ export const plans: Plan[] = [
       'دعم مخصص خلال 24 ساعة',
     ],
     limits: { agents: 25, channels: 10, conversations: 50000, contacts: -1 },
-    freeTokens: 3000,
+    freeTokensMonthly: 3000,
+    freeTokensYearly: 36000,
     pricesPerCountry: pricesFromUSD(99),
     active: true,
     createdAt: nowMinus(60 * 24 * 180),
@@ -134,7 +137,8 @@ export const plans: Plan[] = [
       'استضافة خاصة Dedicated',
     ],
     limits: { agents: -1, channels: -1, conversations: -1, contacts: -1 },
-    freeTokens: 4000,
+    freeTokensMonthly: 4000,
+    freeTokensYearly: 48000,
     pricesPerCountry: pricesFromUSD(249),
     active: true,
     createdAt: nowMinus(60 * 24 * 150),
@@ -430,11 +434,8 @@ export const subscriptions: Subscription[] = clients
 function makeInvoice(client: Client, monthsAgo: number, status: Invoice['status']): Invoice {
   const plan = plans.find((p) => p.id === client.planId);
   const planAmount = plan?.pricesPerCountry[client.country]?.monthly ?? client.mrr;
-  // The demo client used one earned referral month on this paid invoice (see «ادعُ واكسب»):
-  // the month is free, so the whole plan amount comes off before tax.
-  const referral = client.id === 'client_1' && monthsAgo === 2 && status === 'paid';
-  const discount = referral ? planAmount : 0;
-  const amount = planAmount - discount;
+  // Invoices carry no referral discount: the total is always the plan's price.
+  const amount = planAmount;
   const tax = Math.round(amount * 0.05);
   const dueDate = new Date(Date.now() - (monthsAgo - 1) * 30 * 86400000).toISOString();
   return {
@@ -451,9 +452,6 @@ function makeInvoice(client: Client, monthsAgo: number, status: Invoice['status'
     paidAt: status === 'paid' ? new Date(Date.parse(dueDate) - 86400000).toISOString() : undefined,
     items: [
       { description: `اشتراك ${plan?.nameAr ?? 'باقة'} — شهري`, quantity: 1, unitPrice: planAmount, total: planAmount },
-      ...(referral
-        ? [{ description: 'شهر مجاني — مكافأة الإحالة', quantity: 1, unitPrice: -discount, total: -discount }]
-        : []),
     ],
     createdAt: new Date(Date.parse(dueDate) - 7 * 86400000).toISOString(),
   };

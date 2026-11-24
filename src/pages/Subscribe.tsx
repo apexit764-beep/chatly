@@ -413,7 +413,7 @@ export default function Subscribe(): JSX.Element {
                           <p className="text-body font-bold">{plan.nameAr}</p>
                           <p className="mx-auto mb-1 inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[11px] font-semibold text-violet-600">
                             <Sparkles className="h-3 w-3" />
-                            <span dir="ltr">{planFreeTokens(plan).toLocaleString('en')}</span> توكنز مجانية من مساعد Qhub
+                            <span dir="ltr">{planFreeTokens(plan, cycle).toLocaleString('en')}</span> توكنز مجانية / {cycle === 'yearly' ? 'سنة' : 'شهر'}
                           </p>
                           <div className="h-[58px] flex flex-col justify-center">
                             {isEnt ? (
@@ -496,7 +496,7 @@ export default function Subscribe(): JSX.Element {
                     ['عدد الموظفين', (p: Plan) => limitLabel(p.limits.agents)],
                     ['المحادثات شهرياً', (p: Plan) => limitLabel(p.limits.conversations)],
                     ['جهات الاتصال', (p: Plan) => limitLabel(p.limits.contacts)],
-                    ['مساعد Qhub', (p: Plan) => `${planFreeTokens(p).toLocaleString('en')} توكنز`, 'توكنز مجانية ولا يحتاج إلى ربط'],
+                    ['مساعد Qhub', (p: Plan) => `${planFreeTokens(p, cycle).toLocaleString('en')} توكنز / ${cycle === 'yearly' ? 'سنة' : 'شهر'}`, 'توكنز مجانية تنتهي بنهاية الفترة ولا يحتاج إلى ربط'],
                   ] as [string, (p: Plan) => string, string?][]).map(([label, valueOf, sub]) => (
                     <tr key={label} className="border-b border-border-light dark:border-border-dark">
                       <td

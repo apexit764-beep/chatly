@@ -3,17 +3,24 @@ import { useAdminStore } from '@/store/useAdminStore';
 import { planFreeTokens } from '@/types';
 import { useDataStore } from '@/store/useDataStore';
 import { usePaymentMethodsStore, cardLabel } from '@/store/usePaymentMethodsStore';
-import { BALANCE_SETTINGS, MOCK_CARD, clientCurrency, moneyExact, moneyPrice, priceLocal } from '@/utils/aiBalance';
+import { BALANCE_SETTINGS, MOCK_CARD, clientCurrency, moneyExact, moneyPrice, packById, priceLocal } from '@/utils/aiBalance';
+import { formatDate } from '@/utils/format';
 
-/** One top-up (or free credit) whose remainder is still spendable. */
+/** Where a credit came from — it decides the order credits are spent in. */
+export type LotKind = 'plan' | 'topup' | 'gift';
+
+/** One credit (top-up, gift or plan tokens) whose remainder is still spendable. */
 export interface BalanceLot {
   id: number;
   source: string;
   usd: number;
   left: number;
+  kind: LotKind;
+  /** Plan tokens only: they expire at the end of the subscription period and never roll over. */
+  expiresAt?: string;
 }
 
-export type BalanceTxType = 'topup' | 'auto' | 'usage' | 'gift' | 'plan' | 'settings';
+export type BalanceTxType = 'topup' | 'auto' | 'usage' | 'gift' | 'plan' | 'expire' | 'settings';
 
 export interface BalanceTx {
   id: number;
@@ -22,6 +29,10 @@ export interface BalanceTx {
   description: string;
   /** Signed: positive adds balance, negative spends it. */
   usd: number;
+  /** Plan tokens: when they expire. */
+  expiresAt?: string;
+  /** An 'expire' row: the id of the plan-tokens row whose remainder it removes. */
+  ref?: number;
 }
 
 export interface BalanceInvoice {
@@ -56,24 +67,30 @@ interface BalanceState {
   invoices: BalanceInvoice[];
   nextId: number;
   nextInvoice: number;
-  /** The plan's free tokens already credited for the current month. */
-  planGrant: { period: string; tokens: number; planId?: string } | null;
+  /** The top-up pack the client is subscribed to (by id; the amount may change, the id never does). */
+  packId: string | null;
+  /** The plan tokens granted for the current subscription period. */
+  planGrant: { key: string; planId: string; tokens: number; expiresAt: string; txId: number } | null;
   balance: () => number;
-  topUp: (usd: number, paidLocal: number, cardLabelOverride?: string) => BalanceInvoice;
+  /** The plan tokens still spendable and when they expire (none → null). */
+  planTokens: () => { usd: number; expiresAt: string } | null;
+  topUp: (usd: number, paidLocal: number, cardLabelOverride?: string, packId?: string) => BalanceInvoice;
   /** Admin grants free credit; it lands in the client's balance and the transactions log. */
   grantGift: (usd: number, note?: string) => void;
   setAuto: (auto: AutoTopUp) => void;
   /** Mock usage: the assistant answers `messages` customer messages. */
   simulateUsage: (messages: number) => { done: number; blocked: number };
   /**
-   * Credits the plan's free tokens on a new subscription and at each monthly renewal, at the plan's
-   * value at that moment. Later admin edits to the plan apply from the subscriber's next renewal.
+   * Grants the plan's free tokens for the current subscription period (monthly amount on a monthly
+   * subscription, yearly amount on a yearly one), at the plan's value at that moment. They expire at
+   * the end of the period. Changing plan mid-period cancels the current grant and grants the new
+   * plan's tokens in full (no proration). Later admin edits apply from the next period.
    */
   syncPlanTokens: () => void;
   reset: () => void;
 }
 
-const STORAGE_KEY = 'qhub_ai_balance_v2';
+const STORAGE_KEY = 'qhub_ai_balance_v3';
 const CURRENT_CLIENT_ID = 'client_1';
 const DAY = 86_400_000;
 
@@ -112,10 +129,10 @@ function seedInvoice(number: string, days: number, c: ReturnType<typeof clientCu
   };
 }
 
-function initial(): Omit<BalanceState, 'balance' | 'topUp' | 'grantGift' | 'setAuto' | 'simulateUsage' | 'syncPlanTokens' | 'reset'> {
+function initial(): Omit<BalanceState, 'balance' | 'planTokens' | 'topUp' | 'grantGift' | 'setAuto' | 'simulateUsage' | 'syncPlanTokens' | 'reset'> {
   const c = clientCurrency();
   return {
-    lots: [{ id: 1, source: 'شحن', usd: 10, left: 6.2 }],
+    lots: [{ id: 1, source: 'شحن', usd: 10, left: 6.2, kind: 'topup' }],
     negative: 0,
     base: 10,
     alerts: {},
@@ -130,6 +147,7 @@ function initial(): Omit<BalanceState, 'balance' | 'topUp' | 'grantGift' | 'setA
     ],
     nextId: 100,
     nextInvoice: 1039,
+    packId: 'pack_10',
     planGrant: null,
   };
 }
@@ -166,6 +184,7 @@ function persist(state: Persisted): void {
         invoices: state.invoices,
         nextId: state.nextId,
         nextInvoice: state.nextInvoice,
+        packId: state.packId,
         planGrant: state.planGrant,
       }),
     );
@@ -181,6 +200,19 @@ function notify(title: string, body: string): void {
 const round6 = (n: number): number => Math.round(n * 1e6) / 1e6;
 const sumLeft = (lots: BalanceLot[]): number => lots.reduce((a, l) => a + l.left, 0);
 
+/** Spending order: plan tokens first (soonest to expire first), then top-ups, then free credit. */
+const KIND_ORDER: Record<LotKind, number> = { plan: 0, topup: 1, gift: 2 };
+export function spendOrder<T extends { kind: LotKind; expiresAt?: string; id: number }>(lots: T[]): T[] {
+  return lots.slice().sort((a, b) =>
+    KIND_ORDER[a.kind] - KIND_ORDER[b.kind] || (a.expiresAt ?? '').localeCompare(b.expiresAt ?? '') || a.id - b.id);
+}
+
+/** What the client paid (in USD) on the last top-up or pack renewal. */
+export function lastPaidUsd(tx: BalanceTx[]): number | null {
+  const last = tx.find((t) => t.type === 'topup' || t.type === 'auto');
+  return last ? last.usd : null;
+}
+
 export const useAIBalanceStore = create<BalanceState>((set, get) => {
   const snapshot = (): Persisted => get();
   const commit = (patch: Partial<Persisted>): void => {
@@ -188,16 +220,17 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
     persist(snapshot());
   };
 
-  /** Adds credit and resets the usage baseline. */
-  const credit = (usd: number, source: string, txType: BalanceTxType, txDesc: string): void => {
+  /** Adds credit and resets the usage baseline. Returns the id of the credit's transaction. */
+  const credit = (usd: number, source: string, txType: BalanceTxType, txDesc: string, kind: LotKind, expiresAt?: string): number => {
     const s = get();
     const before = Math.max(0, round6(sumLeft(s.lots)));
     const add = usd;
     const negative = 0;
     let nextId = s.nextId;
     const tx: BalanceTx[] = [];
-    tx.push({ id: nextId++, at: new Date().toISOString(), type: txType, description: txDesc, usd });
-    const lots = [...s.lots, { id: nextId++, source, usd, left: add }];
+    const txId = nextId++;
+    tx.push({ id: txId, at: new Date().toISOString(), type: txType, description: txDesc, usd, ...(expiresAt ? { expiresAt } : {}) });
+    const lots: BalanceLot[] = [...s.lots, { id: txId, source, usd, left: add, kind, ...(expiresAt ? { expiresAt } : {}) }];
     const balance = round6(sumLeft(lots) - negative);
     commit({
       lots,
@@ -208,6 +241,27 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
       tx: [...tx.reverse(), ...s.tx],
       nextId,
     });
+    return txId;
+  };
+
+  /** Removes what is left of a plan-tokens credit (period over, or plan changed), with a ledger row. */
+  const dropPlanLot = (lotId: number, reason: string): void => {
+    const s = get();
+    const lot = s.lots.find((l) => l.id === lotId);
+    if (!lot) return;
+    const left = round6(lot.left);
+    commit({
+      lots: s.lots.filter((l) => l.id !== lotId),
+      ...(left > 0
+        ? { tx: [{ id: s.nextId, at: new Date().toISOString(), type: 'expire' as const, description: reason, usd: -left, ref: lotId }, ...s.tx], nextId: s.nextId + 1 }
+        : {}),
+    });
+  };
+
+  /** Plan tokens past their period end leave the balance. */
+  const expireLots = (): void => {
+    const now = new Date().toISOString();
+    get().lots.filter((l) => l.kind === 'plan' && l.expiresAt && l.expiresAt <= now).forEach((l) => dropPlanLot(l.id, 'انتهت توكنز الباقة بنهاية فترة الاشتراك'));
   };
 
   const addInvoice = (description: string, paidLocal: number, card: string): BalanceInvoice => {
@@ -225,8 +279,10 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
     return invoice;
   };
 
+  /** Renews the client's pack at the pack's current amount (the admin may have changed it). */
   const autoCharge = (): void => {
-    const { auto } = get();
+    const { auto, packId } = get();
+    const usd = packById(packId)?.usd ?? auto.usd;
     const card = usePaymentMethodsStore.getState().defaultCard();
     if (!card) {
       commit({ auto: { ...auto, on: false } });
@@ -234,28 +290,35 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
       return;
     }
     const label = cardLabel(card);
-    const paid = priceLocal(auto.usd);
+    const paid = priceLocal(usd);
     const invoice = addInvoice('شحن تلقائي لرصيد المساعد', paid, label);
-    credit(auto.usd, 'شحن تلقائي', 'auto', `${invoice.number} · ${label}`);
-    notify('شحن تلقائي لرصيد المساعد', `تم شحن رصيد المساعد تلقائيًا بمبلغ ${moneyPrice(auto.usd)} من ${label}. رقم الفاتورة ${invoice.number}.`);
+    credit(usd, 'شحن تلقائي', 'auto', `${invoice.number} · ${label}`, 'topup');
+    notify('شحن تلقائي لرصيد المساعد', `تم شحن رصيد المساعد تلقائيًا بمبلغ ${moneyPrice(usd)} من ${label}. رقم الفاتورة ${invoice.number}.`);
   };
 
   return {
     ...load(),
     balance: () => round6(sumLeft(get().lots) - get().negative),
 
-    topUp: (usd, paidLocal, cardLabelOverride) => {
+    planTokens: () => {
+      const lots = get().lots.filter((l) => l.kind === 'plan' && l.left > 0);
+      if (!lots.length) return null;
+      return { usd: round6(sumLeft(lots)), expiresAt: spendOrder(lots)[0].expiresAt ?? '' };
+    },
+
+    topUp: (usd, paidLocal, cardLabelOverride, packId) => {
       const card = usePaymentMethodsStore.getState().defaultCard();
       const label = cardLabelOverride ?? (card ? cardLabel(card) : '—');
       const invoice = addInvoice('شحن رصيد المساعد', paidLocal, label);
-      credit(usd, 'شحن', 'topup', `${invoice.number} · ${label}`);
+      credit(usd, 'شحن', 'topup', `${invoice.number} · ${label}`, 'topup');
+      if (packId) commit({ packId });
       notify('تم شحن رصيد المساعد', `تم شحن رصيد المساعد بمبلغ ${moneyPrice(usd)}. رقم الفاتورة ${invoice.number}.`);
       return invoice;
     },
 
     grantGift: (usd, note) => {
       if (!(usd > 0)) return;
-      credit(usd, 'رصيد مجاني', 'gift', note?.trim() ? `رصيد مجاني من الإدارة · ${note.trim()}` : 'رصيد مجاني من الإدارة');
+      credit(usd, 'رصيد مجاني', 'gift', note?.trim() ? `رصيد مجاني من الإدارة · ${note.trim()}` : 'رصيد مجاني من الإدارة', 'gift');
       notify('حصلت على رصيد مجاني', `أضافت الإدارة ${moneyPrice(usd)} إلى رصيد المساعد.`);
     },
 
@@ -272,6 +335,7 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
     },
 
     simulateUsage: (messages) => {
+      expireLots();
       let done = 0;
       let blocked = 0;
       let tokens = 0;
@@ -292,7 +356,7 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
         tokens += t;
         spentUsd += need;
         const lots = get().lots.map((l) => ({ ...l }));
-        for (const l of lots) {
+        for (const l of spendOrder(lots)) {
           const take = Math.min(l.left, need);
           l.left = round6(l.left - take);
           need -= take;
@@ -338,29 +402,35 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
     },
 
     syncPlanTokens: () => {
-      const client = useAdminStore.getState().clients.find((c) => c.id === CURRENT_CLIENT_ID);
-      const plan = client?.planId ? useAdminStore.getState().plans.find((p) => p.id === client.planId) : undefined;
-      if (!plan) return;
-      const tokens = planFreeTokens(plan);
-      const period = new Date().toISOString().slice(0, 7);
+      expireLots();
+      const admin = useAdminStore.getState();
+      const client = admin.clients.find((c) => c.id === CURRENT_CLIENT_ID);
+      const plan = client?.planId ? admin.plans.find((p) => p.id === client.planId) : undefined;
+      const sub = admin.subscriptions.find((x) => x.clientId === CURRENT_CLIENT_ID && x.planId === client?.planId);
+      if (!plan || !sub || sub.currentPeriodEnd <= new Date().toISOString()) return;
+      const key = `${sub.currentPeriodStart}|${plan.id}|${sub.billingCycle}`;
       const prev = get().planGrant;
-      // Same month and same plan: already granted for this period, whatever the admin changed since.
-      if (prev && prev.period === period && prev.planId === plan.id) return;
-      // Plan changed mid-month (upgrade): grant only what the new plan adds over what was granted.
-      const already = prev && prev.period === period ? prev.tokens : 0;
-      const add = tokens - already;
-      if (add <= 0) {
-        commit({ planGrant: { period, tokens: Math.max(tokens, already), planId: plan.id } });
+      // Already granted for this period on this plan, whatever the admin changed since.
+      if (prev && prev.key === key) return;
+      // Plan changed mid-period: the current grant is cancelled and the new plan's grant is given in full.
+      if (prev && get().lots.some((l) => l.id === prev.txId)) dropPlanLot(prev.txId, 'أُلغيت توكنز الباقة السابقة بتغيير الباقة');
+      const tokens = planFreeTokens(plan, sub.billingCycle);
+      if (tokens <= 0) {
+        commit({ planGrant: { key, planId: plan.id, tokens: 0, expiresAt: sub.currentPeriodEnd, txId: -1 } });
         return;
       }
-      credit(
-        round6((add / 1_000_000) * BALANCE_SETTINGS.pricePerMillionUsd),
+      const cycle = sub.billingCycle === 'yearly' ? 'سنوية' : 'شهرية';
+      // Tokens are converted to USD at the price per million on the day they are granted.
+      const txId = credit(
+        round6((tokens / 1_000_000) * BALANCE_SETTINGS.pricePerMillionUsd),
         'توكنز الباقة',
         'plan',
-        `باقة ${plan.nameAr} · ${add.toLocaleString('en-US')} توكنز مجانية`,
+        `باقة ${plan.nameAr} · ${tokens.toLocaleString('en-US')} توكنز مجانية ${cycle} · تنتهي ${formatDate(sub.currentPeriodEnd)}`,
+        'plan',
+        sub.currentPeriodEnd,
       );
-      commit({ planGrant: { period, tokens, planId: plan.id } });
-      notify('أُضيفت توكنز باقتك', `أُضيف ${add.toLocaleString('en-US')} توكنز مجانية من باقة ${plan.nameAr} إلى رصيد المساعد.`);
+      commit({ planGrant: { key, planId: plan.id, tokens, expiresAt: sub.currentPeriodEnd, txId } });
+      notify('أُضيفت توكنز باقتك', `أُضيف ${tokens.toLocaleString('en-US')} توكنز مجانية من باقة ${plan.nameAr} إلى رصيد المساعد، وتنتهي في ${formatDate(sub.currentPeriodEnd)}.`);
     },
 
     reset: () => {
@@ -372,9 +442,11 @@ export const useAIBalanceStore = create<BalanceState>((set, get) => {
 // The plan's free tokens land in the balance on load and whenever the subscribed plan changes.
 useAIBalanceStore.getState().syncPlanTokens();
 useAdminStore.subscribe((s, prev) => {
-  const now = s.clients.find((c) => c.id === CURRENT_CLIENT_ID)?.planId;
-  const before = prev.clients.find((c) => c.id === CURRENT_CLIENT_ID)?.planId;
-  // Only a new subscription (plan change) triggers a grant — the admin editing a plan's tokens
-  // never touches current subscribers; they get the new amount at their next renewal.
-  if (now !== before) useAIBalanceStore.getState().syncPlanTokens();
+  const sub = (st: typeof s): string => {
+    const x = st.subscriptions.find((y) => y.clientId === CURRENT_CLIENT_ID);
+    return `${st.clients.find((c) => c.id === CURRENT_CLIENT_ID)?.planId}|${x?.currentPeriodStart}|${x?.billingCycle}`;
+  };
+  // A new subscription, a plan change or a new period triggers a grant — the admin editing a plan's
+  // tokens never touches the current period; the new amount applies from the next one.
+  if (sub(s) !== sub(prev)) useAIBalanceStore.getState().syncPlanTokens();
 });

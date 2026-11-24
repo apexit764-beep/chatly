@@ -469,8 +469,17 @@ export type PlanTier = 'starter' | 'pro' | 'business' | 'enterprise';
 /** Default free Qhub-assistant tokens per tier, used when a plan has no value set. */
 export const DEFAULT_FREE_TOKENS: Record<PlanTier, number> = { starter: 1000, pro: 2000, business: 3000, enterprise: 4000 };
 
-export function planFreeTokens(p: Pick<Plan, 'tier' | 'freeTokens'>): number {
-  return p.freeTokens ?? DEFAULT_FREE_TOKENS[p.tier] ?? 0;
+/**
+ * Free Qhub-assistant tokens a subscriber gets with the plan for one billing period: the monthly
+ * amount each month on a monthly subscription, the yearly amount once a year on a yearly one.
+ * They expire at the end of that period and never roll over.
+ */
+export function planFreeTokens(
+  p: Pick<Plan, 'tier' | 'freeTokens' | 'freeTokensMonthly' | 'freeTokensYearly'>,
+  cycle: 'monthly' | 'yearly' = 'monthly',
+): number {
+  const monthly = p.freeTokensMonthly ?? p.freeTokens ?? DEFAULT_FREE_TOKENS[p.tier] ?? 0;
+  return cycle === 'yearly' ? p.freeTokensYearly ?? monthly * 12 : monthly;
 }
 
 export interface Plan {
@@ -487,8 +496,12 @@ export interface Plan {
     conversations: number;
     contacts: number;
   };
-  /** Free monthly tokens of the Qhub assistant included in the plan (set by the admin). */
+  /** Legacy single monthly value; read through `planFreeTokens`. */
   freeTokens?: number;
+  /** Free Qhub-assistant tokens per month on a monthly subscription (set by the admin). */
+  freeTokensMonthly?: number;
+  /** Free Qhub-assistant tokens per year on a yearly subscription (set by the admin). */
+  freeTokensYearly?: number;
   /** keyed by country code; price in local currency (monthly) */
   pricesPerCountry: Record<string, { monthly: number; yearly: number }>;
   popular?: boolean;

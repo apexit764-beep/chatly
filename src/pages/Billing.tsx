@@ -546,9 +546,6 @@ export default function Billing(): JSX.Element {
                     <td className="px-4 py-3 font-mono font-semibold whitespace-nowrap">{inv.number}</td>
                     <td className="px-4 py-3 text-small text-muted-light dark:text-muted-dark hidden md:table-cell max-w-[320px]">
                       <span className="truncate align-middle">{summary}</span>
-                      {inv.items.some((it) => it.total < 0) && (
-                        <span className="ms-2 inline-block px-2 py-0.5 rounded-full bg-success/15 text-success text-[10px] font-semibold align-middle whitespace-nowrap">شهر مجاني</span>
-                      )}
                     </td>
                     <td className="px-4 py-3 text-small text-muted-light dark:text-muted-dark whitespace-nowrap">{formatDate(inv.dueDate)}</td>
                     <td className="px-4 py-3 font-semibold text-end whitespace-nowrap">{formatMoney(inv.total, inv.currency)}</td>
