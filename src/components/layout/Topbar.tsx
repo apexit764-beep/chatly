@@ -29,6 +29,7 @@ const titleMap: Record<string, string> = {
   '/subscribe': 'الباقات والاشتراك',
   '/billing': 'الفوترة',
   '/referral': 'ادعُ واكسب',
+  '/developers': 'المطورين',
   '/chat-templates': 'قوالب المحادثة',
   '/assistant': 'مساعدك الذكي',
 };
