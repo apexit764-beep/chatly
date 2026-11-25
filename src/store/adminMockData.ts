@@ -48,7 +48,7 @@ export const plans: Plan[] = [
     id: 'plan_starter',
     tier: 'starter',
     name: 'Starter',
-    nameAr: 'المبتدئ',
+    nameAr: 'البداية',
     tagline: 'للمشاريع الناشئة وفرق العمل الصغيرة',
     features: [
       'صندوق وارد موحّد مع إسناد المحادثات',
@@ -72,10 +72,10 @@ export const plans: Plan[] = [
     id: 'plan_pro',
     tier: 'pro',
     name: 'Pro',
-    nameAr: 'الاحترافي',
+    nameAr: 'الاحترافية',
     tagline: 'للشركات النامية مع فريق دعم',
     features: [
-      'كل مزايا باقة المبتدئ',
+      'كل مزايا باقة البداية',
       'المساعد الذكي (Claude · OpenAI · Gemini) بردود تلقائية',
       'لهجات ونبرة مخصصة لردود المساعد',
       'الحملات التسويقية مع الجدولة والقوالب',
@@ -158,10 +158,10 @@ export const clients: Client[] = [
     country: 'OM',
     industry: 'عقارات وتأجير',
     // على فترة تجريبية لا اشتراك قائم: هي الحالة التي يراها الزائر أول مرة،
-    // وعليها يظهر شريط الفترة التجريبية بعدّاده. الاشتراك ينقله إلى «الاحترافي».
+    // وعليها يظهر شريط الفترة التجريبية بعدّاده. الاشتراك ينقله إلى «الاحترافية».
     status: 'trial',
     trialEndsAt: nowPlusDays(8),
-    // العميل التجريبي على «الاحترافي» عمداً لا «الأعمال»: فمن لوحته تظهر الأعمال
+    // العميل التجريبي على «الاحترافية» عمداً لا «الأعمال»: فمن لوحته تظهر الأعمال
     // والمؤسسات كترقية، وهو المسار الذي نعرضه. الاستخدام تحت حدود الباقة
     // (3 قنوات · 10 موظفين · 10,000 محادثة) حتى لا يبدو متجاوزاً لها.
     planId: 'plan_pro',
@@ -421,7 +421,7 @@ export const subscriptions: Subscription[] = clients
       paymentMethod: { brand: 'visa', last4: String(1000 + ((c.id.charCodeAt(7) || 0) * 137) % 9000).padStart(4, '0').slice(-4), expMonth: 8, expYear: 28 },
       // Demo client carries a pending downgrade so the مجدولة state is reviewable.
       ...(c.id === 'client_1'
-        // plan_starter, not plan_pro: the demo client is on الاحترافي now, so a
+        // plan_starter, not plan_pro: the demo client is on الاحترافية now, so a
         // downgrade scheduled to the same plan read as "switching to itself".
         ? { scheduledChange: { planId: 'plan_starter', billingCycle: 'monthly' as const, effectiveAt: nowPlusDays(15) } }
         : {}),
@@ -584,7 +584,7 @@ export const planRequests: PlanRequest[] = [
   },
   {
     // ليس client_1: طلب معلّق على «الأعمال» يحجب زرّ الترقية في عمودها بشارة
-    // «طلبك قيد المعالجة»، والعميل التجريبي على «الاحترافي» ليُرى مسار الترقية.
+    // «طلبك قيد المعالجة»، والعميل التجريبي على «الاحترافية» ليُرى مسار الترقية.
     // ومحتوى الطلب (متجر لمسة، رقم إماراتي) لم يكن يطابق client_1 أصلاً.
     id: 'preq_4', clientId: 'client_5', planId: 'plan_business',
     name: 'نورة الحارثي', company: 'متجر لمسة',

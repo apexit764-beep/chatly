@@ -371,7 +371,7 @@ export default function AdminPlans(): JSX.Element {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Input label={<>الاسم بالعربية<span className="text-danger ms-0.5">*</span></>} value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })} placeholder="مثال: الاحترافي" />
+            <Input label={<>الاسم بالعربية<span className="text-danger ms-0.5">*</span></>} value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })} placeholder="مثال: الاحترافية" />
             <Input label={<>Name (EN)<span className="text-danger ms-0.5">*</span></>} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Pro" />
             <Select label={<>الفئة (Tier)<span className="text-danger ms-0.5">*</span></>} value={form.tier} onChange={(e) => setForm({ ...form, tier: e.target.value as PlanTier })}>
               <option value="starter">Starter</option>

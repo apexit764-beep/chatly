@@ -517,7 +517,7 @@ export const conversations: Conversation[] = [
     ],
     messages: [
       { id: 'm130', conversationId: 'conv13', direction: 'in', type: 'text', content: 'مرحباً، ممكن أعرف الباقات والأسعار؟', timestamp: nowMinus(12), read: true, delivered: true },
-      { id: 'm131', conversationId: 'conv13', direction: 'out', type: 'text', content: 'أهلاً وسهلاً! نوفر 4 باقات تناسب جميع الأحجام:\n• المبتدئ: 7 ر.ع/شهر (قناة واحدة، 3 موظفين)\n• الاحترافي: 19 ر.ع/شهر (3 قنوات، 10 موظفين)\n• الأعمال: 38 ر.ع/شهر (10 قنوات، 25 موظف)\n• المؤسسات: 96 ر.ع/شهر (بلا حدود)', timestamp: nowMinus(11), read: true, delivered: true, sender: 'ai' },
+      { id: 'm131', conversationId: 'conv13', direction: 'out', type: 'text', content: 'أهلاً وسهلاً! نوفر 4 باقات تناسب جميع الأحجام:\n• البداية: 7 ر.ع/شهر (قناة واحدة، 3 موظفين)\n• الاحترافية: 19 ر.ع/شهر (3 قنوات، 10 موظفين)\n• الأعمال: 38 ر.ع/شهر (10 قنوات، 25 موظف)\n• المؤسسات: 96 ر.ع/شهر (بلا حدود)', timestamp: nowMinus(11), read: true, delivered: true, sender: 'ai' },
       { id: 'm132', conversationId: 'conv13', direction: 'in', type: 'text', content: 'هل في فترة تجريبية مجانية؟', timestamp: nowMinus(10), read: true, delivered: true },
       { id: 'm133', conversationId: 'conv13', direction: 'out', type: 'text', content: 'نعم! 14 يوم تجريبية مجانية بدون الحاجة لإدخال بطاقة دفع. تقدر تجرب جميع المزايا قبل الاشتراك.', timestamp: nowMinus(9), read: true, delivered: true, sender: 'ai' },
       { id: 'm134', conversationId: 'conv13', direction: 'in', type: 'text', content: 'ممتاز، أريد التواصل مع موظف مبيعات لمعرفة المزيد', timestamp: nowMinus(7), read: true, delivered: true },

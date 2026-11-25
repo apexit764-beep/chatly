@@ -1252,7 +1252,7 @@ export const en: Record<string, string> = {
     'Can the contract be renewed on the same terms?',
   'وعليكم السلام ورحمة الله، أهلاً وسهلاً بك في Qhub. كيف يمكنني مساعدتك؟':
     'Hello and welcome to Qhub. How can I help you?',
-  'أهلاً وسهلاً! نوفر 4 باقات تناسب جميع الأحجام:\n• المبتدئ: 7 ر.ع/شهر (قناة واحدة، 3 موظفين)\n• الاحترافي: 19 ر.ع/شهر (3 قنوات، 10 موظفين)\n• الأعمال: 38 ر.ع/شهر (10 قنوات، 25 موظف)\n• المؤسسات: 96 ر.ع/شهر (بلا حدود)':
+  'أهلاً وسهلاً! نوفر 4 باقات تناسب جميع الأحجام:\n• البداية: 7 ر.ع/شهر (قناة واحدة، 3 موظفين)\n• الاحترافية: 19 ر.ع/شهر (3 قنوات، 10 موظفين)\n• الأعمال: 38 ر.ع/شهر (10 قنوات، 25 موظف)\n• المؤسسات: 96 ر.ع/شهر (بلا حدود)':
     'Welcome! We offer 4 plans for every size:\n• Starter: OMR 7/mo (1 channel, 3 agents)\n• Professional: OMR 19/mo (3 channels, 10 agents)\n• Business: OMR 38/mo (10 channels, 25 agents)\n• Enterprise: OMR 96/mo (unlimited)',
   'محادثات أخرى': 'Other conversations',
   'تم تحويل المحادثة إلى': 'Conversation transferred to',
