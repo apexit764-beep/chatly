@@ -116,7 +116,8 @@ interface AdminState {
   updateRetentionOffer: (patch: Partial<RetentionOffer>) => void;
 
   // Invoice / payment actions
-  recordPayment: (clientId: string, planId: string, amount: number, currency: string, last4: string) => { invoice: Invoice; transaction: Transaction };
+  /** `points` set: the plan was paid with referral points — a 0 invoice and no card transaction. */
+  recordPayment: (clientId: string, planId: string, amount: number, currency: string, last4: string, points?: number) => { invoice: Invoice; transaction: Transaction | null };
   refundInvoice: (invoiceId: string) => void;
 
   // Plan request actions
@@ -424,7 +425,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
 
   updateRetentionOffer: (patch) => set((s) => ({ retentionOffer: { ...s.retentionOffer, ...patch } })),
 
-  recordPayment: (clientId, planId, amount, currency, last4) => {
+  recordPayment: (clientId, planId, amount, currency, last4, points) => {
     const client = get().clients.find((c) => c.id === clientId);
     const plan = get().plans.find((p) => p.id === planId);
     if (!client || !plan) throw new Error('client or plan not found');
@@ -443,7 +444,7 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       status: 'paid',
       dueDate: new Date().toISOString(),
       paidAt: new Date().toISOString(),
-      items: [{ description: `اشتراك ${plan.nameAr} — شهري`, quantity: 1, unitPrice: amount, total: amount }],
+      items: [{ description: points ? `اشتراك ${plan.nameAr} — مدفوع بالنقاط (${points.toLocaleString('en-US')} نقطة)` : `اشتراك ${plan.nameAr} — شهري`, quantity: 1, unitPrice: amount, total: amount }],
       createdAt: new Date().toISOString(),
     };
     const transaction: Transaction = {
@@ -459,6 +460,10 @@ export const useAdminStore = create<AdminState>((set, get) => ({
       paymobTransactionId: `pmb_txn_${Math.random().toString(36).slice(2, 12)}`,
       createdAt: new Date().toISOString(),
     };
+    if (points) {
+      set((s) => ({ invoices: [invoice, ...s.invoices] }));
+      return { invoice, transaction: null };
+    }
     set((s) => ({
       invoices: [invoice, ...s.invoices],
       transactions: [transaction, ...s.transactions],

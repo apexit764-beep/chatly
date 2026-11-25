@@ -53,6 +53,8 @@ interface ReferralState {
   balance: () => number;
   /** Spends points on a plan; returns an error message, or null on success. */
   redeem: (planId: string, planName: string, cycle: Cycle, startsAt: string) => string | null;
+  /** Pays for a plan with points right now (an upgrade paid with points); returns an error message, or null on success. */
+  payNow: (planId: string, planName: string, cycle: Cycle) => string | null;
   reset: () => void;
 }
 
@@ -112,6 +114,16 @@ export const useReferralStore = create<ReferralState>((set, get) => {
       set((s) => ({
         ledger: [{ id: `x_${Date.now()}`, at: new Date().toISOString(), points: -cost, kind: 'redeem', source: `اشتراك ${planName} (${cycle === 'yearly' ? 'سنوي' : 'شهري'}) بالنقاط`, planId, cycle }, ...s.ledger],
         scheduled: { planId, cycle, points: cost, startsAt },
+      }));
+      save();
+      return null;
+    },
+    payNow: (planId, planName, cycle) => {
+      const cost = redeemPoints(planId, cycle);
+      if (cost === null) return 'الباقة دي مش متاحة بالنقاط';
+      if (get().balance() < cost) return 'رصيد نقاطك مش كفاية';
+      set((s) => ({
+        ledger: [{ id: `x_${Date.now()}`, at: new Date().toISOString(), points: -cost, kind: 'redeem', source: `ترقية إلى ${planName} (${cycle === 'yearly' ? 'سنوي' : 'شهري'}) بالنقاط`, planId, cycle }, ...s.ledger],
       }));
       save();
       return null;

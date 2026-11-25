@@ -16,6 +16,7 @@ import {
   Clock,
   ArrowUpRight,
   Sparkles,
+  Coins,
 } from 'lucide-react';
 import { Card, Input, Modal, Textarea, useConfirm, InfoTip } from '@components/ui';
 
@@ -34,6 +35,8 @@ const FEATURE_HINTS: Record<string, string> = {
   'الأقسام والتوزيع الذكي للمحادثات': 'تقسيم الفريق إلى أقسام (مبيعات، دعم…) وتوجيه كل محادثة للقسم المناسب.',
 };
 import { useAdminStore } from '@/store/useAdminStore';
+import { useReferralStore } from '@/store/useReferralStore';
+import { pointsLabel, redeemPoints } from '@/utils/referral';
 import { DowngradeDialog } from '@/components/billing/DowngradeDialog';
 import { useUIStore } from '@/store/useUIStore';
 import { formatMoney } from '@/utils/money';
@@ -81,6 +84,11 @@ export default function Subscribe(): JSX.Element {
   const [step, setStep] = useState<Step>('select');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
+  /** How the upgrade is paid: the card (Paymob checkout) or the referral points balance. */
+  const [payBy, setPayBy] = useState<'card' | 'points'>('card');
+  const [paidPoints, setPaidPoints] = useState<number | null>(null);
+  const pointsBalance = useReferralStore((s) => s.balance());
+  const payNow = useReferralStore((s) => s.payNow);
   // Which plan the enquiry is about. A plan column names its own plan; the generic
   // "not sure which plan?" prompt has none, so it falls back to the slider's pick.
   const [contactPlan, setContactPlan] = useState<Plan | null>(null);
@@ -145,6 +153,19 @@ export default function Subscribe(): JSX.Element {
   };
 
   const isUpgrade = isUpgradeTo(selectedPlan);
+  const pointsCost = selectedPlan ? redeemPoints(selectedPlan.id, cycle) : null;
+  const pointsEnough = pointsCost !== null && pointsBalance >= pointsCost;
+
+  /** Upgrade paid with points: no Paymob, the plan starts now and its invoice is 0. */
+  const payWithPoints = (): void => {
+    if (!selectedPlan || pointsCost === null) return;
+    const err = payNow(selectedPlan.id, selectedPlan.nameAr, cycle);
+    if (err) return showToast(err, 'error');
+    createSubscription(CURRENT_CLIENT_ID, selectedPlan.id, cycle);
+    recordPayment(CURRENT_CLIENT_ID, selectedPlan.id, 0, selectedCountry.currency, '', pointsCost);
+    setPaidPoints(pointsCost);
+    setStep('success');
+  };
 
   // لا مقاصة بين الباقتين: الترقية تُنهي الحالية بالكامل وتُفوتَر الجديدة
   // بسعرها كاملاً، فالمبلغ هو سعر الباقة لا الفرق × ما تبقّى من الفترة.
@@ -152,6 +173,8 @@ export default function Subscribe(): JSX.Element {
   const handleSubscribeClick = (plan: Plan | null): void => {
     if (!plan || plan.id === currentPlanId || plan.tier === 'enterprise') return;
     setSelectedPlan(plan);
+    setPayBy('card');
+    setPaidPoints(null);
     setStep(isUpgradeTo(plan) ? 'confirm-upgrade' : 'confirm-downgrade');
   };
 
@@ -621,6 +644,7 @@ export default function Subscribe(): JSX.Element {
           <h2 className="text-h1 font-bold mb-1">تم تغيير الباقة بنجاح! 🎉</h2>
           <p className="text-body text-muted-light dark:text-muted-dark mb-5">
             تم تفعيل باقة <strong>{selectedPlan.nameAr}</strong> على حسابك فوراً.
+            {paidPoints !== null && <><br />اتدفعت بـ <strong>{pointsLabel(paidPoints)}</strong> من رصيد نقاطك، والفاتورة بقيمة 0.</>}
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button onClick={() => navigate('/billing')} className="h-11 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">
@@ -664,10 +688,11 @@ export default function Subscribe(): JSX.Element {
               إلغاء
             </button>
             <button
-              onClick={() => setStep('checkout')}
-              className="h-11 px-6 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold transition-colors"
+              onClick={() => (payBy === 'points' ? payWithPoints() : setStep('checkout'))}
+              disabled={payBy === 'points' && !pointsEnough}
+              className="h-11 px-6 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              انتقل للدفع
+              {payBy === 'points' ? 'ادفع بالنقاط' : 'انتقل للدفع'}
             </button>
           </>
         }
@@ -698,10 +723,61 @@ export default function Subscribe(): JSX.Element {
               </div>
               <div className="flex justify-between p-4">
                 <span className="text-muted-light dark:text-muted-dark">المبلغ المستحق</span>
-                <span className="font-bold text-primary">
-                  {formatMoney(amountFor(selectedPlan), selectedCountry.currency)}
-                  <span className="font-normal text-muted-light dark:text-muted-dark"> / {cycle === 'yearly' ? 'سنة' : 'شهر'}</span>
-                </span>
+                {payBy === 'points' && pointsCost !== null ? (
+                  <span className="font-bold text-primary">
+                    {pointsLabel(pointsCost)}
+                    <span className="font-normal text-muted-light dark:text-muted-dark"> بدل {formatMoney(amountFor(selectedPlan), selectedCountry.currency)}</span>
+                  </span>
+                ) : (
+                  <span className="font-bold text-primary">
+                    {formatMoney(amountFor(selectedPlan), selectedCountry.currency)}
+                    <span className="font-normal text-muted-light dark:text-muted-dark"> / {cycle === 'yearly' ? 'سنة' : 'شهر'}</span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-small font-semibold">طريقة الدفع</p>
+                <p className="text-small text-muted-light dark:text-muted-dark inline-flex items-center gap-1.5">
+                  <Coins className="h-4 w-4 text-success" />
+                  رصيد نقاطك: <b className="text-current tabular-nums">{pointsLabel(pointsBalance)}</b>
+                </p>
+              </div>
+              <div role="radiogroup" aria-label="طريقة الدفع" className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {([
+                  ['card', 'الدفع بالبطاقة', formatMoney(amountFor(selectedPlan), selectedCountry.currency), true],
+                  [
+                    'points',
+                    'الدفع بالنقاط',
+                    pointsCost === null
+                      ? 'الباقة دي مش متاحة بالنقاط'
+                      : pointsEnough
+                        ? `${pointsLabel(pointsCost)} · رصيدك بعدها ${pointsLabel(pointsBalance - pointsCost)}`
+                        : `${pointsLabel(pointsCost)} · ناقصك ${pointsLabel(pointsCost - pointsBalance)}`,
+                    pointsEnough,
+                  ],
+                ] as ['card' | 'points', string, string, boolean][]).map(([key, label, hint, enabled]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    role="radio"
+                    aria-checked={payBy === key}
+                    disabled={!enabled}
+                    onClick={() => setPayBy(key)}
+                    className={cn(
+                      'text-start rounded-card border p-3 transition-colors disabled:opacity-60 disabled:cursor-not-allowed',
+                      payBy === key ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-light dark:border-border-dark hover:border-primary/50',
+                    )}
+                  >
+                    <span className="flex items-center gap-2 text-small font-semibold">
+                      {key === 'card' ? <CreditCard className="h-4 w-4 text-primary" /> : <Coins className="h-4 w-4 text-success" />}
+                      {label}
+                    </span>
+                    <span className={cn('block text-[12px] mt-1', !enabled && key === 'points' ? 'text-warning' : 'text-muted-light dark:text-muted-dark')}>{hint}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </>
