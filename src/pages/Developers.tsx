@@ -297,7 +297,7 @@ export default function Developers(): JSX.Element {
           <div>
             <h1 className="text-h1 font-bold">المطورين</h1>
             <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
-              أرسل أكواد التحقق لمستخدمي تطبيقك عبر API على رقم واتساب حسابك — بلا تكامل واتساب خاص بك ولا موافقة قوالب من Meta.
+              أرسل رموز التحقق (OTP) لمستخدمي تطبيقك أو موقعك على واتساب، من رقم الواتساب المربوط بحسابك.
             </p>
           </div>
         </div>
@@ -310,14 +310,13 @@ export default function Developers(): JSX.Element {
           <div className="text-small">
             <b>
               {settings.templateStatus === 'rejected'
-                ? `قالب الرسالة «${settings.templateName}» مرفوض من Meta`
+                ? `قالب «${settings.templateName}» مرفوض من Meta`
                 : settings.templateStatus === 'none'
-                ? `قالب الرسالة «${settings.templateName}» لم يُرسل للمراجعة بعد`
-                : `قالب الرسالة «${settings.templateName}» قيد مراجعة Meta`}
+                ? `قالب «${settings.templateName}» لم يُرسل لـ Meta للمراجعة بعد`
+                : `قالب «${settings.templateName}» بانتظار موافقة Meta`}
             </b>
             <p className="text-muted-light dark:text-muted-dark mt-0.5 leading-relaxed">
-              الإرسال الحقيقي ينتظر موافقة Meta على القالب، وهي عندهم لا عندنا. المفتاح التجريبي (<code dir="ltr">qh_test_</code>) يعمل
-              الآن بلا انتظار ولا يُخصم من حصة باقتك، فابنِ عليه واختبر التكامل كاملاً حتى تصل الموافقة.
+              الإرسال الفعلي يبدأ بعد اعتماد القالب، وحتى ذلك الحين جرّب الخدمة بالمفتاح التجريبي (<code dir="ltr">qh_test_</code>) — التجربة مجانية ولا تُخصم من حصة باقتك.
             </p>
           </div>
         </div>
