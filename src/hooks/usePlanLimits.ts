@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useDataStore } from '@/store/useDataStore';
 import { useAdminStore } from '@/store/useAdminStore';
+import { billableRequests, useDeveloperStore } from '@/store/useDeveloperStore';
 // ⚠️ مؤقّت — وضع تصوير الفيديو
 import { VIDEO_DEMO } from '@/config/videoDemo';
 import { runningChannels, seatedAgents } from '@/utils/planDowngrade';
@@ -17,6 +18,12 @@ export interface PlanLimitState {
   agentsReached: boolean;
   /** المحادثات التي تجاوزت الحصة — تُقفل بصرياً في صندوق الوارد */
   lockedConversationIds: Set<string>;
+  /** رسائل التحقق المُستهلكة من الحصة هذا الشهر — المفاتيح الحقيقية فقط */
+  otpUsed: number;
+  /** حصة الباقة من رسائل التحقق: `-1` بلا حد، و`0` لا تتضمّن الخدمة */
+  otpLimit: number;
+  /** بلغ استهلاك رسائل التحقق حصة الباقة */
+  otpReached: boolean;
 }
 
 /** `-1` في الباقة يعني بلا حد، فلا يُبلَغ أبداً. */
@@ -66,6 +73,7 @@ export function usePlanLimits(): PlanLimitState {
   const clients = useAdminStore((s) => s.clients);
   const plans = useAdminStore((s) => s.plans);
   const subscriptions = useAdminStore((s) => s.subscriptions);
+  const otpRequests = useDeveloperStore((s) => s.requests);
 
   return useMemo(() => {
     const client = clients.find((c) => c.id === CURRENT_CLIENT_ID);
@@ -76,6 +84,9 @@ export function usePlanLimits(): PlanLimitState {
         channelsReached: false,
         agentsReached: false,
         lockedConversationIds: new Set<string>(),
+        otpUsed: 0,
+        otpLimit: 0,
+        otpReached: false,
       };
     }
 
@@ -95,6 +106,11 @@ export function usePlanLimits(): PlanLimitState {
         ? []
         : [...inWindow].sort((a, b) => startedAt(a) - startedAt(b)).slice(convLimit);
 
+    // حصة رسائل التحقق شهرية كحصة المحادثات، فتُقرأ في النافذة نفسها. ولا
+    // يُحتسب إلا ما جاء من مفتاح حقيقي: المفاتيح التجريبية مجانية.
+    const otpLimit = plan.limits.otpMessages;
+    const otpUsed = billableRequests(otpRequests, windowStart).length;
+
     return {
       conversationsReached: reached(inWindow.length, convLimit),
       // ⚠️ مؤقّت — وضع تصوير الفيديو: البيانات التجريبية تحمل ٨ قنوات بينما
@@ -104,6 +120,10 @@ export function usePlanLimits(): PlanLimitState {
       // Staff and channels a downgrade stopped hold no seat until an upgrade brings them back.
       agentsReached: reached(seatedAgents(agents).length, plan.limits.agents),
       lockedConversationIds: new Set(overQuota.map((c) => c.id)),
+      otpUsed,
+      otpLimit,
+      // باقة بلا خدمة (`0`) مبلوغةٌ دائماً — لا حصة فيها أصلاً.
+      otpReached: otpLimit === 0 || reached(otpUsed, otpLimit),
     };
-  }, [conversations, channels, agents, clients, plans, subscriptions]);
+  }, [conversations, channels, agents, clients, plans, subscriptions, otpRequests]);
 }

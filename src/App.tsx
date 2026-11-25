@@ -27,6 +27,7 @@ const Subscribe = lazy(() => import('@pages/Subscribe'));
 const AIBalanceCheckout = lazy(() => import('@pages/AIBalanceCheckout'));
 const Billing = lazy(() => import('@pages/Billing'));
 const Referral = lazy(() => import('@pages/Referral'));
+const Developers = lazy(() => import('@pages/Developers'));
 const Assistant = lazy(() => import('@pages/Assistant'));
 const ChatTemplates = lazy(() => import('@pages/ChatTemplates'));
 const ChatTemplateEditor = lazy(() => import('@pages/ChatTemplateEditor'));
@@ -127,6 +128,7 @@ export default function App(): JSX.Element {
           <Route path="/ai-settings/checkout" element={<AIBalanceCheckout />} />
           <Route path="/billing" element={<Billing />} />
           <Route path="/referral" element={<Referral />} />
+          <Route path="/developers" element={<Developers />} />
           <Route path="/assistant" element={<Assistant />} />
           <Route path="/chat-templates" element={<ChatTemplates />} />
           <Route path="/chat-templates/:id" element={<ChatTemplateEditor />} />

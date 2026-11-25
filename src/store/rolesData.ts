@@ -141,6 +141,17 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     ],
   },
   {
+    key: 'developers',
+    label: 'المطورين',
+    icon: 'Code2',
+    permissions: [
+      { key: 'developers.view', label: 'عرض صفحة المطورين', description: 'الوصول لخدمة رسائل التحقق (OTP) والسجلات والتوثيق' },
+      { key: 'developers.keys', label: 'إدارة مفاتيح API', description: 'إنشاء وتدوير وإلغاء المفاتيح — حساس' },
+      { key: 'developers.configure', label: 'تعديل إعدادات OTP والويبهوك', description: 'رقم الإرسال وطول الكود ومدته والويبهوك' },
+      { key: 'developers.logs', label: 'عرض سجل الطلبات', description: 'طلبات التحقق بأسبابها، والأرقام مُقنَّعة' },
+    ],
+  },
+  {
     key: 'billing',
     label: 'الفوترة والإعدادات',
     icon: 'CreditCard',

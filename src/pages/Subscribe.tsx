@@ -519,6 +519,8 @@ export default function Subscribe(): JSX.Element {
                     ['عدد الموظفين', (p: Plan) => limitLabel(p.limits.agents)],
                     ['المحادثات شهرياً', (p: Plan) => limitLabel(p.limits.conversations)],
                     ['جهات الاتصال', (p: Plan) => limitLabel(p.limits.contacts)],
+                    // «—» لا «0»: الباقة لا تتضمّن الخدمة، وليست حصةً صفرية.
+                    ['رسائل OTP شهرياً', (p: Plan) => (p.limits.otpMessages === 0 ? '—' : limitLabel(p.limits.otpMessages)), 'أكواد التحقق التي يرسلها مطوّروك عبر API على رقم واتساب حسابك'],
                     ['مساعد Qhub', (p: Plan) => `${planFreeTokens(p, cycle).toLocaleString('en')} توكنز / ${cycle === 'yearly' ? 'سنة' : 'شهر'}`, 'توكنز مجانية تنتهي بنهاية الفترة ولا يحتاج إلى ربط'],
                   ] as [string, (p: Plan) => string, string?][]).map(([label, valueOf, sub]) => (
                     <tr key={label} className="border-b border-border-light dark:border-border-dark">

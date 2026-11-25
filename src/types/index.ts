@@ -72,7 +72,12 @@ export type PermissionKey =
   | 'billing.view'
   | 'billing.manage'
   | 'settings.view'
-  | 'settings.edit';
+  | 'settings.edit'
+  // Developers (OTP API)
+  | 'developers.view'
+  | 'developers.keys'
+  | 'developers.configure'
+  | 'developers.logs';
 
 export interface Role {
   id: string;
@@ -495,6 +500,12 @@ export interface Plan {
     channels: number;
     conversations: number;
     contacts: number;
+    /**
+     * رسائل التحقق (OTP) التي تُرسلها خدمة المطوّرين شهرياً.
+     * `-1` بلا حد، و`0` يعني أن الباقة لا تتضمّن الخدمة أصلاً — فالصفر هنا
+     * قيمة ذات معنى لا حدٌّ فارغ.
+     */
+    otpMessages: number;
   };
   /** Legacy single monthly value; read through `planFreeTokens`. */
   freeTokens?: number;
@@ -672,4 +683,84 @@ export interface AdminUser {
   active: boolean;
   lastActive: string;
   createdAt: string;
+}
+
+// ============================================================
+// المطوّرون — خدمة رسائل التحقق (OTP) المُدارة
+// ============================================================
+
+/** ما يسمح به المفتاح. */
+export type ApiScope = 'otp.send' | 'otp.verify' | 'otp.read';
+
+/**
+ * مفتاح API للعميل.
+ *
+ * لا يُخزَّن المفتاح نفسه أبداً: تُحفَظ بادئته وآخر ثلاثة أحرف منه فقط،
+ * ليعرف العميل أي مفتاح هذا دون أن يُستخرج من المخزن.
+ * مفاتيح `test` مجانية ولا تُحتسب على حصة الباقة.
+ */
+export interface ApiKey {
+  id: string;
+  name: string;
+  env: 'live' | 'test';
+  /** `qh_live_` أو `qh_test_` */
+  prefix: string;
+  /** آخر ثلاثة أحرف من السر، للتمييز في الجدول. */
+  last3: string;
+  scopes: ApiScope[];
+  createdAt: string;
+  lastUsedAt?: string;
+  /** غير فارغ يعني أن المفتاح مُلغى ولم يُحذف، فيبقى في السجل. */
+  revokedAt?: string;
+}
+
+export type OtpRequestStatus = 'sent' | 'delivered' | 'verified' | 'failed' | 'expired';
+
+/**
+ * طلب تحقق واحد في السجل.
+ *
+ * الكود نفسه لا يُخزَّن ولا يُعرَض في أي مكان، ورقم المستخدم النهائي مُقنَّع
+ * (`+9689****567`) لأنه عميل العميل لا عميلنا.
+ */
+export interface OtpRequest {
+  id: string;
+  /** الرقم مُقنَّعاً، كما يُعرَض: `+9689****567`. */
+  phoneMasked: string;
+  /** ISO-3166 alpha-2 لبلد الرقم. */
+  countryCode: string;
+  keyId: string;
+  env: 'live' | 'test';
+  status: OtpRequestStatus;
+  /** محاولات التحقق التي جرت على هذا الطلب. */
+  attempts: number;
+  createdAt: string;
+  verifiedAt?: string;
+  /** رمز خطأ Meta كما يعود منها، مثل 131026. */
+  errorCode?: number;
+  errorMessage?: string;
+}
+
+/** إعدادات الخدمة: من أي رقم تُرسَل، وكيف يُولَّد الكود ويُتحقَّق منه. */
+export interface OtpSettings {
+  /** معرّف قناة الواتساب التي تُرسل منها الأكواد — رقم العميل نفسه. */
+  senderChannelId: string | null;
+  codeLength: number;
+  codeType: 'numeric' | 'alphanumeric';
+  /** عمر الكود بالثواني. */
+  ttlSeconds: number;
+  maxAttempts: number;
+  /** أقل فاصل بين طلبين للرقم نفسه، بالثواني. */
+  cooldownSeconds: number;
+  /** حالة قالب Meta: الإرسال الحقيقي ينتظر موافقتها، والمفتاح التجريبي لا. */
+  templateStatus: 'none' | 'pending' | 'approved' | 'rejected';
+  templateName: string;
+}
+
+/** ويبهوك يُبلِّغ تطبيق العميل بنتيجة كل طلب. */
+export interface OtpWebhook {
+  url: string;
+  /** سر التوقيع — يُولَّد عندنا ويُستخدم في ترويسة `X-Qhub-Signature`. */
+  secret: string;
+  events: OtpRequestStatus[];
+  enabled: boolean;
 }

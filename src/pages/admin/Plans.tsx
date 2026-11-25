@@ -60,6 +60,7 @@ export default function AdminPlans(): JSX.Element {
     limitChannels: number;
     limitConversations: number;
     limitContacts: number;
+    limitOtpMessages: number;
     freeTokens: number;
     pricesPerCountry: Record<string, { monthly: number; yearly: number }>;
     popular: boolean;
@@ -74,6 +75,7 @@ export default function AdminPlans(): JSX.Element {
     limitChannels: 2,
     limitConversations: 5000,
     limitContacts: 1000,
+    limitOtpMessages: 0,
     freeTokens: 2000,
     pricesPerCountry: {},
     popular: false,
@@ -86,7 +88,7 @@ export default function AdminPlans(): JSX.Element {
     countries.forEach((c) => { defaults[c.code] = { monthly: 0, yearly: 0 }; });
     setForm({
       tier: 'pro', name: '', nameAr: '', tagline: '', features: '',
-      limitAgents: 5, limitChannels: 2, limitConversations: 5000, limitContacts: 1000, freeTokens: 2000,
+      limitAgents: 5, limitChannels: 2, limitConversations: 5000, limitContacts: 1000, limitOtpMessages: 0, freeTokens: 2000,
       pricesPerCountry: defaults, popular: false, active: true,
     });
     setModalOpen(true);
@@ -104,6 +106,7 @@ export default function AdminPlans(): JSX.Element {
       limitChannels: p.limits.channels,
       limitConversations: p.limits.conversations,
       limitContacts: p.limits.contacts,
+      limitOtpMessages: p.limits.otpMessages,
       freeTokens: planFreeTokens(p),
       pricesPerCountry: { ...p.pricesPerCountry },
       popular: p.popular ?? false,
@@ -144,6 +147,8 @@ export default function AdminPlans(): JSX.Element {
         channels: form.limitChannels,
         conversations: form.limitConversations,
         contacts: form.limitContacts,
+        // الصفر هنا مقصود: الباقة لا تتضمّن خدمة رسائل التحقق.
+        otpMessages: form.limitOtpMessages,
       },
       freeTokens: Math.max(0, form.freeTokens),
       pricesPerCountry: form.pricesPerCountry,
@@ -383,11 +388,18 @@ export default function AdminPlans(): JSX.Element {
           <Input label={<>وصف قصير (Tagline)<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="للشركات النامية" />
           <Textarea label={<>الميزات (كل ميزة في سطر)<span className="text-muted-light dark:text-muted-dark font-normal ms-1">(اختياري)</span></>} value={form.features} onChange={(e) => setForm({ ...form, features: e.target.value })} rows={6} placeholder={'حتى 10 موظفين\n3 أرقام واتساب\n...'} />
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <Input label={<>حد الموظفين (-1 = ∞)<span className="text-danger ms-0.5">*</span></>} type="number" value={form.limitAgents} onChange={(e) => setForm({ ...form, limitAgents: Number(e.target.value) })} />
             <Input label={<>حد القنوات (-1 = ∞)<span className="text-danger ms-0.5">*</span></>} type="number" value={form.limitChannels} onChange={(e) => setForm({ ...form, limitChannels: Number(e.target.value) })} />
             <Input label={<>محادثات/شهر (-1 = ∞)<span className="text-danger ms-0.5">*</span></>} type="number" value={form.limitConversations} onChange={(e) => setForm({ ...form, limitConversations: Number(e.target.value) })} />
             <Input label={<>جهات اتصال (-1 = ∞)<span className="text-danger ms-0.5">*</span></>} type="number" value={form.limitContacts} onChange={(e) => setForm({ ...form, limitContacts: Number(e.target.value) })} />
+            <Input
+              label={<>رسائل OTP/شهر (-1 = ∞)<span className="text-danger ms-0.5">*</span></>}
+              type="number"
+              value={form.limitOtpMessages}
+              onChange={(e) => setForm({ ...form, limitOtpMessages: Number(e.target.value) })}
+              tip="حصة خدمة المطوّرين. 0 يعني أن الباقة لا تتضمّن الخدمة."
+            />
           </div>
           <Input
             label={<>توكنز مجانية من مساعد Qhub (شهريًا)<span className="text-danger ms-0.5">*</span></>}

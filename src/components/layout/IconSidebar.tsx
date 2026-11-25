@@ -17,6 +17,7 @@ import {
   Gift,
   Workflow,
   MessageCircleQuestion,
+  Code2,
 } from 'lucide-react';
 
 import { useTranslation } from '@/i18n/useTranslation';
@@ -53,6 +54,7 @@ const mainNav: NavItem[] = [
   { to: '/feedback', label: 'الشكاوى والاقتراحات', icon: MessageSquareWarning, group: 'system', permission: 'feedback.view' },
   { to: '/billing', label: 'الباقات والاشتراك', icon: CreditCard, group: 'system', permission: 'billing.view' },
   { to: '/referral', label: 'ادعُ واكسب', icon: Gift, group: 'system', permission: 'billing.view' },
+  { to: '/developers', label: 'المطورين', icon: Code2, group: 'system', permission: 'developers.view' },
   { to: '/settings', label: 'الإعدادات', icon: Settings, group: 'system' },
 ];
 
