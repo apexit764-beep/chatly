@@ -32,8 +32,8 @@ function randomString(length: number, alphabet = SECRET_ALPHABET): string {
 const id = (p: string): string => `${p}_${Date.now().toString(36)}${randomString(5, 'abcdefghijklmnopqrstuvwxyz0123456789')}`;
 
 export const SCOPE_LABEL: Record<ApiScope, string> = {
-  'otp.send': 'إرسال كود',
-  'otp.verify': 'التحقق من كود',
+  'otp.send': 'إرسال رمز',
+  'otp.verify': 'التحقق من رمز',
   'otp.read': 'قراءة السجلات',
 };
 
@@ -98,9 +98,9 @@ function seedKeys(): ApiKey[] {
  * فلا يمرّ إلا قالب معتمد، 470 انتهت صلاحية جلسة الرسالة.
  */
 const FAILURES: { code: number; message: string }[] = [
-  { code: 131026, message: 'الرقم غير مسجَّل على واتساب أو لا يستقبل رسائل' },
-  { code: 131047, message: 'انقضت نافذة الـ24 ساعة — لا يمر إلا قالب معتمد من Meta' },
-  { code: 470, message: 'انتهت صلاحية جلسة الرسالة قبل التسليم' },
+  { code: 131026, message: 'الرقم غير مسجَّل على واتساب' },
+  { code: 131047, message: 'تعذّر تسليم الرسالة للرقم' },
+  { code: 470, message: 'تعذّر تسليم الرسالة للرقم' },
 ];
 
 /** أرقام تجريبية بامتدادات خليجية، مُقنَّعة كما تُعرَض. */

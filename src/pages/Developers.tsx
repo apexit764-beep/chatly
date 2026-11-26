@@ -18,6 +18,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { Button, Card, Input, Modal, Select, StatCard, useConfirm } from '@components/ui';
+import { ApiDocs } from '@/components/developers/ApiDocs';
 import {
   SCOPE_LABEL,
   STATUS_LABEL,
@@ -35,7 +36,6 @@ import { cn } from '@/utils/cn';
 import type { ApiKey, ApiScope, OtpRequestStatus, OtpSettings, Plan } from '@/types';
 
 const CURRENT_CLIENT_ID = 'client_1';
-const API_BASE = 'https://api.apexes.click/v1';
 const TH = 'text-start font-medium px-4 py-3 whitespace-nowrap';
 const TIER_RANK: Record<string, number> = { starter: 0, pro: 1, business: 2, enterprise: 3 };
 const ALL_SCOPES: ApiScope[] = ['otp.send', 'otp.verify', 'otp.read'];
@@ -51,8 +51,8 @@ const STATUS_TONE: Record<OtpRequestStatus, string> = {
 };
 
 const TEMPLATE_LABEL: Record<OtpSettings['templateStatus'], string> = {
-  none: 'لم يُرسل للمراجعة',
-  pending: 'قيد مراجعة Meta',
+  none: 'لم يُرسل للمراجعة بعد',
+  pending: 'بانتظار موافقة Meta',
   approved: 'معتمد',
   rejected: 'مرفوض',
 };
@@ -177,12 +177,12 @@ export default function Developers(): JSX.Element {
           title="خدمة المطورين غير مشمولة في باقتك"
           text={
             firstWithOtp
-              ? `إرسال أكواد التحقق (OTP) عبر API يبدأ من باقة ${firstWithOtp.nameAr} — ${
+              ? `خدمة رموز التحقق (OTP) متاحة من باقة ${firstWithOtp.nameAr}، بـ ${
                   firstWithOtp.limits.otpMessages === -1
-                    ? 'برسائل بلا حد شهرياً'
-                    : `بـ ${firstWithOtp.limits.otpMessages.toLocaleString('en-US')} رسالة شهرياً`
-                }. ترقِّ باقتك لتشغيل الخدمة على رقم واتساب حسابك.`
-              : 'إرسال أكواد التحقق (OTP) عبر API غير متاح على الباقات الحالية. راسل المبيعات لتفعيله.'
+                    ? 'رسائل غير محدودة'
+                    : `${firstWithOtp.limits.otpMessages.toLocaleString('en-US')} رسالة شهرياً`
+                }. رقِّ باقتك لتفعيل الخدمة.`
+              : 'خدمة رموز التحقق (OTP) غير متاحة في الباقات الحالية. تواصل مع المبيعات لتفعيلها.'
           }
           action={
             <Link
@@ -205,7 +205,7 @@ export default function Developers(): JSX.Element {
           icon={<Smartphone className="h-8 w-8" />}
           tone="bg-whatsapp/15 text-whatsapp"
           title="اربط رقم واتساب لتشغيل الخدمة"
-          text="الأكواد تُرسل من رقم واتساب حسابك أنت، لا من رقم Qhub — فما دام لا يوجد رقم مربوط لا توجد جهة إرسال. اربط رقمك ثم ارجع لهذه الصفحة لإنشاء أول مفتاح."
+          text="رموز التحقق تُرسل من رقم واتساب مربوط بحسابك. اربط رقمًا للبدء."
           action={
             <Link
               to="/channels/whatsapp"
@@ -230,7 +230,7 @@ export default function Developers(): JSX.Element {
   const doRevoke = async (k: ApiKey): Promise<void> => {
     const ok = await confirm({
       title: 'إلغاء المفتاح',
-      message: `كل طلب يستخدم «${k.name}» سيُرفض فوراً بعد الإلغاء، ولا يمكن إرجاعه. تأكد أن تطبيقك صار يستخدم مفتاحاً آخر.`,
+      message: `سيتوقف «${k.name}» نهائيًا وتُرفض أي طلبات تستخدمه.`,
       confirmText: 'إلغاء المفتاح',
       variant: 'danger',
     });
@@ -242,7 +242,7 @@ export default function Developers(): JSX.Element {
   const doRotate = async (k: ApiKey): Promise<void> => {
     const ok = await confirm({
       title: 'تدوير المفتاح',
-      message: `يُلغى «${k.name}» ويُنشأ بدلاً منه مفتاح جديد بنفس الاسم والصلاحيات. السر الجديد يُعرض مرة واحدة فقط.`,
+      message: `سيتوقف «${k.name}» ويُنشأ مفتاح جديد بنفس الاسم والصلاحيات. حدّث المفتاح في تطبيقك.`,
       confirmText: 'تدوير',
     });
     if (!ok) return;
@@ -252,39 +252,16 @@ export default function Developers(): JSX.Element {
   const doSendTest = (): void => {
     if (testPhone.replace(/\D/g, '').length < 8) return showToast('أدخل رقماً دولياً صحيحاً', 'error');
     sendTest(testPhone);
-    showToast('أُرسل كود تجريبي — لا يُخصم من حصة باقتك', 'success');
+    showToast('تم إرسال رمز تجريبي', 'success');
     setTestPhone('');
   };
-
-  const sendSnippet = `curl -X POST ${API_BASE}/otp/send \\
-  -H "Authorization: Bearer qh_live_••••${keys.find((k) => k.env === 'live')?.last3 ?? 'xxx'}" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "phone": "+96891234567",
-    "lang": "ar"
-  }'
-
-# 202 Accepted
-# { "request_id": "otp_8f2c91", "status": "sent", "expires_in": ${form.ttlSeconds} }`;
-
-  const verifySnippet = `curl -X POST ${API_BASE}/otp/verify \\
-  -H "Authorization: Bearer qh_live_••••${keys.find((k) => k.env === 'live')?.last3 ?? 'xxx'}" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "request_id": "otp_8f2c91",
-    "code": "${form.codeType === 'numeric' ? '4'.repeat(form.codeLength) : 'A1B2C3'.slice(0, form.codeLength)}"
-  }'
-
-# 200 OK
-# { "request_id": "otp_8f2c91", "status": "verified" }
-# 422 — { "error": "invalid_code", "attempts_left": ${Math.max(0, form.maxAttempts - 1)} }`;
 
   const tabs: [Tab, string, JSX.Element][] = [
     ['keys', 'المفاتيح', <KeyRound key="i" className="h-3.5 w-3.5" />],
     ['settings', 'إعدادات OTP', <ShieldCheck key="i" className="h-3.5 w-3.5" />],
     ['logs', 'السجلات', <Terminal key="i" className="h-3.5 w-3.5" />],
     ['webhook', 'الويبهوك', <Webhook key="i" className="h-3.5 w-3.5" />],
-    ['docs', 'التوثيق والتجربة', <FileCode2 key="i" className="h-3.5 w-3.5" />],
+    ['docs', 'التوثيق', <FileCode2 key="i" className="h-3.5 w-3.5" />],
   ];
 
   return (
@@ -356,7 +333,7 @@ export default function Developers(): JSX.Element {
           icon={<Send className="h-5 w-5" />}
           iconBg="bg-primary/15"
           iconColor="text-primary"
-          hint="الطلبات من المفاتيح الحقيقية في الدورة الجارية. المفاتيح التجريبية مجانية ولا تُحتسب."
+          hint="طلبات المفاتيح الحقيقية هذا الشهر. الطلبات التجريبية لا تُحتسب."
         />
         <StatCard
           label="نسبة الوصول"
@@ -364,7 +341,7 @@ export default function Developers(): JSX.Element {
           icon={<Smartphone className="h-5 w-5" />}
           iconBg="bg-whatsapp/15"
           iconColor="text-whatsapp"
-          hint="الطلبات التي وصلت رقم المستخدم فعلاً — ما لم يفشل تسليمه عند Meta."
+          hint="نسبة الرسائل التي وصلت للمستخدم."
         />
         <StatCard
           label="تم التحقق"
@@ -372,7 +349,7 @@ export default function Developers(): JSX.Element {
           icon={<ShieldCheck className="h-5 w-5" />}
           iconBg="bg-success/15"
           iconColor="text-success"
-          hint="النسبة التي أكمل مستخدموك إدخال الكود فيها."
+          hint="نسبة الرموز التي أدخلها المستخدمون بنجاح."
         />
         <StatCard
           label="المتبقي من الحصة"
@@ -380,7 +357,7 @@ export default function Developers(): JSX.Element {
           icon={<Gauge className="h-5 w-5" />}
           iconBg="bg-violet-500/15"
           iconColor="text-violet-600"
-          hint={otpLimit === -1 ? 'باقتك بلا حد لرسائل التحقق.' : 'يُصفَّر مع بداية كل دورة شهرية.'}
+          hint={otpLimit === -1 ? 'رسائل غير محدودة في باقتك.' : 'تتجدد الحصة مع بداية كل شهر.'}
         />
       </div>
 
@@ -414,10 +391,7 @@ export default function Developers(): JSX.Element {
         {tab === 'keys' && (
           <div className="space-y-4">
             <div className="px-5 flex items-center justify-between gap-3 flex-wrap">
-              <p className="text-small text-muted-light dark:text-muted-dark max-w-2xl leading-relaxed">
-                المفتاح يُعرض مرة واحدة عند إنشائه ولا يُخزَّن عندنا — نحفظ بادئته وآخر ثلاثة أحرف فقط. لو فُقد، دوّره بدلاً من
-                البحث عنه.
-              </p>
+              <p className="text-small text-muted-light dark:text-muted-dark">استخدم المفتاح في ترويسة كل طلب إلى الـ API.</p>
               {canKeys && (
                 <Button onClick={() => setCreateOpen(true)} className="text-white">
                   <Plus className="h-4 w-4" /> مفتاح جديد
@@ -483,7 +457,7 @@ export default function Developers(): JSX.Element {
             </div>
             {!canKeys && (
               <p className="text-small text-muted-light dark:text-muted-dark px-5 pb-5">
-                دورك يعرض المفاتيح ولا يعدّلها — إنشاؤها وتدويرها وإلغاؤها يحتاج صلاحية «إدارة مفاتيح API».
+                ليس لديك صلاحية إدارة المفاتيح.
               </p>
             )}
             <div className="h-1" />
@@ -493,16 +467,13 @@ export default function Developers(): JSX.Element {
         {/* ── إعدادات OTP ────────────────────────────────────────────── */}
         {tab === 'settings' && (
           <div className="px-5 pb-5 space-y-4">
-            <p className="text-small text-muted-light dark:text-muted-dark leading-relaxed">
-              Qhub يولّد الكود ويحفظ بصمته فقط ثم يتحقّق منه — فالكود نفسه لا يُخزَّن ولا يظهر في أي سجل عندنا ولا عندك.
-            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Select
                 label="رقم الإرسال"
                 value={form.senderChannelId ?? ''}
                 disabled={!canConfigure}
                 onChange={(e) => setForm({ ...form, senderChannelId: e.target.value || null })}
-                tip="رقم واتساب حسابك الذي تُرسل منه الأكواد. Qhub لا يستخدم رقماً من عنده."
+                tip="الرقم الذي تصل منه رسائل التحقق لمستخدميك."
               >
                 <option value="">اختر رقماً مربوطاً</option>
                 {waChannels.map((c) => (
@@ -512,14 +483,14 @@ export default function Developers(): JSX.Element {
                 ))}
               </Select>
               <Input
-                label="اسم قالب Meta"
+                label="قالب الرسالة"
                 value={form.templateName}
                 disabled={!canConfigure}
                 onChange={(e) => setForm({ ...form, templateName: e.target.value })}
-                tip="القالب المعتمد عند Meta الذي يحمل الكود. حالته معروضة أسفل هذا القسم."
+                tip="قالب رسالة التحقق على واتساب، ويجب أن تعتمده Meta قبل الإرسال الفعلي."
               />
               <Select
-                label="طول الكود"
+                label="طول الرمز"
                 value={String(form.codeLength)}
                 disabled={!canConfigure}
                 onChange={(e) => setForm({ ...form, codeLength: Number(e.target.value) })}
@@ -531,7 +502,7 @@ export default function Developers(): JSX.Element {
                 ))}
               </Select>
               <Select
-                label="نوع الكود"
+                label="نوع الرمز"
                 value={form.codeType}
                 disabled={!canConfigure}
                 onChange={(e) => setForm({ ...form, codeType: e.target.value as OtpSettings['codeType'] })}
@@ -540,14 +511,14 @@ export default function Developers(): JSX.Element {
                 <option value="alphanumeric">أرقام وحروف</option>
               </Select>
               <Input
-                label="مدة صلاحية الكود (ثانية)"
+                label="مدة صلاحية الرمز (دقائق)"
                 type="number"
-                min={60}
-                max={3600}
-                value={form.ttlSeconds}
+                min={1}
+                max={60}
+                value={Math.round(form.ttlSeconds / 60)}
                 disabled={!canConfigure}
-                onChange={(e) => setForm({ ...form, ttlSeconds: Number(e.target.value) })}
-                tip="بعدها ينتهي الكود ويحتاج المستخدم طلب كود جديد."
+                onChange={(e) => setForm({ ...form, ttlSeconds: Math.max(1, Number(e.target.value)) * 60 })}
+                tip="بعدها ينتهي الرمز ويطلب المستخدم رمزًا جديدًا."
               />
               <Input
                 label="أقصى عدد محاولات"
@@ -557,20 +528,20 @@ export default function Developers(): JSX.Element {
                 value={form.maxAttempts}
                 disabled={!canConfigure}
                 onChange={(e) => setForm({ ...form, maxAttempts: Number(e.target.value) })}
-                tip="بعد استنفادها يُغلق الطلب ويحتاج المستخدم كوداً جديداً."
+                tip="بعدها يُلغى الرمز ويطلب المستخدم رمزًا جديدًا."
               />
               <Input
-                label="الفاصل بين طلبين لنفس الرقم (ثانية)"
+                label="أقل مدة بين طلبين لنفس الرقم (ثوانٍ)"
                 type="number"
                 min={0}
                 max={600}
                 value={form.cooldownSeconds}
                 disabled={!canConfigure}
                 onChange={(e) => setForm({ ...form, cooldownSeconds: Number(e.target.value) })}
-                tip="يحمي رقمك على Meta من إرسال متكرر لنفس المستخدم."
+                tip="تمنع إرسال رموز متكررة لنفس الرقم في وقت قصير."
               />
               <div className="space-y-1.5">
-                <span className="text-small font-medium text-muted-light dark:text-muted-dark">حالة القالب عند Meta</span>
+                <span className="text-small font-medium text-muted-light dark:text-muted-dark">حالة القالب</span>
                 <div className="h-10 flex items-center">
                   <Pill
                     className={cn(
@@ -601,7 +572,7 @@ export default function Developers(): JSX.Element {
               </div>
             ) : (
               <p className="text-small text-muted-light dark:text-muted-dark">
-                دورك يعرض الإعدادات ولا يعدّلها — التعديل يحتاج صلاحية «تعديل إعدادات OTP والويبهوك».
+                ليس لديك صلاحية تعديل الإعدادات.
               </p>
             )}
           </div>
@@ -611,15 +582,12 @@ export default function Developers(): JSX.Element {
         {tab === 'logs' &&
           (!canLogs ? (
             <p className="text-small text-muted-light dark:text-muted-dark px-5 pb-5">
-              سجل الطلبات يحتاج صلاحية «عرض سجل الطلبات».
+              ليس لديك صلاحية عرض السجلات.
             </p>
           ) : (
             <div className="space-y-4">
               <div className="px-5 flex items-end justify-between gap-3 flex-wrap">
-                <p className="text-small text-muted-light dark:text-muted-dark max-w-2xl leading-relaxed">
-                  أرقام مستخدميك مُقنَّعة لأنها أرقام عملائك، والكود نفسه لا يُسجَّل. الفشل يظهر برمز Meta وسببه، ليُعرف أين تعطّل
-                  الطلب.
-                </p>
+                <span />
                 <div className="w-full sm:w-56">
                   <Select
                     label="الحالة"
@@ -668,16 +636,7 @@ export default function Developers(): JSX.Element {
                           {formatDate(r.createdAt)} · {formatTime(r.createdAt)}
                         </td>
                         <td className="px-4 py-3 text-small text-muted-light dark:text-muted-dark">
-                          {r.errorCode ? (
-                            <span>
-                              <b className="text-danger" dir="ltr">
-                                {r.errorCode}
-                              </b>{' '}
-                              — {r.errorMessage}
-                            </span>
-                          ) : (
-                            '—'
-                          )}
+                          {r.errorMessage ?? '—'}
                         </td>
                       </tr>
                     ))}
@@ -696,10 +655,7 @@ export default function Developers(): JSX.Element {
         {/* ── الويبهوك ──────────────────────────────────────────────── */}
         {tab === 'webhook' && (
           <div className="px-5 pb-5 space-y-4">
-            <p className="text-small text-muted-light dark:text-muted-dark leading-relaxed">
-              نُرسل لتطبيقك نتيجة كل طلب على رابطك، موقَّعة بترويسة <code dir="ltr">X-Qhub-Signature</code> (HMAC-SHA256) حتى تتحقّق
-              أن الطلب منّا.
-            </p>
+            <p className="text-small text-muted-light dark:text-muted-dark">نرسل حالة كل طلب إلى الرابط الذي تحدده.</p>
             <Input
               label="رابط الاستقبال"
               placeholder="https://yourapp.com/webhooks/qhub-otp"
@@ -723,7 +679,7 @@ export default function Developers(): JSX.Element {
                       variant="secondary"
                       onClick={() => {
                         setHook({ ...hook, secret: generateWebhookSecret() });
-                        showToast('تم توليد سر جديد — احفظه في تطبيقك', 'success');
+                        showToast('تم توليد سر جديد', 'success');
                       }}
                     >
                       <RefreshCw className="h-4 w-4" /> توليد سر
@@ -796,43 +752,37 @@ export default function Developers(): JSX.Element {
               </div>
             ) : (
               <p className="text-small text-muted-light dark:text-muted-dark">
-                تعديل الويبهوك يحتاج صلاحية «تعديل إعدادات OTP والويبهوك».
+                ليس لديك صلاحية تعديل الويبهوك.
               </p>
             )}
           </div>
         )}
 
-        {/* ── التوثيق والتجربة ──────────────────────────────────────── */}
+        {/* ── التوثيق ── */}
         {tab === 'docs' && (
-          <div className="px-5 pb-5 space-y-4">
-            <p className="text-small text-muted-light dark:text-muted-dark leading-relaxed">
-              طلبان فقط: <code dir="ltr">/otp/send</code> يرسل الكود، و<code dir="ltr">/otp/verify</code> يتحقّق منه. لو أردت توليد
-              الكود عندك، أضِف <code dir="ltr">code</code> للطلب الأول — وإلا فنحن نولّده ونحفظ بصمته فقط.
-            </p>
-            <CodeBlock title="إرسال كود — POST /otp/send" code={sendSnippet} />
-            <CodeBlock title="التحقق من كود — POST /otp/verify" code={verifySnippet} />
+          <div className="px-5 pb-6 space-y-6">
             <div className="rounded-card border border-border-light dark:border-border-dark p-4 space-y-3">
               <div>
-                <b className="text-body">تجربة سريعة</b>
-                <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
-                  يُرسل على المفتاح التجريبي، فلا يُخصم من حصة باقتك ولا ينتظر موافقة القالب.
-                </p>
+                <b className="text-body">إرسال تجريبي</b>
+                <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">أرسل رمزًا تجريبيًا لرقمك للتأكد من الخدمة. لا يُخصم من حصة باقتك.</p>
               </div>
               <div className="flex items-end gap-2 flex-wrap">
                 <div className="flex-1 min-w-[12rem]">
-                  <Input
-                    label="رقم الاختبار"
-                    placeholder="+96891234567"
-                    dir="ltr"
-                    value={testPhone}
-                    onChange={(e) => setTestPhone(e.target.value)}
-                  />
+                  <Input label="رقم الجوال" placeholder="+96891234567" dir="ltr" value={testPhone} onChange={(e) => setTestPhone(e.target.value)} />
                 </div>
                 <Button className="text-white" onClick={doSendTest}>
-                  <Send className="h-4 w-4" /> إرسال كود تجريبي
+                  <Send className="h-4 w-4" /> إرسال رمز تجريبي
                 </Button>
               </div>
             </div>
+            <ApiDocs
+              ttlSeconds={form.ttlSeconds}
+              codeLength={form.codeLength}
+              codeType={form.codeType}
+              maxAttempts={form.maxAttempts}
+              cooldownSeconds={form.cooldownSeconds}
+              quota={otpLimit}
+            />
           </div>
         )}
       </Card>
@@ -865,7 +815,7 @@ export default function Developers(): JSX.Element {
             label="البيئة"
             value={draftKey.env}
             onChange={(e) => setDraftKey({ ...draftKey, env: e.target.value as 'live' | 'test' })}
-            tip="المفتاح التجريبي مجاني ولا يُخصم من حصة الباقة، ولا ينتظر موافقة القالب."
+            tip="المفتاح التجريبي للتجربة فقط ولا يُخصم من حصة الباقة."
           >
             <option value="live">حقيقي — يُخصم من حصة الباقة</option>
             <option value="test">تجريبي — مجاني</option>
@@ -911,8 +861,7 @@ export default function Developers(): JSX.Element {
             <div className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 flex items-start gap-3 text-small">
               <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
               <p>
-                هذه المرة الوحيدة التي يظهر فيها مفتاح «{justCreated.name}». لا نحفظه عندنا، فلو أُغلقت هذه النافذة بلا نسخ لن
-                يبقى أمامك إلا تدويره.
+                انسخ مفتاح «{justCreated.name}» واحفظه في مكان آمن، لن يظهر مرة أخرى. إذا فقدته يمكنك تدويره للحصول على مفتاح جديد.
               </p>
             </div>
             <div className="flex items-center gap-2">
