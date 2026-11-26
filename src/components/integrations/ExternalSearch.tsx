@@ -49,7 +49,7 @@ export function ExternalSearch({
   const [value, setValue] = useState(initialValue ?? '');
   const [result, setResult] = useState<SearchResult | null>(null);
 
-  // تغيير المصدر أو الكيان يعيد الاختيارات لما يدعمه الجديد.
+  // تغيير المصدر أو نوع البيانات يعيد الاختيارات لما يدعمه الجديد.
   useEffect(() => {
     if (!entities.some((e) => e.id === entityId)) setEntityId(entities[0]?.id ?? '');
   }, [entities, entityId]);
@@ -94,7 +94,7 @@ export function ExternalSearch({
             ))}
           </Select>
         )}
-        <Select label="الكيان" value={entity?.id ?? ''} onChange={(e) => setEntityId(e.target.value)}>
+        <Select label="نوع البيانات" value={entity?.id ?? ''} onChange={(e) => setEntityId(e.target.value)}>
           {entities.map((e) => (
             <option key={e.id} value={e.id}>
               {e.label}
@@ -133,7 +133,7 @@ export function ExternalSearch({
       {entity?.strategy === 'unavailable' ? (
         <p className="text-small text-muted-light dark:text-muted-dark">المصدر لا يدعم البحث في «{entity.label}» ولا يسمح بمزامنته، لذلك البحث غير متاح.</p>
       ) : fields.length === 0 ? (
-        <p className="text-small text-muted-light dark:text-muted-dark">لا توجد حقول مفعّلة للبحث في هذا الكيان.</p>
+        <p className="text-small text-muted-light dark:text-muted-dark">لا توجد حقول مفعّلة للبحث في نوع البيانات هذا.</p>
       ) : (
         <div className="flex items-center gap-3 flex-wrap">
           <Button className="text-white" onClick={run}>

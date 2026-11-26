@@ -23,6 +23,7 @@ import { formatDate, formatTime } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import { METHOD_ICON, StatusPill } from './Integrations';
 import { CapPill, CopyRow } from './IntegrationWizard';
+import { PlatformLogo } from '@/components/integrations/PlatformLogo';
 
 type Tab = 'overview' | 'entities' | 'search' | 'logs' | 'ai';
 const when = (iso?: string): string => (iso ? `${formatDate(iso)} · ${formatTime(iso)}` : '—');
@@ -111,14 +112,18 @@ export default function IntegrationDetail(): JSX.Element {
           >
             <ArrowRight className="h-4 w-4" />
           </Link>
-          <span className="h-12 w-12 rounded-card bg-primary/15 text-primary flex items-center justify-center">{METHOD_ICON[i.method]}</span>
+          {i.platform ? (
+            <PlatformLogo platform={i.platform} size="lg" />
+          ) : (
+            <span className="h-12 w-12 rounded-card bg-primary/15 text-primary flex items-center justify-center">{METHOD_ICON[i.method]}</span>
+          )}
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-h1 font-bold">{i.name}</h1>
               <StatusPill status={i.status} />
             </div>
             <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
-              {i.provider} · {METHOD_LABEL[i.method]}
+              {i.platform ? `منصة جاهزة · ${i.provider}` : `${i.provider} · ${METHOD_LABEL[i.method]}`}
             </p>
           </div>
         </div>
@@ -195,15 +200,15 @@ export default function IntegrationDetail(): JSX.Element {
           <div className="px-5 pb-5 space-y-5">
             {i.description && <p className="text-body text-muted-light dark:text-muted-dark">{i.description}</p>}
             <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-small">
-              <Info k="طريقة الربط" v={METHOD_LABEL[i.method]} />
-              {i.method !== 'webhook_push' && <Info k="المصادقة" v={AUTH_LABEL[i.authType]} />}
-              {i.baseUrl && <Info k="رابط الـ API" v={i.baseUrl} ltr />}
-              {i.credentialHint && <Info k="بيانات الاعتماد" v={`محفوظة مشفّرة (${i.credentialHint})`} />}
+              <Info k="طريقة الربط" v={i.platform ? `منصة جاهزة (${i.provider})` : METHOD_LABEL[i.method]} />
+              {!i.platform && i.method !== 'webhook_push' && <Info k="المصادقة" v={AUTH_LABEL[i.authType]} />}
+              {i.baseUrl && <Info k={i.platform ? 'رابط الجدول' : 'رابط الـ API'} v={i.baseUrl} ltr />}
+              {i.credentialHint && <Info k="بيانات الاعتماد" v={i.platform ? 'مربوط بحسابك (قراءة فقط)' : `محفوظة مشفّرة (${i.credentialHint})`} />}
               {i.syncFrequency && <Info k="معدّل المزامنة" v={FREQ_LABEL[i.syncFrequency]} />}
               {i.method !== 'api_pull' && <Info k="آخر مزامنة ناجحة" v={when(i.lastSyncAt)} />}
               {i.nextSyncAt && <Info k="المزامنة القادمة" v={when(i.nextSyncAt)} />}
               <Info k="آخر اختبار اتصال" v={i.lastTest ? `${i.lastTest.message} — ${when(i.lastTest.at)}` : '—'} />
-              <Info k="الكيانات المفعّلة" v={i.entities.filter((e) => e.enabled).map((e) => e.label).join('، ') || '—'} />
+              <Info k="أنواع البيانات المفعّلة" v={i.entities.filter((e) => e.enabled).map((e) => e.label).join('، ') || '—'} />
               <Info k="أُضيف بواسطة" v={`${i.createdBy} — ${formatDate(i.createdAt)}`} />
             </dl>
             {i.method === 'webhook_push' && i.webhookUrl && (
@@ -238,7 +243,7 @@ export default function IntegrationDetail(): JSX.Element {
             {i.entities.length === 0 ? (
               <p className="text-small text-muted-light dark:text-muted-dark py-6 text-center">لم تُكتشف بنية البيانات بعد.</p>
             ) : (
-              i.entities.map((e) => <EntityEditor key={e.id} integrationId={i.id} entity={e} canManage={canManage} />)
+              i.entities.map((e) => <EntityEditor key={e.id} integrationId={i.id} entity={e} canManage={canManage} simple={!!i.platform} />)
             )}
           </div>
         )}
@@ -262,7 +267,7 @@ export default function IntegrationDetail(): JSX.Element {
                 <table className="w-full text-small">
                   <thead className="bg-bg-light dark:bg-bg-dark text-muted-light dark:text-muted-dark">
                     <tr>
-                      {['الوقت', 'النوع', 'الكيان', 'النتيجة', 'السجلات', 'المدة', 'التفاصيل'].map((h) => (
+                      {['الوقت', 'النوع', 'نوع البيانات', 'النتيجة', 'السجلات', 'المدة', 'التفاصيل'].map((h) => (
                         <th key={h} className="text-start font-medium px-3 py-2 whitespace-nowrap">
                           {h}
                         </th>
@@ -309,8 +314,19 @@ function Info({ k, v, ltr }: { k: string; v: string; ltr?: boolean }): JSX.Eleme
   );
 }
 
-/** إعداد كيان: تفعيله، حد النتائج، والحقول المسموح البحث والتصفية بها وعرضها. */
-function EntityEditor({ integrationId, entity, canManage }: { integrationId: string; entity: ExternalEntity; canManage: boolean }): JSX.Element {
+/** إعداد نوع بيانات: تفعيله، حد النتائج، والحقول المسموح البحث والتصفية بها وعرضها. */
+function EntityEditor({
+  integrationId,
+  entity,
+  canManage,
+  simple = false,
+}: {
+  integrationId: string;
+  entity: ExternalEntity;
+  canManage: boolean;
+  /** منصة جاهزة: ملخّص بسيط، والتفاصيل التقنية تحت «إعدادات متقدمة». */
+  simple?: boolean;
+}): JSX.Element {
   const updateEntity = useIntegrationStore((s) => s.updateEntity);
   const showToast = useUIStore((s) => s.showToast);
   const [draft, setDraft] = useState(entity);
@@ -332,12 +348,14 @@ function EntityEditor({ integrationId, entity, canManage }: { integrationId: str
             onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
           />
           <b className="text-h3">{draft.label}</b>
-          <code dir="ltr" className="text-[12px] text-muted-light dark:text-muted-dark">
-            {draft.endpoint}
-          </code>
+          {!simple && (
+            <code dir="ltr" className="text-[12px] text-muted-light dark:text-muted-dark">
+              {draft.endpoint}
+            </code>
+          )}
         </label>
         <div className="flex items-center gap-3 text-small">
-          <span className="text-muted-light dark:text-muted-dark">{STRATEGY_LABEL[draft.strategy]}</span>
+          {!simple && <span className="text-muted-light dark:text-muted-dark">{STRATEGY_LABEL[draft.strategy]}</span>}
           <label className="inline-flex items-center gap-2">
             <span className="text-muted-light dark:text-muted-dark">حد النتائج</span>
             <input
@@ -353,6 +371,13 @@ function EntityEditor({ integrationId, entity, canManage }: { integrationId: str
         </div>
       </div>
 
+      {simple && (
+        <p className="text-small text-muted-light dark:text-muted-dark inline-flex items-center gap-1.5">
+          <Search className="h-3.5 w-3.5" /> تقدر تدوّر بـ: {draft.fields.filter((f) => f.useForSearch).map((f) => f.label).join('، ') || '—'}
+        </p>
+      )}
+
+      <Advanced simple={simple}>
       <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[12px]">
         {(
           [
@@ -370,7 +395,7 @@ function EntityEditor({ integrationId, entity, canManage }: { integrationId: str
       </div>
       {cached && (
         <p className="text-[12px] text-muted-light dark:text-muted-dark">
-          المصدر لا يبحث في هذا الكيان، فالبحث يتم في النسخة المُزامَنة (آخر تحديث {draft.cachedAt ? when(draft.cachedAt) : '—'}). كل حقولها قابلة للبحث.
+          المصدر لا يبحث في نوع البيانات هذا، فالبحث يتم في النسخة المُزامَنة (آخر تحديث {draft.cachedAt ? when(draft.cachedAt) : '—'}). كل حقولها قابلة للبحث.
         </p>
       )}
 
@@ -434,9 +459,11 @@ function EntityEditor({ integrationId, entity, canManage }: { integrationId: str
           </tbody>
         </table>
       </div>
+      </Advanced>
 
       {canManage && (
         <div className="flex items-end justify-between gap-3 flex-wrap">
+          {simple ? <span /> : (
           <div className="flex items-end gap-2 flex-wrap">
             <Input label="إضافة حقل يدويًا" placeholder="اسم الحقل في الـ API" dir="ltr" value={newField.key} onChange={(e) => setNewField({ ...newField, key: e.target.value })} />
             <Input label="الاسم الظاهر" placeholder="مثلًا: رقم الشحنة" value={newField.label} onChange={(e) => setNewField({ ...newField, label: e.target.value })} />
@@ -459,20 +486,34 @@ function EntityEditor({ integrationId, entity, canManage }: { integrationId: str
               <Plus className="h-4 w-4" /> إضافة
             </Button>
           </div>
+          )}
           <Button
             className="text-white"
             disabled={!dirty}
             onClick={() => {
               updateEntity(integrationId, draft);
-              showToast('تم حفظ إعدادات الكيان', 'success');
+              showToast('تم حفظ الإعدادات', 'success');
             }}
           >
             <Check className="h-4 w-4" /> حفظ
           </Button>
         </div>
       )}
-      {canManage && <p className="text-[11.5px] text-muted-light dark:text-muted-dark">الحقل المضاف يدويًا يظهر في النتائج، ولا يُستخدم في البحث حتى نتحقق من دعم المصدر له.</p>}
+      {canManage && !simple && <p className="text-[11.5px] text-muted-light dark:text-muted-dark">الحقل المضاف يدويًا يظهر في النتائج، ولا يُستخدم في البحث حتى نتحقق من دعم المصدر له.</p>}
     </div>
+  );
+}
+
+/** في المنصات الجاهزة تُطوى التفاصيل التقنية؛ في المنصة الخاصة تظهر كما هي. */
+function Advanced({ simple, children }: { simple: boolean; children: React.ReactNode }): JSX.Element {
+  if (!simple) return <>{children}</>;
+  return (
+    <details className="group rounded-lg border border-border-light dark:border-border-dark">
+      <summary className="cursor-pointer select-none px-3 py-2 text-small font-semibold text-muted-light dark:text-muted-dark hover:text-current">
+        إعدادات متقدمة
+      </summary>
+      <div className="p-3 pt-1 space-y-4">{children}</div>
+    </details>
   );
 }
 
@@ -515,14 +556,14 @@ function AiTab({
       <p className={cn('text-small', included ? 'text-success' : 'text-muted-light dark:text-muted-dark')}>
         {included
           ? `المساعد يقدر يبحث الآن في: ${sources.find((s) => s.integration.id === integration.id)?.entities.map((e) => e.label).join('، ')}.`
-          : 'هذا المصدر غير متاح للمساعد حاليًا (غير مفعّل له، أو التكامل غير متصل، أو لا توجد كيانات مفعّلة).'}
+          : 'هذا المصدر غير متاح للمساعد حاليًا (غير مفعّل له، أو التكامل غير متصل، أو لا توجد أنواع بيانات مفعّلة).'}
       </p>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="space-y-2 text-small leading-relaxed">
           <b className="text-body block">كيف يعمل</b>
           <ol className="list-decimal ps-5 space-y-1 text-muted-light dark:text-muted-dark">
             <li>المساعد يقرر أن السؤال يحتاج بيانات لحظية، فيطلب أداة البحث.</li>
-            <li>Qhub يتحقق: المصدر متاح للمساعد، الكيان مفعّل، الحقل والشرط مسموحان.</li>
+            <li>Qhub يتحقق: المصدر متاح للمساعد، نوع البيانات مفعّل، الحقل والشرط مسموحان.</li>
             <li>Qhub ينفّذ البحث ويرجّع الحقول الظاهرة فقط، بحد النتائج.</li>
             <li>المساعد يرد من النتيجة. لو لم يجد سجلًا يقول ذلك، ولو نقصت معلومة يسأل العميل.</li>
           </ol>

@@ -11,6 +11,7 @@ import {
   type IntegrationStatus,
 } from '@/store/useIntegrationStore';
 import { usePermission } from '@/hooks/usePermission';
+import { PlatformLogo } from '@/components/integrations/PlatformLogo';
 import { formatDate, formatTime } from '@/utils/format';
 import { cn } from '@/utils/cn';
 
@@ -73,7 +74,7 @@ export default function Integrations(): JSX.Element {
         <StatCard label="التكاملات" value={String(integrations.length)} icon={<Database className="h-5 w-5" />} iconBg="bg-primary/15" iconColor="text-primary" />
         <StatCard label="متصلة" value={String(connected)} icon={<DownloadCloud className="h-5 w-5" />} iconBg="bg-success/15" iconColor="text-success" />
         <StatCard label="تحتاج متابعة" value={String(failing)} icon={<Webhook className="h-5 w-5" />} iconBg="bg-danger/10" iconColor="text-danger" hint="تكاملات بها خطأ في الاتصال أو فشلت مزامنتها." />
-        <StatCard label="الكيانات المفعّلة" value={String(entities)} icon={<CalendarClock className="h-5 w-5" />} iconBg="bg-violet-500/15" iconColor="text-violet-600" hint="الطلبات والعملاء والفواتير… المسموح البحث فيها." />
+        <StatCard label="أنواع البيانات المفعّلة" value={String(entities)} icon={<CalendarClock className="h-5 w-5" />} iconBg="bg-violet-500/15" iconColor="text-violet-600" hint="الطلبات والعملاء والفواتير… المسموح البحث فيها." />
       </div>
 
       <Card className="p-4 space-y-4">
@@ -135,7 +136,7 @@ export default function Integrations(): JSX.Element {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">{METHOD_ICON[i.method]}</span>
+                    {i.platform ? <PlatformLogo platform={i.platform} /> : <span className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">{METHOD_ICON[i.method]}</span>}
                     <div className="min-w-0">
                       <b className="text-body block truncate">{i.name}</b>
                       <span className="text-small text-muted-light dark:text-muted-dark">{i.provider}</span>
@@ -146,10 +147,10 @@ export default function Integrations(): JSX.Element {
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-small">
                   <div>
                     <dt className="text-muted-light dark:text-muted-dark">طريقة الربط</dt>
-                    <dd className="font-medium">{METHOD_LABEL[i.method]}</dd>
+                    <dd className="font-medium">{i.platform ? 'منصة جاهزة' : METHOD_LABEL[i.method]}</dd>
                   </div>
                   <div>
-                    <dt className="text-muted-light dark:text-muted-dark">الكيانات</dt>
+                    <dt className="text-muted-light dark:text-muted-dark">أنواع البيانات</dt>
                     <dd className="font-medium">
                       {i.entities.length === 0 ? '—' : `${i.entities.filter((e) => e.enabled).length} من ${i.entities.length}`}
                     </dd>

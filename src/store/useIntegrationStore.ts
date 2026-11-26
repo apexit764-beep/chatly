@@ -76,6 +76,8 @@ export interface ExternalIntegration {
   id: string;
   name: string;
   provider: string;
+  /** منصة جاهزة (سلة، زد…) — غيابها يعني منصة خاصة عبر API. */
+  platform?: PlatformKey;
   description?: string;
   method: ConnectionMethod;
   status: IntegrationStatus;
@@ -477,6 +479,146 @@ function seed(): ExternalIntegration[] {
 }
 
 /** نتائج الاكتشاف لتكامل جديد — يمثّل ما يرجّعه وصف الـ API (OpenAPI) للمصدر. */
+// ── ready-made platforms ────────────────────────────────────────────────────
+
+export type PlatformKey = 'salla' | 'zid' | 'shopify' | 'woocommerce' | 'odoo' | 'google_sheets';
+
+export interface PlatformDef {
+  key: PlatformKey;
+  name: string;
+  hint: string;
+  /** `oauth`: تسجيل دخول وموافقة. `sheet`: رابط جدول مشارَك. */
+  auth: 'oauth' | 'sheet';
+  /** تُبنى أنواع بياناتها مسبقًا — لا رابط ولا مفاتيح ولا اكتشاف. */
+  entities: () => ExternalEntity[];
+}
+
+/** أنواع البيانات الجاهزة لمنصة متجر: الطلبات والعملاء والمنتجات، بالبحث برقم الطلب والجوال. */
+function storePreset(): ExternalEntity[] {
+  return [
+    {
+      id: rid('ent'),
+      key: 'orders',
+      label: 'الطلبات',
+      endpoint: '/orders',
+      enabled: true,
+      idField: 'order_id',
+      capabilities: { getById: 'supported', search: 'supported', filter: 'supported', pagination: 'supported', sort: 'supported' },
+      strategy: 'direct',
+      resultLimit: 20,
+      fields: [
+        field('order_id', 'رقم الطلب', 'string', 'supported', 'supported', ['eq']),
+        field('phone_number', 'جوال العميل', 'string', 'supported', 'supported', ['eq']),
+        field('customer_name', 'اسم العميل', 'string', 'unsupported', 'unsupported', []),
+        field('status', 'حالة الطلب', 'string', 'unsupported', 'supported', ['eq']),
+        field('created_at', 'تاريخ الطلب', 'date', 'unsupported', 'supported', ['gt', 'lt']),
+        field('total', 'الإجمالي', 'number', 'unsupported', 'unsupported', []),
+        field('currency', 'العملة', 'string', 'unsupported', 'unsupported', []),
+      ],
+      records: ORDERS,
+    },
+    {
+      id: rid('ent'),
+      key: 'customers',
+      label: 'العملاء',
+      endpoint: '/customers',
+      enabled: true,
+      idField: 'customer_id',
+      capabilities: { getById: 'supported', search: 'supported', filter: 'unsupported', pagination: 'supported', sort: 'unsupported' },
+      strategy: 'direct',
+      resultLimit: 10,
+      fields: [
+        field('phone', 'الجوال', 'string', 'supported', 'unsupported', ['eq']),
+        field('email', 'البريد الإلكتروني', 'string', 'supported', 'unsupported', ['eq']),
+        field('name', 'الاسم', 'string', 'unsupported', 'unsupported', []),
+        field('orders_count', 'عدد الطلبات', 'number', 'unsupported', 'unsupported', []),
+      ],
+      records: CUSTOMERS,
+    },
+    {
+      id: rid('ent'),
+      key: 'products',
+      label: 'المنتجات',
+      endpoint: '/products',
+      enabled: false,
+      idField: 'sku',
+      capabilities: { getById: 'supported', search: 'supported', filter: 'supported', pagination: 'supported', sort: 'supported' },
+      strategy: 'direct',
+      resultLimit: 20,
+      fields: [
+        field('sku', 'رمز المنتج', 'string', 'supported', 'supported', ['eq']),
+        field('title', 'اسم المنتج', 'string', 'supported', 'unsupported', ['contains']),
+        field('stock', 'المخزون', 'number', 'unsupported', 'supported', ['gt', 'lt']),
+      ],
+      records: [],
+    },
+  ];
+}
+
+export const PLATFORMS: PlatformDef[] = [
+  { key: 'salla', name: 'سلة', hint: 'الطلبات والعملاء والمنتجات من متجرك على سلة.', auth: 'oauth', entities: storePreset },
+  { key: 'zid', name: 'زد', hint: 'الطلبات والعملاء والمنتجات من متجرك على زد.', auth: 'oauth', entities: storePreset },
+  { key: 'shopify', name: 'Shopify', hint: 'الطلبات والعملاء والمنتجات من متجر Shopify.', auth: 'oauth', entities: storePreset },
+  { key: 'woocommerce', name: 'WooCommerce', hint: 'الطلبات والعملاء والمنتجات من متجر WordPress.', auth: 'oauth', entities: storePreset },
+  {
+    key: 'odoo',
+    name: 'Odoo',
+    hint: 'الفواتير والعملاء من نظام Odoo.',
+    auth: 'oauth',
+    entities: () => [
+      {
+        id: rid('ent'),
+        key: 'invoices',
+        label: 'الفواتير',
+        endpoint: 'account.move',
+        enabled: true,
+        idField: 'invoice_no',
+        capabilities: { getById: 'supported', search: 'supported', filter: 'supported', pagination: 'supported', sort: 'supported' },
+        strategy: 'direct',
+        resultLimit: 20,
+        fields: [
+          field('invoice_no', 'رقم الفاتورة', 'string', 'supported', 'supported', ['eq']),
+          field('phone', 'الجوال', 'string', 'supported', 'supported', ['eq']),
+          field('customer', 'العميل', 'string', 'supported', 'supported', ['contains']),
+          field('status', 'الحالة', 'string', 'unsupported', 'supported', ['eq']),
+          field('due_date', 'تاريخ الاستحقاق', 'date', 'unsupported', 'supported', ['gt', 'lt']),
+          field('amount', 'المبلغ', 'number', 'unsupported', 'unsupported', []),
+        ],
+        records: INVOICES,
+      },
+    ],
+  },
+  {
+    key: 'google_sheets',
+    name: 'Google Sheets',
+    hint: 'جدول فيه طلباتك أو عملاءك — بدون أي نظام.',
+    auth: 'sheet',
+    entities: () => [
+      {
+        id: rid('ent'),
+        key: 'rows',
+        label: 'صفوف الجدول',
+        endpoint: 'Sheet1',
+        enabled: true,
+        idField: 'order_id',
+        capabilities: { getById: 'unsupported', search: 'unsupported', filter: 'unsupported', pagination: 'supported', sort: 'unsupported' },
+        strategy: 'cache',
+        resultLimit: 20,
+        cachedAt: new Date().toISOString(),
+        fields: [
+          field('order_id', 'رقم الطلب', 'string', 'supported', 'supported', ['eq']),
+          field('phone_number', 'الجوال', 'string', 'supported', 'supported', ['eq']),
+          field('customer_name', 'الاسم', 'string', 'supported', 'supported', ['contains']),
+          field('status', 'الحالة', 'string', 'supported', 'supported', ['eq']),
+        ],
+        records: ORDERS,
+      },
+    ],
+  },
+];
+
+export const platformOf = (key?: PlatformKey): PlatformDef | undefined => PLATFORMS.find((p) => p.key === key);
+
 export function discoverSample(): ExternalEntity[] {
   return [
     {
@@ -612,7 +754,17 @@ export const useIntegrationStore = create<State>((set, get) => {
       const i = get().integrations.find((x) => x.id === id);
       if (!i) return { ok: false, message: 'التكامل غير موجود' };
       let result: { ok: boolean; message: string };
-      if (i.method === 'webhook_push') result = { ok: true, message: 'رابط الاستقبال جاهز' };
+      if (i.platform) {
+        const p = platformOf(i.platform);
+        result =
+          p?.auth === 'sheet'
+            ? /^https:\/\/docs\.google\.com\/spreadsheets\//.test(i.baseUrl ?? '')
+              ? { ok: true, message: 'تم الوصول للجدول بنجاح' }
+              : { ok: false, message: 'تعذّر الوصول للجدول — تأكد من مشاركته مع Qhub' }
+            : i.credentialHint
+              ? { ok: true, message: 'تم الاتصال بنجاح' }
+              : { ok: false, message: `انتهى ربط حسابك على ${p?.name ?? 'المنصة'} — أعد الربط` };
+      } else if (i.method === 'webhook_push') result = { ok: true, message: 'رابط الاستقبال جاهز' };
       else if (!i.baseUrl) result = { ok: false, message: 'أدخل رابط الـ API' };
       else {
         const blocked = blockedHost(i.baseUrl);
@@ -663,8 +815,8 @@ export const useIntegrationStore = create<State>((set, get) => {
       if (i.status === 'disabled' || i.status === 'disconnected') return fail('التكامل معطّل أو مفصول.');
       if (by === 'ai' && !i.aiEnabled) return fail('هذا المصدر غير متاح للمساعد الذكي.');
       const e = i.entities.find((x) => x.id === entityId);
-      if (!e || !e.enabled) return fail('هذا الكيان غير مفعّل.');
-      if (e.strategy === 'unavailable') return fail('المصدر لا يدعم البحث في هذا الكيان.');
+      if (!e || !e.enabled) return fail('نوع البيانات هذا غير مفعّل.');
+      if (e.strategy === 'unavailable') return fail('المصدر لا يدعم البحث في نوع البيانات هذا.');
       if (e.strategy === 'direct' && i.status === 'error') return fail('تعذّر الاتصال بالمصدر الآن. حاول لاحقًا.');
       if (criteria.length === 0) return fail('اختر حقلًا وأدخل قيمة للبحث.');
       for (const c of criteria) {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { ArrowRight, Check, Copy, Plus, RefreshCw, ScanSearch, Trash2, XCircle } from 'lucide-react';
+import { ArrowRight, Check, Copy, Plus, RefreshCw, ScanSearch, Search, Trash2, XCircle } from 'lucide-react';
 import { Button, Card, Input, Select, Textarea } from '@components/ui';
 import {
   AUTH_LABEL,
@@ -9,7 +9,9 @@ import {
   FREQ_LABEL,
   METHOD_HINT,
   METHOD_LABEL,
+  PLATFORMS,
   STRATEGY_LABEL,
+  platformOf,
   blockedHost,
   discoverSample,
   newWebhookSecret,
@@ -19,15 +21,20 @@ import {
   type ConnectionMethod,
   type ExternalEntity,
   type ExternalIntegration,
+  type PlatformDef,
   type SyncFrequency,
 } from '@/store/useIntegrationStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useDataStore } from '@/store/useDataStore';
+import { PlatformLogo } from '@/components/integrations/PlatformLogo';
 import { useUIStore } from '@/store/useUIStore';
 import { usePermission } from '@/hooks/usePermission';
 import { cn } from '@/utils/cn';
 import { METHOD_ICON } from './Integrations';
 
-const STEPS = ['المعلومات الأساسية', 'الاتصال', 'اكتشاف بنية البيانات', 'المزامنة', 'المراجعة'] as const;
+const CUSTOM_STEPS = ['المعلومات الأساسية', 'الاتصال', 'اكتشاف بنية البيانات', 'المزامنة', 'المراجعة'];
+const PLATFORM_STEPS = ['الربط', 'أنواع البيانات', 'المراجعة'];
+const SHEET_URL = /^https:\/\/docs\.google\.com\/spreadsheets\/d\/[\w-]{10,}/;
 const WEBHOOK_EVENTS = ['record.created', 'record.updated', 'record.deleted'];
 
 function blank(createdBy: string): ExternalIntegration {
@@ -69,10 +76,39 @@ export default function IntegrationWizard(): JSX.Element {
   const [discovering, setDiscovering] = useState(false);
   const [step, setStep] = useState(0);
   const { has } = usePermission();
+  const channels = useDataStore((s) => s.channels);
+  /** منصة جاهزة أم منصة خاصة — يُختار في الخطوة الأولى، وثابت عند التعديل. */
+  const [kind, setKind] = useState<'platform' | 'custom' | null>(existing ? (existing.platform ? 'platform' : 'custom') : null);
 
   if (!has('integrations.manage')) return <Navigate to={id ? `/integrations/${id}` : '/integrations'} replace />;
   const isEdit = !!existing;
-  const steps = STEPS.filter((s) => s !== 'المزامنة' || draft.method === 'scheduled_sync');
+  const flow = kind === 'custom' ? CUSTOM_STEPS.filter((s) => s !== 'المزامنة' || draft.method === 'scheduled_sync') : PLATFORM_STEPS;
+  const steps = isEdit ? flow : ['المصدر', ...flow];
+  const platform = platformOf(draft.platform);
+  // متجر مربوط عندنا كقناة من قبل — يُعاد استخدام ربطه بدل تسجيل الدخول من جديد.
+  const linkedStores = platform ? channels.filter((c) => (c.type as string) === platform.key) : [];
+
+  const choose = (p: PlatformDef | null): void => {
+    if (p) {
+      setKind('platform');
+      set({
+        platform: p.key,
+        name: p.name,
+        provider: p.name,
+        method: p.auth === 'sheet' ? 'scheduled_sync' : 'api_pull',
+        authType: p.auth === 'sheet' ? 'none' : 'oauth2',
+        syncFrequency: p.auth === 'sheet' ? '1h' : undefined,
+        baseUrl: undefined,
+        credentialHint: undefined,
+        entities: p.entities(),
+      });
+      setOauthDone(false);
+    } else {
+      setKind('custom');
+      set({ platform: undefined, name: '', provider: '', method: 'api_pull', authType: 'bearer', entities: [] });
+    }
+    setStep(1);
+  };
   const current = steps[step];
   const set = (p: Partial<ExternalIntegration>): void => setDraft((d) => ({ ...d, ...p }));
 
@@ -110,6 +146,12 @@ export default function IntegrationWizard(): JSX.Element {
     set({ entities: draft.entities.map((x) => (x.id === e.id ? { ...x, enabled: !x.enabled } : x)) });
 
   const canNext = (): string | null => {
+    if (current === 'المصدر' && !kind) return 'اختر المنصة';
+    if (current === 'الربط') {
+      if (platform?.auth === 'sheet' && !SHEET_URL.test(draft.baseUrl ?? '')) return 'أدخل رابط Google Sheet صحيحًا';
+      if (platform?.auth === 'oauth' && !oauthDone) return `اربط حسابك على ${platform.name} أولًا`;
+    }
+    if (current === 'أنواع البيانات' && !draft.entities.some((e) => e.enabled)) return 'اختر نوع بيانات واحدًا على الأقل';
     if (current === 'المعلومات الأساسية') {
       if (!draft.name.trim()) return 'اسم التكامل مطلوب';
       if (!draft.provider.trim()) return 'اسم التطبيق أو الموقع مطلوب';
@@ -119,7 +161,7 @@ export default function IntegrationWizard(): JSX.Element {
       if (draft.method === 'webhook_push' && !draft.webhookUrl) return 'أنشئ رابط الاستقبال أولًا';
     }
     if (current === 'اكتشاف بنية البيانات' && !draft.entities.some((e) => e.enabled && e.strategy !== 'unavailable')) {
-      return 'فعّل كيانًا واحدًا على الأقل';
+      return 'فعّل نوع بيانات واحدًا على الأقل';
     }
     if (current === 'المزامنة' && !draft.syncFrequency) return 'اختر معدّل المزامنة';
     return null;
@@ -132,8 +174,11 @@ export default function IntegrationWizard(): JSX.Element {
   };
 
   const finish = (): void => {
+    if (!draft.name.trim()) return showToast('اسم التكامل مطلوب', 'error');
     const hint =
-      draft.authType === 'none'
+      draft.platform && draft.authType === 'oauth2'
+        ? draft.credentialHint ?? '••••••••oauth'
+        : draft.authType === 'none'
         ? undefined
         : credential.trim()
           ? `••••••••${credential.trim().slice(-4)}`
@@ -194,6 +239,153 @@ export default function IntegrationWizard(): JSX.Element {
       </ol>
 
       <Card className="p-5 space-y-5">
+        {current === 'المصدر' && (
+          <div className="space-y-5">
+            <div>
+              <b className="text-body">منصات جاهزة</b>
+              <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">سجّل دخولك ووافق — بدون روابط أو مفاتيح.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {PLATFORMS.map((p) => (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => choose(p)}
+                  className={cn(
+                    'text-start rounded-card border p-4 flex items-start gap-3 transition',
+                    draft.platform === p.key ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-light dark:border-border-dark hover:border-primary/50',
+                  )}
+                >
+                  <PlatformLogo platform={p.key} />
+                  <span>
+                    <b className="block text-body">{p.name}</b>
+                    <span className="block text-small text-muted-light dark:text-muted-dark mt-0.5 leading-relaxed">{p.hint}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="pt-2">
+              <b className="text-body">منصة خاصة</b>
+              <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">نظام أو موقع عملته بنفسك — تربطه عبر الـ API الخاص به.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => choose(null)}
+              className={cn(
+                'w-full text-start rounded-card border p-4 flex items-start gap-3 transition',
+                kind === 'custom' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border-light dark:border-border-dark hover:border-primary/50',
+              )}
+            >
+              <PlatformLogo />
+              <span>
+                <b className="block text-body">منصة خاصة (API)</b>
+                <span className="block text-small text-muted-light dark:text-muted-dark mt-0.5">رابط الـ API وطريقة المصادقة، ثم نكتشف أنواع البيانات المتاحة.</span>
+              </span>
+            </button>
+          </div>
+        )}
+
+        {current === 'الربط' && platform && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <PlatformLogo platform={platform.key} size="lg" />
+              <div>
+                <b className="text-h3">{platform.name}</b>
+                <p className="text-small text-muted-light dark:text-muted-dark">{platform.hint}</p>
+              </div>
+            </div>
+            {platform.auth === 'oauth' ? (
+              <>
+                {linkedStores.length > 0 && !oauthDone && (
+                  <div className="space-y-2">
+                    <p className="text-small text-muted-light dark:text-muted-dark">متجرك مربوط بالفعل في «الحسابات والربط»:</p>
+                    {linkedStores.map((c) => (
+                      <Button
+                        key={c.id}
+                        variant="secondary"
+                        onClick={() => {
+                          setOauthDone(true);
+                          set({ credentialHint: '••••••••linked', provider: `${platform.name} — ${c.name}` });
+                        }}
+                      >
+                        استخدام المتجر المربوط: {c.name}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+                {oauthDone ? (
+                  <div className="rounded-lg border border-success/30 bg-success/5 px-4 py-3 text-small flex items-center justify-between gap-3 flex-wrap">
+                    <span className="inline-flex items-center gap-2 font-semibold text-success">
+                      <Check className="h-4 w-4" /> تم الربط بحسابك على {platform.name}
+                    </span>
+                    <button type="button" className="text-primary font-semibold hover:underline" onClick={() => setOauthDone(false)}>
+                      ربط حساب آخر
+                    </button>
+                  </div>
+                ) : (
+                  <Button
+                    className="text-white"
+                    onClick={() => {
+                      setOauthDone(true);
+                      set({ credentialHint: '••••••••oauth' });
+                      showToast(`تم الربط بحسابك على ${platform.name}`, 'success');
+                    }}
+                  >
+                    {linkedStores.length > 0 ? `ربط حساب آخر على ${platform.name}` : `ربط بحساب ${platform.name}`}
+                  </Button>
+                )}
+                <p className="text-[12px] text-muted-light dark:text-muted-dark">نطلب صلاحية القراءة فقط — Qhub لا يعدّل أي شيء في {platform.name}.</p>
+              </>
+            ) : (
+              <>
+                <Input
+                  label="رابط Google Sheet"
+                  dir="ltr"
+                  placeholder="https://docs.google.com/spreadsheets/d/…"
+                  value={draft.baseUrl ?? ''}
+                  onChange={(e) => set({ baseUrl: e.target.value.trim() })}
+                />
+                <ol className="list-decimal ps-5 text-small text-muted-light dark:text-muted-dark space-y-1">
+                  <li>
+                    شارك الجدول مع <code dir="ltr">sheets@qhub.app</code> بصلاحية «عارض».
+                  </li>
+                  <li>الصف الأول يكون أسماء الأعمدة (رقم الطلب، الجوال، الاسم، الحالة…).</li>
+                </ol>
+                <Select label="تحديث البيانات" value={draft.syncFrequency ?? '1h'} onChange={(e) => set({ syncFrequency: e.target.value as SyncFrequency })}>
+                  {(Object.keys(FREQ_LABEL) as SyncFrequency[]).map((f) => (
+                    <option key={f} value={f}>
+                      {FREQ_LABEL[f]}
+                    </option>
+                  ))}
+                </Select>
+              </>
+            )}
+          </div>
+        )}
+
+        {current === 'أنواع البيانات' && (
+          <div className="space-y-3">
+            <p className="text-small text-muted-light dark:text-muted-dark">اختر البيانات التي تريد البحث فيها من Qhub.</p>
+            {draft.entities.map((e) => (
+              <label
+                key={e.id}
+                className={cn(
+                  'flex items-start gap-3 rounded-card border p-4 cursor-pointer',
+                  e.enabled ? 'border-primary/40 bg-primary/5' : 'border-border-light dark:border-border-dark',
+                )}
+              >
+                <input type="checkbox" className="h-4 w-4 mt-1 accent-[#2563EB]" checked={e.enabled} onChange={() => toggleEntity(e)} />
+                <span>
+                  <b className="block text-body">{e.label}</b>
+                  <span className="text-small text-muted-light dark:text-muted-dark inline-flex items-center gap-1.5 mt-0.5">
+                    <Search className="h-3.5 w-3.5" /> تقدر تدوّر بـ: {e.fields.filter((f) => f.useForSearch).map((f) => f.label).join('، ') || '—'}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+
         {current === 'المعلومات الأساسية' && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -394,7 +586,7 @@ export default function IntegrationWizard(): JSX.Element {
           <>
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <p className="text-small text-muted-light dark:text-muted-dark leading-relaxed max-w-2xl">
-                نقرأ وصف الـ API عند المصدر لنعرف الكيانات المتاحة وحقولها، وأيها يدعم البحث والتصفية. ما لم نتحقق منه يظهر «غير مؤكد» ولا يُستخدم في البحث.
+                نقرأ وصف الـ API عند المصدر لنعرف أنواع البيانات المتاحة وحقولها، وأيها يدعم البحث والتصفية. ما لم نتحقق منه يظهر «غير مؤكد» ولا يُستخدم في البحث.
               </p>
               <Button className="text-white" onClick={discover} disabled={discovering}>
                 <ScanSearch className="h-4 w-4" /> {discovering ? 'جارٍ الاكتشاف…' : draft.entities.length ? 'إعادة الاكتشاف' : 'اكتشاف بنية البيانات'}
@@ -438,7 +630,7 @@ export default function IntegrationWizard(): JSX.Element {
                       الحقول: {e.fields.map((f) => f.label).join('، ')}
                     </p>
                     {e.strategy === 'cache' && (
-                      <p className="text-[12px] text-muted-light dark:text-muted-dark mt-1">المصدر لا يبحث في هذا الكيان، فنحفظ نسخة منه ونبحث فيها.</p>
+                      <p className="text-[12px] text-muted-light dark:text-muted-dark mt-1">المصدر لا يبحث في نوع البيانات هذا، فنحفظ نسخة منه ونبحث فيها.</p>
                     )}
                     {e.strategy === 'unavailable' && (
                       <p className="text-[12px] text-danger mt-1">المصدر لا يدعم البحث ولا السحب على صفحات — لا يمكن تفعيله.</p>
@@ -469,28 +661,31 @@ export default function IntegrationWizard(): JSX.Element {
               <Input label="وقت البدء" type="time" value={draft.syncStartTime ?? '03:00'} onChange={(e) => set({ syncStartTime: e.target.value })} />
             )}
             <p className="md:col-span-2 text-small text-muted-light dark:text-muted-dark">
-              تُسحب الكيانات المفعّلة ({draft.entities.filter((e) => e.enabled).map((e) => e.label).join('، ') || '—'}) على صفحات، وتُحدَّث السجلات الموجودة دون تكرار.
+              تُسحب أنواع البيانات المفعّلة ({draft.entities.filter((e) => e.enabled).map((e) => e.label).join('، ') || '—'}) على صفحات، وتُحدَّث السجلات الموجودة دون تكرار.
             </p>
           </div>
         )}
 
         {current === 'المراجعة' && (
           <div className="space-y-4">
+            {platform && (
+              <Input label="اسم التكامل" value={draft.name} onChange={(e) => set({ name: e.target.value })} tip="الاسم الذي يظهر لك ولفريقك." />
+            )}
             <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-small">
-              <Row k="اسم التكامل" v={draft.name} />
-              <Row k="التطبيق أو الموقع" v={draft.provider} />
-              <Row k="طريقة الربط" v={METHOD_LABEL[draft.method]} />
-              {draft.method !== 'webhook_push' && <Row k="المصادقة" v={AUTH_LABEL[draft.authType]} />}
-              {draft.baseUrl && <Row k="رابط الـ API" v={draft.baseUrl} ltr />}
-              {draft.syncFrequency && <Row k="المزامنة" v={FREQ_LABEL[draft.syncFrequency]} />}
-              <Row k="الكيانات المفعّلة" v={draft.entities.filter((e) => e.enabled).map((e) => e.label).join('، ')} />
+              {!platform && <Row k="اسم التكامل" v={draft.name} />}
+              <Row k={platform ? 'المنصة' : 'التطبيق أو الموقع'} v={draft.provider} />
+              {!platform && <Row k="طريقة الربط" v={METHOD_LABEL[draft.method]} />}
+              {!platform && draft.method !== 'webhook_push' && <Row k="المصادقة" v={AUTH_LABEL[draft.authType]} />}
+              {draft.baseUrl && <Row k={platform ? 'رابط الجدول' : 'رابط الـ API'} v={draft.baseUrl} ltr />}
+              {draft.syncFrequency && <Row k={platform ? 'تحديث البيانات' : 'المزامنة'} v={FREQ_LABEL[draft.syncFrequency]} />}
+              <Row k="أنواع البيانات المفعّلة" v={draft.entities.filter((e) => e.enabled).map((e) => e.label).join('، ')} />
             </dl>
             <label className="flex items-start gap-3 rounded-card border border-border-light dark:border-border-dark p-4 cursor-pointer">
               <input type="checkbox" className="h-4 w-4 mt-0.5 accent-[#2563EB]" checked={draft.aiEnabled} onChange={(e) => set({ aiEnabled: e.target.checked })} />
               <span>
                 <b className="text-body block">متاح للمساعد الذكي</b>
                 <span className="text-small text-muted-light dark:text-muted-dark">
-                  يبحث المساعد في الكيانات المفعّلة عندما يسأل عميل عن طلبه أو فاتورته، ويرد من النتيجة فقط.
+                  يبحث المساعد في أنواع البيانات المفعّلة عندما يسأل عميل عن طلبه أو فاتورته، ويرد من النتيجة فقط.
                 </span>
               </span>
             </label>
