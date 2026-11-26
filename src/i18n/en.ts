@@ -803,6 +803,7 @@ export const en: Record<string, string> = {
   'القنوات المُفعّل عليها': 'Enabled Channels',
   'ادعُ واكسب': 'Refer & Earn',
   'المطورين': 'Developers',
+  'مصادر البيانات': 'Data sources',
   'قناة مُفعّلة': 'channel enabled',
   'لغات الرد': 'Reply Languages',
   'نبرة وأسلوب الرد': 'Reply Tone & Style',

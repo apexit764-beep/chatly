@@ -152,6 +152,16 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     ],
   },
   {
+    key: 'integrations',
+    label: 'مصادر البيانات الخارجية',
+    icon: 'Database',
+    permissions: [
+      { key: 'integrations.view', label: 'عرض التكاملات', description: 'قائمة التكاملات وحالتها وسجل المزامنة' },
+      { key: 'integrations.manage', label: 'إدارة التكاملات', description: 'إضافة وتعديل وفصل التكاملات وبيانات الاتصال — حساس' },
+      { key: 'integrations.search', label: 'البحث في البيانات الخارجية', description: 'البحث في الكيانات المسموحة من الصفحة ومن المحادثات' },
+    ],
+  },
+  {
     key: 'billing',
     label: 'الفوترة والإعدادات',
     icon: 'CreditCard',

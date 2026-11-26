@@ -28,6 +28,9 @@ const AIBalanceCheckout = lazy(() => import('@pages/AIBalanceCheckout'));
 const Billing = lazy(() => import('@pages/Billing'));
 const Referral = lazy(() => import('@pages/Referral'));
 const Developers = lazy(() => import('@pages/Developers'));
+const Integrations = lazy(() => import('@pages/Integrations'));
+const IntegrationDetail = lazy(() => import('@pages/IntegrationDetail'));
+const IntegrationWizard = lazy(() => import('@pages/IntegrationWizard'));
 const Assistant = lazy(() => import('@pages/Assistant'));
 const ChatTemplates = lazy(() => import('@pages/ChatTemplates'));
 const ChatTemplateEditor = lazy(() => import('@pages/ChatTemplateEditor'));
@@ -120,7 +123,10 @@ export default function App(): JSX.Element {
           <Route path="/team" element={<Team />} />
           <Route path="/team/roles" element={<Roles />} />
           <Route path="/team/:agentId" element={<AgentDetail />} />
-          <Route path="/integrations" element={<Navigate to="/channels" replace />} />
+          <Route path="/integrations" element={<Integrations />} />
+          <Route path="/integrations/new" element={<IntegrationWizard />} />
+          <Route path="/integrations/:id" element={<IntegrationDetail />} />
+          <Route path="/integrations/:id/edit" element={<IntegrationWizard />} />
           <Route path="/widget" element={<Navigate to="/channels/widget" replace />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />

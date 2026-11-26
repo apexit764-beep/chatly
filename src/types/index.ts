@@ -77,7 +77,11 @@ export type PermissionKey =
   | 'developers.view'
   | 'developers.keys'
   | 'developers.configure'
-  | 'developers.logs';
+  | 'developers.logs'
+  // External data integrations
+  | 'integrations.view'
+  | 'integrations.manage'
+  | 'integrations.search';
 
 export interface Role {
   id: string;

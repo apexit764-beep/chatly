@@ -22,7 +22,7 @@ const titleMap: Record<string, string> = {
   '/templates': 'القوالب',
   '/saved-replies': 'الردود السريعة',
   '/team': 'فريق العمل',
-  '/integrations': 'التكاملات',
+  '/integrations': 'مصادر البيانات',
   '/widget': 'Live Chat Widget',
   '/reports': 'التقارير',
   '/settings': 'الإعدادات',

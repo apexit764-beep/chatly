@@ -55,6 +55,7 @@ import {
   Square,
   Play,
   Pause,
+  Database,
 } from 'lucide-react';
 import {
   AiAvatar,
@@ -71,6 +72,8 @@ import {
   InfoTip,
 } from '@components/ui';
 import { ContactTypeTip } from '@components/contacts/ContactTypeTip';
+import { ExternalSearch } from '@/components/integrations/ExternalSearch';
+import { usePermission } from '@/hooks/usePermission';
 import { useDataStore, RATING_SENT_PREVIEW } from '@/store/useDataStore';
 import { useUIStore } from '@/store/useUIStore';
 import { useInboxStore } from '@/store/useInboxStore';
@@ -1828,6 +1831,8 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
   const showToast = useUIStore((s) => s.showToast);
   const collapsed = useUIStore((s) => s.detailsCollapsed);
   const toggleDetails = useUIStore((s) => s.toggleDetails);
+  const { has: hasPerm } = usePermission();
+  const [externalOpen, setExternalOpen] = useState(false);
   const contact = contacts.find((c) => c.id === conversation.contactId);
   const [openAttrs, setOpenAttrs] = useState(true);
   const [openRecent, setOpenRecent] = useState(true);
@@ -1984,6 +1989,24 @@ function DetailsPanel({ conversation }: { conversation: Conversation }): JSX.Ele
           )}
         />
       </div>
+
+      {/* External data — look up this customer's orders/invoices without leaving the conversation. */}
+      {hasPerm('integrations.search') && (
+        <div className="p-4 border-b border-border-light dark:border-border-dark">
+          <button
+            type="button"
+            onClick={() => setExternalOpen(true)}
+            className="w-full h-9 rounded-lg border border-border-light dark:border-border-dark text-small font-semibold inline-flex items-center justify-center gap-2 hover:bg-bg-light dark:hover:bg-bg-dark"
+          >
+            <Database className="h-4 w-4 text-primary" /> {t('البحث في البيانات الخارجية')}
+          </button>
+          <Drawer open={externalOpen} onClose={() => setExternalOpen(false)} title={t('البحث في البيانات الخارجية')}>
+            <div className="p-5">
+              <ExternalSearch initialValue={contact.phone} compact key={contact.id} />
+            </div>
+          </Drawer>
+        </div>
+      )}
 
       {/* Tags */}
       <div className="p-4 border-b border-border-light dark:border-border-dark">

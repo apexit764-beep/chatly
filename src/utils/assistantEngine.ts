@@ -5,6 +5,7 @@ import { BALANCE_SETTINGS } from '@/utils/aiBalance';
 import { channelLabel } from '@components/ui';
 import { formatDate } from '@/utils/format';
 import { currentAgent, hasPermission, seesAllDepartments } from '@/utils/assistantAccess';
+import { aiToolSources, useIntegrationStore } from '@/store/useIntegrationStore';
 
 /**
  * The internal assistant: answers staff questions about their own account's data (subscription,
@@ -23,7 +24,7 @@ export interface Answer {
 
 export type Topic =
   | 'sub' | 'usage' | 'open' | 'channels' | 'team' | 'top' | 'camp' | 'contact'
-  | 'ai' | 'howTo' | 'action' | 'none';
+  | 'ai' | 'howTo' | 'action' | 'external' | 'none';
 
 export interface QuickQuestion {
   topic: Topic;
@@ -59,6 +60,8 @@ export function detectTopic(question: string): Topic {
   if (has('حول', 'احذف', 'امسح', 'اضف وسم', 'اغلق', 'ارسل رساله', 'غير حاله', 'اسند')) return 'action';
   // How-to questions are for the support team, not for this assistant.
   if (has('كيف اربط', 'كيف اضيف', 'كيف انشئ', 'كيف اطلق', 'كيف اعمل', 'كيف استخدم', 'طريقه', 'ازاي', 'خطوات', 'اربط واتساب', 'ربط واتساب', 'اضيف موظف', 'موظف جديد', 'ادعو موظف', 'رد سريع', 'ردود سريعه', 'اطلق حمله', 'انشئ حمله', 'حمله جديده', 'اعمل حمله')) return 'howTo';
+  // A record number asked about (order, invoice, shipment) — answered live from the client's own sources.
+  if (recordRef(question) && has('طلب', 'اوردر', 'order', 'فاتوره', 'فواتير', 'شحنه', 'تتبع', 'سجل')) return 'external';
   if (has('رصيد المساعد', 'استهلاك المساعد', 'توكن')) return 'ai';
   if (has('متبقي', 'باقي', 'تبقي', 'استهلاك', 'حد الباقه')) return 'usage';
   if (has('اشتراك', 'باقه', 'تجديد', 'ينتهي', 'الفاتوره')) return 'sub';
@@ -69,6 +72,45 @@ export function detectTopic(question: string): Topic {
   if (has('موظف', 'موظفين', 'متاح', 'مشغول', 'الفريق')) return 'team';
   if (has('مفتوحه', 'محادثه', 'محادثات', 'مسند')) return 'open';
   return 'none';
+}
+
+/** The record number in a question: 10582, INV-3391, SH-778120. */
+function recordRef(question: string): string | null {
+  return question.match(/[A-Za-z]{2,3}-?\d{3,}|\d{4,}/)?.[0] ?? null;
+}
+
+/**
+ * Live answer from the client's connected sources, through the same validated search the staff use:
+ * only sources enabled for the assistant, only enabled entities and allowed fields, only visible fields back.
+ */
+function externalAnswer(question: string): Answer {
+  if (!hasPermission('integrations.search')) return NO_PERMISSION;
+  const ref = recordRef(question);
+  const store = useIntegrationStore.getState();
+  const sources = aiToolSources(store.integrations);
+  if (!ref) return { intro: 'اكتب رقم الطلب أو الفاتورة أو الشحنة لأبحث عنه.', tone: 'warn' };
+  if (sources.length === 0) return { intro: 'لا يوجد مصدر بيانات خارجي متاح للمساعد.', tone: 'warn', link: link('/integrations', 'مصادر البيانات') };
+  const q = norm(question);
+  const wants = (k: string): boolean =>
+    (k === 'invoices' && q.includes('فاتور')) || (k === 'shipments' && (q.includes('شحن') || q.includes('تتبع'))) || (k === 'orders' && (q.includes('طلب') || q.includes('اوردر')));
+  const candidates = sources
+    .flatMap((s) => s.entities.map((e) => ({ s, e })))
+    .sort((a, b) => Number(wants(b.e.key)) - Number(wants(a.e.key)));
+  for (const { s, e } of candidates) {
+    for (const f of e.fields.filter((x) => (x.useForSearch || e.strategy === 'cache') && x.operators.includes('eq') && !/phone|mobile/.test(x.key))) {
+      const r = store.search(s.integration.id, e.id, [{ field: f.key, op: 'eq', value: ref }], 'ai');
+      if (r.ok && r.records.length > 0) {
+        const rec = r.records[0];
+        return {
+          intro: `من «${s.integration.name}» — ${e.label}:`,
+          items: e.fields.filter((x) => x.visible && rec[x.key] !== undefined).map((x) => `${x.label}: \u2068${rec[x.key]}\u2069`),
+          outro: r.source === 'cache' && r.cachedAt ? `من النسخة المُزامَنة بتاريخ ${formatDate(r.cachedAt)}.` : undefined,
+          link: link(`/integrations/${s.integration.id}`, 'فتح المصدر'),
+        };
+      }
+    }
+  }
+  return { intro: `لم أجد سجلًا بالرقم ${ref} في: ${sources.map((s) => s.integration.name).join('، ')}.`, tone: 'warn' };
 }
 
 function contactNamed(question: string) {
@@ -243,6 +285,7 @@ export function answerFor(topic: Topic, question = ''): Answer {
     case 'camp': return lastCampaign();
     case 'contact': return contactAnswer(question);
     case 'ai': return aiAnswer();
+    case 'external': return externalAnswer(question);
     case 'howTo': return { intro: 'أجيب عن بيانات حسابك فقط. لمعرفة طريقة استخدام النظام تواصل مع فريق الدعم.', tone: 'warn' };
     case 'action': return { intro: 'لا يمكنني تنفيذ الإجراءات، لكن يمكنك تنفيذها بنفسك من الصفحة المناسبة.', tone: 'warn' };
     default: return { intro: 'لم أجد إجابة لهذا السؤال. جرّب صياغة أخرى، أو اسأل عن اشتراكك أو القنوات أو الموظفين أو العملاء أو الحملات.', tone: 'warn' };

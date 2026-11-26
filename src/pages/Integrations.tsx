@@ -1,375 +1,176 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { CalendarClock, Database, DownloadCloud, Plus, Search, Webhook } from 'lucide-react';
+import { Button, Card, StatCard } from '@components/ui';
 import {
-  Facebook,
-  Instagram,
-  Send as TelegramIcon,
-  Zap,
-  MessageSquare,
-  Webhook,
-  Search,
-  Check,
-  Sparkles,
-  Building2,
-  ShoppingCart,
-  Calendar,
-  FileText,
-  Mail,
-  Database,
-} from 'lucide-react';
-import { Card, Input, Modal, StatCard } from '@components/ui';
-import { TikTokIcon } from '@components/ui/BrandIcons';
-import { useDataStore } from '@/store/useDataStore';
-import { useUIStore } from '@/store/useUIStore';
+  METHOD_LABEL,
+  STATUS_LABEL,
+  STATUS_TONE,
+  useIntegrationStore,
+  type ConnectionMethod,
+  type IntegrationStatus,
+} from '@/store/useIntegrationStore';
+import { usePermission } from '@/hooks/usePermission';
+import { formatDate, formatTime } from '@/utils/format';
 import { cn } from '@/utils/cn';
-import { timeAgo } from '@/utils/format';
-import type { Integration } from '@/types';
 
-interface IntegrationMeta {
-  type: Integration['type'];
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-  color: string;
-  bg: string;
-  category: 'messaging' | 'automation' | 'crm' | 'productivity';
-  featured?: boolean;
+export const METHOD_ICON: Record<ConnectionMethod, JSX.Element> = {
+  api_pull: <DownloadCloud className="h-4 w-4" />,
+  scheduled_sync: <CalendarClock className="h-4 w-4" />,
+  webhook_push: <Webhook className="h-4 w-4" />,
+};
+
+export function StatusPill({ status }: { status: IntegrationStatus }): JSX.Element {
+  return <span className={cn('inline-flex px-2 py-0.5 rounded-full text-[11.5px] font-semibold whitespace-nowrap', STATUS_TONE[status])}>{STATUS_LABEL[status]}</span>;
 }
 
-const allIntegrations: IntegrationMeta[] = [
-  { type: 'messenger', name: 'Facebook Messenger', description: 'استقبل رسائل صفحتك على فيسبوك في صندوق Qhub', icon: <Facebook className="h-6 w-6" />, color: 'text-[#0084FF]', bg: 'bg-[#0084FF]/10', category: 'messaging', featured: true },
-  { type: 'instagram', name: 'Instagram Direct', description: 'الرد على الـ DMs والتعليقات في انستجرام', icon: <Instagram className="h-6 w-6" />, color: 'text-[#E4405F]', bg: 'bg-[#E4405F]/10', category: 'messaging', featured: true },
-  { type: 'telegram', name: 'Telegram', description: 'بوت تيليجرام لاستقبال الاستفسارات', icon: <TelegramIcon className="h-6 w-6" />, color: 'text-[#0088CC]', bg: 'bg-[#0088CC]/10', category: 'messaging', featured: true },
-  { type: 'tiktok', name: 'TikTok', description: 'الرسائل المباشرة والتعليقات من TikTok', icon: <TikTokIcon className="h-6 w-6" />, color: 'text-[#FE2C55]', bg: 'bg-[#FE2C55]/10', category: 'messaging', featured: true },
-  { type: 'slack', name: 'Slack', description: 'إشعارات داخلية على قناة Slack', icon: <MessageSquare className="h-6 w-6" />, color: 'text-[#4A154B]', bg: 'bg-[#4A154B]/10', category: 'productivity' },
-  { type: 'zapier', name: 'Zapier', description: 'اربط بآلاف التطبيقات الأخرى بدون كود', icon: <Zap className="h-6 w-6" />, color: 'text-[#FF4A00]', bg: 'bg-[#FF4A00]/10', category: 'automation' },
-  { type: 'webhook', name: 'Custom Webhook', description: 'استقبل أحداث المحادثات على خادمك', icon: <Webhook className="h-6 w-6" />, color: 'text-primary', bg: 'bg-primary/10', category: 'automation' },
-];
+const when = (iso?: string): string => (iso ? `${formatDate(iso)} · ${formatTime(iso)}` : '—');
 
-// Coming soon integrations
-const upcoming: { name: string; icon: React.ReactNode; color: string; bg: string; category: 'crm' | 'productivity' | 'automation' }[] = [
-  { name: 'Hubspot CRM', icon: <Building2 className="h-6 w-6" />, color: 'text-[#FF7A59]', bg: 'bg-[#FF7A59]/10', category: 'crm' },
-  { name: 'Salesforce', icon: <Database className="h-6 w-6" />, color: 'text-[#00A1E0]', bg: 'bg-[#00A1E0]/10', category: 'crm' },
-  { name: 'Shopify', icon: <ShoppingCart className="h-6 w-6" />, color: 'text-[#96BF48]', bg: 'bg-[#96BF48]/10', category: 'productivity' },
-  { name: 'Google Calendar', icon: <Calendar className="h-6 w-6" />, color: 'text-[#4285F4]', bg: 'bg-[#4285F4]/10', category: 'productivity' },
-  { name: 'Notion', icon: <FileText className="h-6 w-6" />, color: 'text-[#111]', bg: 'bg-[#111]/10', category: 'productivity' },
-  { name: 'Mailchimp', icon: <Mail className="h-6 w-6" />, color: 'text-[#FFE01B]', bg: 'bg-[#FFE01B]/20', category: 'productivity' },
-];
-
+/** إدارة التكامل مع مصادر البيانات الخارجية — قائمة التكاملات. */
 export default function Integrations(): JSX.Element {
-  const integrations = useDataStore((s) => s.integrations);
-  const toggleIntegration = useDataStore((s) => s.toggleIntegration);
-  const showToast = useUIStore((s) => s.showToast);
+  const integrations = useIntegrationStore((s) => s.integrations);
+  const { has } = usePermission();
+  const navigate = useNavigate();
+  const canManage = has('integrations.manage');
 
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<'all' | 'messaging' | 'automation' | 'crm' | 'productivity'>('all');
-  const [connectModal, setConnectModal] = useState<{ meta: IntegrationMeta; integration?: Integration } | null>(null);
+  const [q, setQ] = useState('');
+  const [method, setMethod] = useState<ConnectionMethod | 'all'>('all');
+  const [status, setStatus] = useState<IntegrationStatus | 'all'>('all');
 
-  const filtered = allIntegrations.filter((m) => {
-    if (category !== 'all' && m.category !== category) return false;
-    if (search && !m.name.includes(search) && !m.description.includes(search)) return false;
-    return true;
-  });
-
-  const connected = integrations.filter((i) => i.connected).length;
-
-  const getIntegration = (type: Integration['type']): Integration | undefined =>
-    integrations.find((i) => i.type === type);
-
-  return (
-    <div className="p-4 lg:p-6 space-y-5 page-fade">
-      {/* Hero */}
-      <Card className="p-6 bg-gradient-to-l from-primary to-primary-dark text-white border-0">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
-              <Sparkles className="h-7 w-7" />
-            </div>
-            <div>
-              <h2 className="text-h1 font-bold">التكاملات</h2>
-              <p className="text-body opacity-90">اربط Qhub بالأدوات والمنصات التي تستخدمها يومياً</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-center px-4">
-              <p className="text-h1 font-extrabold">{connected}</p>
-              <p className="text-small opacity-90">مفعّل</p>
-            </div>
-            <div className="text-center px-4 border-s border-white/20">
-              <p className="text-h1 font-extrabold">{allIntegrations.length}+</p>
-              <p className="text-small opacity-90">متاح</p>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Toolbar */}
-      <Card className="p-3 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="h-4 w-4 absolute end-3 top-1/2 -translate-y-1/2 text-muted-light dark:text-muted-dark" />
-          <input
-            type="text"
-            placeholder="ابحث عن تكامل..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-10 ps-3 pe-9 rounded-full bg-bg-light dark:bg-bg-dark border border-transparent text-body focus:outline-none focus:border-primary"
-          />
-        </div>
-        <div className="flex items-center gap-1 bg-bg-light dark:bg-bg-dark rounded-full p-1">
-          {[
-            { key: 'all', label: 'الكل' },
-            { key: 'messaging', label: 'مراسلة' },
-            { key: 'automation', label: 'أتمتة' },
-            { key: 'productivity', label: 'إنتاجية' },
-            { key: 'crm', label: 'CRM' },
-          ].map((c) => (
-            <button
-              key={c.key}
-              onClick={() => setCategory(c.key as typeof category)}
-              className={cn(
-                'px-3 py-1.5 rounded-full text-small font-medium transition-colors whitespace-nowrap',
-                category === c.key ? 'bg-primary text-white shadow' : 'text-muted-light dark:text-muted-dark hover:text-current'
-              )}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-      </Card>
-
-      {/* Featured row */}
-      {category === 'all' && !search && (
-        <div>
-          <p className="text-small font-semibold uppercase tracking-wider text-muted-light dark:text-muted-dark mb-3">الأكثر استخداماً</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {allIntegrations.filter((i) => i.featured).map((meta) => {
-              const integration = getIntegration(meta.type);
-              return (
-                <IntegrationCard
-                  key={meta.type}
-                  meta={meta}
-                  integration={integration}
-                  onConnect={() => setConnectModal({ meta, integration })}
-                  onToggle={() => {
-                    if (integration) {
-                      toggleIntegration(integration.id);
-                      showToast(integration.connected ? 'تم الفصل' : 'تم الربط بنجاح', 'success');
-                    }
-                  }}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* All integrations */}
-      <div>
-        <p className="text-small font-semibold uppercase tracking-wider text-muted-light dark:text-muted-dark mb-3">
-          جميع التكاملات
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((meta) => {
-            const integration = getIntegration(meta.type);
-            return (
-              <IntegrationCard
-                key={meta.type}
-                meta={meta}
-                integration={integration}
-                onConnect={() => setConnectModal({ meta, integration })}
-                onToggle={() => {
-                  if (integration) {
-                    toggleIntegration(integration.id);
-                    showToast(integration.connected ? 'تم الفصل' : 'تم الربط بنجاح', 'success');
-                  }
-                }}
-              />
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Coming soon */}
-      <div>
-        <p className="text-small font-semibold uppercase tracking-wider text-muted-light dark:text-muted-dark mb-3">قريباً</p>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {upcoming.map((u) => (
-            <div key={u.name} className="bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card p-4 text-center opacity-60 hover:opacity-100 transition-opacity">
-              <div className={cn('h-12 w-12 rounded-card mx-auto flex items-center justify-center mb-2', u.bg, u.color)}>
-                {u.icon}
-              </div>
-              <p className="text-small font-medium">{u.name}</p>
-              <p className="text-[10px] text-muted-light dark:text-muted-dark mt-1">قريباً</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Connect modal */}
-      {connectModal && (
-        <ConnectModal
-          meta={connectModal.meta}
-          integration={connectModal.integration}
-          onClose={() => setConnectModal(null)}
-          onConnect={() => {
-            if (connectModal.integration) {
-              toggleIntegration(connectModal.integration.id);
-              showToast('تم الربط بنجاح', 'success');
-            }
-            setConnectModal(null);
-          }}
-        />
-      )}
-    </div>
+  const list = integrations.filter(
+    (i) =>
+      (method === 'all' || i.method === method) &&
+      (status === 'all' || i.status === status) &&
+      (!q.trim() || `${i.name} ${i.provider}`.toLowerCase().includes(q.trim().toLowerCase())),
   );
-}
 
-function IntegrationCard({
-  meta,
-  integration,
-  onConnect,
-  onToggle,
-}: {
-  meta: IntegrationMeta;
-  integration?: Integration;
-  onConnect: () => void;
-  onToggle: () => void;
-}): JSX.Element {
-  const connected = integration?.connected ?? false;
+  const connected = integrations.filter((i) => i.status === 'connected' || i.status === 'syncing').length;
+  const failing = integrations.filter((i) => i.status === 'error' || i.status === 'sync_failed').length;
+  const entities = integrations.reduce((n, i) => n + i.entities.filter((e) => e.enabled).length, 0);
+
   return (
-    <div className="bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-card p-5 hover:shadow-card-hover transition-all">
-      <div className="flex items-start justify-between mb-3">
-        <div className={cn('h-12 w-12 rounded-card flex items-center justify-center', meta.bg, meta.color)}>
-          {meta.icon}
-        </div>
-        {connected && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/15 text-success text-[10px] font-semibold">
-            <Check className="h-3 w-3" />
-            متصل
+    <div className="p-4 lg:p-6 page-fade space-y-5">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <span className="h-12 w-12 rounded-card bg-primary/15 text-primary flex items-center justify-center">
+            <Database className="h-6 w-6" />
           </span>
-        )}
-      </div>
-      <h3 className="text-h3 font-bold mb-1">{meta.name}</h3>
-      <p className="text-small text-muted-light dark:text-muted-dark line-clamp-2 mb-4 min-h-[2.5rem]">{meta.description}</p>
-
-      {connected && integration?.accountName && (
-        <div className="text-small text-muted-light dark:text-muted-dark mb-3 flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
-          <span className="font-mono">{integration.accountName}</span>
-          {integration.lastSync && <span>· مزامنة {timeAgo(integration.lastSync)}</span>}
-        </div>
-      )}
-
-      <div className="flex items-center gap-2">
-        {connected ? (
-          <>
-            <button
-              onClick={onConnect}
-              className="flex-1 h-9 rounded-full bg-bg-light dark:bg-bg-dark text-small font-medium hover:bg-border-light dark:hover:bg-border-dark transition-colors"
-            >
-              إعدادات
-            </button>
-            <button
-              onClick={onToggle}
-              className="h-9 px-4 rounded-full bg-danger/10 text-danger text-small font-medium hover:bg-danger/15 transition-colors"
-            >
-              فصل
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={onConnect}
-            className="w-full h-9 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium transition-colors"
-          >
-            ربط
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ConnectModal({
-  meta,
-  integration,
-  onClose,
-  onConnect,
-}: {
-  meta: IntegrationMeta;
-  integration?: Integration;
-  onClose: () => void;
-  onConnect: () => void;
-}): JSX.Element {
-  const [step, setStep] = useState(1);
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      title={`ربط ${meta.name}`}
-      size="md"
-      footer={
-        <>
-          <button onClick={onClose} className="h-10 px-5 rounded-full border border-border-light dark:border-border-dark text-small font-medium hover:bg-bg-light dark:hover:bg-bg-dark">
-            إلغاء
-          </button>
-          {!integration?.connected && (
-            <button onClick={() => { setStep(2); setTimeout(onConnect, 800); }} className="h-10 px-5 rounded-full bg-primary hover:bg-primary-dark text-white text-small font-medium flex items-center gap-2">
-              {step === 1 ? 'متابعة' : (
-                <>
-                  <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  جارٍ الربط...
-                </>
-              )}
-            </button>
-          )}
-        </>
-      }
-    >
-      <div className="text-center mb-4">
-        <div className={cn('h-16 w-16 rounded-2xl mx-auto flex items-center justify-center mb-3', meta.bg, meta.color)}>
-          {meta.icon}
-        </div>
-        <h3 className="text-h3 font-bold">{meta.name}</h3>
-        <p className="text-small text-muted-light dark:text-muted-dark mt-1">{meta.description}</p>
-      </div>
-
-      {integration?.connected ? (
-        <div className="space-y-3">
-          <div className="p-3 rounded-card bg-bg-light dark:bg-bg-dark">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-small text-muted-light dark:text-muted-dark">الحساب المرتبط</p>
-                <p className="text-body font-semibold font-mono">{integration.accountName ?? '—'}</p>
-              </div>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/15 text-success text-small font-medium">
-                <Check className="h-3.5 w-3.5" />
-                متصل
-              </span>
-            </div>
+          <div>
+            <h1 className="text-h1 font-bold">إدارة التكامل مع مصادر البيانات الخارجية</h1>
+            <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
+              اربط متجرك أو نظامك، وابحث في طلباتك وفواتيرك وعملائك من Qhub — ويستخدمها المساعد الذكي في الرد على عملائك.
+            </p>
           </div>
-          {integration.lastSync && (
-            <p className="text-small text-muted-light dark:text-muted-dark text-center">
-              آخر مزامنة: {timeAgo(integration.lastSync)}
-            </p>
-          )}
         </div>
-      ) : (
-        <div className="space-y-3">
-          <p className="text-small font-semibold">سيتم منح Qhub الصلاحيات التالية:</p>
-          <ul className="space-y-2 text-small">
-            <li className="flex items-start gap-2"><Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" /> قراءة الرسائل الواردة</li>
-            <li className="flex items-start gap-2"><Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" /> إرسال ردود من خلال {meta.name}</li>
-            <li className="flex items-start gap-2"><Check className="h-4 w-4 text-success flex-shrink-0 mt-0.5" /> الوصول لمعلومات الملف الشخصي الأساسية</li>
-          </ul>
-          {meta.type === 'webhook' ? (
-            <Input label={<>URL الـ webhook<span className="text-danger ms-0.5">*</span></>} placeholder="https://your-server.com/webhook" />
-          ) : (
-            <p className="text-small text-muted-light dark:text-muted-dark p-3 rounded-card bg-bg-light dark:bg-bg-dark">
-              سيتم تحويلك إلى صفحة {meta.name} لتسجيل الدخول ومنح الصلاحيات.
-            </p>
-          )}
+        {canManage && (
+          <Button className="text-white" onClick={() => navigate('/integrations/new')}>
+            <Plus className="h-4 w-4" /> إضافة تكامل جديد
+          </Button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard label="التكاملات" value={String(integrations.length)} icon={<Database className="h-5 w-5" />} iconBg="bg-primary/15" iconColor="text-primary" />
+        <StatCard label="متصلة" value={String(connected)} icon={<DownloadCloud className="h-5 w-5" />} iconBg="bg-success/15" iconColor="text-success" />
+        <StatCard label="تحتاج متابعة" value={String(failing)} icon={<Webhook className="h-5 w-5" />} iconBg="bg-danger/10" iconColor="text-danger" hint="تكاملات بها خطأ في الاتصال أو فشلت مزامنتها." />
+        <StatCard label="الكيانات المفعّلة" value={String(entities)} icon={<CalendarClock className="h-5 w-5" />} iconBg="bg-violet-500/15" iconColor="text-violet-600" hint="الطلبات والعملاء والفواتير… المسموح البحث فيها." />
+      </div>
+
+      <Card className="p-4 space-y-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[14rem]">
+            <Search className="h-4 w-4 absolute top-1/2 -translate-y-1/2 start-3 text-muted-light dark:text-muted-dark" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="ابحث باسم التكامل…"
+              className="w-full h-10 ps-9 pe-3 rounded-input border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-body focus:outline-none focus:border-primary"
+            />
+          </div>
+          <select
+            value={method}
+            onChange={(e) => setMethod(e.target.value as ConnectionMethod | 'all')}
+            className="h-10 px-3 rounded-input border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-body"
+            aria-label="طريقة الربط"
+          >
+            <option value="all">كل طرق الربط</option>
+            {(Object.keys(METHOD_LABEL) as ConnectionMethod[]).map((m) => (
+              <option key={m} value={m}>
+                {METHOD_LABEL[m]}
+              </option>
+            ))}
+          </select>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as IntegrationStatus | 'all')}
+            className="h-10 px-3 rounded-input border border-border-light dark:border-border-dark bg-white dark:bg-surface-dark text-body"
+            aria-label="حالة الاتصال"
+          >
+            <option value="all">كل الحالات</option>
+            {(Object.keys(STATUS_LABEL) as IntegrationStatus[]).map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABEL[s]}
+              </option>
+            ))}
+          </select>
         </div>
-      )}
-    </Modal>
+
+        {list.length === 0 ? (
+          <div className="py-12 text-center">
+            <Database className="h-8 w-8 mx-auto text-muted-light dark:text-muted-dark" />
+            <p className="text-body font-semibold mt-3">{integrations.length === 0 ? 'لم تربط أي مصدر بيانات بعد' : 'لا توجد نتائج'}</p>
+            {integrations.length === 0 && canManage && (
+              <Button className="text-white mt-4" onClick={() => navigate('/integrations/new')}>
+                <Plus className="h-4 w-4" /> إضافة تكامل جديد
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {list.map((i) => (
+              <Link
+                key={i.id}
+                to={`/integrations/${i.id}`}
+                className="block rounded-card border border-border-light dark:border-border-dark p-4 hover:border-primary/50 hover:shadow-sm transition"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">{METHOD_ICON[i.method]}</span>
+                    <div className="min-w-0">
+                      <b className="text-body block truncate">{i.name}</b>
+                      <span className="text-small text-muted-light dark:text-muted-dark">{i.provider}</span>
+                    </div>
+                  </div>
+                  <StatusPill status={i.status} />
+                </div>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-small">
+                  <div>
+                    <dt className="text-muted-light dark:text-muted-dark">طريقة الربط</dt>
+                    <dd className="font-medium">{METHOD_LABEL[i.method]}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-light dark:text-muted-dark">الكيانات</dt>
+                    <dd className="font-medium">
+                      {i.entities.length === 0 ? '—' : `${i.entities.filter((e) => e.enabled).length} من ${i.entities.length}`}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-light dark:text-muted-dark">آخر مزامنة ناجحة</dt>
+                    <dd className="font-medium">{i.method === 'api_pull' ? 'عند الطلب' : when(i.lastSyncAt)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-light dark:text-muted-dark">آخر اختبار</dt>
+                    <dd className={cn('font-medium', i.lastTest && !i.lastTest.ok && 'text-danger')}>
+                      {i.lastTest ? i.lastTest.message : '—'}
+                    </dd>
+                  </div>
+                </dl>
+                <p className="text-[11.5px] text-muted-light dark:text-muted-dark mt-3">أُضيف {formatDate(i.createdAt)}</p>
+              </Link>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
   );
 }

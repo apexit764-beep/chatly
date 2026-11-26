@@ -43,6 +43,7 @@ const PAGE_LABELS: Record<string, string> = {
   '/billing': 'الباقات والاشتراك',
   '/referral': 'ادعُ واكسب',
   '/developers': 'المطورين',
+  '/integrations': 'مصادر البيانات',
   '/chat-templates': 'قوالب المحادثة',
   '/assistant': 'مساعدك الذكي',
   '/subscribe': 'الاشتراك',

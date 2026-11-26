@@ -17,6 +17,7 @@ import {
   Gift,
   Workflow,
   MessageCircleQuestion,
+  Database,
 } from 'lucide-react';
 
 import { useTranslation } from '@/i18n/useTranslation';
@@ -44,6 +45,7 @@ const mainNav: NavItem[] = [
   { to: '/contacts', label: 'جهات الاتصال', icon: Users, group: 'main', permission: 'contacts.view' },
   { to: '/reports', label: 'التقارير', icon: BarChart3, group: 'main', permission: 'reports.view' },
   { to: '/channels', label: 'الحسابات والربط', icon: Smartphone, group: 'manage', permission: 'channels.view' },
+  { to: '/integrations', label: 'مصادر البيانات', icon: Database, group: 'manage', permission: 'integrations.view' },
   { to: '/departments', label: 'الأقسام', icon: Building2, group: 'manage', permission: 'departments.view' },
   { to: '/team', label: 'فريق العمل', icon: UsersRound, group: 'manage', permission: 'team.view' },
   { to: '/campaigns', label: 'الحملات التسويقية', icon: Megaphone, group: 'manage', permission: 'campaigns.view' },
