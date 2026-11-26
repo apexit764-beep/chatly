@@ -114,8 +114,69 @@ function CodeBlock({ title, code }: { title: string; code: string }): JSX.Elemen
   );
 }
 
+/** قالب رسالة التحقق: ينشئه Qhub على حساب واتساب العميل، والعميل يتابع حالته فقط. */
+function TemplateCard({
+  settings,
+  ttlMinutes,
+  canConfigure,
+  onResubmit,
+}: {
+  settings: OtpSettings;
+  ttlMinutes: number;
+  canConfigure: boolean;
+  onResubmit: () => void;
+}): JSX.Element {
+  const s = settings.templateStatus;
+  const tone =
+    s === 'approved' ? 'bg-success/15 text-success' : s === 'rejected' ? 'bg-danger/10 text-danger' : s === 'pending' ? 'bg-warning/15 text-warning' : 'bg-muted-light/15 text-muted-light dark:text-muted-dark';
+  return (
+    <div className="rounded-card border border-border-light dark:border-border-dark p-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <b className="text-body">قالب رسالة التحقق</b>
+          <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">
+            {s === 'none' && 'يُجهَّز تلقائيًا ويُرسل لـ Meta للمراجعة عند اختيار رقم الإرسال وحفظ الإعدادات.'}
+            {s === 'pending' && settings.templateSubmittedAt && `أُرسل لـ Meta للمراجعة في ${formatDate(settings.templateSubmittedAt)} · ${formatTime(settings.templateSubmittedAt)}`}
+            {s === 'approved' && settings.templateApprovedAt && `اعتمدته Meta في ${formatDate(settings.templateApprovedAt)} — الإرسال الفعلي متاح.`}
+            {s === 'rejected' && 'رفضت Meta القالب، ولن يعمل الإرسال الفعلي حتى يُعتمد.'}
+          </p>
+        </div>
+        <Pill className={tone}>{TEMPLATE_LABEL[s]}</Pill>
+      </div>
+
+      {s === 'rejected' && (
+        <div className="mt-3 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2.5 text-small flex items-start justify-between gap-3 flex-wrap">
+          <span>
+            <b>سبب الرفض:</b> {settings.templateRejectReason ?? 'لم تحدد Meta سببًا.'}
+          </span>
+          {canConfigure && (
+            <Button size="sm" className="text-white" onClick={onResubmit}>
+              <RefreshCw className="h-3.5 w-3.5" /> إعادة الإرسال للمراجعة
+            </Button>
+          )}
+        </div>
+      )}
+
+      <div className="mt-4 rounded-xl bg-[#ECE5DD] dark:bg-[#0B141A] p-4">
+        <div className="max-w-xs rounded-lg bg-white dark:bg-[#1F2C34] shadow-sm px-3 py-2 text-small leading-relaxed">
+          <p>
+            <b dir="ltr">482913</b> هو رمز التحقق الخاص بك. للحفاظ على أمانك، لا تشارك هذا الرمز.
+          </p>
+          <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1">تنتهي صلاحية هذا الرمز خلال {ttlMinutes} دقائق.</p>
+          <div className="mt-2 pt-2 border-t border-border-light dark:border-border-dark text-center text-[#027EB5] font-semibold inline-flex w-full items-center justify-center gap-1.5">
+            <Copy className="h-3.5 w-3.5" /> نسخ الرمز
+          </div>
+        </div>
+      </div>
+      <p className="text-[12px] text-muted-light dark:text-muted-dark mt-2">
+        يظهر في حساب واتساب باسم <code dir="ltr">{settings.templateName}</code>
+      </p>
+    </div>
+  );
+}
+
 export default function Developers(): JSX.Element {
-  const { keys, settings, webhook, requests, justCreated, createKey, revokeKey, rotateKey, dismissJustCreated, saveSettings, saveWebhook, sendTest } =
+  const { keys, settings, webhook, requests, justCreated, createKey, revokeKey, rotateKey, dismissJustCreated, saveSettings, resubmitTemplate, saveWebhook, sendTest } =
     useDeveloperStore();
   const channels = useDataStore((s) => s.channels);
   const clients = useAdminStore((s) => s.clients);
@@ -287,12 +348,21 @@ export default function Developers(): JSX.Element {
           <div className="text-small">
             <b>
               {settings.templateStatus === 'rejected'
-                ? `قالب «${settings.templateName}» مرفوض من Meta`
+                ? 'رفضت Meta قالب رسالة التحقق'
                 : settings.templateStatus === 'none'
-                ? `قالب «${settings.templateName}» لم يُرسل لـ Meta للمراجعة بعد`
-                : `قالب «${settings.templateName}» بانتظار موافقة Meta`}
+                ? 'اختر رقم الإرسال لتجهيز قالب رسالة التحقق'
+                : 'قالب رسالة التحقق بانتظار موافقة Meta'}
             </b>
             <p className="text-muted-light dark:text-muted-dark mt-0.5 leading-relaxed">
+              {settings.templateStatus === 'rejected' ? (
+                <>
+                  راجع سبب الرفض وأعد إرسال القالب من{' '}
+                  <button type="button" className="text-primary font-semibold hover:underline" onClick={() => setTab('settings')}>
+                    إعدادات OTP
+                  </button>
+                  .{' '}
+                </>
+              ) : null}
               الإرسال الفعلي يبدأ بعد اعتماد القالب، وحتى ذلك الحين جرّب الخدمة بالمفتاح التجريبي (<code dir="ltr">qh_test_</code>) — التجربة مجانية ولا تُخصم من حصة باقتك.
             </p>
           </div>
@@ -482,13 +552,6 @@ export default function Developers(): JSX.Element {
                   </option>
                 ))}
               </Select>
-              <Input
-                label="قالب الرسالة"
-                value={form.templateName}
-                disabled={!canConfigure}
-                onChange={(e) => setForm({ ...form, templateName: e.target.value })}
-                tip="قالب رسالة التحقق على واتساب، ويجب أن تعتمده Meta قبل الإرسال الفعلي."
-              />
               <Select
                 label="طول الرمز"
                 value={String(form.codeLength)}
@@ -540,31 +603,27 @@ export default function Developers(): JSX.Element {
                 onChange={(e) => setForm({ ...form, cooldownSeconds: Number(e.target.value) })}
                 tip="تمنع إرسال رموز متكررة لنفس الرقم في وقت قصير."
               />
-              <div className="space-y-1.5">
-                <span className="text-small font-medium text-muted-light dark:text-muted-dark">حالة القالب</span>
-                <div className="h-10 flex items-center">
-                  <Pill
-                    className={cn(
-                      form.templateStatus === 'approved'
-                        ? 'bg-success/15 text-success'
-                        : form.templateStatus === 'rejected'
-                        ? 'bg-danger/10 text-danger'
-                        : 'bg-warning/15 text-warning',
-                    )}
-                  >
-                    {TEMPLATE_LABEL[form.templateStatus]}
-                  </Pill>
-                </div>
-              </div>
             </div>
+            <TemplateCard
+              settings={settings}
+              ttlMinutes={Math.round(form.ttlSeconds / 60)}
+              canConfigure={canConfigure}
+              onResubmit={() => {
+                resubmitTemplate();
+                setForm((f) => ({ ...f, templateStatus: 'pending' }));
+                showToast('تم إرسال القالب لـ Meta للمراجعة', 'success');
+              }}
+            />
             {canConfigure ? (
               <div className="flex justify-end">
                 <Button
                   className="text-white"
                   onClick={() => {
                     if (!form.senderChannelId) return showToast('اختر رقم الإرسال أولاً', 'error');
+                    const firstSubmit = settings.templateStatus === 'none';
                     saveSettings(form);
-                    showToast('تم حفظ إعدادات OTP', 'success');
+                    setForm(useDeveloperStore.getState().settings);
+                    showToast(firstSubmit ? 'تم الحفظ وإرسال قالب رسالة التحقق لـ Meta للمراجعة' : 'تم حفظ إعدادات OTP', 'success');
                   }}
                 >
                   <Check className="h-4 w-4" /> حفظ الإعدادات

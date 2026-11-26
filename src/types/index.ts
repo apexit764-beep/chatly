@@ -753,7 +753,14 @@ export interface OtpSettings {
   cooldownSeconds: number;
   /** حالة قالب Meta: الإرسال الحقيقي ينتظر موافقتها، والمفتاح التجريبي لا. */
   templateStatus: 'none' | 'pending' | 'approved' | 'rejected';
+  /** اسم القالب على حساب واتساب العميل — ثابت ينشئه Qhub، ولا يُدخله العميل. */
   templateName: string;
+  /** متى أُرسل القالب لـ Meta للمراجعة. */
+  templateSubmittedAt?: string;
+  /** متى اعتمدته Meta. */
+  templateApprovedAt?: string;
+  /** سبب الرفض كما تُرسله Meta. */
+  templateRejectReason?: string;
 }
 
 /** ويبهوك يُبلِّغ تطبيق العميل بنتيجة كل طلب. */

@@ -48,15 +48,19 @@ export const STATUS_LABEL: Record<OtpRequestStatus, string> = {
 /** أحداث الويبهوك المعروضة للعميل — نفس حالات الطلب. */
 export const WEBHOOK_EVENTS: OtpRequestStatus[] = ['sent', 'delivered', 'verified', 'failed', 'expired'];
 
+/** اسم قالب المصادقة الذي ينشئه Qhub على حساب واتساب العميل. */
+export const OTP_TEMPLATE_NAME = 'qhub_verification_code';
+
 const DEFAULT_SETTINGS: OtpSettings = {
-  senderChannelId: null,
+  senderChannelId: 'ch1',
   codeLength: 6,
   codeType: 'numeric',
   ttlSeconds: 300,
   maxAttempts: 3,
   cooldownSeconds: 60,
   templateStatus: 'pending',
-  templateName: 'qhub_otp_ar',
+  templateName: OTP_TEMPLATE_NAME,
+  templateSubmittedAt: new Date(Date.now() - 3 * 3_600_000).toISOString(),
 };
 
 const DEFAULT_WEBHOOK: OtpWebhook = {
@@ -184,7 +188,10 @@ interface DeveloperState extends Persisted {
   revokeKey: (keyId: string) => void;
   rotateKey: (keyId: string) => void;
   dismissJustCreated: () => void;
+  /** يحفظ الإعدادات. أول اختيار لرقم الإرسال يُرسل قالب المصادقة لـ Meta تلقائياً. */
   saveSettings: (settings: OtpSettings) => void;
+  /** يعيد إرسال القالب المرفوض للمراجعة. */
+  resubmitTemplate: () => void;
   saveWebhook: (webhook: OtpWebhook) => void;
   /** إرسال تجريبي: يضيف سطراً للسجل على مفتاح تجريبي، فلا يخصم من الحصة. */
   sendTest: (phone: string) => void;
@@ -198,7 +205,7 @@ function load(): Persisted {
     const saved = JSON.parse(raw) as Partial<Persisted>;
     return {
       keys: saved.keys ?? fallback.keys,
-      settings: { ...DEFAULT_SETTINGS, ...(saved.settings ?? {}) },
+      settings: { ...DEFAULT_SETTINGS, ...(saved.settings ?? {}), templateName: OTP_TEMPLATE_NAME },
       webhook: { ...DEFAULT_WEBHOOK, ...(saved.webhook ?? {}) },
     };
   } catch {
@@ -264,7 +271,23 @@ export const useDeveloperStore = create<DeveloperState>((set, get) => ({
 
   dismissJustCreated: () => set({ justCreated: null }),
 
-  saveSettings: (settings) => {
+  saveSettings: (next) => {
+    const settings: OtpSettings =
+      next.senderChannelId && next.templateStatus === 'none'
+        ? { ...next, templateStatus: 'pending', templateSubmittedAt: new Date().toISOString(), templateRejectReason: undefined }
+        : next;
+    set({ settings });
+    persist({ keys: get().keys, settings, webhook: get().webhook });
+  },
+
+  resubmitTemplate: () => {
+    const settings: OtpSettings = {
+      ...get().settings,
+      templateStatus: 'pending',
+      templateSubmittedAt: new Date().toISOString(),
+      templateApprovedAt: undefined,
+      templateRejectReason: undefined,
+    };
     set({ settings });
     persist({ keys: get().keys, settings, webhook: get().webhook });
   },
