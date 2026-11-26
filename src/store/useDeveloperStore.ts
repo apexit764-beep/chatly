@@ -272,19 +272,12 @@ export const useDeveloperStore = create<DeveloperState>((set, get) => ({
   dismissJustCreated: () => set({ justCreated: null }),
 
   saveSettings: (next) => {
-    const prev = get().settings;
-    // أول حفظ برقم إرسال يُنشئ القالب، وتغيير مدة الصلاحية يعدّل نصه — وفي الحالتين يذهب لمراجعة Meta.
-    const submit =
-      !!next.senderChannelId && (next.templateStatus === 'none' || next.ttlSeconds !== prev.ttlSeconds);
-    const settings: OtpSettings = submit
-      ? {
-          ...next,
-          templateStatus: 'pending',
-          templateSubmittedAt: new Date().toISOString(),
-          templateApprovedAt: undefined,
-          templateRejectReason: undefined,
-        }
-      : next;
+    // أول حفظ برقم إرسال يُنشئ القالب ويرسله لمراجعة Meta. باقي الإعدادات — ومنها مدة
+    // الصلاحية — تُطبَّق عندنا ولا تلمس القالب (لا يحمل نصّه المدة).
+    const settings: OtpSettings =
+      next.senderChannelId && next.templateStatus === 'none'
+        ? { ...next, templateStatus: 'pending', templateSubmittedAt: new Date().toISOString(), templateRejectReason: undefined }
+        : next;
     set({ settings });
     persist({ keys: get().keys, settings, webhook: get().webhook });
   },

@@ -118,12 +118,10 @@ function CodeBlock({ title, code }: { title: string; code: string }): JSX.Elemen
 /** قالب رسالة التحقق: ينشئه Qhub على حساب واتساب العميل، والعميل يتابع حالته فقط. */
 function TemplateCard({
   settings,
-  ttlMinutes,
   canConfigure,
   onResubmit,
 }: {
   settings: OtpSettings;
-  ttlMinutes: number;
   canConfigure: boolean;
   onResubmit: () => void;
 }): JSX.Element {
@@ -163,7 +161,6 @@ function TemplateCard({
           <p>
             <b dir="ltr">482913</b> هو رمز التحقق الخاص بك. للحفاظ على أمانك، لا تشارك هذا الرمز.
           </p>
-          <p className="text-[11px] text-muted-light dark:text-muted-dark mt-1">تنتهي صلاحية هذا الرمز خلال {ttlMinutes} دقائق.</p>
           <div className="mt-2 pt-2 border-t border-border-light dark:border-border-dark text-center text-[#027EB5] font-semibold inline-flex w-full items-center justify-center gap-1.5">
             <Copy className="h-3.5 w-3.5" /> نسخ الرمز
           </div>
@@ -620,7 +617,6 @@ export default function Developers(): JSX.Element {
             </div>
             <TemplateCard
               settings={settings}
-              ttlMinutes={Math.round(form.ttlSeconds / 60)}
               canConfigure={canConfigure}
               onResubmit={() => {
                 resubmitTemplate();
@@ -632,24 +628,13 @@ export default function Developers(): JSX.Element {
               <div className="flex justify-end">
                 <Button
                   className="text-white"
-                  onClick={async () => {
+                  onClick={() => {
                     if (!form.senderChannelId) return showToast('اختر رقم الإرسال أولاً', 'error');
                     const firstSubmit = settings.templateStatus === 'none';
-                    // مدة الصلاحية مكتوبة في نص القالب نفسه، فتغييرها تعديلٌ على القالب يعيده لمراجعة Meta.
-                    const ttlChanged = !firstSubmit && form.ttlSeconds !== settings.ttlSeconds;
-                    if (ttlChanged) {
-                      const ok = await confirm({
-                        title: 'تغيير مدة صلاحية الرمز',
-                        message: `مدة الصلاحية جزء من نص رسالة التحقق («تنتهي صلاحية هذا الرمز خلال ${Math.round(form.ttlSeconds / 60)} دقائق»). تغييرها يعدّل القالب ويعيده لمراجعة Meta، ولا يمكن إرسال رموز التحقق حتى يُعتمد من جديد.`,
-                        confirmText: 'حفظ وإرسال للمراجعة',
-                        variant: 'warning',
-                      });
-                      if (!ok) return;
-                    }
                     saveSettings(form);
                     setForm(useDeveloperStore.getState().settings);
                     showToast(
-                      firstSubmit || ttlChanged ? 'تم الحفظ وإرسال قالب رسالة التحقق لـ Meta للمراجعة' : 'تم حفظ إعدادات OTP',
+                      firstSubmit ? 'تم الحفظ وإرسال قالب رسالة التحقق لـ Meta للمراجعة' : 'تم حفظ إعدادات OTP',
                       'success',
                     );
                   }}
