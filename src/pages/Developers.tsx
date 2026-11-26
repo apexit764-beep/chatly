@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
+  ArrowRight,
   Check,
   Copy,
   FileCode2,
@@ -130,7 +131,7 @@ function TemplateCard({
   const tone =
     s === 'approved' ? 'bg-success/15 text-success' : s === 'rejected' ? 'bg-danger/10 text-danger' : s === 'pending' ? 'bg-warning/15 text-warning' : 'bg-muted-light/15 text-muted-light dark:text-muted-dark';
   return (
-    <div className="rounded-card border border-border-light dark:border-border-dark p-4">
+    <div id="otp-template" className="scroll-mt-24 rounded-card border border-border-light dark:border-border-dark p-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <b className="text-body">قالب رسالة التحقق</b>
@@ -169,7 +170,7 @@ function TemplateCard({
         </div>
       </div>
       <p className="text-[12px] text-muted-light dark:text-muted-dark mt-2">
-        يظهر في حساب واتساب باسم <code dir="ltr">{settings.templateName}</code>
+        يظهر في حساب واتساب باسم <code dir="ltr">{settings.templateName}</code>. رسوم Meta على رسائل التحقق تُحتسب على حساب واتساب للأعمال الخاص بك.
       </p>
     </div>
   );
@@ -310,7 +311,15 @@ export default function Developers(): JSX.Element {
     rotateKey(k.id);
   };
 
+  /** Opens «إعدادات OTP» and brings the template status card into view. */
+  const goToTemplate = (): void => {
+    setTab('settings');
+    setTimeout(() => document.getElementById('otp-template')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  };
+  const templateReady = settings.templateStatus === 'approved';
+
   const doSendTest = (): void => {
+    if (!templateReady) return;
     if (testPhone.replace(/\D/g, '').length < 8) return showToast('أدخل رقماً دولياً صحيحاً', 'error');
     sendTest(testPhone);
     showToast('تم إرسال رمز تجريبي', 'success');
@@ -329,6 +338,14 @@ export default function Developers(): JSX.Element {
     <div className="p-4 lg:p-6 page-fade space-y-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
+          <Link
+            to="/"
+            title="الرجوع للوحة التحكم"
+            aria-label="الرجوع للوحة التحكم"
+            className="h-9 w-9 rounded-lg flex items-center justify-center border border-border-light dark:border-border-dark text-muted-light dark:text-muted-dark hover:text-current hover:bg-bg-light dark:hover:bg-bg-dark"
+          >
+            <ArrowRight className="h-4 w-4" />
+          </Link>
           <span className="h-12 w-12 rounded-card bg-primary/15 text-primary flex items-center justify-center">
             <Terminal className="h-6 w-6" />
           </span>
@@ -354,16 +371,13 @@ export default function Developers(): JSX.Element {
                 : 'قالب رسالة التحقق بانتظار موافقة Meta'}
             </b>
             <p className="text-muted-light dark:text-muted-dark mt-0.5 leading-relaxed">
-              {settings.templateStatus === 'rejected' ? (
-                <>
-                  راجع سبب الرفض وأعد إرسال القالب من{' '}
-                  <button type="button" className="text-primary font-semibold hover:underline" onClick={() => setTab('settings')}>
-                    إعدادات OTP
-                  </button>
-                  .{' '}
-                </>
-              ) : null}
-              الإرسال الفعلي يبدأ بعد اعتماد القالب، وحتى ذلك الحين جرّب الخدمة بالمفتاح التجريبي (<code dir="ltr">qh_test_</code>) — التجربة مجانية ولا تُخصم من حصة باقتك.
+              {settings.templateStatus === 'none' ? 'اختر رقم الإرسال واحفظ الإعدادات، ونرسل القالب لـ Meta للمراجعة. ' : null}
+              {settings.templateStatus === 'rejected' ? 'راجع سبب الرفض وأعد إرسال القالب. ' : null}
+              لا يمكن إرسال رموز التحقق قبل اعتماد القالب. تابع حالة القالب من{' '}
+              <button type="button" className="text-primary font-semibold hover:underline" onClick={goToTemplate}>
+                إعدادات OTP
+              </button>
+              .
             </p>
           </div>
         </div>
@@ -618,12 +632,26 @@ export default function Developers(): JSX.Element {
               <div className="flex justify-end">
                 <Button
                   className="text-white"
-                  onClick={() => {
+                  onClick={async () => {
                     if (!form.senderChannelId) return showToast('اختر رقم الإرسال أولاً', 'error');
                     const firstSubmit = settings.templateStatus === 'none';
+                    // مدة الصلاحية مكتوبة في نص القالب نفسه، فتغييرها تعديلٌ على القالب يعيده لمراجعة Meta.
+                    const ttlChanged = !firstSubmit && form.ttlSeconds !== settings.ttlSeconds;
+                    if (ttlChanged) {
+                      const ok = await confirm({
+                        title: 'تغيير مدة صلاحية الرمز',
+                        message: `مدة الصلاحية جزء من نص رسالة التحقق («تنتهي صلاحية هذا الرمز خلال ${Math.round(form.ttlSeconds / 60)} دقائق»). تغييرها يعدّل القالب ويعيده لمراجعة Meta، ولا يمكن إرسال رموز التحقق حتى يُعتمد من جديد.`,
+                        confirmText: 'حفظ وإرسال للمراجعة',
+                        variant: 'warning',
+                      });
+                      if (!ok) return;
+                    }
                     saveSettings(form);
                     setForm(useDeveloperStore.getState().settings);
-                    showToast(firstSubmit ? 'تم الحفظ وإرسال قالب رسالة التحقق لـ Meta للمراجعة' : 'تم حفظ إعدادات OTP', 'success');
+                    showToast(
+                      firstSubmit || ttlChanged ? 'تم الحفظ وإرسال قالب رسالة التحقق لـ Meta للمراجعة' : 'تم حفظ إعدادات OTP',
+                      'success',
+                    );
                   }}
                 >
                   <Check className="h-4 w-4" /> حفظ الإعدادات
@@ -825,11 +853,23 @@ export default function Developers(): JSX.Element {
                 <b className="text-body">إرسال تجريبي</b>
                 <p className="text-small text-muted-light dark:text-muted-dark mt-0.5">أرسل رمزًا تجريبيًا لرقمك للتأكد من الخدمة. لا يُخصم من حصة باقتك.</p>
               </div>
+              {!templateReady && (
+                <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5 text-small flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
+                  <span>
+                    لم يتم اعتماد القالب من Meta حاليًا، يمكنك متابعة حالة القالب من{' '}
+                    <button type="button" className="text-primary font-semibold hover:underline" onClick={goToTemplate}>
+                      إعدادات OTP
+                    </button>
+                    .
+                  </span>
+                </div>
+              )}
               <div className="flex items-end gap-2 flex-wrap">
                 <div className="flex-1 min-w-[12rem]">
                   <Input label="رقم الجوال" placeholder="+96891234567" dir="ltr" value={testPhone} onChange={(e) => setTestPhone(e.target.value)} />
                 </div>
-                <Button className="text-white" onClick={doSendTest}>
+                <Button className="text-white" onClick={doSendTest} disabled={!templateReady}>
                   <Send className="h-4 w-4" /> إرسال رمز تجريبي
                 </Button>
               </div>

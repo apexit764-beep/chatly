@@ -5,6 +5,7 @@ import {
   Moon,
   Languages,
   BookOpen,
+  Code2,
   ChevronLeft,
   Menu,
   CreditCard,
@@ -27,6 +28,7 @@ import { HeaderSearch } from '@components/ui/HeaderSearch';
 import { timeAgo } from '@/utils/format';
 import { cn } from '@/utils/cn';
 import { useTranslation } from '@/i18n/useTranslation';
+import { usePermission } from '@/hooks/usePermission';
 
 const PAGE_LABELS: Record<string, string> = {
   '/inbox': 'المحادثات',
@@ -59,6 +61,7 @@ function currentPageLabel(pathname: string): string {
 
 export function TopHeader(): JSX.Element {
   const { t } = useTranslation();
+  const { has: hasPerm } = usePermission();
   const location = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
@@ -115,7 +118,7 @@ export function TopHeader(): JSX.Element {
 
       {/* Breadcrumb */}
       <nav className="hidden md:flex items-center gap-1.5 text-small">
-        <span className="text-muted-light dark:text-muted-dark">Qhub</span>
+        <Link to="/" className="text-muted-light dark:text-muted-dark hover:text-primary">Qhub</Link>
         <ChevronLeft className="h-3.5 w-3.5 text-muted-light dark:text-muted-dark" />
         <span className="font-semibold">{t(pageLabel)}</span>
       </nav>
@@ -143,6 +146,21 @@ export function TopHeader(): JSX.Element {
         >
           <BookOpen className="h-[18px] w-[18px]" />
         </NavLink>
+        {/* «المطورين» lives here, not in the sidebar: it is a separate console
+            for whoever integrates the OTP API, and opens full width. */}
+        {hasPerm('developers.view') && (
+          <NavLink
+            to="/developers"
+            title={t('المطورين')}
+            aria-label={t('المطورين')}
+            className={({ isActive }) => cn(
+              'h-9 w-9 rounded-lg flex items-center justify-center transition-colors',
+              isActive ? 'bg-primary/10 text-primary dark:text-[#60A5FA]' : 'text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current',
+            )}
+          >
+            <Code2 className="h-[18px] w-[18px]" />
+          </NavLink>
+        )}
         <div className="relative">
           <button
             onClick={toggleNotifications}

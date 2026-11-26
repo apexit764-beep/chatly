@@ -28,6 +28,8 @@ export function AppShell(): JSX.Element {
   // Pages that size themselves to the window (a chat composer pinned to the bottom)
   // instead of scrolling inside <main>.
   const fillsViewport = isInbox || location.pathname.startsWith('/assistant');
+  // «المطورين» console of its own: opened from the header, full width, no sidebars.
+  const devConsole = location.pathname.startsWith('/developers');
   const inboxFocus = useUIStore((s) => s.inboxFocus);
   // Focus mode only applies on the inbox page
   const focused = isInbox && inboxFocus;
@@ -49,8 +51,8 @@ export function AppShell(): JSX.Element {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg-light dark:bg-bg-dark text-[14px] text-[#111827] dark:text-[#F1F5F9]">
       <div className="flex flex-1 min-h-0">
-        {!focused && <IconSidebar />}
-        {!focused && <SectionSidebar />}
+        {!focused && !devConsole && <IconSidebar />}
+        {!focused && !devConsole && <SectionSidebar />}
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
           {!focused && <TopHeader />}
           <main className={fillsViewport ? 'flex-1 overflow-hidden min-h-0 flex flex-col' : 'flex-1 overflow-y-auto overflow-x-hidden'}>
