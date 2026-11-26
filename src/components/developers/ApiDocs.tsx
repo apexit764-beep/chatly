@@ -114,8 +114,8 @@ export function ApiDocs({ ttlSeconds, codeLength, codeType, maxAttempts, cooldow
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6">
-      <nav aria-label="محتويات التوثيق" className="hidden lg:block">
-        <ul className="sticky top-24 space-y-1 text-small">
+      <nav aria-label="محتويات التوثيق" className="hidden lg:block self-start sticky top-4">
+        <ul className="space-y-1 text-small">
           {TOC.map(([id, label]) => (
             <li key={id}>
               <a href={`#${id}`} className="block px-3 py-1.5 rounded-lg text-muted-light dark:text-muted-dark hover:bg-bg-light dark:hover:bg-bg-dark hover:text-current">

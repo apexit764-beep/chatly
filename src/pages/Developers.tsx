@@ -361,7 +361,7 @@ export default function Developers(): JSX.Element {
         />
       </div>
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-clip">
         <div className="px-5 pt-5 pb-3">
           <div
             role="tablist"
